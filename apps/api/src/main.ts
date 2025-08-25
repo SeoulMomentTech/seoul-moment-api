@@ -1,5 +1,10 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  Logger,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AppModule } from './module/api.module';
 import { Configuration } from '@app/config/configuration';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -36,6 +41,22 @@ async function bootstrap() {
 
   morganSetting(app);
   swaggerSettring(app);
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      errorHttpStatusCode: HttpStatus.BAD_REQUEST,
+      transform: true,
+      forbidNonWhitelisted: true,
+      forbidUnknownValues: true,
+      disableErrorMessages: false,
+      validationError: {
+        target: true,
+        value: true,
+      },
+      exceptionFactory: (errors) => new BadRequestException(errors),
+    }),
+  );
 
   // 환경 정보 로깅
   logger.info(`🚀 Starting Seoul Moment API Server`);

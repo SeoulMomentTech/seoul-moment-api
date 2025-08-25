@@ -4,6 +4,7 @@ import { BrandEntity } from './entity/brand.entity';
 import { BrandSectionImageEntity } from './entity/brand-section-image.entity';
 import { BrandBannerImageEntity } from './entity/brand-banner-image.entity';
 import { BrandSectionEntity } from './entity/brand-info-section.entity';
+import { BrandRepositoryService } from './service/brand.repository.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -13,7 +14,7 @@ import { BrandSectionEntity } from './entity/brand-info-section.entity';
       BrandSectionImageEntity,
     ]),
   ],
-  providers: [],
-  exports: [],
+  providers: [BrandRepositoryService],
+  exports: [BrandRepositoryService],
 })
 export class RepositoryModule {}

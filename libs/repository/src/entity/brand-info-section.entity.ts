@@ -29,7 +29,7 @@ export class BrandSectionEntity extends CommonEntity {
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
-  @ManyToOne(() => BrandEntity, (brand) => brand.infoSections, {
+  @ManyToOne(() => BrandEntity, (brand) => brand.brandSectionList, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'brand_id' })
@@ -37,11 +37,11 @@ export class BrandSectionEntity extends CommonEntity {
 
   @OneToMany(
     () => BrandSectionImageEntity,
-    (sectionImage) => sectionImage.section,
+    (brandSectionImage) => brandSectionImage.section,
     {
       cascade: true,
       eager: true,
     },
   )
-  images: BrandSectionImageEntity[];
+  brandSectionImageList: BrandSectionImageEntity[];
 }

@@ -27,9 +27,13 @@ export class BrandSectionImageEntity extends CommonEntity {
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
-  @ManyToOne(() => BrandSectionEntity, (section) => section.images, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => BrandSectionEntity,
+    (section) => section.brandSectionImageList,
+    {
+      onDelete: 'CASCADE',
+    },
+  )
   @JoinColumn({ name: 'section_id' })
   section: BrandSectionEntity;
 }

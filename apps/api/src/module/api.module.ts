@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from '@app/common/log/logger.module';
 import { RepositoryModule } from '@app/repository/repository.module';
 import { HealthController } from '../health.controller';
+import { BrandModule } from './brand/brand.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { HealthController } from '../health.controller';
     }),
     LoggerModule,
     RepositoryModule,
+    BrandModule,
   ],
   controllers: [HealthController],
 })
