@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
-import { AppModule } from './app.module';
+import { AppModule } from './module/api.module';
 import { Configuration } from '@app/config/configuration';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { initializeTransactionalContext } from 'typeorm-transactional';

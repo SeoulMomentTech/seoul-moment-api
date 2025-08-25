@@ -1,5 +1,18 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { BrandEntity } from './entity/brand.entity';
+import { BrandSectionImageEntity } from './entity/brand-section-image.entity';
+import { BrandBannerImageEntity } from './entity/brand-banner-image.entity';
+import { BrandSectionEntity } from './entity/brand-info-section.entity';
 @Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      BrandEntity,
+      BrandBannerImageEntity,
+      BrandSectionEntity,
+      BrandSectionImageEntity,
+    ]),
+  ],
   providers: [],
   exports: [],
 })

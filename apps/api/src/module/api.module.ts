@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
 import { DatabaseModule } from '@app/database/database.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DatabaseService } from '@app/database/database.service';
@@ -7,12 +6,14 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
 import { DataSource } from 'typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from '@app/common/log/logger.module';
+import { RepositoryModule } from '@app/repository/repository.module';
+import { HealthController } from '../health.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, // 전역 모듈화 (다른 모듈에서도 바로 사용 가능)
-      envFilePath: `.env.${process.env.NODE_ENV || 'local'}`, // 환경별 .env 파일 로드
+      isGlobal: true,
+      envFilePath: `.env.${process.env.NODE_ENV || 'local'}`,
     }),
     TypeOrmModule.forRootAsync({
       imports: [DatabaseModule],
@@ -27,7 +28,8 @@ import { LoggerModule } from '@app/common/log/logger.module';
       },
     }),
     LoggerModule,
+    RepositoryModule,
   ],
-  controllers: [AppController],
+  controllers: [HealthController],
 })
 export class AppModule {}

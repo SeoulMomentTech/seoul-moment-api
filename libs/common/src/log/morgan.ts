@@ -13,11 +13,7 @@ enum HttpDataType {
 }
 
 function isSkipUrl(req: IncomingMessage): boolean {
-  if (
-    req.url === '/health' ||
-    req.url === '/metrics' ||
-    req.url === '/favicon.ico'
-  ) {
+  if (req.url === '/metrics' || req.url === '/favicon.ico') {
     return true;
   }
 
@@ -30,7 +26,7 @@ function convertBodyMessage(message: string) {
     .replace(`${HttpDataType.REQUEST_BODY}:`, '')
     .replace(`${HttpDataType.RESPONSE_BODY}:`, '')
     .trim();
-    
+
   try {
     return JSON.parse(cleanedMessage);
   } catch {
