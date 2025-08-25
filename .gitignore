@@ -37,10 +37,23 @@ lerna-debug.log*
 
 # dotenv environment variable files
 .env
+.env.local
+.env.development
+.env.production
+.env.test
 .env.development.local
 .env.test.local
 .env.production.local
-.env.local
+
+# AWS credentials and config
+.aws/
+aws-exports.js
+
+# Secrets and sensitive data
+secrets/
+*.pem
+*.key
+*.crt
 
 # temp directory
 .temp
