@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { DatabaseModule } from '@app/database/database.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DatabaseService } from '@app/database/database.service';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 import { DataSource } from 'typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { LoggerModule } from '@app/common/log/logger.module';
 
 @Module({
   imports: [
@@ -26,8 +26,8 @@ import { ConfigModule } from '@nestjs/config';
         return addTransactionalDataSource(new DataSource(options));
       },
     }),
+    LoggerModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

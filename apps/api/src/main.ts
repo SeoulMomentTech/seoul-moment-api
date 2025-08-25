@@ -6,9 +6,15 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { initializeTransactionalContext } from 'typeorm-transactional';
 import moment from 'moment-timezone';
 import helmet from 'helmet';
+import { swaggerSettring } from '@app/common/docs/swagger';
+import morganSetting from '@app/common/log/morgan';
+import { NextFunction } from 'express';
+import { LoggerService } from '@app/common/log/logger.service';
+import { v4 as uuidV4 } from 'uuid';
 
 async function bootstrap() {
-  // use @Transactional
+  const config = Configuration.getConfig();
+
   initializeTransactionalContext();
 
   moment.tz.setDefault('Asia/Seoul');
@@ -16,32 +22,38 @@ async function bootstrap() {
     cors: true,
   });
 
+  const logger = app.get(LoggerService);
+
   app.use(
     helmet({
       contentSecurityPolicy: false,
     }),
   );
 
-  const logger = new Logger('Bootstrap');
-  const config = Configuration.getConfig();
+  app.use((req: Request, res: Response, next: NextFunction) =>
+    logger.scope(uuidV4(), next),
+  );
+
+  morganSetting(app);
+  swaggerSettring(app);
 
   // 환경 정보 로깅
-  logger.log(`🚀 Starting Seoul Moment API Server`);
-  logger.log(`📦 Environment: ${config.NODE_ENV}`);
-  logger.log(`🔧 Port: ${config.PORT}`);
-  logger.log(`📊 API Version: ${config.API_VERSION}`);
-  logger.log(
+  logger.info(`🚀 Starting Seoul Moment API Server`);
+  logger.info(`📦 Environment: ${config.NODE_ENV}`);
+  logger.info(`🔧 Port: ${config.PORT}`);
+  logger.info(`📊 API Version: ${config.API_VERSION}`);
+  logger.info(
     `🗄️  Database: ${config.DATABASE_HOST}:${config.DATABASE_PORT}/${config.DATABASE_NAME}`,
   );
 
   if (config.REDIS_HOST) {
-    logger.log(`🔴 Redis: ${config.REDIS_HOST}:${config.REDIS_PORT}`);
+    logger.info(`🔴 Redis: ${config.REDIS_HOST}:${config.REDIS_PORT}`);
   }
 
   await app.listen(config.PORT);
 
-  logger.log(`✅ Server is running on http://localhost:${config.PORT}`);
-  logger.log(`📚 Environment configuration loaded successfully`);
+  logger.info(`✅ Server is running on http://localhost:${config.PORT}`);
+  logger.info(`📚 Environment configuration loaded successfully`);
 }
 
 bootstrap().catch((error) => {

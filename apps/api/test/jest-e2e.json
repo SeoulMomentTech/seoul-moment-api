@@ -16,6 +16,8 @@
     "@app/config/(.*)": "<rootDir>/../libs/config/src/$1",
     "@app/config": "<rootDir>/../libs/config/src",
     "@app/repository/(.*)": "<rootDir>/../libs/repository/src/$1",
-    "@app/repository": "<rootDir>/../libs/repository/src"
+    "@app/repository": "<rootDir>/../libs/repository/src",
+    "@app/common/(.*)": "<rootDir>/../libs/common/src/$1",
+    "@app/common": "<rootDir>/../libs/common/src"
   }
 }
