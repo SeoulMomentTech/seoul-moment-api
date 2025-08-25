@@ -1,9 +1,10 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Param } from '@nestjs/common';
 import { BrandService } from './brand.service';
 import { ApiOperation } from '@nestjs/swagger';
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseDataDto } from '@app/common/type/response-data';
 import { GetBrandIntroduceResponse } from './brand.dto';
+import { ResponseException } from '@app/common/decorator/response-exception.decorator';
 
 @Controller('brand')
 export class BrandController {
@@ -14,6 +15,7 @@ export class BrandController {
     summary: 'Get Brand Introduce',
   })
   @ResponseData(GetBrandIntroduceResponse)
+  @ResponseException(HttpStatus.NOT_FOUND, '존재하는 브랜드가 없음')
   async getBrandIntroduce(
     @Param('id') id: number,
   ): Promise<ResponseDataDto<GetBrandIntroduceResponse>> {

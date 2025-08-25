@@ -31,6 +31,7 @@ export class BrandSectionEntity extends CommonEntity {
 
   @ManyToOne(() => BrandEntity, (brand) => brand.brandSectionList, {
     onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'brand_id' })
   brand: BrandEntity;

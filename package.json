@@ -16,11 +16,17 @@
     "start:prod": "cross-env NODE_ENV=production node dist/apps/api/main",
     "start:debug": "nest start api --debug --watch",
     "lint": "eslint \"{apps,libs}/**/*.ts\" --fix",
-    "test": "cross-env NODE_ENV=test jest",
-    "test:watch": "cross-env NODE_ENV=test jest --watch",
-    "test:cov": "cross-env NODE_ENV=test jest --coverage",
-    "test:debug": "cross-env NODE_ENV=test node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "cross-env NODE_ENV=test jest --config ./apps/api/test/jest-e2e.json"
+    "test": "cross-env NODE_ENV=test jest --selectProjects unit",
+    "test:watch": "cross-env NODE_ENV=test jest --watch --selectProjects unit",
+    "test:cov": "cross-env NODE_ENV=test jest --coverage --selectProjects unit",
+    "test:debug": "cross-env NODE_ENV=test node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --selectProjects unit",
+    "test:e2e": "cross-env NODE_ENV=test jest --config ./apps/api/test/jest-e2e.json",
+    "test:integration": "cross-env NODE_ENV=test jest --selectProjects integration",
+    "test:integration:watch": "cross-env NODE_ENV=test jest --watch --selectProjects integration",
+    "test:db:up": "docker-compose -f docker-compose.test.yml up -d",
+    "test:db:down": "docker-compose -f docker-compose.test.yml down -v",
+    "test:db:logs": "docker-compose -f docker-compose.test.yml logs -f test-db",
+    "test:full": "npm run test:db:up && sleep 5 && npm run test:integration && npm run test:db:down"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -86,13 +92,54 @@
     "testEnvironment": "node",
     "roots": [
       "<rootDir>/libs/",
-      "<rootDir>/apps/"
+      "<rootDir>/apps/",
+      "<rootDir>/test/"
     ],
     "moduleNameMapper": {
       "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
       "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",
       "^@app/repository(|/.*)$": "<rootDir>/libs/repository/src/$1",
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1"
-    }
+    },
+    "projects": [
+      {
+        "displayName": "unit",
+        "testMatch": ["<rootDir>/(libs|apps)/**/*.spec.ts"],
+        "testEnvironment": "node",
+        "moduleFileExtensions": ["js", "json", "ts"],
+        "rootDir": ".",
+        "transform": {
+          "^.+\\.(t|j)s$": "ts-jest"
+        },
+        "moduleNameMapper": {
+          "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
+          "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1", 
+          "^@app/repository(|/.*)$": "<rootDir>/libs/repository/src/$1",
+          "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1"
+        }
+      },
+      {
+        "displayName": "integration",
+        "testMatch": ["<rootDir>/test/**/*.spec.ts"],
+        "testEnvironment": "node",
+        "setupFilesAfterEnv": ["<rootDir>/test/setup/jest.setup.ts"],
+        "moduleFileExtensions": ["js", "json", "ts"],
+        "rootDir": ".",
+        "transform": {
+          "^.+\\.(t|j)s$": "ts-jest"
+        },
+        "moduleNameMapper": {
+          "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
+          "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",
+          "^@app/repository(|/.*)$": "<rootDir>/libs/repository/src/$1", 
+          "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1"
+        },
+        "globals": {
+          "ts-jest": {
+            "tsconfig": "tsconfig.json"
+          }
+        }
+      }
+    ]
   }
 }

@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  test-db:
+    image: postgres:15-alpine
+    container_name: seoul-moment-test-db
+    environment:
+      POSTGRES_DB: seoul_moment_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"  # 테스트용으로 다른 포트 사용
+    volumes:
+      - test_db_data:/var/lib/postgresql/data
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d seoul_moment_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  test_db_data:
+
+networks:
+  test-network:
+    driver: bridge

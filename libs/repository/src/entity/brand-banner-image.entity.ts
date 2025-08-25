@@ -9,7 +9,7 @@ import {
 import { CommonEntity } from './common.entity';
 import { BrandEntity } from './brand.entity';
 
-@Entity('brand_banner_images')
+@Entity('brand_banner_image')
 @Index(['brandId', 'sortOrder'])
 export class BrandBannerImageEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
@@ -29,6 +29,7 @@ export class BrandBannerImageEntity extends CommonEntity {
 
   @ManyToOne(() => BrandEntity, (brand) => brand.brandBannerImageList, {
     onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'brand_id' })
   brand: BrandEntity;

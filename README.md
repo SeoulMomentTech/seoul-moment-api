@@ -1,99 +1,179 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Seoul Moment API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+서울의 특별한 순간들을 담은 브랜드 소개 API 서비스
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🏗️ 프로젝트 구조
 
-## Description
+이 프로젝트는 NestJS 기반의 모노레포 구조로 구성되어 있습니다.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```
+seoul-moment-api/
+├── apps/api/                    # API 애플리케이션
+├── libs/
+│   ├── common/                  # 공통 유틸리티 (로거, 예외처리)
+│   ├── config/                  # 환경설정 관리
+│   ├── database/                # 데이터베이스 설정
+│   └── repository/              # 엔티티 및 레포지토리
+└── test/                        # 통합 테스트
 ```
 
-## Compile and run the project
+## 🚀 주요 기능
 
+- **브랜드 관리**: 브랜드 정보, 배너 이미지, 정보 섹션 관리
+- **환경별 설정**: local, development, test, production 환경 지원
+- **로깅**: Winston 기반 구조화된 로깅 및 Morgan HTTP 로깅
+- **데이터베이스**: PostgreSQL + TypeORM, UTC 시간 관리
+- **통합 테스트**: Docker PostgreSQL을 활용한 실제 DB 테스트
+
+## 🛠️ 설치 및 실행
+
+### 프로젝트 설치
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
-
+### 애플리케이션 실행
 ```bash
-# unit tests
-$ npm run test
+# 로컬 개발 환경 (NODE_ENV=local)
+npm run start:local
 
-# e2e tests
-$ npm run test:e2e
+# 개발 환경 (NODE_ENV=development)
+npm run start:dev
 
-# test coverage
-$ npm run test:cov
+# 프로덕션 환경
+npm run start:prod
+
+# 디버그 모드
+npm run start:debug
 ```
 
-## Deployment
+## 🧪 테스트
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### 단위 테스트
 ```bash
-$ npm install -g mau
-$ mau deploy
+# 단위 테스트 실행
+npm run test
+
+# 단위 테스트 watch 모드
+npm run test:watch
+
+# 커버리지 포함 단위 테스트
+npm run test:cov
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 통합 테스트 (실제 PostgreSQL 사용)
+```bash
+# 전체 통합 테스트 (추천)
+# DB 컨테이너 시작 → 테스트 → 컨테이너 정리
+npm run test:full
 
-## Resources
+# 단계별 실행
+npm run test:db:up        # PostgreSQL 테스트 컨테이너 시작
+npm run test:integration  # 통합 테스트 실행
+npm run test:db:down      # 테스트 컨테이너 정리
 
-Check out a few resources that may come in handy when working with NestJS:
+# 개발 중 유용한 명령어
+npm run test:integration:watch  # 통합 테스트 watch 모드
+npm run test:db:logs           # 테스트 DB 로그 확인
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### E2E 테스트
+```bash
+npm run test:e2e
+```
 
-## Support
+## 📊 데이터베이스 스키마
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### 브랜드 테이블 구조
+```sql
+brands                    # 브랜드 기본 정보
+├── brand_banner_images   # 배너 이미지 (1:N, 무제한)
+├── brand_info_sections   # 정보 섹션 (1:N, 무제한)
+    └── brand_section_images  # 섹션 이미지 (1:N, 무제한)
+```
 
-## Stay in touch
+- 모든 관계는 eager loading으로 설정
+- sortOrder 필드로 정렬 순서 관리
+- CASCADE 삭제로 데이터 일관성 보장
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 🔧 개발 히스토리
 
-## License
+### 완료된 주요 기능들
+- ✅ **모노레포 구조 구축** (apps/api, libs 분리)
+- ✅ **환경설정 시스템** (local/dev/test/prod 환경별 설정)
+- ✅ **로깅 시스템** (Winston + Morgan, JSON 파싱 로그)
+- ✅ **데이터베이스 설정** (PostgreSQL + TypeORM, UTC 시간 처리)
+- ✅ **브랜드 테이블 설계** (Brand, BannerImage, InfoSection, SectionImage)
+- ✅ **Repository/Service 계층** (데이터 접근 + 비즈니스 로직 분리)
+- ✅ **API 응답 DTO** (Swagger 문서화 포함)
+- ✅ **헬스체크 API** (GET /health)
+- ✅ **통합 테스트 환경** (Docker PostgreSQL + 실제 DB 테스트)
+- ✅ **완전한 테스트 격리** (외래키 제약조건 비활성화 + TRUNCATE 정리)
+- ✅ **13개 통합 테스트 완료** (CRUD, 에러 처리, 동시성, CASCADE 테스트)
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### API 엔드포인트
+```
+GET /health                    # 헬스체크
+GET /brand/introduce/:id       # 브랜드 소개 페이지 조회
+```
+
+## ✅ 테스트 현황
+
+### 통합 테스트 결과
+- **총 13개 테스트 모두 통과** ✅
+- **완전한 테스트 격리** 구현
+- **실제 PostgreSQL** 사용으로 신뢰할 수 있는 테스트
+
+### 테스트 커버리지
+```
+BrandRepositoryService Integration Tests
+├── findAllNormalBrandList (4개 테스트)
+│   ├── NORMAL 상태 브랜드만 반환
+│   ├── NORMAL 브랜드 없을 때 빈 배열 반환  
+│   ├── eager loading으로 관련 데이터 포함
+│   └── sortOrder에 따른 정렬 검증
+├── findBrandById (3개 테스트)
+│   ├── 존재하는 NORMAL 브랜드 반환
+│   ├── 존재하지 않는 브랜드 시 null 반환
+│   └── BLOCK 상태 브랜드 시 null 반환
+├── getBrandById (3개 테스트)
+│   ├── 존재하는 NORMAL 브랜드 반환
+│   ├── 존재하지 않는 브랜드 시 ServiceError 발생
+│   └── BLOCK 상태 브랜드 시 ServiceError 발생
+└── Database constraints and validation (2개 테스트)
+    ├── 동시성 처리 테스트
+    └── CASCADE 삭제 무결성 테스트
+```
+
+## 🐛 문제 해결
+
+### 환경변수 로딩 이슈
+환경변수가 undefined로 나올 때:
+1. `.env.{환경}` 파일 확인
+2. `ConfigModule.forRoot()` 설정 확인
+3. `NODE_ENV` 환경변수 설정 확인
+
+### 테스트 DB 연결 실패
+```bash
+# Docker 상태 확인
+docker ps
+
+# 로그 확인
+npm run test:db:logs
+
+# 포트 충돌 시 컨테이너 재시작
+npm run test:db:down
+npm run test:db:up
+```
+
+### 테스트 관련 문제 해결
+상세한 테스트 환경 설정 및 문제 해결 가이드는 [CLAUDE.md](./CLAUDE.md)를 참고하세요.
+
+## 📚 기술 스택
+
+- **Framework**: NestJS
+- **Database**: PostgreSQL + TypeORM
+- **Logging**: Winston + Morgan
+- **Testing**: Jest + Docker PostgreSQL
+- **Documentation**: Swagger/OpenAPI
+- **Code Quality**: ESLint + Prettier

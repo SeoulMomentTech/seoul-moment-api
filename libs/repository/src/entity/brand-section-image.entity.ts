@@ -9,7 +9,7 @@ import {
 import { CommonEntity } from './common.entity';
 import { BrandSectionEntity } from './brand-info-section.entity';
 
-@Entity('brand_section_images')
+@Entity('brand_section_image')
 @Index(['sectionId', 'sortOrder'])
 export class BrandSectionImageEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
@@ -32,6 +32,7 @@ export class BrandSectionImageEntity extends CommonEntity {
     (section) => section.brandSectionImageList,
     {
       onDelete: 'CASCADE',
+      createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
     },
   )
   @JoinColumn({ name: 'section_id' })
