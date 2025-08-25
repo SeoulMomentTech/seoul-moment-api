@@ -1,6 +1,6 @@
 export enum SupportEnv {
   LOCAL = 'local',
-  DEV = 'dev',
+  DEV = 'development',
   TEST = 'test',
-  PROD = 'prod',
+  PROD = 'production',
 }
