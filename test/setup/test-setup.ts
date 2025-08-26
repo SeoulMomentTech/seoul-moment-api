@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { TestDatabaseModule } from './test-database.module';
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { BrandService } from '../../apps/api/src/module/brand/brand.service';
 
 export class TestSetup {
   private static dataSource: DataSource;
@@ -17,7 +18,7 @@ export class TestSetup {
 
     this.module = await Test.createTestingModule({
       imports: [TestDatabaseModule],
-      providers: [BrandRepositoryService],
+      providers: [BrandRepositoryService, BrandService],
     }).compile();
 
     this.dataSource = this.module.get<DataSource>(DataSource);
@@ -48,8 +49,8 @@ export class TestSetup {
     }
 
     try {
-      // 외래키 제약조건이 없으므로 간단하게 각 테이블 정리 (실제 테이블 이름 사용)
-      const tables = ['brand', 'brand_banner_image', 'brand_section', 'brand_section_image'];
+      // 자식 테이블부터 순서대로 정리 (외래키 참조 순서 고려)
+      const tables = ['brand_section_image', 'brand_banner_image', 'brand_section', 'brand'];
       
       for (const tableName of tables) {
         try {
@@ -63,15 +64,23 @@ export class TestSetup {
           `);
           
           if (exists[0].exists) {
-            await this.dataSource.query(`TRUNCATE TABLE ${tableName} RESTART IDENTITY`);
+            // CASCADE 옵션으로 참조된 데이터도 함께 삭제
+            await this.dataSource.query(`TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE`);
           }
         } catch (error) {
-          // 테이블이 없는 경우는 정상적인 상황이므로 로깅만 수행
+          // 여전히 실패하면 DELETE 사용 (느리지만 확실함)
           if (!error.message.includes('does not exist')) {
-            console.error(`Failed to clear table ${tableName}:`, error.message);
+            try {
+              await this.dataSource.query(`DELETE FROM "${tableName}"`);
+              // 시퀀스 초기화
+              await this.dataSource.query(`ALTER SEQUENCE IF EXISTS "${tableName}_id_seq" RESTART WITH 1`);
+            } catch (deleteError) {
+              console.warn(`Warning: Failed to clear table ${tableName}:`, deleteError.message);
+            }
           }
         }
       }
+      
     } catch (error) {
       console.error('Database cleanup failed:', error.message);
     }

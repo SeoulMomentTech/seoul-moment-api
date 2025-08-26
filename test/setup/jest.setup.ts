@@ -7,7 +7,7 @@ beforeAll(async () => {
   await TestSetup.clearDatabase();
 });
 
-// 각 테스트 후 데이터베이스 정리
+// 각 테스트 후 데이터베이스 정리 (테스트 격리 보장)
 afterEach(async () => {
   await TestSetup.clearDatabase();
 });

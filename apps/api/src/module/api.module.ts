@@ -9,6 +9,10 @@ import { LoggerModule } from '@app/common/log/logger.module';
 import { RepositoryModule } from '@app/repository/repository.module';
 import { HealthController } from '../health.controller';
 import { BrandModule } from './brand/brand.module';
+import { APP_FILTER } from '@nestjs/core';
+import { HttpExceptionFilter } from '@app/common/exception/http-exception-filter';
+import { ServiceErrorFilter } from '@app/common/exception/service-exception-filter';
+import { InternalExceptionFilter } from '@app/common/exception/internal-exception-filter';
 
 @Module({
   imports: [
@@ -33,5 +37,19 @@ import { BrandModule } from './brand/brand.module';
     BrandModule,
   ],
   controllers: [HealthController],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: ServiceErrorFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: InternalExceptionFilter,
+    },
+  ],
 })
 export class AppModule {}

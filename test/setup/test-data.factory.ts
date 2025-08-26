@@ -11,7 +11,9 @@ export class TestDataFactory {
   /**
    * 기본 브랜드 생성
    */
-  async createBrand(overrides: Partial<BrandEntity> = {}): Promise<BrandEntity> {
+  async createBrand(
+    overrides: Partial<BrandEntity> = {},
+  ): Promise<BrandEntity> {
     const brandRepository = this.dataSource.getRepository(BrandEntity);
 
     const brand = brandRepository.create({
@@ -31,7 +33,9 @@ export class TestDataFactory {
     brand: BrandEntity,
     overrides: Partial<BrandBannerImageEntity> = {},
   ): Promise<BrandBannerImageEntity> {
-    const bannerRepository = this.dataSource.getRepository(BrandBannerImageEntity);
+    const bannerRepository = this.dataSource.getRepository(
+      BrandBannerImageEntity,
+    );
 
     const banner = bannerRepository.create({
       brandId: brand.id,
@@ -47,7 +51,7 @@ export class TestDataFactory {
   /**
    * 브랜드 정보 섹션 생성
    */
-  async createInfoSection(
+  async createBrandSection(
     brand: BrandEntity,
     overrides: Partial<BrandSectionEntity> = {},
   ): Promise<BrandSectionEntity> {
@@ -71,7 +75,9 @@ export class TestDataFactory {
     section: BrandSectionEntity,
     overrides: Partial<BrandSectionImageEntity> = {},
   ): Promise<BrandSectionImageEntity> {
-    const imageRepository = this.dataSource.getRepository(BrandSectionImageEntity);
+    const imageRepository = this.dataSource.getRepository(
+      BrandSectionImageEntity,
+    );
 
     const image = imageRepository.create({
       sectionId: section.id,
@@ -87,12 +93,14 @@ export class TestDataFactory {
   /**
    * 완전한 브랜드 데이터 생성 (배너, 섹션, 섹션 이미지 포함)
    */
-  async createFullBrand(options: {
-    brand?: Partial<BrandEntity>;
-    bannerCount?: number;
-    sectionCount?: number;
-    imagesPerSection?: number;
-  } = {}): Promise<BrandEntity> {
+  async createFullBrand(
+    options: {
+      brand?: Partial<BrandEntity>;
+      bannerCount?: number;
+      sectionCount?: number;
+      imagesPerSection?: number;
+    } = {},
+  ): Promise<BrandEntity> {
     const {
       brand: brandData = {},
       bannerCount = 2,
@@ -114,7 +122,7 @@ export class TestDataFactory {
 
     // 3. 정보 섹션들과 섹션 이미지들 생성
     for (let i = 1; i <= sectionCount; i++) {
-      const section = await this.createInfoSection(brand, {
+      const section = await this.createBrandSection(brand, {
         title: `Section ${i}`,
         content: `Content for section ${i}`,
         sortOrder: i,
@@ -140,28 +148,36 @@ export class TestDataFactory {
     const brands = [];
 
     // NORMAL 상태 브랜드
-    brands.push(await this.createBrand({
-      name: 'Normal Brand',
-      status: BrandStatus.NORMAL,
-    }));
+    brands.push(
+      await this.createBrand({
+        name: 'Normal Brand',
+        status: BrandStatus.NORMAL,
+      }),
+    );
 
     // WAIT 상태 브랜드
-    brands.push(await this.createBrand({
-      name: 'Waiting Brand',
-      status: BrandStatus.WAIT,
-    }));
+    brands.push(
+      await this.createBrand({
+        name: 'Waiting Brand',
+        status: BrandStatus.WAIT,
+      }),
+    );
 
     // BLOCK 상태 브랜드
-    brands.push(await this.createBrand({
-      name: 'Blocked Brand',
-      status: BrandStatus.BLOCK,
-    }));
+    brands.push(
+      await this.createBrand({
+        name: 'Blocked Brand',
+        status: BrandStatus.BLOCK,
+      }),
+    );
 
     // DELETE 상태 브랜드
-    brands.push(await this.createBrand({
-      name: 'Deleted Brand',
-      status: BrandStatus.DELETE,
-    }));
+    brands.push(
+      await this.createBrand({
+        name: 'Deleted Brand',
+        status: BrandStatus.DELETE,
+      }),
+    );
 
     return brands;
   }

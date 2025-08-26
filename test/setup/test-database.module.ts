@@ -5,6 +5,7 @@ import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-info-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
+import { LoggerModule } from '@app/common/log/logger.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-im
       envFilePath: '.env.test',
       isGlobal: true,
     }),
+    LoggerModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST,
@@ -36,6 +38,6 @@ import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-im
       BrandSectionImageEntity,
     ]),
   ],
-  exports: [TypeOrmModule],
+  exports: [TypeOrmModule, LoggerModule],
 })
 export class TestDatabaseModule {}
