@@ -26,7 +26,7 @@ export class GetBrandIntroduceSection {
       content: entity.content,
       imageList: entity.brandSectionImageList
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((v) => v.imageUrl),
+        .map((v) => v.getImage()),
     });
   }
 }
@@ -65,7 +65,7 @@ export class GetBrandIntroduceResponse {
       id: entity.id,
       bannerList: entity.brandBannerImageList
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((v) => v.imageUrl),
+        .map((v) => v.getImage()),
       name: entity.name,
       description: entity.description,
       section: entity.brandSectionList

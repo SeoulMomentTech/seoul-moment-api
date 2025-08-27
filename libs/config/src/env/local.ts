@@ -5,6 +5,8 @@ const config: ConfigImpl = {
   PORT: 3000,
   API_VERSION: 'v1',
 
+  IMAGE_DOMAIN_NAME: process.env.IMAGE_DOMAIN_NAME || '',
+
   DATABASE_HOST: process.env.DATABASE_HOST,
   DATABASE_PORT: parseInt(process.env.DATABASE_PORT),
   DATABASE_USERNAME: process.env.DATABASE_USERNAME,

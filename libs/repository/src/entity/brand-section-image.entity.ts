@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { CommonEntity } from './common.entity';
 import { BrandSectionEntity } from './brand-info-section.entity';
+import { Configuration } from '@app/config/configuration';
 
 @Entity('brand_section_image')
 @Index(['sectionId', 'sortOrder'])
@@ -37,4 +38,8 @@ export class BrandSectionImageEntity extends CommonEntity {
   )
   @JoinColumn({ name: 'section_id' })
   section: BrandSectionEntity;
+
+  getImage(): string {
+    return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imageUrl}`;
+  }
 }

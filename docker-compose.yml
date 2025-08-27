@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   api:
     build:
@@ -9,16 +7,8 @@ services:
         ENV: ${NODE_ENV}
         APP: api
         PORT: 3000
+    image: 156321659479.dkr.ecr.ap-northeast-2.amazonaws.com/seoul-moment-api-dev:latest
     environment:
-      - TZ=Asia/Seoul # 컨테이너 내부 시간대를 KST로 설정
-    image: api
+      - TZ=Asia/Seoul
     ports:
-      - '3000:3000'
-    networks:
-      - app
-    restart: always
-
-networks:
-  app:
-    external: true
-    name: app
+      - '3000:3000' # 로컬 테스트용 (ECS에선 미사용)

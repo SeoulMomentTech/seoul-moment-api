@@ -3,6 +3,7 @@ export interface ConfigImpl {
   NODE_ENV: string;
   PORT: number;
   API_VERSION: string;
+  IMAGE_DOMAIN_NAME: string;
 
   // Database Config (PostgreSQL)
   DATABASE_HOST: string;
