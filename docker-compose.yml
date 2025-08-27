@@ -4,7 +4,6 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        ENV: ${NODE_ENV}
         APP: api
         PORT: 3000
     image: 156321659479.dkr.ecr.ap-northeast-2.amazonaws.com/seoul-moment-api-dev:latest
