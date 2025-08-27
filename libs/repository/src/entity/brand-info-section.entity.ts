@@ -7,9 +7,10 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { CommonEntity } from './common.entity';
-import { BrandEntity } from './brand.entity';
+
 import { BrandSectionImageEntity } from './brand-section-image.entity';
+import { BrandEntity } from './brand.entity';
+import { CommonEntity } from './common.entity';
 
 @Entity('brand_section')
 @Index(['brandId', 'sortOrder'])

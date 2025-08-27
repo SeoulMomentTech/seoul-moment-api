@@ -7,6 +7,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Response } from 'express';
+
 import { LoggerService } from '../log/logger.service';
 
 @Catch(InternalServerErrorException)

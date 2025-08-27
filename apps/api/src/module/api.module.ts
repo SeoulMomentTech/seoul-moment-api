@@ -1,18 +1,19 @@
-import { Module } from '@nestjs/common';
-import { DatabaseModule } from '@app/database/database.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { DatabaseService } from '@app/database/database.service';
-import { addTransactionalDataSource } from 'typeorm-transactional';
-import { DataSource } from 'typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { HttpExceptionFilter } from '@app/common/exception/http-exception-filter';
+import { InternalExceptionFilter } from '@app/common/exception/internal-exception-filter';
+import { ServiceErrorFilter } from '@app/common/exception/service-exception-filter';
 import { LoggerModule } from '@app/common/log/logger.module';
+import { DatabaseModule } from '@app/database/database.module';
+import { DatabaseService } from '@app/database/database.service';
 import { RepositoryModule } from '@app/repository/repository.module';
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER } from '@nestjs/core';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { addTransactionalDataSource } from 'typeorm-transactional';
+
 import { HealthController } from '../health.controller';
 import { BrandModule } from './brand/brand.module';
-import { APP_FILTER } from '@nestjs/core';
-import { HttpExceptionFilter } from '@app/common/exception/http-exception-filter';
-import { ServiceErrorFilter } from '@app/common/exception/service-exception-filter';
-import { InternalExceptionFilter } from '@app/common/exception/internal-exception-filter';
 
 @Module({
   imports: [

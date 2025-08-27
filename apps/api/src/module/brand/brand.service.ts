@@ -1,5 +1,6 @@
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { Injectable } from '@nestjs/common';
+
 import { GetBrandIntroduceResponse } from './brand.dto';
 
 @Injectable()

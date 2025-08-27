@@ -1,21 +1,23 @@
-import { NestFactory } from '@nestjs/core';
+/* eslint-disable max-lines-per-function */
+import { swaggerSettring } from '@app/common/docs/swagger';
+import { LoggerService } from '@app/common/log/logger.service';
+import morganSetting from '@app/common/log/morgan';
+import { Configuration } from '@app/config/configuration';
 import {
   BadRequestException,
   HttpStatus,
   Logger,
   ValidationPipe,
 } from '@nestjs/common';
-import { AppModule } from './module/api.module';
-import { Configuration } from '@app/config/configuration';
+import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { initializeTransactionalContext } from 'typeorm-transactional';
-import moment from 'moment-timezone';
-import helmet from 'helmet';
-import { swaggerSettring } from '@app/common/docs/swagger';
-import morganSetting from '@app/common/log/morgan';
 import { NextFunction } from 'express';
-import { LoggerService } from '@app/common/log/logger.service';
+import helmet from 'helmet';
+import moment from 'moment-timezone';
+import { initializeTransactionalContext } from 'typeorm-transactional';
 import { v4 as uuidV4 } from 'uuid';
+
+import { AppModule } from './module/api.module';
 
 async function bootstrap() {
   const config = Configuration.getConfig();

@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { SupportEnv } from '@app/config/enum/config.enum';
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AsyncLocalStorage } from 'async_hooks';
 import winston from 'winston';
 

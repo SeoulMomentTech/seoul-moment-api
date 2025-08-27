@@ -1,7 +1,7 @@
 import { BrandSectionEntity } from '@app/repository/entity/brand-info-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
-import { plainToInstance } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { plainToInstance } from 'class-transformer';
 
 export class GetBrandIntroduceSection {
   @ApiProperty({ description: '섹션 제목', example: '브랜드 스토리' })

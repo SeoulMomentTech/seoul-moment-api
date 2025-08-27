@@ -1,8 +1,9 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { CommonEntity } from './common.entity';
-import { BrandStatus } from '../enum/brand.enum';
+
 import { BrandBannerImageEntity } from './brand-banner-image.entity';
 import { BrandSectionEntity } from './brand-info-section.entity';
+import { CommonEntity } from './common.entity';
+import { BrandStatus } from '../enum/brand.enum';
 
 @Entity('brand')
 export class BrandEntity extends CommonEntity {

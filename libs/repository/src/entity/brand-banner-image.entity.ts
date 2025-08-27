@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import {
   Column,
   Entity,
@@ -6,9 +7,9 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { CommonEntity } from './common.entity';
+
 import { BrandEntity } from './brand.entity';
-import { Configuration } from '@app/config/configuration';
+import { CommonEntity } from './common.entity';
 
 @Entity('brand_banner_image')
 @Index(['brandId', 'sortOrder'])

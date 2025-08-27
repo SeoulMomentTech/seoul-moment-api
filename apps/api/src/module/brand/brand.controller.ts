@@ -1,3 +1,6 @@
+import { ResponseData } from '@app/common/decorator/response-data.decorator';
+import { ResponseException } from '@app/common/decorator/response-exception.decorator';
+import { ResponseDataDto } from '@app/common/type/response-data';
 import {
   Controller,
   Get,
@@ -5,12 +8,10 @@ import {
   Param,
   ParseIntPipe,
 } from '@nestjs/common';
-import { BrandService } from './brand.service';
 import { ApiOperation } from '@nestjs/swagger';
-import { ResponseData } from '@app/common/decorator/response-data.decorator';
-import { ResponseDataDto } from '@app/common/type/response-data';
+
 import { GetBrandIntroduceResponse } from './brand.dto';
-import { ResponseException } from '@app/common/decorator/response-exception.decorator';
+import { BrandService } from './brand.service';
 
 @Controller('brand')
 export class BrandController {
