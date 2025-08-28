@@ -52,6 +52,24 @@
       "compilerOptions": {
         "tsConfigPath": "apps/api/tsconfig.app.json"
       }
+    },
+    "external": {
+      "type": "library",
+      "root": "libs/external",
+      "entryFile": "index",
+      "sourceRoot": "libs/external/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/external/tsconfig.lib.json"
+      }
+    },
+    "http": {
+      "type": "library",
+      "root": "libs/http",
+      "entryFile": "index",
+      "sourceRoot": "libs/http/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/http/tsconfig.lib.json"
+      }
     }
   },
   "monorepo": true,

@@ -68,6 +68,22 @@
         {
           "name": "REDIS_DB",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:REDIS_DB::"
+        },
+        {
+          "name": "GOOGLE_SHEET_SERVICE_EMAIL",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:GOOGLE_SHEET_SERVICE_EMAIL::"
+        },
+        {
+          "name": "GOOGLE_SHEET_SERVICE_PRIMARY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:GOOGLE_SHEET_SERVICE_PRIMARY::"
+        },
+        {
+          "name": "SERPER_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:SERPER_URL::"
+        },
+        {
+          "name": "SERPER_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:SERPER_API_KEY::"
         }
       ],
       "healthCheck": {

@@ -43,6 +43,18 @@
       ],
       "@app/common/*": [
         "libs/common/src/*"
+      ],
+      "@app/external": [
+        "libs/external/src"
+      ],
+      "@app/external/*": [
+        "libs/external/src/*"
+      ],
+      "@app/http": [
+        "libs/http/src"
+      ],
+      "@app/http/*": [
+        "libs/http/src/*"
       ]
     }
   }

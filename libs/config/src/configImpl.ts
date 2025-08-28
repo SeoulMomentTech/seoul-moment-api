@@ -20,4 +20,11 @@ export interface ConfigImpl {
   REDIS_HOST?: string;
   REDIS_PORT?: number;
   REDIS_DB?: number;
+
+  // Google api
+  GOOGLE_SHEET_SERVICE_EMAIL: string;
+  GOOGLE_SHEET_SERVICE_PRIMARY: string;
+
+  SERPER_URL: string;
+  SERPER_API_KEY: string;
 }

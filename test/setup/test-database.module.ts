@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
-import { BrandEntity } from '@app/repository/entity/brand.entity';
+import { LoggerModule } from '@app/common/log/logger.module';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-info-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
-import { LoggerModule } from '@app/common/log/logger.module';
+import { BrandEntity } from '@app/repository/entity/brand.entity';
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [

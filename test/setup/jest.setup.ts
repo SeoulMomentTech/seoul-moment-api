@@ -1,3 +1,8 @@
+import * as dotenv from 'dotenv';
+
+// 모든 테스트 실행 전에 환경변수 로드 (가장 먼저!)
+dotenv.config({ path: '.env.test' });
+
 import { TestSetup } from './test-setup';
 
 // 테스트 환경 설정

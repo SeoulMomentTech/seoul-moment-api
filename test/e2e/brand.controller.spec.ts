@@ -1,20 +1,22 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { HttpExceptionFilter } from '@app/common/exception/http-exception-filter';
+import { ServiceErrorFilter } from '@app/common/exception/service-exception-filter';
+import { LoggerService } from '@app/common/log/logger.service';
+import { Configuration } from '@app/config/configuration';
+import { BrandStatus } from '@app/repository/enum/brand.enum';
 import {
   INestApplication,
   ValidationPipe,
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
+
 import { BrandModule } from '../../apps/api/src/module/brand/brand.module';
+import { TestDataFactory } from '../setup/test-data.factory';
 import { TestDatabaseModule } from '../setup/test-database.module';
 import { TestSetup } from '../setup/test-setup';
-import { TestDataFactory } from '../setup/test-data.factory';
-import { BrandStatus } from '@app/repository/enum/brand.enum';
-import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
-import { HttpExceptionFilter } from '@app/common/exception/http-exception-filter';
-import { ServiceErrorFilter } from '@app/common/exception/service-exception-filter';
-import { LoggerService } from '@app/common/log/logger.service';
 
 describe('BrandController (E2E)', () => {
   let app: INestApplication;
@@ -59,7 +61,6 @@ describe('BrandController (E2E)', () => {
     testDataFactory = new TestDataFactory(TestSetup.getDataSource());
   });
 
-
   afterAll(async () => {
     await app.close();
     await TestSetup.cleanup();
@@ -101,7 +102,7 @@ describe('BrandController (E2E)', () => {
       });
 
       // 섹션 데이터 검증
-      data.section.forEach((section: any, index: number) => {
+      data.section.forEach((section: any) => {
         expect(section).toHaveProperty('title');
         expect(section).toHaveProperty('content');
         expect(section).toHaveProperty('imageList');
@@ -182,22 +183,22 @@ describe('BrandController (E2E)', () => {
       // 배너를 역순으로 생성
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 3,
-        imageUrl: 'https://example.com/banner3.jpg',
+        imageUrl: '/banner3.jpg',
         altText: 'Banner 3',
       });
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 1,
-        imageUrl: 'https://example.com/banner1.jpg',
+        imageUrl: '/banner1.jpg',
         altText: 'Banner 1',
       });
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 2,
-        imageUrl: 'https://example.com/banner2.jpg',
+        imageUrl: '/banner2.jpg',
         altText: 'Banner 2',
       });
 
       // 섹션을 역순으로 생성
-      const section2 = await testDataFactory.createBrandSection(brand, {
+      await testDataFactory.createBrandSection(brand, {
         title: 'Second Section',
         content: 'Content 2',
         sortOrder: 2,
@@ -211,12 +212,12 @@ describe('BrandController (E2E)', () => {
       // 첫 번째 섹션에 이미지를 역순으로 생성
       await testDataFactory.createSectionImage(section1, {
         sortOrder: 2,
-        imageUrl: 'https://example.com/section1-2.jpg',
+        imageUrl: '/section1-2.jpg',
         altText: 'Section 1 Image 2',
       });
       await testDataFactory.createSectionImage(section1, {
         sortOrder: 1,
-        imageUrl: 'https://example.com/section1-1.jpg',
+        imageUrl: '/section1-1.jpg',
         altText: 'Section 1 Image 1',
       });
 
@@ -229,9 +230,9 @@ describe('BrandController (E2E)', () => {
       const data = response.body.data;
 
       expect(data.bannerList).toEqual([
-        'https://example.com/banner1.jpg',
-        'https://example.com/banner2.jpg',
-        'https://example.com/banner3.jpg',
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/banner1.jpg`,
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/banner2.jpg`,
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/banner3.jpg`,
       ]);
 
       expect(data.section).toHaveLength(2);
@@ -239,8 +240,8 @@ describe('BrandController (E2E)', () => {
       expect(data.section[1].title).toBe('Second Section');
 
       expect(data.section[0].imageList).toEqual([
-        'https://example.com/section1-1.jpg',
-        'https://example.com/section1-2.jpg',
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/section1-1.jpg`,
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/section1-2.jpg`,
       ]);
     });
 
@@ -306,7 +307,7 @@ describe('BrandController (E2E)', () => {
       for (let i = 1; i <= 10; i++) {
         await testDataFactory.createBannerImage(largeBrand, {
           sortOrder: i,
-          imageUrl: `https://example.com/banner${i}.jpg`,
+          imageUrl: `/banner${i}.jpg`,
           altText: `Banner ${i}`,
         });
       }
@@ -324,7 +325,7 @@ describe('BrandController (E2E)', () => {
         for (let imgIndex = 1; imgIndex <= 8; imgIndex++) {
           await testDataFactory.createSectionImage(section, {
             sortOrder: imgIndex,
-            imageUrl: `https://example.com/section${sectionIndex}-${imgIndex}.jpg`,
+            imageUrl: `/section${sectionIndex}-${imgIndex}.jpg`,
             altText: `Section ${sectionIndex} Image ${imgIndex}`,
           });
         }
@@ -366,7 +367,7 @@ describe('BrandController (E2E)', () => {
       // 추가 데이터 생성
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 2,
-        imageUrl: 'https://example.com/new-banner.jpg',
+        imageUrl: '/new-banner.jpg',
         altText: 'New Banner',
       });
 
@@ -382,7 +383,7 @@ describe('BrandController (E2E)', () => {
       expect(secondResponse.body.data.bannerList).toHaveLength(2);
 
       expect(secondResponse.body.data.bannerList).toContain(
-        'https://example.com/new-banner.jpg',
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/new-banner.jpg`,
       );
     });
   });

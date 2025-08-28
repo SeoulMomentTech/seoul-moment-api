@@ -1,23 +1,20 @@
-import { BrandService } from '../../apps/api/src/module/brand/brand.service';
-import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
-import { GetBrandIntroduceResponse } from '../../apps/api/src/module/brand/brand.dto';
-import { BrandStatus } from '@app/repository/enum/brand.enum';
-import { ServiceError } from '@app/common/exception/service.error';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
-import { TestSetup } from '../setup/test-setup';
+import { ServiceError } from '@app/common/exception/service.error';
+import { Configuration } from '@app/config/configuration';
+import { BrandStatus } from '@app/repository/enum/brand.enum';
+
+import { GetBrandIntroduceResponse } from '../../apps/api/src/module/brand/brand.dto';
+import { BrandService } from '../../apps/api/src/module/brand/brand.service';
 import { TestDataFactory } from '../setup/test-data.factory';
+import { TestSetup } from '../setup/test-setup';
 
 describe('BrandService Integration Tests', () => {
   let brandService: BrandService;
-  let brandRepositoryService: BrandRepositoryService;
   let testDataFactory: TestDataFactory;
 
   beforeEach(() => {
     const module = TestSetup.getModule();
     brandService = module.get<BrandService>(BrandService);
-    brandRepositoryService = module.get<BrandRepositoryService>(
-      BrandRepositoryService,
-    );
     testDataFactory = new TestDataFactory(TestSetup.getDataSource());
   });
 
@@ -47,12 +44,12 @@ describe('BrandService Integration Tests', () => {
       expect(result.section).toHaveLength(2);
 
       // 배너 이미지 URL 검증
-      result.bannerList.forEach((bannerUrl, index) => {
+      result.bannerList.forEach((bannerUrl) => {
         expect(bannerUrl).toMatch(/^https:\/\/.*banner.*\.jpg$/);
       });
 
       // 섹션 데이터 검증
-      result.section.forEach((section, index) => {
+      result.section.forEach((section) => {
         expect(section.title).toBeDefined();
         expect(section.content).toBeDefined();
         expect(section.imageList).toHaveLength(2);
@@ -111,7 +108,9 @@ describe('BrandService Integration Tests', () => {
       // Then: 빈 배열들이 정상적으로 반환됨
       expect(result.id).toBe(minimalBrand.id);
       expect(result.name).toBe('Minimal Brand');
-      expect(result.description).toBe('Simple brand without banners or sections');
+      expect(result.description).toBe(
+        'Simple brand without banners or sections',
+      );
       expect(result.bannerList).toEqual([]);
       expect(result.section).toEqual([]);
     });
@@ -126,22 +125,22 @@ describe('BrandService Integration Tests', () => {
       // 배너를 역순으로 생성
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 3,
-        imageUrl: 'https://example.com/banner3.jpg',
+        imageUrl: '/banner3.jpg',
         altText: 'Banner 3',
       });
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 1,
-        imageUrl: 'https://example.com/banner1.jpg',
+        imageUrl: '/banner1.jpg',
         altText: 'Banner 1',
       });
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 2,
-        imageUrl: 'https://example.com/banner2.jpg',
+        imageUrl: '/banner2.jpg',
         altText: 'Banner 2',
       });
 
       // 섹션을 역순으로 생성
-      const section2 = await testDataFactory.createBrandSection(brand, {
+      await testDataFactory.createBrandSection(brand, {
         title: 'Section 2',
         content: 'Second section',
         sortOrder: 2,
@@ -155,11 +154,11 @@ describe('BrandService Integration Tests', () => {
       // 섹션 이미지도 역순으로 생성
       await testDataFactory.createSectionImage(section1, {
         sortOrder: 2,
-        imageUrl: 'https://example.com/section1-2.jpg',
+        imageUrl: '/section1-2.jpg',
       });
       await testDataFactory.createSectionImage(section1, {
         sortOrder: 1,
-        imageUrl: 'https://example.com/section1-1.jpg',
+        imageUrl: '/section1-1.jpg',
       });
 
       // When: 서비스 메서드 호출
@@ -167,9 +166,9 @@ describe('BrandService Integration Tests', () => {
 
       // Then: 정렬된 순서로 반환됨
       expect(result.bannerList).toEqual([
-        'https://example.com/banner1.jpg',
-        'https://example.com/banner2.jpg',
-        'https://example.com/banner3.jpg',
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/banner1.jpg`,
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/banner2.jpg`,
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/banner3.jpg`,
       ]);
 
       expect(result.section).toHaveLength(2);
@@ -177,8 +176,8 @@ describe('BrandService Integration Tests', () => {
       expect(result.section[1].title).toBe('Section 2');
 
       expect(result.section[0].imageList).toEqual([
-        'https://example.com/section1-1.jpg',
-        'https://example.com/section1-2.jpg',
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/section1-1.jpg`,
+        `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/section1-2.jpg`,
       ]);
     });
 
@@ -194,7 +193,7 @@ describe('BrandService Integration Tests', () => {
       for (let i = 1; i <= 5; i++) {
         await testDataFactory.createBannerImage(complexBrand, {
           sortOrder: i,
-          imageUrl: `https://example.com/banner${i}.jpg`,
+          imageUrl: `/banner${i}.jpg`,
           altText: `Banner ${i}`,
         });
       }
@@ -210,7 +209,7 @@ describe('BrandService Integration Tests', () => {
         for (let imgIndex = 1; imgIndex <= 4; imgIndex++) {
           await testDataFactory.createSectionImage(section, {
             sortOrder: imgIndex,
-            imageUrl: `https://example.com/section${sectionIndex}-${imgIndex}.jpg`,
+            imageUrl: `/section${sectionIndex}-${imgIndex}.jpg`,
             altText: `Section ${sectionIndex} Image ${imgIndex}`,
           });
         }
@@ -230,7 +229,7 @@ describe('BrandService Integration Tests', () => {
 
         section.imageList.forEach((imageUrl, imgIndex) => {
           expect(imageUrl).toBe(
-            `https://example.com/section${index + 1}-${imgIndex + 1}.jpg`,
+            `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/section${index + 1}-${imgIndex + 1}.jpg`,
           );
         });
       });

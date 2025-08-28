@@ -19,6 +19,12 @@ const config: ConfigImpl = {
   REDIS_HOST: process.env.REDIS_HOST,
   REDIS_PORT: parseInt(process.env.REDIS_PORT),
   REDIS_DB: parseInt(process.env.REDIS_DB),
+
+  GOOGLE_SHEET_SERVICE_EMAIL: process.env.GOOGLE_SHEET_SERVICE_EMAIL || '',
+  GOOGLE_SHEET_SERVICE_PRIMARY: process.env.GOOGLE_SHEET_SERVICE_PRIMARY || '',
+
+  SERPER_URL: process.env.SERPER_URL || '',
+  SERPER_API_KEY: process.env.SERPER_API_KEY || '',
 };
 
 export default config;

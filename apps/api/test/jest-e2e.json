@@ -1,9 +1,5 @@
 {
-  "moduleFileExtensions": [
-    "js",
-    "json",
-    "ts"
-  ],
+  "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
@@ -18,6 +14,10 @@
     "@app/repository/(.*)": "<rootDir>/../libs/repository/src/$1",
     "@app/repository": "<rootDir>/../libs/repository/src",
     "@app/common/(.*)": "<rootDir>/../libs/common/src/$1",
-    "@app/common": "<rootDir>/../libs/common/src"
+    "@app/common": "<rootDir>/../libs/common/src",
+    "@app/external/(.*)": "<rootDir>/../libs/external/src/$1",
+    "@app/external": "<rootDir>/../libs/external/src",
+    "@app/http/(.*)": "<rootDir>/../libs/http/src/$1",
+    "@app/http": "<rootDir>/../libs/http/src"
   }
 }

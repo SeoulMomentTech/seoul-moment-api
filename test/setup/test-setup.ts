@@ -1,7 +1,8 @@
+import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
+
 import { TestDatabaseModule } from './test-database.module';
-import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { BrandService } from '../../apps/api/src/module/brand/brand.service';
 
 export class TestSetup {
@@ -50,8 +51,13 @@ export class TestSetup {
 
     try {
       // 자식 테이블부터 순서대로 정리 (외래키 참조 순서 고려)
-      const tables = ['brand_section_image', 'brand_banner_image', 'brand_section', 'brand'];
-      
+      const tables = [
+        'brand_section_image',
+        'brand_banner_image',
+        'brand_section',
+        'brand',
+      ];
+
       for (const tableName of tables) {
         try {
           // 테이블 존재 확인
@@ -62,10 +68,12 @@ export class TestSetup {
               AND table_name = '${tableName}'
             );
           `);
-          
+
           if (exists[0].exists) {
             // CASCADE 옵션으로 참조된 데이터도 함께 삭제
-            await this.dataSource.query(`TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE`);
+            await this.dataSource.query(
+              `TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE`,
+            );
           }
         } catch (error) {
           // 여전히 실패하면 DELETE 사용 (느리지만 확실함)
@@ -73,14 +81,18 @@ export class TestSetup {
             try {
               await this.dataSource.query(`DELETE FROM "${tableName}"`);
               // 시퀀스 초기화
-              await this.dataSource.query(`ALTER SEQUENCE IF EXISTS "${tableName}_id_seq" RESTART WITH 1`);
+              await this.dataSource.query(
+                `ALTER SEQUENCE IF EXISTS "${tableName}_id_seq" RESTART WITH 1`,
+              );
             } catch (deleteError) {
-              console.warn(`Warning: Failed to clear table ${tableName}:`, deleteError.message);
+              console.warn(
+                `Warning: Failed to clear table ${tableName}:`,
+                deleteError.message,
+              );
             }
           }
         }
       }
-      
     } catch (error) {
       console.error('Database cleanup failed:', error.message);
     }
