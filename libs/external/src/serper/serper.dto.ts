@@ -46,7 +46,7 @@ export class NewsItemDto {
       }
     }
 
-    return plainToInstance(this, {
+    return plainToInstance(NewsItemDto, {
       keyword,
       title,
       link,
@@ -68,7 +68,11 @@ export class SearchResultDto {
     news: NewsItemDto[],
     credits: number,
   ): SearchResultDto {
-    return plainToInstance(this, { searchParameters, news, credits });
+    return plainToInstance(SearchResultDto, {
+      searchParameters,
+      news,
+      credits,
+    });
   }
 }
 

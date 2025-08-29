@@ -18,6 +18,8 @@
     "@app/external/(.*)": "<rootDir>/../libs/external/src/$1",
     "@app/external": "<rootDir>/../libs/external/src",
     "@app/http/(.*)": "<rootDir>/../libs/http/src/$1",
-    "@app/http": "<rootDir>/../libs/http/src"
+    "@app/http": "<rootDir>/../libs/http/src",
+    "@app/cache/(.*)": "<rootDir>/../libs/cache/src/$1",
+    "@app/cache": "<rootDir>/../libs/cache/src"
   }
 }

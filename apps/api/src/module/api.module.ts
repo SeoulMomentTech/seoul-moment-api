@@ -14,6 +14,7 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
 
 import { HealthController } from '../health.controller';
 import { BrandModule } from './brand/brand.module';
+import { GoogleModule } from './google/google.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { BrandModule } from './brand/brand.module';
     LoggerModule,
     RepositoryModule,
     BrandModule,
+    GoogleModule,
   ],
   controllers: [HealthController],
   providers: [

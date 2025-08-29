@@ -1,7 +1,8 @@
 import { ConfigImpl } from '../configImpl';
+import { SupportEnv } from '../enum/config.enum';
 
-const config: ConfigImpl = {
-  NODE_ENV: 'development',
+const getConfig = (): ConfigImpl => ({
+  NODE_ENV: SupportEnv.DEV,
   PORT: parseInt(process.env.PORT || '3000'),
   API_VERSION: 'v1',
 
@@ -18,13 +19,13 @@ const config: ConfigImpl = {
 
   REDIS_HOST: process.env.REDIS_HOST || '',
   REDIS_PORT: parseInt(process.env.REDIS_PORT || '6379'),
-  REDIS_DB: parseInt(process.env.REDIS_DB || '0'),
+  REDIS_DB: parseInt(process.env.REDIS_DB || '1'),
 
   GOOGLE_SHEET_SERVICE_EMAIL: process.env.GOOGLE_SHEET_SERVICE_EMAIL || '',
   GOOGLE_SHEET_SERVICE_PRIMARY: process.env.GOOGLE_SHEET_SERVICE_PRIMARY || '',
 
   SERPER_URL: process.env.SERPER_URL || '',
   SERPER_API_KEY: process.env.SERPER_API_KEY || '',
-};
+});
 
-export default config;
+export default getConfig;

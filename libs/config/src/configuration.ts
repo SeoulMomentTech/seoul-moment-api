@@ -9,17 +9,25 @@ export class Configuration {
   static getConfig(): ConfigImpl {
     const env = process.env.NODE_ENV as SupportEnv;
 
+    let config: ConfigImpl;
     switch (env) {
       case SupportEnv.LOCAL:
-        return local;
+        config = local();
+        break;
       case SupportEnv.DEV:
-        return dev;
+        config = dev();
+        break;
       case SupportEnv.TEST:
-        return test;
+        config = test();
+        break;
       case SupportEnv.PROD:
-        return prod;
+        config = prod();
+        break;
       default:
-        return local;
+        config = local();
+        break;
     }
+
+    return config;
   }
 }

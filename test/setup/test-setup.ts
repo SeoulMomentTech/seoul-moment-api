@@ -1,52 +1,97 @@
-import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { CacheService } from '@app/cache/cache.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 
+import { TestCacheModule } from './test-cache.module';
 import { TestDatabaseModule } from './test-database.module';
-import { BrandService } from '../../apps/api/src/module/brand/brand.service';
 
 export class TestSetup {
   private static dataSource: DataSource;
-  private static module: TestingModule;
+  private static cacheService: CacheService;
+  private static cacheModule: TestingModule;
+  private static fullModule: TestingModule;
 
   /**
-   * 테스트 모듈과 데이터베이스 연결 초기화
+   * 테스트 유틸리티 초기화 (Cache만 필요한 경우)
    */
-  static async initialize(): Promise<TestingModule> {
-    if (this.module) {
-      return this.module;
+  static async initializeCache(): Promise<void> {
+    if (this.cacheService && this.cacheModule) {
+      return;
     }
 
-    this.module = await Test.createTestingModule({
-      imports: [TestDatabaseModule],
-      providers: [BrandRepositoryService, BrandService],
+    this.cacheModule = await Test.createTestingModule({
+      imports: [TestCacheModule],
     }).compile();
 
-    this.dataSource = this.module.get<DataSource>(DataSource);
+    this.cacheService = this.cacheModule.get<CacheService>(CacheService);
+  }
 
-    return this.module;
+  /**
+   * 테스트 유틸리티 초기화 (DB와 Cache 접근용)
+   */
+  static async initialize(): Promise<void> {
+    if (this.dataSource && this.cacheService && this.fullModule) {
+      return;
+    }
+
+    // Cache-only 모듈이 이미 있다면 정리
+    if (this.cacheModule) {
+      await this.cacheModule.close();
+      this.cacheModule = null;
+      this.cacheService = null;
+    }
+
+    this.fullModule = await Test.createTestingModule({
+      imports: [TestDatabaseModule],
+    }).compile();
+
+    this.dataSource = this.fullModule.get<DataSource>(DataSource);
+    this.cacheService = this.fullModule.get<CacheService>(CacheService);
   }
 
   /**
    * 테스트 완료 후 정리
    */
   static async cleanup(): Promise<void> {
-    if (this.dataSource) {
+    if (this.cacheService) {
+      try {
+        await this.clearCache();
+      } catch (error) {
+        // Suppress Redis connection warnings for cache-only tests
+        if (error.message !== 'Connection is closed.') {
+          console.warn('Warning: Failed to clear cache during cleanup:', error.message);
+        }
+      }
+    }
+    
+    if (this.dataSource && this.dataSource.isInitialized) {
       await this.dataSource.destroy();
     }
-    if (this.module) {
-      await this.module.close();
+    
+    if (this.cacheModule) {
+      await this.cacheModule.close();
+      this.cacheModule = null;
     }
+    
+    if (this.fullModule) {
+      await this.fullModule.close();
+      this.fullModule = null;
+    }
+    
     this.dataSource = null;
-    this.module = null;
+    this.cacheService = null;
   }
 
   /**
-   * 각 테스트 전 데이터베이스 초기화
+   * 각 테스트 전 데이터베이스 및 캐시 초기화
    */
   static async clearDatabase(): Promise<void> {
+    // Clear Redis cache first
+    await this.clearCache();
+    
+    // Skip DB operations if no DataSource (cache-only tests)
     if (!this.dataSource) {
-      throw new Error('DataSource not initialized. Call initialize() first.');
+      return;
     }
 
     try {
@@ -85,10 +130,13 @@ export class TestSetup {
                 `ALTER SEQUENCE IF EXISTS "${tableName}_id_seq" RESTART WITH 1`,
               );
             } catch (deleteError) {
-              console.warn(
-                `Warning: Failed to clear table ${tableName}:`,
-                deleteError.message,
-              );
+              // Suppress DB connection warnings for cache-only tests
+              if (!deleteError.message.includes('Driver not Connected')) {
+                console.warn(
+                  `Warning: Failed to clear table ${tableName}:`,
+                  deleteError.message,
+                );
+              }
             }
           }
         }
@@ -124,16 +172,6 @@ export class TestSetup {
   }
 
   /**
-   * 현재 모듈 인스턴스 반환
-   */
-  static getModule(): TestingModule {
-    if (!this.module) {
-      throw new Error('Test module not initialized. Call initialize() first.');
-    }
-    return this.module;
-  }
-
-  /**
    * 현재 데이터소스 인스턴스 반환
    */
   static getDataSource(): DataSource {
@@ -141,5 +179,37 @@ export class TestSetup {
       throw new Error('DataSource not initialized. Call initialize() first.');
     }
     return this.dataSource;
+  }
+
+  /**
+   * Redis 캐시 정리
+   */
+  static async clearCache(): Promise<void> {
+    if (!this.cacheService) {
+      return;
+    }
+
+    try {
+      // Get all keys and delete them
+      const keys = await this.cacheService.scan('*');
+      for (const key of keys) {
+        await this.cacheService.del(key);
+      }
+    } catch (error) {
+      // Suppress Redis connection warnings for cache-only tests
+      if (error.message !== 'Connection is closed.') {
+        console.warn('Warning: Failed to clear cache:', error.message);
+      }
+    }
+  }
+
+  /**
+   * CacheService 인스턴스 반환
+   */
+  static getCacheService(): CacheService {
+    if (!this.cacheService) {
+      throw new Error('CacheService not initialized. Call initialize() first.');
+    }
+    return this.cacheService;
   }
 }

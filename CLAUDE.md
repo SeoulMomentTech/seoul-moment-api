@@ -500,8 +500,234 @@ expect(response.body).toHaveProperty('error', 'Bad Request');
 - **deadlock 방지**를 위한 `--runInBand` 옵션 적용으로 안정적인 테스트 실행
 - 새로운 테스트 작성 시 위 가이드를 참고하여 안정적인 테스트 코드를 작성하세요
 
-## 최근 해결 사항 (2025-08-26)
+## 최근 해결 사항 (2025-08-29)
+- ✅ Redis 통합 테스트 환경 구축 (TestCacheModule, TestDatabaseModule 분리)
+- ✅ 모듈별 독립적인 테스트 설정으로 불필요한 의존성 제거
+- ✅ TestSetup 클래스 리팩토링으로 cache-only와 full-DB 테스트 지원
+- ✅ 캐시 데이터 격리 문제 해결 (beforeEach에서 직접 캐시 정리)
+- ✅ getModule() 의존성 제거하여 각 테스트가 독립적으로 모듈 생성
+
+## 12. 통합 테스트 작성 표준 패턴 (2025-08-29)
+
+### Cache-only 테스트 패턴
+```typescript
+import { CacheService } from '@app/cache/cache.service';
+import { Test, TestingModule } from '@nestjs/testing';
+
+import { TestCacheModule } from '../setup/test-cache.module';
+import { TestSetup } from '../setup/test-setup';
+
+describe('CacheService Integration Tests', () => {
+  let cacheService: CacheService;
+  let module: TestingModule;
+
+  beforeAll(async () => {
+    await TestSetup.initializeCache();
+    
+    module = await Test.createTestingModule({
+      imports: [TestCacheModule],
+    }).compile();
+    
+    cacheService = module.get<CacheService>(CacheService);
+  });
+
+  afterAll(async () => {
+    await module.close();
+    await TestSetup.cleanup();
+  });
+
+  beforeEach(async () => {
+    await TestSetup.clearCache();
+  });
+});
+```
+
+### DB + Cache 통합 테스트 패턴
+```typescript
+import { ServiceError } from '@app/common/exception/service.error';
+import { Test, TestingModule } from '@nestjs/testing';
+
+import { BrandModule } from '../../apps/api/src/module/brand/brand.module';
+import { BrandService } from '../../apps/api/src/module/brand/brand.service';
+import { TestDataFactory } from '../setup/test-data.factory';
+import { TestDatabaseModule } from '../setup/test-database.module';
+import { TestSetup } from '../setup/test-setup';
+
+describe('BrandService Integration Tests', () => {
+  let brandService: BrandService;
+  let testDataFactory: TestDataFactory;
+  let module: TestingModule;
+
+  beforeAll(async () => {
+    await TestSetup.initialize();
+
+    module = await Test.createTestingModule({
+      imports: [TestDatabaseModule, BrandModule],
+    }).compile();
+
+    brandService = module.get<BrandService>(BrandService);
+    testDataFactory = new TestDataFactory(TestSetup.getDataSource());
+  });
+
+  afterAll(async () => {
+    await module.close();
+    await TestSetup.cleanup();
+  });
+
+  beforeEach(async () => {
+    await TestSetup.clearDatabase();
+  });
+});
+```
+
+### Repository 서비스 테스트 패턴
+```typescript
+import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { Test, TestingModule } from '@nestjs/testing';
+
+import { TestDataFactory } from '../setup/test-data.factory';
+import { TestDatabaseModule } from '../setup/test-database.module';
+import { TestSetup } from '../setup/test-setup';
+
+describe('BrandRepositoryService Integration Tests', () => {
+  let brandRepositoryService: BrandRepositoryService;
+  let testDataFactory: TestDataFactory;
+  let module: TestingModule;
+
+  beforeAll(async () => {
+    await TestSetup.initialize();
+    
+    module = await Test.createTestingModule({
+      imports: [TestDatabaseModule],
+      providers: [BrandRepositoryService],
+    }).compile();
+    
+    brandRepositoryService = module.get<BrandRepositoryService>(BrandRepositoryService);
+    testDataFactory = new TestDataFactory(TestSetup.getDataSource());
+  });
+
+  afterAll(async () => {
+    await module.close();
+    await TestSetup.cleanup();
+  });
+
+  beforeEach(async () => {
+    await TestSetup.clearDatabase();
+  });
+});
+```
+
+### E2E 테스트 패턴
+```typescript
+import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import request from 'supertest';
+
+import { BrandModule } from '../../apps/api/src/module/brand/brand.module';
+import { TestDataFactory } from '../setup/test-data.factory';
+import { TestDatabaseModule } from '../setup/test-database.module';
+import { TestSetup } from '../setup/test-setup';
+
+describe('BrandController (E2E)', () => {
+  let app: INestApplication;
+  let testDataFactory: TestDataFactory;
+  let moduleFixture: TestingModule;
+
+  beforeAll(async () => {
+    await TestSetup.initialize();
+
+    moduleFixture = await Test.createTestingModule({
+      imports: [BrandModule, TestDatabaseModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    
+    // 전역 설정 추가...
+    
+    await app.init();
+    testDataFactory = new TestDataFactory(TestSetup.getDataSource());
+  });
+
+  afterAll(async () => {
+    await app.close();
+    await moduleFixture.close();
+    await TestSetup.cleanup();
+  });
+
+  beforeEach(async () => {
+    await TestSetup.clearDatabase();
+  });
+});
+```
+
+### 중요 규칙
+
+#### 1. Module Import 우선순위
+```typescript
+// ✅ 올바른 방법: 관련 Module을 import하면 모든 의존성 자동 해결
+module = await Test.createTestingModule({
+  imports: [TestDatabaseModule, BrandModule],
+}).compile();
+
+// ❌ 잘못된 방법: providers에 중복 추가
+module = await Test.createTestingModule({
+  imports: [TestDatabaseModule, BrandModule],
+  providers: [BrandService], // 불필요한 중복
+}).compile();
+```
+
+#### 2. 상대 경로 사용
+```typescript
+// ✅ 올바른 방법
+import { BrandModule } from '../../apps/api/src/module/brand/brand.module';
+
+// ❌ 잘못된 방법
+import { BrandModule } from 'apps/api/src/module/brand/brand.module';
+```
+
+#### 3. TestSetup 사용법
+```typescript
+// Cache만 필요한 경우
+await TestSetup.initializeCache();
+
+// DB + Cache 모두 필요한 경우
+await TestSetup.initialize();
+
+// 각 테스트 전 정리
+beforeEach(async () => {
+  await TestSetup.clearDatabase(); // DB + Cache 정리
+  // 또는
+  await TestSetup.clearCache(); // Cache만 정리
+});
+```
+
+#### 4. 캐시 격리가 중요한 경우
+```typescript
+beforeEach(async () => {
+  // TestSetup 정리 + 직접 정리로 확실한 격리 보장
+  try {
+    await cacheService.del(RedisKey.SPECIFIC_KEY);
+    
+    const keys = await cacheService.scan('*');
+    for (const key of keys) {
+      await cacheService.del(key);
+    }
+  } catch (error) {
+    console.warn('Failed to clear cache in beforeEach:', error.message);
+  }
+});
+```
+
+### 테스트 실행
+```bash
+npm run test:full  # 전체 테스트 (권장)
+```
+
+---
+
+## 이전 해결 사항 (2025-08-26)
 - ✅ ParseIntPipe 도입으로 path parameter 검증 강화
 - ✅ deadlock 에러 해결 (--runInBand 옵션)
 - ✅ 데이터 정리 타이밍 최적화 (afterEach 사용)
 - ✅ 29개 테스트 100% 통과 달성
+- 테스트 실행은 무조건 test:full로 한다

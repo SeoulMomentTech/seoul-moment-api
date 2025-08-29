@@ -8,13 +8,19 @@
   "scripts": {
     "build": "nest build api",
     "build:api": "nest build api",
+    "build:batch": "nest build batch",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start api",
     "start:api": "nest start api",
+    "start:batch": "nest start batch",
     "start:local": "cross-env NODE_ENV=local nest start api --watch",
+    "start:batch:local": "cross-env NODE_ENV=local nest start batch --watch",
     "start:dev": "cross-env NODE_ENV=development nest start api --watch",
+    "start:batch:dev": "cross-env NODE_ENV=development nest start batch --watch",
     "start:prod": "cross-env NODE_ENV=production node dist/apps/api/main",
+    "start:batch:prod": "cross-env NODE_ENV=production node dist/apps/batch/main",
     "start:debug": "nest start api --debug --watch",
+    "start:batch:debug": "nest start batch --debug --watch",
     "lint": "eslint \"{apps,libs}/**/*.ts\" --fix",
     "test": "cross-env NODE_ENV=test jest --selectProjects unit",
     "test:watch": "cross-env NODE_ENV=test jest --watch --selectProjects unit",
@@ -30,12 +36,14 @@
     "prepare": "husky || true"
   },
   "dependencies": {
+    "@liaoliaots/nestjs-redis": "^10.0.0",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/axios": "^4.0.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/schedule": "^6.0.0",
     "@nestjs/swagger": "^8.1.1",
     "@nestjs/typeorm": "^11.0.0",
     "class-transformer": "^0.5.1",
@@ -110,7 +118,8 @@
       "^@app/repository(|/.*)$": "<rootDir>/libs/repository/src/$1",
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@app/external(|/.*)$": "<rootDir>/libs/external/src/$1",
-      "^@app/http(|/.*)$": "<rootDir>/libs/http/src/$1"
+      "^@app/http(|/.*)$": "<rootDir>/libs/http/src/$1",
+      "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1"
     },
     "projects": [
       {
@@ -132,7 +141,10 @@
           "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
           "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",
           "^@app/repository(|/.*)$": "<rootDir>/libs/repository/src/$1",
-          "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1"
+          "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
+          "^@app/external(|/.*)$": "<rootDir>/libs/external/src/$1",
+          "^@app/http(|/.*)$": "<rootDir>/libs/http/src/$1",
+          "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1"
         }
       },
       {
@@ -159,7 +171,8 @@
           "^@app/repository(|/.*)$": "<rootDir>/libs/repository/src/$1",
           "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
           "^@app/external(|/.*)$": "<rootDir>/libs/external/src/$1",
-          "^@app/http(|/.*)$": "<rootDir>/libs/http/src/$1"
+          "^@app/http(|/.*)$": "<rootDir>/libs/http/src/$1",
+          "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1"
         },
         "globals": {
           "ts-jest": {

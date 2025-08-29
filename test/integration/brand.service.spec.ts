@@ -2,20 +2,38 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
+import { Test, TestingModule } from '@nestjs/testing';
 
 import { GetBrandIntroduceResponse } from '../../apps/api/src/module/brand/brand.dto';
+import { BrandModule } from '../../apps/api/src/module/brand/brand.module';
 import { BrandService } from '../../apps/api/src/module/brand/brand.service';
 import { TestDataFactory } from '../setup/test-data.factory';
+import { TestDatabaseModule } from '../setup/test-database.module';
 import { TestSetup } from '../setup/test-setup';
 
 describe('BrandService Integration Tests', () => {
   let brandService: BrandService;
   let testDataFactory: TestDataFactory;
+  let module: TestingModule;
 
-  beforeEach(() => {
-    const module = TestSetup.getModule();
+  beforeAll(async () => {
+    await TestSetup.initialize();
+
+    module = await Test.createTestingModule({
+      imports: [TestDatabaseModule, BrandModule],
+    }).compile();
+
     brandService = module.get<BrandService>(BrandService);
     testDataFactory = new TestDataFactory(TestSetup.getDataSource());
+  });
+
+  afterAll(async () => {
+    await module.close();
+    await TestSetup.cleanup();
+  });
+
+  beforeEach(async () => {
+    await TestSetup.clearDatabase();
   });
 
   describe('getBrandIntroduce', () => {

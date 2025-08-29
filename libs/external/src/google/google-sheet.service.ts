@@ -135,32 +135,50 @@ export class ExternalGoogleSheetService {
   }
 
   async getData<T>(range: string, type: ClassConstructor<T>): Promise<T[]> {
-    const res = await this.sheets.spreadsheets.values.get({
-      spreadsheetId: this.spreadsheetId,
-      range,
-    });
-    const allValues = res.data.values || [];
+    if (!this.spreadsheetId) {
+      throw new Error(
+        'Spreadsheet ID is not set. Call setSpreadsheetId() first.',
+      );
+    }
 
-    if (allValues.length < 2) return [];
-    const [headers, ...rows] = allValues as [string[], any[][]];
-
-    const result = rows.map((row) => {
-      const obj: Record<string, any> = {};
-      headers.forEach((h, idx) => {
-        obj[h] = row[idx];
+    try {
+      const res = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range,
       });
-      return plainToInstance(type, obj);
-    });
 
-    this.logger.info(`Fetched ${rows.length} data rows from ${range}`);
-    return result;
+      const allValues = res.data.values || [];
+
+      if (allValues.length < 2) return [];
+      const [headers, ...rows] = allValues as [string[], any[][]];
+
+      const result = rows.map((row) => {
+        const obj: Record<string, any> = {};
+        headers.forEach((h, idx) => {
+          obj[h] = row[idx];
+        });
+        return plainToInstance(type, obj);
+      });
+
+      this.logger.info(`Fetched ${rows.length} data rows from ${range}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to get data from ${range}: ${error.message}`);
+      // 스프레드시트나 범위가 존재하지 않는 경우 빈 배열 반환
+      if (
+        error.message.includes('Requested entity was not found') ||
+        error.message.includes('Unable to parse range')
+      ) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   async writeRows(range: string, data: Record<string, any>[]): Promise<void> {
     if (!data.length) return;
 
     const values = this.convertToSheetValue(data, { includeHeaders: true });
-
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
       range,
@@ -174,7 +192,6 @@ export class ExternalGoogleSheetService {
     if (!data.length) return;
 
     const values = this.convertToSheetValue(data);
-
     await this.sheets.spreadsheets.values.append({
       spreadsheetId: this.spreadsheetId,
       range,
@@ -182,6 +199,7 @@ export class ExternalGoogleSheetService {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values },
     });
+
     this.logger.info(`Appended ${values.length} rows to ${range}`);
   }
 

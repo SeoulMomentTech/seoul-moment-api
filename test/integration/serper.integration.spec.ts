@@ -12,6 +12,7 @@ import { SerperService } from '@app/external/serper/serper.service';
 import { HttpRequestModule } from '@app/http/http.module';
 import { Test } from '@nestjs/testing';
 import { plainToInstance } from 'class-transformer';
+
 jest.setTimeout(60_000);
 
 const hasEnv =

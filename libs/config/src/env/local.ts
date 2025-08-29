@@ -1,7 +1,8 @@
 import { ConfigImpl } from '../configImpl';
+import { SupportEnv } from '../enum/config.enum';
 
-const config: ConfigImpl = {
-  NODE_ENV: 'local',
+const getConfig = (): ConfigImpl => ({
+  NODE_ENV: SupportEnv.LOCAL,
   PORT: 3000,
   API_VERSION: 'v1',
 
@@ -25,6 +26,6 @@ const config: ConfigImpl = {
 
   SERPER_URL: process.env.SERPER_URL || '',
   SERPER_API_KEY: process.env.SERPER_API_KEY || '',
-};
+});
 
-export default config;
+export default getConfig;

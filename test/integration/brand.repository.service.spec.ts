@@ -1,27 +1,46 @@
-import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
-import { ServiceError } from '@app/common/exception/service.error';
-import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
-import { TestSetup } from '../setup/test-setup';
+import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { Test, TestingModule } from '@nestjs/testing';
+
 import { TestDataFactory } from '../setup/test-data.factory';
+import { TestDatabaseModule } from '../setup/test-database.module';
+import { TestSetup } from '../setup/test-setup';
 
 describe('BrandRepositoryService Integration Tests', () => {
   let brandRepositoryService: BrandRepositoryService;
   let testDataFactory: TestDataFactory;
+  let module: TestingModule;
 
-  beforeEach(() => {
-    const module = TestSetup.getModule();
+  beforeAll(async () => {
+    await TestSetup.initialize();
+
+    module = await Test.createTestingModule({
+      imports: [TestDatabaseModule],
+      providers: [BrandRepositoryService],
+    }).compile();
+
     brandRepositoryService = module.get<BrandRepositoryService>(
       BrandRepositoryService,
     );
     testDataFactory = new TestDataFactory(TestSetup.getDataSource());
   });
 
+  afterAll(async () => {
+    await module.close();
+    await TestSetup.cleanup();
+  });
+
+  beforeEach(async () => {
+    await TestSetup.clearDatabase();
+  });
+
   describe('findAllNormalBrandList', () => {
     it('should return only brands with NORMAL status', async () => {
       // Given: 다양한 상태의 브랜드들 생성
-      const brands = await testDataFactory.createBrandsWithDifferentStatuses();
+      await testDataFactory.createBrandsWithDifferentStatuses();
 
       // When: NORMAL 상태 브랜드들 조회
       const result = await brandRepositoryService.findAllNormalBrandList();
@@ -90,7 +109,9 @@ describe('BrandRepositoryService Integration Tests', () => {
 
       // Then: sortOrder에 따라 정렬됨
       const brandResult = result[0];
-      const sortedBanners = brandResult.brandBannerImageList.sort((a, b) => a.sortOrder - b.sortOrder);
+      const sortedBanners = brandResult.brandBannerImageList.sort(
+        (a, b) => a.sortOrder - b.sortOrder,
+      );
       expect(sortedBanners[0].sortOrder).toBe(1);
       expect(sortedBanners[1].sortOrder).toBe(2);
       expect(sortedBanners[2].sortOrder).toBe(3);
@@ -112,9 +133,9 @@ describe('BrandRepositoryService Integration Tests', () => {
 
       // Then: 브랜드 반환
       expect(result).toBeDefined();
-      expect(result!.id).toBe(createdBrand.id);
-      expect(result!.name).toBe('Test Brand');
-      expect(result!.status).toBe(BrandStatus.NORMAL);
+      expect(result.id).toBe(createdBrand.id);
+      expect(result.name).toBe('Test Brand');
+      expect(result.status).toBe(BrandStatus.NORMAL);
     });
 
     it('should return null when brand does not exist', async () => {

@@ -21,11 +21,12 @@ import { TestSetup } from '../setup/test-setup';
 describe('BrandController (E2E)', () => {
   let app: INestApplication;
   let testDataFactory: TestDataFactory;
+  let moduleFixture: TestingModule;
 
   beforeAll(async () => {
     await TestSetup.initialize();
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    moduleFixture = await Test.createTestingModule({
       imports: [BrandModule, TestDatabaseModule],
     }).compile();
 
@@ -63,7 +64,12 @@ describe('BrandController (E2E)', () => {
 
   afterAll(async () => {
     await app.close();
+    await moduleFixture.close();
     await TestSetup.cleanup();
+  });
+
+  beforeEach(async () => {
+    await TestSetup.clearDatabase();
   });
 
   describe('GET /brand/introduce/:id', () => {

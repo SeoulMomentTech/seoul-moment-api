@@ -20,6 +20,19 @@ services:
       timeout: 5s
       retries: 5
 
+  test-redis:
+    image: redis:7-alpine
+    container_name: seoul-moment-test-redis
+    ports:
+      - "6380:6379"  # 테스트용으로 다른 포트 사용
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   test_db_data:
 

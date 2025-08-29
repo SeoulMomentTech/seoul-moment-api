@@ -1,19 +1,15 @@
-import { LoggerModule } from '@app/common/log/logger.module';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-info-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { TestCacheModule } from './test-cache.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      envFilePath: '.env.test',
-      isGlobal: true,
-    }),
-    LoggerModule,
+    TestCacheModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST,
@@ -38,6 +34,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       BrandSectionImageEntity,
     ]),
   ],
-  exports: [TypeOrmModule, LoggerModule],
+  exports: [TestCacheModule, TypeOrmModule],
 })
 export class TestDatabaseModule {}

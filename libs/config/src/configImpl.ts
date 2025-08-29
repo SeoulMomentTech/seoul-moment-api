@@ -1,6 +1,8 @@
+import { SupportEnv } from './enum/config.enum';
+
 export interface ConfigImpl {
   // App Config
-  NODE_ENV: string;
+  NODE_ENV: SupportEnv;
   PORT: number;
   API_VERSION: string;
   IMAGE_DOMAIN_NAME: string;

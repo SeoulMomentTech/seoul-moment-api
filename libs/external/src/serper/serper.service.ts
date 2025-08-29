@@ -9,12 +9,14 @@ export class SerperService {
   constructor(private readonly httpRequestService: HttpRequestService) {}
 
   async requestGoogleNews(search: string): Promise<SearchResultDto> {
+    const config = Configuration.getConfig();
+
     const { data } =
       await this.httpRequestService.sendPostRequest<SearchResultDto>(
-        `${Configuration.getConfig().SERPER_URL}/news`,
+        `${config.SERPER_URL}/news`,
         SearchRequestDto.fromGoogleNews(search),
         {
-          'X-API-KEY': Configuration.getConfig().SERPER_API_KEY,
+          'X-API-KEY': config.SERPER_API_KEY,
           'Content-Type': 'application/json',
         },
       );
