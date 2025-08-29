@@ -86,16 +86,6 @@
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:SERPER_API_KEY::"
         }
       ],
-      "healthCheck": {
-        "command": [
-          "CMD-SHELL",
-          "curl -f http://localhost:3000/health || exit 1"
-        ],
-        "interval": 30,
-        "timeout": 10,
-        "retries": 5,
-        "startPeriod": 60
-      },
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
