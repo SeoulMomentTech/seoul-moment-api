@@ -70,3 +70,6 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
+          deployment-configuration: |
+            minimumHealthyPercent: 0
+            maximumPercent: 100
