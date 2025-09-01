@@ -48,7 +48,6 @@ describe('BrandRepositoryService Integration Tests', () => {
       // Then: NORMAL 상태 브랜드만 반환
       expect(result).toHaveLength(1);
       expect(result[0].status).toBe(BrandStatus.NORMAL);
-      expect(result[0].name).toBe('Normal Brand');
     });
 
     it('should return empty array when no normal brands exist', async () => {
@@ -66,10 +65,34 @@ describe('BrandRepositoryService Integration Tests', () => {
     it('should return brands with eager loaded relations', async () => {
       // Given: 완전한 브랜드 데이터 생성 (배너, 섹션, 이미지 포함)
       await testDataFactory.createFullBrand({
-        brand: { name: 'Full Brand', status: BrandStatus.NORMAL },
-        bannerCount: 2,
-        sectionCount: 3,
-        imagesPerSection: 2,
+        brand: { status: BrandStatus.NORMAL },
+        banners: [
+          { sortOrder: 1, imageUrl: 'banner1.jpg' },
+          { sortOrder: 2, imageUrl: 'banner2.jpg' },
+        ],
+        sections: [
+          {
+            sortOrder: 1,
+            images: [
+              { sortOrder: 1, imageUrl: 'section1-1.jpg' },
+              { sortOrder: 2, imageUrl: 'section1-2.jpg' },
+            ],
+          },
+          {
+            sortOrder: 2,
+            images: [
+              { sortOrder: 1, imageUrl: 'section2-1.jpg' },
+              { sortOrder: 2, imageUrl: 'section2-2.jpg' },
+            ],
+          },
+          {
+            sortOrder: 3,
+            images: [
+              { sortOrder: 1, imageUrl: 'section3-1.jpg' },
+              { sortOrder: 2, imageUrl: 'section3-2.jpg' },
+            ],
+          },
+        ],
       });
 
       // When: 브랜드 조회
@@ -122,7 +145,6 @@ describe('BrandRepositoryService Integration Tests', () => {
     it('should return brand when exists with NORMAL status', async () => {
       // Given: NORMAL 상태 브랜드 생성
       const createdBrand = await testDataFactory.createBrand({
-        name: 'Test Brand',
         status: BrandStatus.NORMAL,
       });
 
@@ -134,7 +156,6 @@ describe('BrandRepositoryService Integration Tests', () => {
       // Then: 브랜드 반환
       expect(result).toBeDefined();
       expect(result.id).toBe(createdBrand.id);
-      expect(result.name).toBe('Test Brand');
       expect(result.status).toBe(BrandStatus.NORMAL);
     });
 
@@ -166,7 +187,7 @@ describe('BrandRepositoryService Integration Tests', () => {
     it('should return brand when exists with NORMAL status', async () => {
       // Given: 완전한 브랜드 데이터 생성
       const createdBrand = await testDataFactory.createFullBrand({
-        brand: { name: 'Complete Brand', status: BrandStatus.NORMAL },
+        brand: { status: BrandStatus.NORMAL },
       });
 
       // When: 브랜드 ID로 조회
@@ -175,7 +196,6 @@ describe('BrandRepositoryService Integration Tests', () => {
       // Then: 브랜드와 관련 데이터 반환
       expect(result).toBeDefined();
       expect(result.id).toBe(createdBrand.id);
-      expect(result.name).toBe('Complete Brand');
       expect(result.brandBannerImageList).toBeDefined();
       expect(result.brandSectionList).toBeDefined();
     });
@@ -210,10 +230,46 @@ describe('BrandRepositoryService Integration Tests', () => {
     it('should return brand with all nested relations', async () => {
       // Given: 복잡한 브랜드 데이터 생성
       const brand = await testDataFactory.createFullBrand({
-        brand: { name: 'Complex Brand', status: BrandStatus.NORMAL },
-        bannerCount: 3,
-        sectionCount: 4,
-        imagesPerSection: 3,
+        brand: { status: BrandStatus.NORMAL },
+        banners: [
+          { sortOrder: 1, imageUrl: 'banner1.jpg' },
+          { sortOrder: 2, imageUrl: 'banner2.jpg' },
+          { sortOrder: 3, imageUrl: 'banner3.jpg' },
+        ],
+        sections: [
+          {
+            sortOrder: 1,
+            images: [
+              { sortOrder: 1, imageUrl: 'section1-1.jpg' },
+              { sortOrder: 2, imageUrl: 'section1-2.jpg' },
+              { sortOrder: 3, imageUrl: 'section1-3.jpg' },
+            ],
+          },
+          {
+            sortOrder: 2,
+            images: [
+              { sortOrder: 1, imageUrl: 'section2-1.jpg' },
+              { sortOrder: 2, imageUrl: 'section2-2.jpg' },
+              { sortOrder: 3, imageUrl: 'section2-3.jpg' },
+            ],
+          },
+          {
+            sortOrder: 3,
+            images: [
+              { sortOrder: 1, imageUrl: 'section3-1.jpg' },
+              { sortOrder: 2, imageUrl: 'section3-2.jpg' },
+              { sortOrder: 3, imageUrl: 'section3-3.jpg' },
+            ],
+          },
+          {
+            sortOrder: 4,
+            images: [
+              { sortOrder: 1, imageUrl: 'section4-1.jpg' },
+              { sortOrder: 2, imageUrl: 'section4-2.jpg' },
+              { sortOrder: 3, imageUrl: 'section4-3.jpg' },
+            ],
+          },
+        ],
       });
 
       // When: 브랜드 조회
@@ -249,7 +305,7 @@ describe('BrandRepositoryService Integration Tests', () => {
       // Then: 모든 요청이 성공적으로 같은 브랜드 반환
       results.forEach((result) => {
         expect(result.id).toBe(brand.id);
-        expect(result.name).toBe(brand.name);
+        expect(result.status).toBe(brand.status);
       });
     });
 

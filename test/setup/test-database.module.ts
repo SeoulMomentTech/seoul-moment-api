@@ -2,6 +2,8 @@ import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-imag
 import { BrandSectionEntity } from '@app/repository/entity/brand-info-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
+import { LanguageEntity } from '@app/repository/entity/language.entity';
+import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -22,6 +24,8 @@ import { TestCacheModule } from './test-cache.module';
         BrandBannerImageEntity,
         BrandSectionEntity,
         BrandSectionImageEntity,
+        LanguageEntity,
+        MultilingualTextEntity,
       ],
       synchronize: true, // 테스트용으로만 true 사용
       dropSchema: false, // 스키마를 유지하고 데이터만 정리
@@ -32,6 +36,8 @@ import { TestCacheModule } from './test-cache.module';
       BrandBannerImageEntity,
       BrandSectionEntity,
       BrandSectionImageEntity,
+      LanguageEntity,
+      MultilingualTextEntity,
     ]),
   ],
   exports: [TestCacheModule, TypeOrmModule],

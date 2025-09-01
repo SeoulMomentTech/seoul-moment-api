@@ -26,7 +26,7 @@ export class BrandController {
       'Returns brand information in the specified language. Supports Korean (ko), English (en), and Chinese (zh).',
   })
   @ApiHeader({
-    name: 'accept-language',
+    name: 'Accept-language',
     required: true,
     description: 'Alternative way to specify language preference (ko, en, zh)',
     enum: LanguageCode,
@@ -35,26 +35,12 @@ export class BrandController {
   @ResponseException(HttpStatus.NOT_FOUND, '존재하는 브랜드가 없음')
   async getBrandIntroduce(
     @Param('id', ParseIntPipe) id: number,
-    @Headers('accept-language') acceptLanguage: LanguageCode,
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
   ): Promise<ResponseDataDto<GetBrandIntroduceResponse>> {
     const result = await this.brandService.getBrandIntroduce(
       id,
       acceptLanguage,
     );
     return new ResponseDataDto(result);
-  }
-
-  private mapHeaderLanguageToCode(headerLang: string): LanguageCode | null {
-    const languageMap: Record<string, LanguageCode> = {
-      ko: LanguageCode.KOREAN,
-      korean: LanguageCode.KOREAN,
-      en: LanguageCode.ENGLISH,
-      english: LanguageCode.ENGLISH,
-      zh: LanguageCode.CHINESE,
-      chinese: LanguageCode.CHINESE,
-      cn: LanguageCode.CHINESE,
-    };
-
-    return languageMap[headerLang] || null;
   }
 }

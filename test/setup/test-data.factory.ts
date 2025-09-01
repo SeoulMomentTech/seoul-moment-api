@@ -1,12 +1,13 @@
-import { DataSource } from 'typeorm';
-import { BrandEntity } from '@app/repository/entity/brand.entity';
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-info-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
+import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
+import { DataSource } from 'typeorm';
 
 export class TestDataFactory {
   constructor(private dataSource: DataSource) {}
@@ -20,8 +21,6 @@ export class TestDataFactory {
     const brandRepository = this.dataSource.getRepository(BrandEntity);
 
     const brand = brandRepository.create({
-      name: 'Test Brand',
-      description: 'Test brand description',
       status: BrandStatus.NORMAL,
       ...overrides,
     });
@@ -62,8 +61,6 @@ export class TestDataFactory {
 
     const section = sectionRepository.create({
       brandId: brand.id,
-      title: 'Test Section',
-      content: 'Test section content',
       sortOrder: 1,
       ...overrides,
     });
@@ -94,22 +91,117 @@ export class TestDataFactory {
   }
 
   /**
-   * 완전한 브랜드 데이터 생성 (배너, 섹션, 섹션 이미지 포함)
+   * 완전한 브랜드 데이터 생성 (배너, 섹션, 섹션 이미지 포함) - 레거시 버전
    */
+  async createFullBrand(options?: {
+    brand?: Partial<BrandEntity>;
+    bannerCount?: number;
+    sectionCount?: number;
+    imagesPerSection?: number;
+  }): Promise<BrandEntity>;
+
+  /**
+   * 완전한 브랜드 데이터 생성 (새로운 구조) - 다국어 지원
+   */
+  async createFullBrand(options: {
+    brand?: Partial<BrandEntity>;
+    banners?: Array<{ sortOrder: number; imageUrl: string; altText?: string }>;
+    sections?: Array<{
+      sortOrder: number;
+      images?: Array<{ sortOrder: number; imageUrl: string; altText?: string }>;
+    }>;
+  }): Promise<BrandEntity>;
+
   async createFullBrand(
-    options: {
-      brand?: Partial<BrandEntity>;
-      bannerCount?: number;
-      sectionCount?: number;
-      imagesPerSection?: number;
-    } = {},
+    options:
+      | {
+          brand?: Partial<BrandEntity>;
+          bannerCount?: number;
+          sectionCount?: number;
+          imagesPerSection?: number;
+        }
+      | {
+          brand?: Partial<BrandEntity>;
+          banners?: Array<{
+            sortOrder: number;
+            imageUrl: string;
+            altText?: string;
+          }>;
+          sections?: Array<{
+            sortOrder: number;
+            images?: Array<{
+              sortOrder: number;
+              imageUrl: string;
+              altText?: string;
+            }>;
+          }>;
+        },
   ): Promise<BrandEntity> {
+    // Default empty object if options is undefined
+    if (!options) {
+      options = {};
+    }
+
+    // 새로운 구조 처리
+    if ('banners' in options || 'sections' in options) {
+      const { brand: brandData = {}, banners = [], sections = [] } = options;
+
+      // 1. 브랜드 생성
+      const brand = await this.createBrand(brandData);
+
+      // 2. 배너 이미지들 생성
+      for (const bannerData of banners) {
+        await this.createBannerImage(brand, {
+          imageUrl: bannerData.imageUrl,
+          altText: bannerData.altText || 'Banner image',
+          sortOrder: bannerData.sortOrder,
+        });
+      }
+
+      // 3. 정보 섹션들과 섹션 이미지들 생성
+      for (const sectionData of sections) {
+        const section = await this.createBrandSection(brand, {
+          sortOrder: sectionData.sortOrder,
+        });
+
+        // 각 섹션에 이미지들 생성
+        if (sectionData.images) {
+          for (const imageData of sectionData.images) {
+            await this.createSectionImage(section, {
+              imageUrl: imageData.imageUrl,
+              altText: imageData.altText || 'Section image',
+              sortOrder: imageData.sortOrder,
+            });
+          }
+        }
+      }
+
+      // 4. 관계가 로드된 브랜드를 다시 조회해서 반환
+      const brandRepository = this.dataSource.getRepository(BrandEntity);
+      const reloadedBrand = await brandRepository.findOne({
+        where: { id: brand.id },
+        relations: [
+          'brandBannerImageList',
+          'brandSectionList',
+          'brandSectionList.brandSectionImageList',
+        ],
+      });
+
+      return reloadedBrand || brand;
+    }
+
+    // 기존 레거시 구조 처리
     const {
       brand: brandData = {},
       bannerCount = 2,
       sectionCount = 3,
       imagesPerSection = 2,
-    } = options;
+    } = options as {
+      brand?: Partial<BrandEntity>;
+      bannerCount?: number;
+      sectionCount?: number;
+      imagesPerSection?: number;
+    };
 
     // 1. 브랜드 생성
     const brand = await this.createBrand(brandData);
@@ -126,8 +218,6 @@ export class TestDataFactory {
     // 3. 정보 섹션들과 섹션 이미지들 생성
     for (let i = 1; i <= sectionCount; i++) {
       const section = await this.createBrandSection(brand, {
-        title: `Section ${i}`,
-        content: `Content for section ${i}`,
         sortOrder: i,
       });
 
@@ -141,7 +231,18 @@ export class TestDataFactory {
       }
     }
 
-    return brand;
+    // 4. 관계가 로드된 브랜드를 다시 조회해서 반환
+    const brandRepository = this.dataSource.getRepository(BrandEntity);
+    const reloadedBrand = await brandRepository.findOne({
+      where: { id: brand.id },
+      relations: [
+        'brandBannerImageList',
+        'brandSectionList',
+        'brandSectionList.brandSectionImageList',
+      ],
+    });
+
+    return reloadedBrand || brand;
   }
 
   /**
@@ -153,7 +254,6 @@ export class TestDataFactory {
     // NORMAL 상태 브랜드
     brands.push(
       await this.createBrand({
-        name: 'Normal Brand',
         status: BrandStatus.NORMAL,
       }),
     );
@@ -161,7 +261,6 @@ export class TestDataFactory {
     // WAIT 상태 브랜드
     brands.push(
       await this.createBrand({
-        name: 'Waiting Brand',
         status: BrandStatus.WAIT,
       }),
     );
@@ -169,7 +268,6 @@ export class TestDataFactory {
     // BLOCK 상태 브랜드
     brands.push(
       await this.createBrand({
-        name: 'Blocked Brand',
         status: BrandStatus.BLOCK,
       }),
     );
@@ -177,7 +275,6 @@ export class TestDataFactory {
     // DELETE 상태 브랜드
     brands.push(
       await this.createBrand({
-        name: 'Deleted Brand',
         status: BrandStatus.DELETE,
       }),
     );
@@ -216,7 +313,9 @@ export class TestDataFactory {
     textContent: string,
     overrides: Partial<MultilingualTextEntity> = {},
   ): Promise<MultilingualTextEntity> {
-    const textRepository = this.dataSource.getRepository(MultilingualTextEntity);
+    const textRepository = this.dataSource.getRepository(
+      MultilingualTextEntity,
+    );
 
     const text = textRepository.create({
       entityType,
@@ -273,7 +372,11 @@ export class TestDataFactory {
     },
   ): Promise<{
     brand: BrandEntity;
-    languages: { korean: LanguageEntity; english: LanguageEntity; chinese: LanguageEntity };
+    languages: {
+      korean: LanguageEntity;
+      english: LanguageEntity;
+      chinese: LanguageEntity;
+    };
     texts: MultilingualTextEntity[];
   }> {
     // Create brand
@@ -287,10 +390,12 @@ export class TestDataFactory {
 
     if (multilingualData?.name) {
       for (const [langCode, content] of Object.entries(multilingualData.name)) {
-        const language = Object.values(languages).find(l => l.code === langCode);
+        const language = Object.values(languages).find(
+          (l) => l.code === langCode,
+        );
         if (language && content) {
           const text = await this.createMultilingualText(
-            'Brand',
+            'brand',
             brand.id,
             'name',
             language,
@@ -302,11 +407,15 @@ export class TestDataFactory {
     }
 
     if (multilingualData?.description) {
-      for (const [langCode, content] of Object.entries(multilingualData.description)) {
-        const language = Object.values(languages).find(l => l.code === langCode);
+      for (const [langCode, content] of Object.entries(
+        multilingualData.description,
+      )) {
+        const language = Object.values(languages).find(
+          (l) => l.code === langCode,
+        );
         if (language && content) {
           const text = await this.createMultilingualText(
-            'Brand',
+            'brand',
             brand.id,
             'description',
             language,

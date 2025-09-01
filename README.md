@@ -25,6 +25,7 @@ seoul-moment-api/
 
 ### API 애플리케이션
 - **브랜드 관리**: 브랜드 정보, 배너 이미지, 정보 섹션 관리
+- **다국어 시스템**: 한국어, 영어, 중국어 지원하는 완전한 multilingual API
 - **Redis 캐시**: 성능 최적화를 위한 캐싱 시스템
 - **환경별 설정**: local, development, test, production 환경 지원
 
@@ -115,18 +116,34 @@ npm run test:e2e
 
 ## 📊 데이터베이스 스키마
 
-### 브랜드 테이블 구조
+### 브랜드 테이블 구조 (Multilingual System)
 
 ```sql
-brands                    # 브랜드 기본 정보
+brands                    # 브랜드 기본 정보 (텍스트 필드 제거)
 ├── brand_banner_images   # 배너 이미지 (1:N, 무제한)
-├── brand_info_sections   # 정보 섹션 (1:N, 무제한)
+├── brand_sections        # 정보 섹션 (1:N, 무제한) - 텍스트 필드 제거
     └── brand_section_images  # 섹션 이미지 (1:N, 무제한)
+
+languages                 # 언어 관리 (한국어, 영어, 중국어)
+├── code: LanguageCode    # 'ko', 'en', 'zh'
+├── name: string          # '한국어', 'English', '中文'
+├── englishName: string   # 'Korean', 'English', 'Chinese'
+└── isActive: boolean     # 활성화 여부
+
+multilingual_texts        # 다국어 텍스트 저장소
+├── entityType: string    # 'brand', 'brand_section'
+├── entityId: number      # 연결할 엔티티 ID
+├── fieldName: string     # 'name', 'description', 'title', 'content'
+├── languageId: number    # 언어 ID
+└── textContent: string   # 실제 텍스트 내용
 ```
 
-- 모든 관계는 eager loading으로 설정
-- sortOrder 필드로 정렬 순서 관리
-- CASCADE 삭제로 데이터 일관성 보장
+### 다국어 시스템 특징
+- **Generic Design**: 모든 엔티티에 확장 가능한 다국어 텍스트 시스템
+- **Type Safety**: LanguageCode enum으로 지원 언어 제한
+- **No Fallback**: 요청 언어에 해당하는 데이터만 반환 (fallback 없음)
+- **sortOrder 유지**: 관련 엔티티의 정렬 순서 관리
+- **CASCADE 삭제**: 데이터 일관성 및 무결성 보장
 
 ## 🔧 개발 히스토리
 
@@ -141,8 +158,9 @@ brands                    # 브랜드 기본 정보
 
 #### 애플리케이션 기능
 - ✅ **브랜드 테이블 설계** (Brand, BannerImage, InfoSection, SectionImage)
+- ✅ **다국어 시스템** (한국어/영어/중국어 지원, Generic Multilingual Entity)
 - ✅ **Repository/Service 계층** (데이터 접근 + 비즈니스 로직 분리)
-- ✅ **API 응답 DTO** (Swagger 문서화 포함)
+- ✅ **API 응답 DTO** (Swagger 문서화 + Accept-Language 헤더 지원)
 - ✅ **헬스체크 API** (GET /health)
 - ✅ **Google Sheets 크롤링** (외부 데이터 수집)
 - ✅ **메일 서비스** (자동화된 이메일 발송)
@@ -150,8 +168,9 @@ brands                    # 브랜드 기본 정보
 #### 테스트 및 품질
 - ✅ **통합 테스트 환경** (Docker PostgreSQL + 실제 DB 테스트)
 - ✅ **완전한 테스트 격리** (외래키 제약조건 비활성화 + TRUNCATE 정리)
-- ✅ **29개 통합 테스트 완료** (CRUD, 에러 처리, 동시성, CASCADE 테스트)
+- ✅ **70개 통합 테스트 완료** (CRUD, 다국어, 에러 처리, 동시성, CASCADE 테스트)
 - ✅ **Redis 캐시 테스트** (캐시 격리 및 성능 테스트)
+- ✅ **테스트 환경 안전성** (실제 DB 데이터 보호 장치)
 
 #### 배포 및 운영
 - ✅ **ECS 배포 시스템** (API/Batch 분리 배포)
@@ -162,16 +181,30 @@ brands                    # 브랜드 기본 정보
 
 ```
 GET /health                    # 헬스체크
-GET /brand/introduce/:id       # 브랜드 소개 페이지 조회
+GET /brand/introduce/:id       # 브랜드 소개 페이지 조회 (다국어 지원)
+```
+
+#### 다국어 API 사용법
+```bash
+# 한국어 (기본값)
+curl -H "Accept-Language: ko" GET /brand/introduce/1
+
+# 영어
+curl -H "Accept-Language: en" GET /brand/introduce/1
+
+# 중국어  
+curl -H "Accept-Language: zh" GET /brand/introduce/1
 ```
 
 ## ✅ 테스트 현황
 
 ### 통합 테스트 결과
 
-- **총 29개 테스트 모두 통과** ✅
+- **총 70개 테스트 모두 통과** ✅
+- **다국어 시스템 테스트** 완료 (Language, Multilingual Text, Fallback 로직)
 - **완전한 테스트 격리** 구현
 - **실제 PostgreSQL + Redis** 사용으로 신뢰할 수 있는 테스트
+- **테스트 환경 안전성 검증** (실제 DB 데이터 보호)
 - **Cache-only 테스트와 DB+Cache 통합 테스트** 분리
 
 ### 테스트 커버리지

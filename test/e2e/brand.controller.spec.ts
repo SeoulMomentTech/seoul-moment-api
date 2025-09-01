@@ -73,22 +73,38 @@ describe('BrandController (E2E)', () => {
   });
 
   describe('GET /brand/introduce/:id', () => {
-    it('should return brand introduce data successfully', async () => {
-      // Given: 실제 DB에 완전한 브랜드 데이터 생성
+    it('should return brand introduce data with empty content for no multilingual data', async () => {
+      // Given: 다국어 콘텐츠가 없는 브랜드 생성
       const brand = await testDataFactory.createFullBrand({
-        brand: {
-          name: 'Seoul Moment',
-          description: '서울의 특별한 순간들을 담은 브랜드',
-          status: BrandStatus.NORMAL,
-        },
-        bannerCount: 2,
-        sectionCount: 2,
-        imagesPerSection: 3,
+        brand: { status: BrandStatus.NORMAL },
+        banners: [
+          { sortOrder: 1, imageUrl: 'banner1.jpg' },
+          { sortOrder: 2, imageUrl: 'banner2.jpg' },
+        ],
+        sections: [
+          {
+            sortOrder: 1,
+            images: [
+              { sortOrder: 1, imageUrl: 'section1-1.jpg' },
+              { sortOrder: 2, imageUrl: 'section1-2.jpg' },
+              { sortOrder: 3, imageUrl: 'section1-3.jpg' },
+            ],
+          },
+          {
+            sortOrder: 2,
+            images: [
+              { sortOrder: 1, imageUrl: 'section2-1.jpg' },
+              { sortOrder: 2, imageUrl: 'section2-2.jpg' },
+              { sortOrder: 3, imageUrl: 'section2-3.jpg' },
+            ],
+          },
+        ],
       });
 
       // When: HTTP GET 요청
       const response = await request(app.getHttpServer())
         .get(`/brand/introduce/${brand.id}`)
+        .set('accept-language', 'ko')
         .expect(200);
 
       // Then: 응답 데이터 검증
@@ -97,10 +113,15 @@ describe('BrandController (E2E)', () => {
 
       const data = response.body.data;
       expect(data.id).toBe(brand.id);
-      expect(data.name).toBe('Seoul Moment');
-      expect(data.description).toBe('서울의 특별한 순간들을 담은 브랜드');
+      expect(data.name).toBe(''); // 다국어 콘텐츠 없음
+      expect(data.description).toBe(''); // 다국어 콘텐츠 없음
       expect(data.bannerList).toHaveLength(2);
       expect(data.section).toHaveLength(2);
+      
+      // 섹션 데이터도 빈 문자열
+      expect(data.section[0].title).toBe('');
+      expect(data.section[0].content).toBe('');
+      expect(data.section[0].imageList).toHaveLength(3);
 
       // 배너 리스트 검증
       data.bannerList.forEach((bannerUrl: string) => {
@@ -140,7 +161,6 @@ describe('BrandController (E2E)', () => {
     it('should return 404 when brand exists but not NORMAL status', async () => {
       // Given: BLOCK 상태의 브랜드 생성
       const blockedBrand = await testDataFactory.createBrand({
-        name: 'Blocked Brand',
         status: BrandStatus.BLOCK,
       });
 
@@ -159,8 +179,6 @@ describe('BrandController (E2E)', () => {
     it('should return brand with empty arrays when no banners or sections', async () => {
       // Given: 배너와 섹션이 없는 최소한의 브랜드 생성
       const minimalBrand = await testDataFactory.createBrand({
-        name: 'Minimal Brand',
-        description: 'Simple brand',
         status: BrandStatus.NORMAL,
       });
 
@@ -173,8 +191,8 @@ describe('BrandController (E2E)', () => {
       expect(response.body.result).toBe(true);
       const data = response.body.data;
       expect(data.id).toBe(minimalBrand.id);
-      expect(data.name).toBe('Minimal Brand');
-      expect(data.description).toBe('Simple brand');
+      expect(data.name).toBe(''); // No multilingual content
+      expect(data.description).toBe(''); // No multilingual content
       expect(data.bannerList).toEqual([]);
       expect(data.section).toEqual([]);
     });
@@ -182,7 +200,6 @@ describe('BrandController (E2E)', () => {
     it('should return correctly sorted data by sortOrder', async () => {
       // Given: 정렬 순서가 다른 브랜드 데이터 생성
       const brand = await testDataFactory.createBrand({
-        name: 'Sorted Brand',
         status: BrandStatus.NORMAL,
       });
 
@@ -205,13 +222,9 @@ describe('BrandController (E2E)', () => {
 
       // 섹션을 역순으로 생성
       await testDataFactory.createBrandSection(brand, {
-        title: 'Second Section',
-        content: 'Content 2',
         sortOrder: 2,
       });
       const section1 = await testDataFactory.createBrandSection(brand, {
-        title: 'First Section',
-        content: 'Content 1',
         sortOrder: 1,
       });
 
@@ -242,8 +255,8 @@ describe('BrandController (E2E)', () => {
       ]);
 
       expect(data.section).toHaveLength(2);
-      expect(data.section[0].title).toBe('First Section');
-      expect(data.section[1].title).toBe('Second Section');
+      expect(data.section[0].title).toBe(''); // No multilingual content
+      expect(data.section[1].title).toBe(''); // No multilingual content
 
       expect(data.section[0].imageList).toEqual([
         `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/section1-1.jpg`,
@@ -266,7 +279,6 @@ describe('BrandController (E2E)', () => {
       // Given: 브랜드 데이터 생성
       const brand = await testDataFactory.createFullBrand({
         brand: {
-          name: 'Concurrent Brand',
           status: BrandStatus.NORMAL,
         },
         bannerCount: 2,
@@ -289,7 +301,7 @@ describe('BrandController (E2E)', () => {
       responses.forEach((response) => {
         expect(response.body.result).toBe(true);
         expect(response.body.data.id).toBe(brand.id);
-        expect(response.body.data.name).toBe('Concurrent Brand');
+        expect(response.body.data.name).toBe(''); // No multilingual content
         expect(response.body.data.bannerList).toHaveLength(2);
         expect(response.body.data.section).toHaveLength(1);
       });
@@ -304,8 +316,6 @@ describe('BrandController (E2E)', () => {
     it('should handle large brand data correctly', async () => {
       // Given: 큰 규모의 브랜드 데이터 생성
       const largeBrand = await testDataFactory.createBrand({
-        name: 'Large Brand',
-        description: 'A' + 'very '.repeat(100) + 'large brand description',
         status: BrandStatus.NORMAL,
       });
 
@@ -321,10 +331,6 @@ describe('BrandController (E2E)', () => {
       // 많은 섹션과 각 섹션마다 많은 이미지 생성
       for (let sectionIndex = 1; sectionIndex <= 5; sectionIndex++) {
         const section = await testDataFactory.createBrandSection(largeBrand, {
-          title: `Section ${sectionIndex}`,
-          content:
-            `Content for section ${sectionIndex}. ` +
-            'Long content. '.repeat(50),
           sortOrder: sectionIndex,
         });
 
@@ -348,7 +354,7 @@ describe('BrandController (E2E)', () => {
       expect(data.section).toHaveLength(5);
 
       data.section.forEach((section: any, index: number) => {
-        expect(section.title).toBe(`Section ${index + 1}`);
+        expect(section.title).toBe(''); // No multilingual content
         expect(section.imageList).toHaveLength(8);
       });
     });
@@ -357,7 +363,6 @@ describe('BrandController (E2E)', () => {
       // Given: 초기 브랜드 생성
       const brand = await testDataFactory.createFullBrand({
         brand: {
-          name: 'Consistent Brand',
           status: BrandStatus.NORMAL,
         },
         bannerCount: 1,

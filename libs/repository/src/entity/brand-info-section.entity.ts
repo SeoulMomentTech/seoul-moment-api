@@ -44,6 +44,7 @@ export class BrandSectionEntity extends CommonEntity {
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   multilingualTexts: MultilingualTextEntity[];
 }

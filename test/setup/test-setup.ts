@@ -12,9 +12,35 @@ export class TestSetup {
   private static fullModule: TestingModule;
 
   /**
+   * 테스트 환경 안전성 검증
+   */
+  private static validateTestEnvironment(): void {
+    // NODE_ENV가 test가 아니면 에러
+    if (process.env.NODE_ENV !== 'test') {
+      throw new Error(`DANGER: Tests running in non-test environment! NODE_ENV=${process.env.NODE_ENV}`);
+    }
+
+    // 실제 프로덕션/개발 DB를 가리키고 있으면 에러
+    const dbName = process.env.DATABASE_NAME;
+    if (!dbName || !dbName.includes('test')) {
+      throw new Error(`DANGER: Test database name must contain 'test'. Current: ${dbName}`);
+    }
+
+    // 테스트용 포트가 아니면 에러
+    const dbPort = process.env.DATABASE_PORT;
+    if (dbPort !== '5433') {
+      throw new Error(`DANGER: Test database must use port 5433. Current: ${dbPort}`);
+    }
+
+    console.log('✅ Test environment validation passed');
+  }
+
+  /**
    * 테스트 유틸리티 초기화 (Cache만 필요한 경우)
    */
   static async initializeCache(): Promise<void> {
+    this.validateTestEnvironment();
+    
     if (this.cacheService && this.cacheModule) {
       return;
     }
@@ -30,6 +56,8 @@ export class TestSetup {
    * 테스트 유틸리티 초기화 (DB와 Cache 접근용)
    */
   static async initialize(): Promise<void> {
+    this.validateTestEnvironment();
+    
     if (this.dataSource && this.cacheService && this.fullModule) {
       return;
     }
@@ -99,8 +127,10 @@ export class TestSetup {
       const tables = [
         'brand_section_image',
         'brand_banner_image',
+        'multilingual_text',
         'brand_section',
         'brand',
+        'language',
       ];
 
       for (const tableName of tables) {

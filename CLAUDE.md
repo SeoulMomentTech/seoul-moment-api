@@ -5,11 +5,13 @@
 ### 1. 테스트 환경 구성 원칙
 
 #### PostgreSQL Docker 컨테이너 사용
+
 - **실제 데이터베이스** 사용 (인메모리나 모킹 대신)
 - `docker-compose.test.yml`로 테스트 전용 PostgreSQL 컨테이너 구성
 - 테스트 격리를 위한 독립적인 데이터베이스 환경
 
 #### 테스트 명령어
+
 ```bash
 # 전체 통합 테스트 실행 (권장)
 npm run test:full
@@ -29,6 +31,7 @@ npm run test:db:logs           # DB 로그 확인
 ### 2. TypeORM 엔티티 설정 원칙
 
 #### 테스트 환경에서 외래키 제약조건 비활성화
+
 ```typescript
 @ManyToOne(() => ParentEntity, (parent) => parent.children, {
   onDelete: 'CASCADE',
@@ -41,7 +44,9 @@ parent: ParentEntity;
 **이유**: 테스트 환경에서 외래키 제약조건이 있으면 `TRUNCATE CASCADE`가 복잡해지고, 데이터 정리 시 순서 의존성 문제가 발생
 
 #### 실제 테이블 이름 확인 필수
+
 TypeORM naming strategy에 의해 엔티티 이름과 실제 테이블 이름이 다를 수 있음:
+
 - `BrandEntity` → `brand` 테이블
 - `BrandBannerImageEntity` → `brand_banner_image` 테이블
 - `BrandSectionEntity` → `brand_section` 테이블 (brand_info_sections가 아님)
@@ -49,23 +54,24 @@ TypeORM naming strategy에 의해 엔티티 이름과 실제 테이블 이름이
 ### 3. 테스트 데이터베이스 정리 전략
 
 #### TestSetup 클래스의 clearDatabase() 메서드
+
 ```typescript
 static async clearDatabase(): Promise<void> {
   try {
     // 자식 테이블부터 순서대로 정리 (외래키 참조 순서 고려)
     const tables = ['brand_section_image', 'brand_banner_image', 'brand_section', 'brand'];
-    
+
     for (const tableName of tables) {
       try {
         // 테이블 존재 확인
         const exists = await this.dataSource.query(`
           SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
+            SELECT FROM information_schema.tables
+            WHERE table_schema = 'public'
             AND table_name = '${tableName}'
           );
         `);
-        
+
         if (exists[0].exists) {
           // CASCADE 옵션으로 참조된 데이터도 함께 삭제
           await this.dataSource.query(`TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE`);
@@ -90,6 +96,7 @@ static async clearDatabase(): Promise<void> {
 ```
 
 #### Jest 설정에서 정리 타이밍
+
 ```typescript
 // beforeAll: 초기 정리
 beforeAll(async () => {
@@ -103,7 +110,8 @@ beforeEach(async () => {
 });
 ```
 
-**주의**: 
+**주의**:
+
 - `beforeEach`에서 데이터 정리하면 테스트 중간 단계에서 데이터가 사라질 수 있음
 - `afterEach`에서 데이터 정리하여 테스트 격리 보장 (현재 권장 방식)
 - deadlock 방지를 위해 `--runInBand` 옵션과 함께 사용
@@ -111,6 +119,7 @@ beforeEach(async () => {
 ### 4. 테스트 작성 시 주의사항
 
 #### ServiceError 테스트
+
 ```typescript
 // ❌ 잘못된 방법
 expect(error.errorCode).toBe(ServiceErrorCode.NOT_FOUND_DATA);
@@ -120,37 +129,41 @@ expect(error.getCode()).toBe(ServiceErrorCode.NOT_FOUND_DATA);
 ```
 
 #### Eager Loading 정렬 문제
+
 TypeORM의 eager loading은 정렬을 보장하지 않음:
+
 ```typescript
 // 테스트에서 수동 정렬 후 검증
-const sortedBanners = brand.brandBannerImageList.sort((a, b) => a.sortOrder - b.sortOrder);
+const sortedBanners = brand.brandBannerImageList.sort(
+  (a, b) => a.sortOrder - b.sortOrder,
+);
 expect(sortedBanners[0].sortOrder).toBe(1);
 ```
 
 #### 테스트 데이터 팩토리 활용
+
 ```typescript
 // 복잡한 관계 데이터 생성
 const brand = await testDataFactory.createFullBrand({
   brand: { name: 'Test Brand', status: BrandStatus.NORMAL },
   banners: [
     { sortOrder: 1, imageUrl: 'banner1.jpg' },
-    { sortOrder: 2, imageUrl: 'banner2.jpg' }
+    { sortOrder: 2, imageUrl: 'banner2.jpg' },
   ],
   sections: [
     {
       title: 'Section 1',
       sortOrder: 1,
-      images: [
-        { sortOrder: 1, imageUrl: 'section1-1.jpg' }
-      ]
-    }
-  ]
+      images: [{ sortOrder: 1, imageUrl: 'section1-1.jpg' }],
+    },
+  ],
 });
 ```
 
 ### 5. 환경 변수 설정
 
 #### .env.test 파일
+
 ```env
 NODE_ENV=test
 DATABASE_HOST=localhost
@@ -161,6 +174,7 @@ DATABASE_NAME=seoul_moment_test
 ```
 
 #### TypeORM 테스트 설정
+
 ```typescript
 TypeOrmModule.forRoot({
   type: 'postgres',
@@ -169,16 +183,19 @@ TypeOrmModule.forRoot({
   username: process.env.DATABASE_USERNAME,
   password: process.env.DATABASE_PASSWORD,
   database: process.env.DATABASE_NAME,
-  entities: [/* 엔티티 목록 */],
-  synchronize: true,    // 테스트용으로만 true
-  dropSchema: false,    // 스키마 유지, 데이터만 정리
-  logging: false,       // 테스트 시 로깅 비활성화
-})
+  entities: [
+    /* 엔티티 목록 */
+  ],
+  synchronize: true, // 테스트용으로만 true
+  dropSchema: false, // 스키마 유지, 데이터만 정리
+  logging: false, // 테스트 시 로깅 비활성화
+});
 ```
 
 ### 6. 테스트 디버깅 팁
 
 #### 테스트 실패 시 체크리스트
+
 1. **Docker 컨테이너 상태 확인**: `docker ps`
 2. **테스트 DB 로그 확인**: `npm run test:db:logs`
 3. **실제 테이블 이름 확인**: PostgreSQL에 접속해서 `\dt` 명령
@@ -186,6 +203,7 @@ TypeOrmModule.forRoot({
 5. **완전 초기화**: Docker 볼륨까지 삭제 후 재시작
 
 #### 단일 테스트 실행
+
 ```bash
 npm run test:integration -- --testNamePattern="특정 테스트 이름"
 ```
@@ -193,11 +211,13 @@ npm run test:integration -- --testNamePattern="특정 테스트 이름"
 ### 7. 성능 최적화
 
 #### 테스트 실행 시간 단축
+
 - Docker 컨테이너는 가능한 한 번만 시작/종료
 - `npm run test:full` 사용으로 자동화
 - `test:integration:watch` 모드로 개발 시 빠른 피드백
 
 #### 메모리 사용량 관리
+
 - 각 테스트 후 완전한 데이터 정리
 - `RESTART IDENTITY`로 시퀀스 초기화
 - 테스트 간 데이터 누적 방지
@@ -224,12 +244,14 @@ npm run test:integration -- --testNamePattern="특정 테스트 이름"
 ### 9. 코드 품질 관리
 
 #### 테스트 작성 원칙
+
 - 각 테스트는 독립적이어야 함
 - Given-When-Then 패턴 사용
 - 의미있는 테스트 이름 작성
 - 복잡한 시나리오는 여러 테스트로 분할
 
 #### 테스트 커버리지
+
 ```bash
 npm run test:cov  # 단위 테스트 커버리지
 ```
@@ -237,9 +259,11 @@ npm run test:cov  # 단위 테스트 커버리지
 ### 10. DB 관련 비즈니스 로직 테스트 전략
 
 #### Service 및 Controller 테스트 원칙
+
 **모든 DB 관련 비즈니스 로직은 실제 테스트 DB에 데이터를 넣고 확인하는 통합 테스트로 작성**
 
 #### Service 테스트
+
 - Repository mocking 대신 실제 테스트 DB 사용
 - TestDataFactory를 활용한 실제 데이터 생성 및 검증
 - DB 트랜잭션, 제약조건, 관계 매핑 등 실제 동작 검증
@@ -258,7 +282,7 @@ describe('BrandService Integration Tests', () => {
   it('should return brand introduce with actual data', async () => {
     // Given: 실제 DB에 브랜드 데이터 생성
     const brand = await testDataFactory.createFullBrand({
-      brand: { name: 'Test Brand', status: BrandStatus.NORMAL }
+      brand: { name: 'Test Brand', status: BrandStatus.NORMAL },
     });
 
     // When: 실제 서비스 호출
@@ -271,6 +295,7 @@ describe('BrandService Integration Tests', () => {
 ```
 
 #### Controller (E2E) 테스트
+
 - supertest를 사용한 실제 HTTP 요청/응답 테스트
 - 실제 테스트 DB와 연동된 완전한 요청 흐름 검증
 - 인증, 권한, 예외 처리 등 실제 동작 검증
@@ -302,6 +327,7 @@ describe('BrandController (E2E)', () => {
 ```
 
 #### 테스트 격리 및 데이터 정리
+
 - 각 테스트 후 TestSetup.clearDatabase() 호출로 완전한 데이터 정리
 - 테스트 간 데이터 오염 방지
 - 병렬 테스트 실행 시에도 안전한 격리 보장
@@ -311,6 +337,7 @@ describe('BrandController (E2E)', () => {
 ## 11. E2E 테스트 설정 및 중요 사항
 
 ### E2E 테스트 파일 명명 규칙
+
 - **E2E 테스트를 통합 테스트에 포함시키려면**: `*.spec.ts` 파일명 사용
 - **별도 E2E 테스트로 실행하려면**: `*.e2e-spec.ts` 파일명 사용하고 `apps/api/test/` 경로에 위치
 
@@ -318,16 +345,22 @@ describe('BrandController (E2E)', () => {
 # 통합 테스트에 포함되는 경우
 test/e2e/brand.controller.spec.ts    # ✅ test:integration에서 실행됨
 
-# 별도 E2E 테스트인 경우  
+# 별도 E2E 테스트인 경우
 apps/api/test/brand.controller.e2e-spec.ts  # test:e2e에서 실행됨
 ```
 
 ### E2E 테스트 NestJS 애플리케이션 설정
 
 #### 필수 임포트 및 설정
+
 ```typescript
-import { INestApplication, ValidationPipe, HttpStatus, BadRequestException } from '@nestjs/common';
-import request from 'supertest'; // ❌ import * as request from 'supertest'; 
+import {
+  INestApplication,
+  ValidationPipe,
+  HttpStatus,
+  BadRequestException,
+} from '@nestjs/common';
+import request from 'supertest'; // ❌ import * as request from 'supertest';
 import { HttpExceptionFilter } from '@app/common/exception/http-exception-filter';
 import { ServiceErrorFilter } from '@app/common/exception/service-exception-filter';
 import { LoggerService } from '@app/common/log/logger.service';
@@ -341,10 +374,10 @@ describe('Controller (E2E)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // LoggerService 인스턴스 가져오기
     const logger = moduleFixture.get<LoggerService>(LoggerService);
-    
+
     // 전역 파이프 및 필터 설정 (main.ts와 동일하게)
     app.useGlobalPipes(
       new ValidationPipe({
@@ -361,18 +394,19 @@ describe('Controller (E2E)', () => {
         exceptionFactory: (errors) => new BadRequestException(errors),
       }),
     );
-    
+
     app.useGlobalFilters(
       new HttpExceptionFilter(logger),
       new ServiceErrorFilter(logger),
     );
-    
+
     await app.init();
   });
 });
 ```
 
 #### TestDatabaseModule에 LoggerModule 추가
+
 ```typescript
 @Module({
   imports: [
@@ -391,6 +425,7 @@ export class TestDatabaseModule {}
 ### E2E 테스트 응답 구조 이해
 
 #### 성공 응답 구조
+
 ```typescript
 // 실제 API 응답 구조 (ResponseDataDto)
 {
@@ -403,7 +438,8 @@ expect(response.body).toHaveProperty('result', true);
 expect(response.body).toHaveProperty('data');
 ```
 
-#### 에러 응답 구조  
+#### 에러 응답 구조
+
 ```typescript
 // ServiceError 응답 구조 (ServiceErrorFilter)
 {
@@ -418,11 +454,12 @@ expect(response.body).toHaveProperty('message', 'Brand not found or not in norma
 ```
 
 #### ValidationPipe 에러 응답 구조
+
 ```typescript
 // ValidationPipe 에러 응답 (400 Bad Request)
 {
   "message": [...],
-  "error": "Bad Request",  
+  "error": "Bad Request",
   "statusCode": 400
 }
 
@@ -433,6 +470,7 @@ expect(response.body).toHaveProperty('statusCode', 400);
 ### E2E 테스트 작성 시 주의사항
 
 #### 1. supertest 임포트 방식
+
 ```typescript
 // ✅ 올바른 방법
 import request from 'supertest';
@@ -442,7 +480,9 @@ import * as request from 'supertest';
 ```
 
 #### 2. 의존성 주입 확인
+
 TestSetup에서 필요한 모든 서비스를 providers에 추가:
+
 ```typescript
 // TestSetup.initialize()에서
 this.module = await Test.createTestingModule({
@@ -455,6 +495,7 @@ this.module = await Test.createTestingModule({
 ```
 
 #### 3. 테스트 데이터 정리 타이밍
+
 ```typescript
 // E2E 테스트에서도 동일하게
 beforeEach(async () => {
@@ -463,6 +504,7 @@ beforeEach(async () => {
 ```
 
 #### 4. Path Parameter 검증 및 ParseIntPipe 사용
+
 ```typescript
 // ❌ 잘못된 방법: 타입만 지정하면 500 에러 발생
 @Param('id') id: number
@@ -472,11 +514,13 @@ beforeEach(async () => {
 ```
 
 **ParseIntPipe 사용 시 장점:**
+
 - 잘못된 ID 입력 시 자동으로 400 Bad Request 반환
 - 명확한 에러 메시지: `"Validation failed (numeric string is expected)"`
 - NestJS 표준 방식으로 타입 안전성 보장
 
 #### 5. HTTP 상태 코드 실제 동작 확인
+
 ```typescript
 // ParseIntPipe 적용 후 테스트
 const response = await request(app.getHttpServer())
@@ -485,7 +529,10 @@ const response = await request(app.getHttpServer())
 
 // 응답 구조 검증
 expect(response.body).toHaveProperty('statusCode', 400);
-expect(response.body).toHaveProperty('message', 'Validation failed (numeric string is expected)');
+expect(response.body).toHaveProperty(
+  'message',
+  'Validation failed (numeric string is expected)',
+);
 expect(response.body).toHaveProperty('error', 'Bad Request');
 ```
 
@@ -502,7 +549,24 @@ expect(response.body).toHaveProperty('error', 'Bad Request');
 
 ## 최근 해결 사항
 
-### 2025-09-01
+### 2025-09-01: Multilingual System Implementation
+
+- ✅ **다국어 시스템 구축**: 한국어, 영어, 중국어 지원하는 완전한 multilingual 시스템 구현
+- ✅ **Generic Entity System**: `MultilingualTextEntity`를 통한 확장 가능한 다국어 텍스트 저장 구조
+- ✅ **Language Management**: `LanguageEntity`와 `LanguageCode` enum을 통한 언어 관리 시스템
+- ✅ **API Multilingual Support**: Accept-Language 헤더를 통한 다국어 API 지원
+- ✅ **Database Entity Updates**: Brand 및 BrandSection 엔티티에서 하드코딩된 텍스트 필드 제거
+- ✅ **Test Environment Safety**: 실제 DB 데이터 보호를 위한 테스트 환경 검증 로직 추가
+- ✅ **Complete Test Suite**: 70개 통합 테스트 모두 통과 (E2E, Service, Repository 모든 계층)
+- ✅ **TestDataFactory Enhancement**: Multilingual 테스트 데이터 생성 지원 및 관계 로딩 최적화
+
+#### 주요 기술 결정사항
+- **No Fallback Policy**: Controller에서 fallback 로직 제거, 요청 언어에 해당하는 데이터만 반환
+- **Entity Type Consistency**: 서비스와 테스트에서 일관된 entity type 사용 (`'brand'`, `'brand_section'`)
+- **Test Safety First**: 환경변수 검증으로 실제 DB 데이터 보호 (NODE_ENV, DB_NAME, DB_PORT 검증)
+- **Eager Loading with Manual Reload**: createFullBrand에서 관계 데이터 수동 재조회로 확실한 관계 로딩 보장
+
+#### 이전 개발 사항 (같은 날)
 - ✅ **dev-batch CI/CD 파이프라인 구축**: 별도 batch 애플리케이션 배포 워크플로우
 - ✅ **ECS Task Definition 분리**: API용(`taskdef.json`)과 Batch용(`taskdef-batch.json`) 독립 관리
 - ✅ **Redis TLS 연결 업데이트**: 보안 강화 및 연결 안정성 개선
@@ -510,6 +574,7 @@ expect(response.body).toHaveProperty('error', 'Bad Request');
 - ✅ **Health Check 최적화**: ECS taskdef에서 불필요한 health check 제거로 배포 안정성 향상
 
 ### 2025-08-29
+
 - ✅ Redis 통합 테스트 환경 구축 (TestCacheModule, TestDatabaseModule 분리)
 - ✅ 모듈별 독립적인 테스트 설정으로 불필요한 의존성 제거
 - ✅ TestSetup 클래스 리팩토링으로 cache-only와 full-DB 테스트 지원
@@ -519,6 +584,7 @@ expect(response.body).toHaveProperty('error', 'Bad Request');
 ## 12. 통합 테스트 작성 표준 패턴 (2025-08-29)
 
 ### Cache-only 테스트 패턴
+
 ```typescript
 import { CacheService } from '@app/cache/cache.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -532,11 +598,11 @@ describe('CacheService Integration Tests', () => {
 
   beforeAll(async () => {
     await TestSetup.initializeCache();
-    
+
     module = await Test.createTestingModule({
       imports: [TestCacheModule],
     }).compile();
-    
+
     cacheService = module.get<CacheService>(CacheService);
   });
 
@@ -552,6 +618,7 @@ describe('CacheService Integration Tests', () => {
 ```
 
 ### DB + Cache 통합 테스트 패턴
+
 ```typescript
 import { ServiceError } from '@app/common/exception/service.error';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -590,6 +657,7 @@ describe('BrandService Integration Tests', () => {
 ```
 
 ### Repository 서비스 테스트 패턴
+
 ```typescript
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -605,13 +673,15 @@ describe('BrandRepositoryService Integration Tests', () => {
 
   beforeAll(async () => {
     await TestSetup.initialize();
-    
+
     module = await Test.createTestingModule({
       imports: [TestDatabaseModule],
       providers: [BrandRepositoryService],
     }).compile();
-    
-    brandRepositoryService = module.get<BrandRepositoryService>(BrandRepositoryService);
+
+    brandRepositoryService = module.get<BrandRepositoryService>(
+      BrandRepositoryService,
+    );
     testDataFactory = new TestDataFactory(TestSetup.getDataSource());
   });
 
@@ -627,6 +697,7 @@ describe('BrandRepositoryService Integration Tests', () => {
 ```
 
 ### E2E 테스트 패턴
+
 ```typescript
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -650,9 +721,9 @@ describe('BrandController (E2E)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // 전역 설정 추가...
-    
+
     await app.init();
     testDataFactory = new TestDataFactory(TestSetup.getDataSource());
   });
@@ -672,6 +743,7 @@ describe('BrandController (E2E)', () => {
 ### 중요 규칙
 
 #### 1. Module Import 우선순위
+
 ```typescript
 // ✅ 올바른 방법: 관련 Module을 import하면 모든 의존성 자동 해결
 module = await Test.createTestingModule({
@@ -686,6 +758,7 @@ module = await Test.createTestingModule({
 ```
 
 #### 2. 상대 경로 사용
+
 ```typescript
 // ✅ 올바른 방법
 import { BrandModule } from '../../apps/api/src/module/brand/brand.module';
@@ -695,6 +768,7 @@ import { BrandModule } from 'apps/api/src/module/brand/brand.module';
 ```
 
 #### 3. TestSetup 사용법
+
 ```typescript
 // Cache만 필요한 경우
 await TestSetup.initializeCache();
@@ -711,12 +785,13 @@ beforeEach(async () => {
 ```
 
 #### 4. 캐시 격리가 중요한 경우
+
 ```typescript
 beforeEach(async () => {
   // TestSetup 정리 + 직접 정리로 확실한 격리 보장
   try {
     await cacheService.del(RedisKey.SPECIFIC_KEY);
-    
+
     const keys = await cacheService.scan('*');
     for (const key of keys) {
       await cacheService.del(key);
@@ -728,6 +803,7 @@ beforeEach(async () => {
 ```
 
 ### 테스트 실행
+
 ```bash
 npm run test:full  # 전체 테스트 (권장)
 ```
@@ -735,8 +811,77 @@ npm run test:full  # 전체 테스트 (권장)
 ---
 
 ## 이전 해결 사항 (2025-08-26)
+
 - ✅ ParseIntPipe 도입으로 path parameter 검증 강화
 - ✅ deadlock 에러 해결 (--runInBand 옵션)
 - ✅ 데이터 정리 타이밍 최적화 (afterEach 사용)
 - ✅ 29개 테스트 100% 통과 달성
 - 테스트 실행은 무조건 test:full로 한다
+- 앞으로 Entity 관련 service 테스트 repository service 테스트 할땐 test.data.factory 나 test-database.module 에 추가 되어야 해
+
+## 13. 테스트 환경 안전성 가이드 (2025-09-01)
+
+### 실제 DB 데이터 보호를 위한 필수 안전장치
+
+#### TestSetup 환경 검증 로직
+
+```typescript
+export class TestSetup {
+  /**
+   * 테스트 환경 안전성 검증
+   */
+  private static validateTestEnvironment(): void {
+    // NODE_ENV가 test가 아니면 에러
+    if (process.env.NODE_ENV !== 'test') {
+      throw new Error(`DANGER: Tests running in non-test environment! NODE_ENV=${process.env.NODE_ENV}`);
+    }
+
+    // 실제 프로덕션/개발 DB를 가리키고 있으면 에러
+    const dbName = process.env.DATABASE_NAME;
+    if (!dbName || !dbName.includes('test')) {
+      throw new Error(`DANGER: Test database name must contain 'test'. Current: ${dbName}`);
+    }
+
+    // 테스트용 포트가 아니면 에러
+    const dbPort = process.env.DATABASE_PORT;
+    if (dbPort !== '5433') {
+      throw new Error(`DANGER: Test database must use port 5433. Current: ${dbPort}`);
+    }
+
+    console.log('✅ Test environment validation passed');
+  }
+
+  static async initialize(): Promise<void> {
+    this.validateTestEnvironment(); // 모든 초기화 전에 검증
+    // ... 나머지 초기화 로직
+  }
+}
+```
+
+#### 안전장치 구성 요소
+
+1. **NODE_ENV 검증**: 반드시 'test'여야 함
+2. **DB 이름 검증**: 'test'가 포함되어야 함 (`seoul_moment_test`)
+3. **포트 검증**: 5433 (테스트 전용 포트)이어야 함
+4. **초기화 시점 검증**: 모든 TestSetup.initialize() 호출 시 자동 검증
+
+#### 추가 보호 방안
+
+- **환경변수 파일 분리**: `.env.test` 파일 사용으로 테스트 환경 독립성 보장
+- **Docker 컨테이너 격리**: 테스트용 PostgreSQL/Redis 컨테이너 사용
+- **포트 분리**: 개발용(5432/6379)과 테스트용(5433/6380) 포트 분리
+
+#### 위험 상황 예방
+
+```bash
+# ❌ 위험한 상황들
+NODE_ENV=production npm run test:integration  # 에러 발생
+NODE_ENV=development npm run test:integration # 에러 발생
+DATABASE_NAME=seoul_moment_prod npm run test  # 에러 발생
+
+# ✅ 안전한 실행
+NODE_ENV=test npm run test:integration        # 정상 실행
+npm run test:full                             # 정상 실행 (NODE_ENV=test 자동 설정)
+```
+
+**중요**: 이 안전장치로 인해 잘못된 환경에서 테스트 실행 시 즉시 에러가 발생하여 실제 DB 데이터를 보호합니다.

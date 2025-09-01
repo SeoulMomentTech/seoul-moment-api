@@ -1,5 +1,6 @@
-import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
+import { BrandStatus } from '@app/repository/enum/brand.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
+import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { TestDataFactory } from '../setup/test-data.factory';
@@ -19,7 +20,9 @@ describe('LanguageRepositoryService Integration Tests', () => {
       providers: [LanguageRepositoryService],
     }).compile();
 
-    languageRepositoryService = module.get<LanguageRepositoryService>(LanguageRepositoryService);
+    languageRepositoryService = module.get<LanguageRepositoryService>(
+      LanguageRepositoryService,
+    );
     testDataFactory = new TestDataFactory(TestSetup.getDataSource());
   });
 
@@ -77,12 +80,14 @@ describe('LanguageRepositoryService Integration Tests', () => {
       });
 
       // When
-      const result = await languageRepositoryService.findLanguageByCode(LanguageCode.KOREAN);
+      const result = await languageRepositoryService.findLanguageByCode(
+        LanguageCode.KOREAN,
+      );
 
       // Then
       expect(result).toBeDefined();
-      expect(result!.code).toBe(LanguageCode.KOREAN);
-      expect(result!.name).toBe('한국어');
+      expect(result.code).toBe(LanguageCode.KOREAN);
+      expect(result.name).toBe('한국어');
     });
 
     it('should return null for inactive language', async () => {
@@ -94,7 +99,9 @@ describe('LanguageRepositoryService Integration Tests', () => {
       });
 
       // When
-      const result = await languageRepositoryService.findLanguageByCode(LanguageCode.CHINESE);
+      const result = await languageRepositoryService.findLanguageByCode(
+        LanguageCode.CHINESE,
+      );
 
       // Then
       expect(result).toBeNull();
@@ -111,7 +118,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
       });
 
       const brand = await testDataFactory.createBrand({
-        status: 'NORMAL',
+        status: BrandStatus.NORMAL,
       });
 
       // When: Save multilingual text
@@ -145,7 +152,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
       });
 
       const brand = await testDataFactory.createBrand({
-        status: 'NORMAL',
+        status: BrandStatus.NORMAL,
       });
 
       await languageRepositoryService.saveMultilingualText(
@@ -191,14 +198,11 @@ describe('LanguageRepositoryService Integration Tests', () => {
       });
 
       const brand = await testDataFactory.createFullBrand({
-        brand: { status: 'NORMAL' },
-        sections: [
-          { sortOrder: 1 },
-          { sortOrder: 2 },
-        ],
+        brand: { status: BrandStatus.NORMAL },
+        sections: [{ sortOrder: 1 }, { sortOrder: 2 }],
       });
 
-      const sectionIds = brand.brandSectionList.map(section => section.id);
+      const sectionIds = brand.brandSectionList.map((section) => section.id);
 
       // When: Save multilingual texts for sections
       await Promise.all([
@@ -226,24 +230,26 @@ describe('LanguageRepositoryService Integration Tests', () => {
       ]);
 
       // Then: Find texts for all sections in Korean
-      const koreanTexts = await languageRepositoryService.findMultilingualTextsByEntities(
-        'BrandSection',
-        sectionIds,
-        LanguageCode.KOREAN,
-      );
+      const koreanTexts =
+        await languageRepositoryService.findMultilingualTextsByEntities(
+          'BrandSection',
+          sectionIds,
+          LanguageCode.KOREAN,
+        );
 
       expect(koreanTexts).toHaveLength(2);
-      expect(koreanTexts.map(t => t.textContent).sort()).toEqual([
+      expect(koreanTexts.map((t) => t.textContent).sort()).toEqual([
         '두 번째 섹션',
         '첫 번째 섹션',
       ]);
 
       // And: Find texts for all sections in English
-      const englishTexts = await languageRepositoryService.findMultilingualTextsByEntities(
-        'BrandSection',
-        sectionIds,
-        LanguageCode.ENGLISH,
-      );
+      const englishTexts =
+        await languageRepositoryService.findMultilingualTextsByEntities(
+          'BrandSection',
+          sectionIds,
+          LanguageCode.ENGLISH,
+        );
 
       expect(englishTexts).toHaveLength(1);
       expect(englishTexts[0].textContent).toBe('First Section');
@@ -258,7 +264,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
       });
 
       const brand = await testDataFactory.createBrand({
-        status: 'NORMAL',
+        status: BrandStatus.NORMAL,
       });
 
       await Promise.all([
@@ -279,7 +285,10 @@ describe('LanguageRepositoryService Integration Tests', () => {
       ]);
 
       // When: Delete multilingual texts
-      await languageRepositoryService.deleteMultilingualTexts('Brand', brand.id);
+      await languageRepositoryService.deleteMultilingualTexts(
+        'Brand',
+        brand.id,
+      );
 
       // Then: Should have no texts
       const result = await languageRepositoryService.findMultilingualTexts(
