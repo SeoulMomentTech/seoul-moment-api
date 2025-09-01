@@ -1,12 +1,13 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { BrandBannerImageEntity } from './brand-banner-image.entity';
-import { BrandSectionEntity } from './brand-info-section.entity';
+import { BrandSectionEntity } from './brand-section.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { BrandStatus } from '../enum/brand.enum';
+import { EntityEnum } from '../enum/entity.enum';
 
-@Entity('brand')
+@Entity(EntityEnum.BRAND)
 export class BrandEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;

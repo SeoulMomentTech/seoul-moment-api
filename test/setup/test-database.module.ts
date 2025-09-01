@@ -1,5 +1,5 @@
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
-import { BrandSectionEntity } from '@app/repository/entity/brand-info-section.entity';
+import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { LanguageEntity } from '@app/repository/entity/language.entity';

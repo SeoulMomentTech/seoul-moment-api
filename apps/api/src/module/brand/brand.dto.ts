@@ -1,4 +1,4 @@
-import { BrandSectionEntity } from '@app/repository/entity/brand-info-section.entity';
+import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';

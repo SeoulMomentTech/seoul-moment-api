@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { BrandSectionEntity } from './brand-info-section.entity';
+import { BrandSectionEntity } from './brand-section.entity';
 import { CommonEntity } from './common.entity';
 
 @Entity('brand_section_image')

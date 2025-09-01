@@ -10,6 +10,7 @@ import {
 
 import { CommonEntity } from './common.entity';
 import { LanguageEntity } from './language.entity';
+import { EntityEnum } from '../enum/entity.enum';
 
 @Entity('multilingual_text')
 @Index(['entityType', 'entityId', 'fieldName'])
@@ -18,13 +19,12 @@ export class MultilingualTextEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column('varchar', {
-    name: 'entity_type',
-    length: 50,
+  @Column('enum', {
+    enum: EntityEnum,
     nullable: false,
     comment: 'Entity type (e.g., Brand, BrandSection)',
   })
-  entityType: string;
+  entityType: EntityEnum;
 
   @Column('int', {
     name: 'entity_id',

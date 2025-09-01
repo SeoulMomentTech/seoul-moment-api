@@ -1,5 +1,5 @@
 {
-  "family": "seoul-moment-dev",
+  "family": "seoul-moment-dev-batch",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
@@ -8,8 +8,8 @@
   "taskRoleArn": "arn:aws:iam::156321659479:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
-      "name": "seoul-moment-api",
-      "image": "156321659479.dkr.ecr.ap-northeast-2.amazonaws.com/seoul-moment-api-dev",
+      "name": "seoul-moment-batch",
+      "image": "156321659479.dkr.ecr.ap-northeast-2.amazonaws.com/seoul-moment-batch-dev",
       "essential": true,
       "portMappings": [{ "containerPort": 3000, "protocol": "tcp" }],
       "secrets": [
@@ -89,9 +89,9 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/seoul-moment-dev",
+          "awslogs-group": "/ecs/seoul-moment-dev-batch",
           "awslogs-region": "ap-northeast-2",
-          "awslogs-stream-prefix": "api"
+          "awslogs-stream-prefix": "batch"
         }
       }
     }

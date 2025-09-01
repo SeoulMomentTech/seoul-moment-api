@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
-import { BrandSectionEntity } from '@app/repository/entity/brand-info-section.entity';
+import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
+import { EntityEnum } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { DataSource } from 'typeorm';
 
@@ -395,7 +396,7 @@ export class TestDataFactory {
         );
         if (language && content) {
           const text = await this.createMultilingualText(
-            'brand',
+            EntityEnum.BRAND,
             brand.id,
             'name',
             language,
@@ -415,7 +416,7 @@ export class TestDataFactory {
         );
         if (language && content) {
           const text = await this.createMultilingualText(
-            'brand',
+            EntityEnum.BRAND,
             brand.id,
             'description',
             language,

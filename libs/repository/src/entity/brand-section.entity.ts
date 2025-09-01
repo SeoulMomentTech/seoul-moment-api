@@ -12,8 +12,9 @@ import { BrandSectionImageEntity } from './brand-section-image.entity';
 import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
+import { EntityEnum } from '../enum/entity.enum';
 
-@Entity('brand_section')
+@Entity(EntityEnum.BRAND_SECTION)
 @Index(['brandId', 'sortOrder'])
 export class BrandSectionEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')

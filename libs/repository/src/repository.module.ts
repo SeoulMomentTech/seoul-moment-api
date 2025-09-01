@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { BrandBannerImageEntity } from './entity/brand-banner-image.entity';
-import { BrandSectionEntity } from './entity/brand-info-section.entity';
+import { BrandSectionEntity } from './entity/brand-section.entity';
 import { BrandSectionImageEntity } from './entity/brand-section-image.entity';
 import { BrandEntity } from './entity/brand.entity';
 import { LanguageEntity } from './entity/language.entity';
