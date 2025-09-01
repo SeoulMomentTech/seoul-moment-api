@@ -115,7 +115,10 @@ export class LanguageRepositoryService {
     return this.multilingualTextRepository.save(newText);
   }
 
-  async deleteMultilingualTexts(entityType: string, entityId: number): Promise<void> {
+  async deleteMultilingualTexts(
+    entityType: string,
+    entityId: number,
+  ): Promise<void> {
     await this.multilingualTextRepository.delete({
       entityType,
       entityId,

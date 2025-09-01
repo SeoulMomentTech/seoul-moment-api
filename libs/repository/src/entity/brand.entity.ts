@@ -11,7 +11,6 @@ export class BrandEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-
   @Column('enum', {
     enum: BrandStatus,
     default: BrandStatus.NORMAL,

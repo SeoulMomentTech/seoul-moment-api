@@ -22,7 +22,6 @@ export class BrandSectionEntity extends CommonEntity {
   @Column('int', { name: 'brand_id', nullable: false })
   brandId: number;
 
-
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
