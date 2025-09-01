@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 
 import { LanguageEntity } from '../entity/language.entity';
 import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
+import { EntityEnum } from '../enum/entity.enum';
 import { LanguageCode } from '../enum/language.enum';
 
 @Injectable()
@@ -84,7 +85,7 @@ export class LanguageRepositoryService {
   }
 
   async saveMultilingualText(
-    entityType: string,
+    entityType: EntityEnum,
     entityId: number,
     fieldName: string,
     languageId: number,
@@ -116,7 +117,7 @@ export class LanguageRepositoryService {
   }
 
   async deleteMultilingualTexts(
-    entityType: string,
+    entityType: EntityEnum,
     entityId: number,
   ): Promise<void> {
     await this.multilingualTextRepository.delete({
