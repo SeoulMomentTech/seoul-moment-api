@@ -41,6 +41,7 @@ export class GoogleSheetService {
       Configuration.getConfig().NODE_ENV === SupportEnv.DEV
         ? this.SHEET_ID
         : cachedSheetId;
+
     if (!sheetId) {
       sheetId = await this.getNewSheetId();
       await this.cacheService.set(RedisKey.GOOGLE_SHEET_ID, sheetId);

@@ -3,13 +3,21 @@ import { InternalExceptionFilter } from '@app/common/exception/internal-exceptio
 import { ServiceErrorFilter } from '@app/common/exception/service-exception-filter';
 import { LoggerModule } from '@app/common/log/logger.module';
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
 
 import { HealthController } from '../health.controller';
 import { GoogleModule } from './google/google.module';
 
 @Module({
-  imports: [LoggerModule, GoogleModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: `.env.${process.env.NODE_ENV || 'local'}`,
+    }),
+    LoggerModule,
+    GoogleModule,
+  ],
   controllers: [HealthController],
   providers: [
     {
