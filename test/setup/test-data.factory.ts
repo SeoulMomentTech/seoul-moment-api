@@ -3,7 +3,10 @@ import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-info-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
+import { LanguageEntity } from '@app/repository/entity/language.entity';
+import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
+import { LanguageCode } from '@app/repository/enum/language.enum';
 
 export class TestDataFactory {
   constructor(private dataSource: DataSource) {}
@@ -180,5 +183,140 @@ export class TestDataFactory {
     );
 
     return brands;
+  }
+
+  /**
+   * 언어 생성
+   */
+  async createLanguage(
+    overrides: Partial<LanguageEntity> = {},
+  ): Promise<LanguageEntity> {
+    const languageRepository = this.dataSource.getRepository(LanguageEntity);
+
+    const language = languageRepository.create({
+      code: LanguageCode.KOREAN,
+      name: '한국어',
+      englishName: 'Korean',
+      isActive: true,
+      sortOrder: 1,
+      ...overrides,
+    });
+
+    return languageRepository.save(language);
+  }
+
+  /**
+   * 다국어 텍스트 생성
+   */
+  async createMultilingualText(
+    entityType: string,
+    entityId: number,
+    fieldName: string,
+    language: LanguageEntity,
+    textContent: string,
+    overrides: Partial<MultilingualTextEntity> = {},
+  ): Promise<MultilingualTextEntity> {
+    const textRepository = this.dataSource.getRepository(MultilingualTextEntity);
+
+    const text = textRepository.create({
+      entityType,
+      entityId,
+      fieldName,
+      languageId: language.id,
+      textContent,
+      ...overrides,
+    });
+
+    return textRepository.save(text);
+  }
+
+  /**
+   * 기본 언어들 생성 (한국어, 영어, 중국어)
+   */
+  async createDefaultLanguages(): Promise<{
+    korean: LanguageEntity;
+    english: LanguageEntity;
+    chinese: LanguageEntity;
+  }> {
+    const korean = await this.createLanguage({
+      code: LanguageCode.KOREAN,
+      name: '한국어',
+      englishName: 'Korean',
+      sortOrder: 1,
+    });
+
+    const english = await this.createLanguage({
+      code: LanguageCode.ENGLISH,
+      name: 'English',
+      englishName: 'English',
+      sortOrder: 2,
+    });
+
+    const chinese = await this.createLanguage({
+      code: LanguageCode.CHINESE,
+      name: '中文',
+      englishName: 'Chinese',
+      sortOrder: 3,
+    });
+
+    return { korean, english, chinese };
+  }
+
+  /**
+   * 다국어 브랜드 생성 (브랜드와 다국어 텍스트를 함께 생성)
+   */
+  async createMultilingualBrand(
+    brandData: Partial<BrandEntity> = {},
+    multilingualData?: {
+      name?: { [key in LanguageCode]?: string };
+      description?: { [key in LanguageCode]?: string };
+    },
+  ): Promise<{
+    brand: BrandEntity;
+    languages: { korean: LanguageEntity; english: LanguageEntity; chinese: LanguageEntity };
+    texts: MultilingualTextEntity[];
+  }> {
+    // Create brand
+    const brand = await this.createBrand(brandData);
+
+    // Create languages
+    const languages = await this.createDefaultLanguages();
+
+    // Create multilingual texts
+    const texts: MultilingualTextEntity[] = [];
+
+    if (multilingualData?.name) {
+      for (const [langCode, content] of Object.entries(multilingualData.name)) {
+        const language = Object.values(languages).find(l => l.code === langCode);
+        if (language && content) {
+          const text = await this.createMultilingualText(
+            'Brand',
+            brand.id,
+            'name',
+            language,
+            content,
+          );
+          texts.push(text);
+        }
+      }
+    }
+
+    if (multilingualData?.description) {
+      for (const [langCode, content] of Object.entries(multilingualData.description)) {
+        const language = Object.values(languages).find(l => l.code === langCode);
+        if (language && content) {
+          const text = await this.createMultilingualText(
+            'Brand',
+            brand.id,
+            'description',
+            language,
+            content,
+          );
+          texts.push(text);
+        }
+      }
+    }
+
+    return { brand, languages, texts };
   }
 }

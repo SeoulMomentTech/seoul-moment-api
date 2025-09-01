@@ -11,6 +11,7 @@ import {
 import { BrandSectionImageEntity } from './brand-section-image.entity';
 import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
+import { MultilingualTextEntity } from './multilingual-text.entity';
 
 @Entity('brand_section')
 @Index(['brandId', 'sortOrder'])
@@ -21,11 +22,6 @@ export class BrandSectionEntity extends CommonEntity {
   @Column('int', { name: 'brand_id', nullable: false })
   brandId: number;
 
-  @Column('varchar', { length: 200, nullable: true })
-  title: string;
-
-  @Column('text', { nullable: true })
-  content: string;
 
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
@@ -46,4 +42,9 @@ export class BrandSectionEntity extends CommonEntity {
     },
   )
   brandSectionImageList: BrandSectionImageEntity[];
+
+  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
+    cascade: true,
+  })
+  multilingualTexts: MultilingualTextEntity[];
 }

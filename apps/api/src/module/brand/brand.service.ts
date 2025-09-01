@@ -1,4 +1,9 @@
+import {
+  LanguageCode,
+  DEFAULT_LANGUAGE,
+} from '@app/repository/enum/language.enum';
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
 
 import { GetBrandIntroduceResponse } from './brand.dto';
@@ -7,11 +12,38 @@ import { GetBrandIntroduceResponse } from './brand.dto';
 export class BrandService {
   constructor(
     private readonly brandRepositoryService: BrandRepositoryService,
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
-  async getBrandIntroduce(id: number): Promise<GetBrandIntroduceResponse> {
+  async getBrandIntroduce(
+    id: number,
+    languageCode: LanguageCode = DEFAULT_LANGUAGE,
+  ): Promise<GetBrandIntroduceResponse> {
     const brandEntity = await this.brandRepositoryService.getBrandById(id);
 
-    return GetBrandIntroduceResponse.from(brandEntity);
+    // Fetch multilingual texts for brand and sections
+    const [brandTexts, sectionTexts] = await Promise.all([
+      this.languageRepositoryService.findMultilingualTexts(
+        'brand',
+        brandEntity.id,
+        languageCode,
+      ),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        'brand_section',
+        brandEntity.brandSectionList.map((section) => section.id),
+        languageCode,
+      ),
+    ]);
+
+    const brandMultilingual = {
+      brandText: brandTexts,
+      sectionText: sectionTexts,
+    };
+
+    return GetBrandIntroduceResponse.from(
+      brandEntity,
+      brandMultilingual,
+      languageCode,
+    );
   }
 }

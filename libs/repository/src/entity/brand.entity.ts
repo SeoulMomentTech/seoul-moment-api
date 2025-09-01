@@ -3,6 +3,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { BrandBannerImageEntity } from './brand-banner-image.entity';
 import { BrandSectionEntity } from './brand-info-section.entity';
 import { CommonEntity } from './common.entity';
+import { MultilingualTextEntity } from './multilingual-text.entity';
 import { BrandStatus } from '../enum/brand.enum';
 
 @Entity('brand')
@@ -10,11 +11,6 @@ export class BrandEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column('varchar', { length: 100, nullable: false })
-  name: string;
-
-  @Column('text', { nullable: true })
-  description: string;
 
   @Column('enum', {
     enum: BrandStatus,
@@ -38,4 +34,9 @@ export class BrandEntity extends CommonEntity {
     eager: true,
   })
   brandSectionList: BrandSectionEntity[];
+
+  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
+    cascade: true,
+  })
+  multilingualTexts: MultilingualTextEntity[];
 }
