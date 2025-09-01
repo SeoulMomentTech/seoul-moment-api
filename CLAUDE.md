@@ -500,7 +500,16 @@ expect(response.body).toHaveProperty('error', 'Bad Request');
 - **deadlock 방지**를 위한 `--runInBand` 옵션 적용으로 안정적인 테스트 실행
 - 새로운 테스트 작성 시 위 가이드를 참고하여 안정적인 테스트 코드를 작성하세요
 
-## 최근 해결 사항 (2025-08-29)
+## 최근 해결 사항
+
+### 2025-09-01
+- ✅ **dev-batch CI/CD 파이프라인 구축**: 별도 batch 애플리케이션 배포 워크플로우
+- ✅ **ECS Task Definition 분리**: API용(`taskdef.json`)과 Batch용(`taskdef-batch.json`) 독립 관리
+- ✅ **Redis TLS 연결 업데이트**: 보안 강화 및 연결 안정성 개선
+- ✅ **Google Sheets 크롤링 기능**: 외부 데이터 수집 및 메일 서비스 연동
+- ✅ **Health Check 최적화**: ECS taskdef에서 불필요한 health check 제거로 배포 안정성 향상
+
+### 2025-08-29
 - ✅ Redis 통합 테스트 환경 구축 (TestCacheModule, TestDatabaseModule 분리)
 - ✅ 모듈별 독립적인 테스트 설정으로 불필요한 의존성 제거
 - ✅ TestSetup 클래스 리팩토링으로 cache-only와 full-DB 테스트 지원

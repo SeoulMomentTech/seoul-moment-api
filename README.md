@@ -8,19 +8,32 @@
 
 ```
 seoul-moment-api/
-├── apps/api/                    # API 애플리케이션
+├── apps/
+│   ├── api/                     # API 애플리케이션
+│   └── batch/                   # 배치 애플리케이션 (크롤링, 메일 등)
 ├── libs/
 │   ├── common/                  # 공통 유틸리티 (로거, 예외처리)
 │   ├── config/                  # 환경설정 관리
 │   ├── database/                # 데이터베이스 설정
+│   ├── cache/                   # Redis 캐시 관리
+│   ├── external/                # 외부 API 연동 (Google 등)
 │   └── repository/              # 엔티티 및 레포지토리
 └── test/                        # 통합 테스트
 ```
 
 ## 🚀 주요 기능
 
+### API 애플리케이션
 - **브랜드 관리**: 브랜드 정보, 배너 이미지, 정보 섹션 관리
+- **Redis 캐시**: 성능 최적화를 위한 캐싱 시스템
 - **환경별 설정**: local, development, test, production 환경 지원
+
+### Batch 애플리케이션  
+- **Google Sheets 크롤링**: 외부 데이터 수집 및 동기화
+- **메일 서비스**: 자동화된 이메일 발송 기능
+- **배치 작업**: 스케줄링된 백그라운드 작업
+
+### 공통 기능
 - **로깅**: Winston 기반 구조화된 로깅 및 Morgan HTTP 로깅
 - **데이터베이스**: PostgreSQL + TypeORM, UTC 시간 관리
 - **통합 테스트**: Docker PostgreSQL을 활용한 실제 DB 테스트
@@ -35,6 +48,7 @@ npm install
 
 ### 애플리케이션 실행
 
+#### API 서버
 ```bash
 # 로컬 개발 환경 (NODE_ENV=local)
 npm run start:local
@@ -47,6 +61,18 @@ npm run start:prod
 
 # 디버그 모드
 npm run start:debug
+```
+
+#### Batch 서버
+```bash
+# Batch 애플리케이션 실행
+npm run start:batch
+
+# Batch 개발 모드
+npm run start:batch:dev
+
+# Batch 프로덕션 모드
+npm run start:batch:prod
 ```
 
 ## 🧪 테스트
@@ -106,17 +132,31 @@ brands                    # 브랜드 기본 정보
 
 ### 완료된 주요 기능들
 
-- ✅ **모노레포 구조 구축** (apps/api, libs 분리)
+#### 인프라 및 아키텍처
+- ✅ **모노레포 구조 구축** (apps/api, apps/batch, libs 분리)
 - ✅ **환경설정 시스템** (local/dev/test/prod 환경별 설정)
 - ✅ **로깅 시스템** (Winston + Morgan, JSON 파싱 로그)
 - ✅ **데이터베이스 설정** (PostgreSQL + TypeORM, UTC 시간 처리)
+- ✅ **Redis 캐시 시스템** (성능 최적화 및 TLS 보안 연결)
+
+#### 애플리케이션 기능
 - ✅ **브랜드 테이블 설계** (Brand, BannerImage, InfoSection, SectionImage)
 - ✅ **Repository/Service 계층** (데이터 접근 + 비즈니스 로직 분리)
 - ✅ **API 응답 DTO** (Swagger 문서화 포함)
 - ✅ **헬스체크 API** (GET /health)
+- ✅ **Google Sheets 크롤링** (외부 데이터 수집)
+- ✅ **메일 서비스** (자동화된 이메일 발송)
+
+#### 테스트 및 품질
 - ✅ **통합 테스트 환경** (Docker PostgreSQL + 실제 DB 테스트)
 - ✅ **완전한 테스트 격리** (외래키 제약조건 비활성화 + TRUNCATE 정리)
-- ✅ **13개 통합 테스트 완료** (CRUD, 에러 처리, 동시성, CASCADE 테스트)
+- ✅ **29개 통합 테스트 완료** (CRUD, 에러 처리, 동시성, CASCADE 테스트)
+- ✅ **Redis 캐시 테스트** (캐시 격리 및 성능 테스트)
+
+#### 배포 및 운영
+- ✅ **ECS 배포 시스템** (API/Batch 분리 배포)
+- ✅ **GitHub Actions CI/CD** (dev-batch 파이프라인)
+- ✅ **Docker 멀티 스테이지 빌드** (애플리케이션별 최적화)
 
 ### API 엔드포인트
 
@@ -129,9 +169,10 @@ GET /brand/introduce/:id       # 브랜드 소개 페이지 조회
 
 ### 통합 테스트 결과
 
-- **총 13개 테스트 모두 통과** ✅
+- **총 29개 테스트 모두 통과** ✅
 - **완전한 테스트 격리** 구현
-- **실제 PostgreSQL** 사용으로 신뢰할 수 있는 테스트
+- **실제 PostgreSQL + Redis** 사용으로 신뢰할 수 있는 테스트
+- **Cache-only 테스트와 DB+Cache 통합 테스트** 분리
 
 ### 테스트 커버리지
 
@@ -185,14 +226,31 @@ npm run test:db:up
 
 ## 📚 기술 스택
 
-- **Framework**: NestJS
+- **Framework**: NestJS (API + Batch)
 - **Database**: PostgreSQL + TypeORM
+- **Cache**: Redis (TLS 보안 연결)
+- **External APIs**: Google Sheets API, Serper API
 - **Logging**: Winston + Morgan
-- **Testing**: Jest + Docker PostgreSQL
+- **Testing**: Jest + Docker (PostgreSQL + Redis)
 - **Documentation**: Swagger/OpenAPI
 - **Code Quality**: ESLint + Prettier
+- **Deployment**: AWS ECS + GitHub Actions
+- **Containerization**: Docker (멀티 스테이지 빌드)
 
-docker compose 배포 방법
+## 🚀 배포 방법
 
+### Docker Compose 로컬 배포
+```bash
+# API 서버 빌드 및 배포
 NODE_ENV=development docker compose build api
 NODE_ENV=development docker compose push api
+
+# Batch 서버 빌드 및 배포  
+NODE_ENV=development docker compose build batch
+NODE_ENV=development docker compose push batch
+```
+
+### GitHub Actions 자동 배포
+- **dev-batch 브랜치**: Batch 애플리케이션 자동 배포
+- **main 브랜치**: API 애플리케이션 자동 배포
+- ECS 태스크 정의 분리로 독립적인 배포 관리
