@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
-import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
+import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
@@ -307,7 +307,7 @@ export class TestDataFactory {
    * 다국어 텍스트 생성
    */
   async createMultilingualText(
-    entityType: string,
+    entityType: EntityEnum,
     entityId: number,
     fieldName: string,
     language: LanguageEntity,
