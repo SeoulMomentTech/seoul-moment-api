@@ -310,13 +310,13 @@ describe('BrandController (E2E)', () => {
     testDataFactory = new TestDataFactory(TestSetup.getDataSource());
   });
 
-  it('GET /brand/introduce/:id - success', async () => {
+  it('GET /brand/:id - success', async () => {
     // Given: 실제 DB에 브랜드 데이터 생성
     const brand = await testDataFactory.createFullBrand();
 
     // When: 실제 HTTP 요청
     const response = await request(app.getHttpServer())
-      .get(`/brand/introduce/${brand.id}`)
+      .get(`/brand/${brand.id}`)
       .expect(200);
 
     // Then: 실제 응답 데이터 검증
@@ -524,7 +524,7 @@ beforeEach(async () => {
 ```typescript
 // ParseIntPipe 적용 후 테스트
 const response = await request(app.getHttpServer())
-  .get('/brand/introduce/invalid-id')
+  .get('/brand/invalid-id')
   .expect(400); // ParseIntPipe가 400 Bad Request 반환
 
 // 응답 구조 검증
@@ -561,12 +561,14 @@ expect(response.body).toHaveProperty('error', 'Bad Request');
 - ✅ **TestDataFactory Enhancement**: Multilingual 테스트 데이터 생성 지원 및 관계 로딩 최적화
 
 #### 주요 기술 결정사항
+
 - **No Fallback Policy**: Controller에서 fallback 로직 제거, 요청 언어에 해당하는 데이터만 반환
 - **Entity Type Consistency**: 서비스와 테스트에서 일관된 entity type 사용 (`'brand'`, `'brand_section'`)
 - **Test Safety First**: 환경변수 검증으로 실제 DB 데이터 보호 (NODE_ENV, DB_NAME, DB_PORT 검증)
 - **Eager Loading with Manual Reload**: createFullBrand에서 관계 데이터 수동 재조회로 확실한 관계 로딩 보장
 
 #### 이전 개발 사항 (같은 날)
+
 - ✅ **dev-batch CI/CD 파이프라인 구축**: 별도 batch 애플리케이션 배포 워크플로우
 - ✅ **ECS Task Definition 분리**: API용(`taskdef.json`)과 Batch용(`taskdef-batch.json`) 독립 관리
 - ✅ **Redis TLS 연결 업데이트**: 보안 강화 및 연결 안정성 개선
@@ -833,19 +835,25 @@ export class TestSetup {
   private static validateTestEnvironment(): void {
     // NODE_ENV가 test가 아니면 에러
     if (process.env.NODE_ENV !== 'test') {
-      throw new Error(`DANGER: Tests running in non-test environment! NODE_ENV=${process.env.NODE_ENV}`);
+      throw new Error(
+        `DANGER: Tests running in non-test environment! NODE_ENV=${process.env.NODE_ENV}`,
+      );
     }
 
     // 실제 프로덕션/개발 DB를 가리키고 있으면 에러
     const dbName = process.env.DATABASE_NAME;
     if (!dbName || !dbName.includes('test')) {
-      throw new Error(`DANGER: Test database name must contain 'test'. Current: ${dbName}`);
+      throw new Error(
+        `DANGER: Test database name must contain 'test'. Current: ${dbName}`,
+      );
     }
 
     // 테스트용 포트가 아니면 에러
     const dbPort = process.env.DATABASE_PORT;
     if (dbPort !== '5433') {
-      throw new Error(`DANGER: Test database must use port 5433. Current: ${dbPort}`);
+      throw new Error(
+        `DANGER: Test database must use port 5433. Current: ${dbPort}`,
+      );
     }
 
     console.log('✅ Test environment validation passed');
@@ -981,7 +989,11 @@ export class TestDataFactory {
     },
   ): Promise<{
     entity: NewEntity;
-    languages: { korean: LanguageEntity; english: LanguageEntity; chinese: LanguageEntity };
+    languages: {
+      korean: LanguageEntity;
+      english: LanguageEntity;
+      chinese: LanguageEntity;
+    };
     texts: MultilingualTextEntity[];
   }> {
     // 엔티티 생성
@@ -995,7 +1007,9 @@ export class TestDataFactory {
 
     if (multilingualData?.name) {
       for (const [langCode, content] of Object.entries(multilingualData.name)) {
-        const language = Object.values(languages).find(l => l.code === langCode);
+        const language = Object.values(languages).find(
+          (l) => l.code === langCode,
+        );
         if (language && content) {
           const text = await this.createMultilingualText(
             EntityEnum.NEW_ENTITY, // EntityEnum에도 추가 필요
@@ -1030,20 +1044,24 @@ TestDatabaseModule과 TestDataFactory에 등록된 엔티티들:
 새로운 엔티티(예: News, Article 등)의 테스트를 구현할 때:
 
 #### □ 1. TestDatabaseModule 업데이트
+
 - [ ] Import 구문 추가
 - [ ] `entities` 배열에 추가
 - [ ] `TypeOrmModule.forFeature` 배열에 추가
 
 #### □ 2. TestDataFactory 업데이트
+
 - [ ] Import 구문 추가
 - [ ] 기본 생성 메서드 추가 (`createNewEntity`)
 - [ ] 관계 엔티티 생성 메서드 추가 (필요 시)
 - [ ] 다국어 지원 메서드 추가 (필요 시)
 
 #### □ 3. EntityEnum 업데이트 (다국어 지원 시)
+
 - [ ] `libs/repository/src/enum/entity.enum.ts`에 새 엔티티 타입 추가
 
 #### □ 4. 테스트 작성 전 확인
+
 - [ ] `npm run test:full` 실행하여 기존 테스트가 통과하는지 확인
 - [ ] 새 엔티티 관련 테스트 작성
 - [ ] 모든 테스트 통과 확인

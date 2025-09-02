@@ -67,7 +67,7 @@ describe('BrandController Multilingual (E2E)', () => {
     await TestSetup.clearDatabase();
   });
 
-  describe('GET /brand/introduce/:id with multilingual support', () => {
+  describe('GET /brand/:id with multilingual support', () => {
     it('should return content based on Accept-Language header', async () => {
       // Given: Create multilingual brand
       const { brand } = await testDataFactory.createMultilingualBrand(
@@ -82,7 +82,7 @@ describe('BrandController Multilingual (E2E)', () => {
 
       // When: Request with Accept-Language header
       const response = await request(app.getHttpServer())
-        .get(`/brand/introduce/${brand.id}`)
+        .get(`/brand/${brand.id}`)
         .set('Accept-Language', 'en')
         .expect(200);
 
@@ -112,7 +112,7 @@ describe('BrandController Multilingual (E2E)', () => {
 
       for (const testCase of testCases) {
         const response = await request(app.getHttpServer())
-          .get(`/brand/introduce/${brand.id}`)
+          .get(`/brand/${brand.id}`)
           .set('Accept-Language', testCase.header)
           .expect(200);
 
@@ -123,7 +123,7 @@ describe('BrandController Multilingual (E2E)', () => {
     it('should return 404 for non-existent brand', async () => {
       // When: Request non-existent brand
       const response = await request(app.getHttpServer())
-        .get('/brand/introduce/999?lang=ko')
+        .get('/brand/999?lang=ko')
         .expect(404);
 
       // Then: Should return error
@@ -142,7 +142,7 @@ describe('BrandController Multilingual (E2E)', () => {
 
       // When: Request blocked brand
       const response = await request(app.getHttpServer())
-        .get(`/brand/introduce/${brand.id}?lang=ko`)
+        .get(`/brand/${brand.id}?lang=ko`)
         .expect(404);
 
       // Then: Should return error
@@ -152,7 +152,7 @@ describe('BrandController Multilingual (E2E)', () => {
     it('should return 400 for invalid brand ID', async () => {
       // When: Request with invalid ID
       const response = await request(app.getHttpServer())
-        .get('/brand/introduce/invalid-id?lang=ko')
+        .get('/brand/invalid-id?lang=ko')
         .expect(400);
 
       // Then: Should return validation error
@@ -168,7 +168,7 @@ describe('BrandController Multilingual (E2E)', () => {
 
       // When: Request brand
       const response = await request(app.getHttpServer())
-        .get(`/brand/introduce/${brand.id}?lang=en`)
+        .get(`/brand/${brand.id}?lang=en`)
         .expect(200);
 
       // Then: Should return empty strings
