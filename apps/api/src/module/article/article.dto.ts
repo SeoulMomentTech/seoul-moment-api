@@ -1,19 +1,19 @@
+import { ArticleSectionEntity } from '@app/repository/entity/article-section.entity';
+import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
-import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
-import { NewsEntity } from '@app/repository/entity/news.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { plainToInstance } from 'class-transformer';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
-export class GetNewsSection {
+export class GetArticleSection {
   title: string;
   subTitle: string;
   content: string;
   iamgeList: string[];
 
   static from(
-    entity: NewsSectionEntity,
+    entity: ArticleSectionEntity,
     multilingualText: MultilingualTextEntity[],
     language: LanguageCode,
   ) {
@@ -55,7 +55,7 @@ export class GetNewsSection {
   }
 }
 
-export class GetNewsResponse {
+export class GetArticleResponse {
   id: number;
   writer: string;
   category: string;
@@ -63,10 +63,10 @@ export class GetNewsResponse {
   content: string;
   banner: string;
   profileImage: string;
-  section: GetNewsSection;
+  section: GetArticleSection;
 
   static from(
-    entity: NewsEntity,
+    entity: ArticleEntity,
     multilingualText: {
       text: MultilingualTextEntity[];
       sectionText: MultilingualTextEntity[];
@@ -100,7 +100,7 @@ export class GetNewsResponse {
       banner: entity.getBannerImage(),
       profileImage: entity.getProfileImage(),
       section: entity.section.map((v) =>
-        GetNewsSection.from(v, multilingualText.sectionText, language),
+        GetArticleSection.from(v, multilingualText.sectionText, language),
       ),
     });
   }

@@ -5,7 +5,7 @@ import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 
-import { MultilingualFieldDto } from './dto/multilingual.dto';
+import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
 export class GetBrandIntroduceSection {
   @ApiProperty({ description: '섹션 제목', example: '브랜드 스토리' })
