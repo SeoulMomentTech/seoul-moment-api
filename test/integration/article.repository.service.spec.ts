@@ -168,6 +168,118 @@ describe('ArticleRepositoryService Integration Tests', () => {
     });
   });
 
+  describe('findLastArticleByCount', () => {
+    it('should return latest articles by count with NORMAL status only', async () => {
+      // Given: 여러 Article을 시간차로 생성
+      const category = await testDataFactory.createCategory();
+      const articles = [];
+
+      for (let i = 1; i <= 5; i++) {
+        const article = await testDataFactory.createArticle(category, {
+          status: ArticleStatus.NORMAL,
+          writer: `Writer ${i}`,
+        });
+        articles.push(article);
+        // 시간차 생성을 위한 작은 지연
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+
+      // DELETE 상태 Article도 생성 (결과에 포함되지 않아야 함)
+      await testDataFactory.createArticle(category, {
+        status: ArticleStatus.DELETE,
+        writer: 'Deleted Writer',
+      });
+
+      // When: 최신 3개 Article 조회
+      const result = await articleRepositoryService.findLastArticleByCount(3);
+
+      // Then: 최신 3개 NORMAL 상태 Article만 반환
+      expect(result).toHaveLength(3);
+
+      // 최신 순서대로 정렬되어 있는지 확인
+      for (let i = 0; i < result.length - 1; i++) {
+        expect(result[i].createDate.getTime()).toBeGreaterThanOrEqual(
+          result[i + 1].createDate.getTime(),
+        );
+      }
+
+      // 모든 Article이 NORMAL 상태인지 확인
+      result.forEach((article) => {
+        expect(article.status).toBe(ArticleStatus.NORMAL);
+      });
+    });
+
+    it('should return empty array when no normal articles exist', async () => {
+      // Given: DELETE 상태 Article들만 생성
+      const category = await testDataFactory.createCategory();
+      await testDataFactory.createArticle(category, {
+        status: ArticleStatus.DELETE,
+      });
+      await testDataFactory.createArticle(category, {
+        status: ArticleStatus.DELETE,
+      });
+
+      // When: 최신 Article 조회
+      const result = await articleRepositoryService.findLastArticleByCount(3);
+
+      // Then: 빈 배열 반환
+      expect(result).toHaveLength(0);
+    });
+
+    it('should return fewer articles when requested count exceeds available', async () => {
+      // Given: 2개의 NORMAL Article만 생성
+      const category = await testDataFactory.createCategory();
+      await testDataFactory.createArticle(category, {
+        status: ArticleStatus.NORMAL,
+      });
+      await testDataFactory.createArticle(category, {
+        status: ArticleStatus.NORMAL,
+      });
+
+      // When: 5개 요청하지만 2개만 존재
+      const result = await articleRepositoryService.findLastArticleByCount(5);
+
+      // Then: 실제 존재하는 2개만 반환
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return articles with eager loaded relations', async () => {
+      // Given: 완전한 Article 데이터 생성
+      const article = await testDataFactory.createFullArticle({
+        article: { status: ArticleStatus.NORMAL },
+        sections: [
+          {
+            sortOrder: 1,
+            images: [{ sortOrder: 1, imageUrl: 'test.jpg' }],
+          },
+        ],
+      });
+
+      // When: 최신 Article 조회
+      const result = await articleRepositoryService.findLastArticleByCount(1);
+
+      // Then: 관련 데이터가 eager loading으로 포함됨
+      expect(result).toHaveLength(1);
+      expect(result[0].category).toBeDefined();
+      expect(result[0].section).toHaveLength(1);
+      expect(result[0].section[0].sectionImage).toHaveLength(1);
+    });
+
+    it('should handle zero count parameter', async () => {
+      // Given: Article 생성
+      const category = await testDataFactory.createCategory();
+      await testDataFactory.createArticle(category, {
+        status: ArticleStatus.NORMAL,
+      });
+
+      // When: count가 0인 경우
+      const result = await articleRepositoryService.findLastArticleByCount(0);
+
+      // Then: take: 0은 제한 없음을 의미하므로 모든 데이터 반환
+      expect(result).toHaveLength(1);
+    });
+  });
+
   describe('getArticleById', () => {
     it('should return article when exists with NORMAL status', async () => {
       // Given: 완전한 Article 데이터 생성

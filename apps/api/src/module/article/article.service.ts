@@ -17,10 +17,12 @@ export class ArticleService {
     id: number,
     languageCode: LanguageCode,
   ): Promise<GetArticleResponse> {
-    const articleEntity =
-      await this.articleRepositoryService.getArticleById(id);
+    const [articleEntity, lastArticleEntityList] = await Promise.all([
+      this.articleRepositoryService.getArticleById(id),
+      this.articleRepositoryService.findLastArticleByCount(3),
+    ]);
 
-    const [articleText, sectionText] = await Promise.all([
+    const [articleText, sectionText, lastArticleText] = await Promise.all([
       this.languageRepositoryService.findMultilingualTexts(
         EntityType.ARTICLE,
         articleEntity.id,
@@ -31,6 +33,11 @@ export class ArticleService {
         articleEntity.section.map((v) => v.id),
         languageCode,
       ),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.ARTICLE,
+        lastArticleEntityList.map((v) => v.id),
+        languageCode,
+      ),
     ]);
 
     return GetArticleResponse.from(
@@ -39,6 +46,8 @@ export class ArticleService {
         text: articleText,
         sectionText,
       },
+      lastArticleEntityList,
+      lastArticleText,
       languageCode,
     );
   }

@@ -17,9 +17,12 @@ export class NewsService {
     id: number,
     languageCode: LanguageCode,
   ): Promise<GetNewsResponse> {
-    const newsEntity = await this.newsRepositoryService.getNewsById(id);
+    const [newsEntity, lastNewsEntityList] = await Promise.all([
+      this.newsRepositoryService.getNewsById(id),
+      this.newsRepositoryService.findLastNewsByCount(3),
+    ]);
 
-    const [newsText, sectionText] = await Promise.all([
+    const [newsText, sectionText, lastNewsText] = await Promise.all([
       this.languageRepositoryService.findMultilingualTexts(
         EntityType.NEWS,
         newsEntity.id,
@@ -30,6 +33,11 @@ export class NewsService {
         newsEntity.section.map((v) => v.id),
         languageCode,
       ),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.NEWS,
+        lastNewsEntityList.map((v) => v.id),
+        languageCode,
+      ),
     ]);
 
     return GetNewsResponse.from(
@@ -38,6 +46,8 @@ export class NewsService {
         text: newsText,
         sectionText,
       },
+      lastNewsEntityList,
+      lastNewsText,
       languageCode,
     );
   }

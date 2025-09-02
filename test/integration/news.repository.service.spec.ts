@@ -164,6 +164,108 @@ describe('NewsRepositoryService Integration Tests', () => {
     });
   });
 
+  describe('findLastNewsByCount', () => {
+    it('should return latest news by count with NORMAL status only', async () => {
+      // Given: 여러 News을 시간차로 생성
+      const category = await testDataFactory.createCategory();
+      const newsList = [];
+
+      for (let i = 1; i <= 5; i++) {
+        const news = await testDataFactory.createNews(category, {
+          status: NewsStatus.NORMAL,
+          writer: `Writer ${i}`,
+        });
+        newsList.push(news);
+        // 시간차 생성을 위한 작은 지연
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+
+      // DELETE 상태 News도 생성 (결과에 포함되지 않아야 함)
+      await testDataFactory.createNews(category, {
+        status: NewsStatus.DELETE,
+        writer: 'Deleted Writer',
+      });
+
+      // When: 최신 3개 News 조회
+      const result = await newsRepositoryService.findLastNewsByCount(3);
+
+      // Then: 최신 3개 NORMAL 상태 News만 반환
+      expect(result).toHaveLength(3);
+
+      // 최신 순서대로 정렬되어 있는지 확인
+      for (let i = 0; i < result.length - 1; i++) {
+        expect(result[i].createDate.getTime()).toBeGreaterThanOrEqual(
+          result[i + 1].createDate.getTime(),
+        );
+      }
+
+      // 모든 News가 NORMAL 상태인지 확인
+      result.forEach((news) => {
+        expect(news.status).toBe(NewsStatus.NORMAL);
+      });
+    });
+
+    it('should return empty array when no normal news exist', async () => {
+      // Given: DELETE 상태 News들만 생성
+      const category = await testDataFactory.createCategory();
+      await testDataFactory.createNews(category, { status: NewsStatus.DELETE });
+      await testDataFactory.createNews(category, { status: NewsStatus.DELETE });
+
+      // When: 최신 News 조회
+      const result = await newsRepositoryService.findLastNewsByCount(3);
+
+      // Then: 빈 배열 반환
+      expect(result).toHaveLength(0);
+    });
+
+    it('should return fewer news when requested count exceeds available', async () => {
+      // Given: 2개의 NORMAL News만 생성
+      const category = await testDataFactory.createCategory();
+      await testDataFactory.createNews(category, { status: NewsStatus.NORMAL });
+      await testDataFactory.createNews(category, { status: NewsStatus.NORMAL });
+
+      // When: 5개 요청하지만 2개만 존재
+      const result = await newsRepositoryService.findLastNewsByCount(5);
+
+      // Then: 실제 존재하는 2개만 반환
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return news with eager loaded relations', async () => {
+      // Given: 완전한 News 데이터 생성
+      const news = await testDataFactory.createFullNews({
+        news: { status: NewsStatus.NORMAL },
+        sections: [
+          {
+            sortOrder: 1,
+            images: [{ sortOrder: 1, imageUrl: 'test.jpg' }],
+          },
+        ],
+      });
+
+      // When: 최신 News 조회
+      const result = await newsRepositoryService.findLastNewsByCount(1);
+
+      // Then: 관련 데이터가 eager loading으로 포함됨
+      expect(result).toHaveLength(1);
+      expect(result[0].category).toBeDefined();
+      expect(result[0].section).toHaveLength(1);
+      expect(result[0].section[0].sectionImage).toHaveLength(1);
+    });
+
+    it('should handle zero count parameter', async () => {
+      // Given: News 생성
+      const category = await testDataFactory.createCategory();
+      await testDataFactory.createNews(category, { status: NewsStatus.NORMAL });
+
+      // When: count가 0인 경우
+      const result = await newsRepositoryService.findLastNewsByCount(0);
+
+      // Then: take: 0은 제한 없음을 의미하므로 모든 데이터 반환
+      expect(result).toHaveLength(1);
+    });
+  });
+
   describe('getNewsById', () => {
     it('should return news when exists with NORMAL status', async () => {
       // Given: 완전한 News 데이터 생성

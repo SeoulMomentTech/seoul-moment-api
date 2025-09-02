@@ -6,6 +6,35 @@ import { plainToInstance } from 'class-transformer';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
+export class GetLastArticle {
+  id: number;
+  banner: string;
+  title: string;
+
+  static from(
+    entity: ArticleEntity,
+    multilingualText: MultilingualTextEntity[],
+    language: LanguageCode,
+  ) {
+    multilingualText = multilingualText.filter((v) => v.entityId === entity.id);
+
+    const title = new MultilingualFieldDto(
+      multilingualText
+        .filter((v) => v.fieldName === 'title')
+        .map((text) => ({
+          language: text.language.code,
+          content: text.textContent,
+        })),
+    );
+
+    return plainToInstance(this, {
+      id: entity.id,
+      banner: entity.getBannerImage(),
+      title: title.getContentByLanguage(language),
+    });
+  }
+}
+
 export class GetArticleSection {
   title: string;
   subTitle: string;
@@ -63,6 +92,7 @@ export class GetArticleResponse {
   content: string;
   banner: string;
   profileImage: string;
+  lastArticle: GetLastArticle[];
   section: GetArticleSection;
 
   static from(
@@ -71,6 +101,8 @@ export class GetArticleResponse {
       text: MultilingualTextEntity[];
       sectionText: MultilingualTextEntity[];
     },
+    lastArticleList: ArticleEntity[],
+    lastArticleMultilingual: MultilingualTextEntity[],
     language: LanguageCode,
   ) {
     const title = new MultilingualFieldDto(
@@ -99,6 +131,9 @@ export class GetArticleResponse {
       content: content.getContentByLanguage(language),
       banner: entity.getBannerImage(),
       profileImage: entity.getProfileImage(),
+      lastArticle: lastArticleList.map((v) =>
+        GetLastArticle.from(v, lastArticleMultilingual, language),
+      ),
       section: entity.section.map((v) =>
         GetArticleSection.from(v, multilingualText.sectionText, language),
       ),

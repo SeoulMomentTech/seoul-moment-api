@@ -32,7 +32,7 @@ export class ArticleController {
     enum: LanguageCode,
   })
   @ResponseData(GetArticleResponse)
-  @ResponseException(HttpStatus.NOT_FOUND, '존재하는 아티클이가 없음')
+  @ResponseException(HttpStatus.NOT_FOUND, '존재하는 아티클이 없음')
   async getArticle(
     @Param('id', ParseIntPipe) id: number,
     @Headers('Accept-language') acceptLanguage: LanguageCode,

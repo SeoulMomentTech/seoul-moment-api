@@ -27,6 +27,18 @@ export class NewsRepositoryService {
     });
   }
 
+  async findLastNewsByCount(count: number): Promise<NewsEntity[]> {
+    return this.newsRepository.find({
+      where: {
+        status: NewsStatus.NORMAL,
+      },
+      order: {
+        createDate: 'DESC',
+      },
+      take: count,
+    });
+  }
+
   async getNewsById(id: number): Promise<NewsEntity> {
     const result = await this.newsRepository.findOneBy({
       id,

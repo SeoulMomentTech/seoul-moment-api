@@ -27,6 +27,18 @@ export class ArticleRepositoryService {
     });
   }
 
+  async findLastArticleByCount(count: number): Promise<ArticleEntity[]> {
+    return this.articleRepository.find({
+      where: {
+        status: ArticleStatus.NORMAL,
+      },
+      order: {
+        createDate: 'DESC',
+      },
+      take: count,
+    });
+  }
+
   async getArticleById(id: number): Promise<ArticleEntity> {
     const result = await this.articleRepository.findOneBy({
       id,
