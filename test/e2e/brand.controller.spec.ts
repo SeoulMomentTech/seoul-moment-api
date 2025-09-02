@@ -207,17 +207,14 @@ describe('BrandController (E2E)', () => {
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 3,
         imageUrl: '/banner3.jpg',
-        altText: 'Banner 3',
       });
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 1,
         imageUrl: '/banner1.jpg',
-        altText: 'Banner 1',
       });
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 2,
         imageUrl: '/banner2.jpg',
-        altText: 'Banner 2',
       });
 
       // 섹션을 역순으로 생성
@@ -232,12 +229,10 @@ describe('BrandController (E2E)', () => {
       await testDataFactory.createSectionImage(section1, {
         sortOrder: 2,
         imageUrl: '/section1-2.jpg',
-        altText: 'Section 1 Image 2',
       });
       await testDataFactory.createSectionImage(section1, {
         sortOrder: 1,
         imageUrl: '/section1-1.jpg',
-        altText: 'Section 1 Image 1',
       });
 
       // When: HTTP GET 요청
@@ -324,7 +319,6 @@ describe('BrandController (E2E)', () => {
         await testDataFactory.createBannerImage(largeBrand, {
           sortOrder: i,
           imageUrl: `/banner${i}.jpg`,
-          altText: `Banner ${i}`,
         });
       }
 
@@ -338,7 +332,6 @@ describe('BrandController (E2E)', () => {
           await testDataFactory.createSectionImage(section, {
             sortOrder: imgIndex,
             imageUrl: `/section${sectionIndex}-${imgIndex}.jpg`,
-            altText: `Section ${sectionIndex} Image ${imgIndex}`,
           });
         }
       }
@@ -379,7 +372,6 @@ describe('BrandController (E2E)', () => {
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 2,
         imageUrl: '/new-banner.jpg',
-        altText: 'New Banner',
       });
 
       // When: 두 번째 요청 (데이터 추가 후)

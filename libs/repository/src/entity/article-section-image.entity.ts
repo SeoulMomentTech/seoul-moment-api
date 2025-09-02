@@ -26,14 +26,10 @@ export class ArticleSectionImageEntity extends CommonEntity {
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
-  @ManyToOne(
-    () => ArticleSectionEntity,
-    (section) => section.articleSectionImage,
-    {
-      onDelete: 'CASCADE',
-      createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-    },
-  )
+  @ManyToOne(() => ArticleSectionEntity, (section) => section.sectionImage, {
+    onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
   @JoinColumn({ name: 'section_id' })
   section: ArticleSectionEntity;
 

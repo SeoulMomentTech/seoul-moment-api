@@ -27,7 +27,7 @@ export class BrandEntity extends CommonEntity {
       eager: true,
     },
   )
-  brandBannerImage: BrandBannerImageEntity[];
+  bannerImage: BrandBannerImageEntity[];
 
   @OneToMany(() => BrandSectionEntity, (brandSection) => brandSection.brand, {
     cascade: true,

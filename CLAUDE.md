@@ -885,3 +885,213 @@ npm run test:full                             # 정상 실행 (NODE_ENV=test 자
 ```
 
 **중요**: 이 안전장치로 인해 잘못된 환경에서 테스트 실행 시 즉시 에러가 발생하여 실제 DB 데이터를 보호합니다.
+
+## 14. 새로운 엔티티 테스트 환경 설정 가이드 (2025-09-02)
+
+### 새로운 엔티티 추가 시 필수 작업
+
+새로운 엔티티의 테스트를 작성하기 전에 **반드시** 다음 두 파일을 업데이트해야 합니다:
+
+#### 1. TestDatabaseModule에 엔티티 등록
+
+`test/setup/test-database.module.ts` 파일을 수정:
+
+```typescript
+// 1. Import 구문 추가
+import { NewEntity } from '@app/repository/entity/new.entity';
+
+@Module({
+  imports: [
+    TestCacheModule,
+    TypeOrmModule.forRoot({
+      // 2. entities 배열에 추가
+      entities: [
+        BrandEntity,
+        BrandBannerImageEntity,
+        BrandSectionEntity,
+        BrandSectionImageEntity,
+        LanguageEntity,
+        MultilingualTextEntity,
+        NewEntity, // ✅ 새 엔티티 추가
+      ],
+      // ... 나머지 설정
+    }),
+    // 3. TypeOrmModule.forFeature에도 추가
+    TypeOrmModule.forFeature([
+      BrandEntity,
+      BrandBannerImageEntity,
+      BrandSectionEntity,
+      BrandSectionImageEntity,
+      LanguageEntity,
+      MultilingualTextEntity,
+      NewEntity, // ✅ 새 엔티티 추가
+    ]),
+  ],
+})
+```
+
+#### 2. TestDataFactory에 헬퍼 메서드 추가
+
+`test/setup/test-data.factory.ts` 파일에 새 엔티티 생성 메서드 추가:
+
+```typescript
+// Import 추가
+import { NewEntity } from '@app/repository/entity/new.entity';
+
+export class TestDataFactory {
+  /**
+   * 새로운 엔티티 생성
+   */
+  async createNewEntity(
+    overrides: Partial<NewEntity> = {},
+  ): Promise<NewEntity> {
+    const repository = this.dataSource.getRepository(NewEntity);
+
+    const entity = repository.create({
+      // 기본값들 설정
+      status: EntityStatus.ACTIVE,
+      name: 'Test Entity',
+      ...overrides,
+    });
+
+    return repository.save(entity);
+  }
+
+  /**
+   * 관계가 있는 엔티티 생성 (예: Brand와 관련된 엔티티)
+   */
+  async createNewEntityWithBrand(
+    brand: BrandEntity,
+    overrides: Partial<NewEntity> = {},
+  ): Promise<NewEntity> {
+    return this.createNewEntity({
+      brandId: brand.id,
+      ...overrides,
+    });
+  }
+
+  /**
+   * 다국어 지원이 필요한 엔티티 생성
+   */
+  async createMultilingualNewEntity(
+    entityData: Partial<NewEntity> = {},
+    multilingualData?: {
+      name?: { [key in LanguageCode]?: string };
+      description?: { [key in LanguageCode]?: string };
+    },
+  ): Promise<{
+    entity: NewEntity;
+    languages: { korean: LanguageEntity; english: LanguageEntity; chinese: LanguageEntity };
+    texts: MultilingualTextEntity[];
+  }> {
+    // 엔티티 생성
+    const entity = await this.createNewEntity(entityData);
+
+    // 언어 생성
+    const languages = await this.createDefaultLanguages();
+
+    // 다국어 텍스트 생성
+    const texts: MultilingualTextEntity[] = [];
+
+    if (multilingualData?.name) {
+      for (const [langCode, content] of Object.entries(multilingualData.name)) {
+        const language = Object.values(languages).find(l => l.code === langCode);
+        if (language && content) {
+          const text = await this.createMultilingualText(
+            EntityEnum.NEW_ENTITY, // EntityEnum에도 추가 필요
+            entity.id,
+            'name',
+            language,
+            content,
+          );
+          texts.push(text);
+        }
+      }
+    }
+
+    return { entity, languages, texts };
+  }
+}
+```
+
+### 현재 지원하는 엔티티 목록 (2025-09-02 기준)
+
+TestDatabaseModule과 TestDataFactory에 등록된 엔티티들:
+
+- ✅ `BrandEntity` - 브랜드 기본 정보
+- ✅ `BrandBannerImageEntity` - 브랜드 배너 이미지
+- ✅ `BrandSectionEntity` - 브랜드 정보 섹션
+- ✅ `BrandSectionImageEntity` - 브랜드 섹션 이미지
+- ✅ `LanguageEntity` - 언어 정보
+- ✅ `MultilingualTextEntity` - 다국어 텍스트
+
+### 새 엔티티 추가 체크리스트
+
+새로운 엔티티(예: News, Article 등)의 테스트를 구현할 때:
+
+#### □ 1. TestDatabaseModule 업데이트
+- [ ] Import 구문 추가
+- [ ] `entities` 배열에 추가
+- [ ] `TypeOrmModule.forFeature` 배열에 추가
+
+#### □ 2. TestDataFactory 업데이트
+- [ ] Import 구문 추가
+- [ ] 기본 생성 메서드 추가 (`createNewEntity`)
+- [ ] 관계 엔티티 생성 메서드 추가 (필요 시)
+- [ ] 다국어 지원 메서드 추가 (필요 시)
+
+#### □ 3. EntityEnum 업데이트 (다국어 지원 시)
+- [ ] `libs/repository/src/enum/entity.enum.ts`에 새 엔티티 타입 추가
+
+#### □ 4. 테스트 작성 전 확인
+- [ ] `npm run test:full` 실행하여 기존 테스트가 통과하는지 확인
+- [ ] 새 엔티티 관련 테스트 작성
+- [ ] 모든 테스트 통과 확인
+
+### 실제 사용 예시
+
+```typescript
+describe('NewEntityService Integration Tests', () => {
+  let newEntityService: NewEntityService;
+  let testDataFactory: TestDataFactory;
+  let module: TestingModule;
+
+  beforeAll(async () => {
+    await TestSetup.initialize();
+
+    module = await Test.createTestingModule({
+      imports: [TestDatabaseModule, NewEntityModule],
+    }).compile();
+
+    newEntityService = module.get<NewEntityService>(NewEntityService);
+    testDataFactory = new TestDataFactory(TestSetup.getDataSource());
+  });
+
+  beforeEach(async () => {
+    await TestSetup.clearDatabase();
+  });
+
+  it('should create new entity successfully', async () => {
+    // Given: TestDataFactory로 테스트 데이터 생성
+    const entity = await testDataFactory.createNewEntity({
+      name: 'Test Entity',
+      status: EntityStatus.ACTIVE,
+    });
+
+    // When: 서비스 호출
+    const result = await newEntityService.findById(entity.id);
+
+    // Then: 검증
+    expect(result.name).toBe('Test Entity');
+  });
+});
+```
+
+### 중요 주의사항
+
+1. **양쪽 모두 추가 필수**: TestDatabaseModule과 TestDataFactory 둘 다 업데이트해야 함
+2. **Import 경로 확인**: `@app/repository/entity/` 경로 사용
+3. **테스트 실행**: 항상 `npm run test:full`로 실행
+4. **데이터 정리**: 각 테스트 후 `TestSetup.clearDatabase()` 호출로 데이터 격리 보장
+
+**이 가이드를 따르지 않으면 테스트 실행 시 엔티티를 찾을 수 없다는 에러가 발생합니다.**

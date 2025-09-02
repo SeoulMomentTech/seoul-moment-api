@@ -1,9 +1,16 @@
+import { ArticleSectionImageEntity } from '@app/repository/entity/article-section-image.entity';
+import { ArticleSectionEntity } from '@app/repository/entity/article-section.entity';
+import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
+import { CategoryEntity } from '@app/repository/entity/category.entity';
 import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { NewsSectionImageEntity } from '@app/repository/entity/news-section-image.entity';
+import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
+import { NewsEntity } from '@app/repository/entity/news.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -20,24 +27,38 @@ import { TestCacheModule } from './test-cache.module';
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
       entities: [
+        ArticleEntity,
+        ArticleSectionEntity,
+        ArticleSectionImageEntity,
         BrandEntity,
         BrandBannerImageEntity,
         BrandSectionEntity,
         BrandSectionImageEntity,
+        CategoryEntity,
         LanguageEntity,
         MultilingualTextEntity,
+        NewsEntity,
+        NewsSectionEntity,
+        NewsSectionImageEntity,
       ],
       synchronize: true, // 테스트용으로만 true 사용
       dropSchema: false, // 스키마를 유지하고 데이터만 정리
       logging: false, // 테스트 시 로깅 비활성화
     }),
     TypeOrmModule.forFeature([
+      ArticleEntity,
+      ArticleSectionEntity,
+      ArticleSectionImageEntity,
       BrandEntity,
       BrandBannerImageEntity,
       BrandSectionEntity,
       BrandSectionImageEntity,
+      CategoryEntity,
       LanguageEntity,
       MultilingualTextEntity,
+      NewsEntity,
+      NewsSectionEntity,
+      NewsSectionImageEntity,
     ]),
   ],
   exports: [TestCacheModule, TypeOrmModule],

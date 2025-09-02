@@ -57,7 +57,7 @@ export class GetBrandIntroduceSection {
     return plainToInstance(this, {
       title: titleField.getContentByLanguageWithFallback(language) || '',
       content: contentField.getContentByLanguageWithFallback(language) || '',
-      imageList: entity.brandSectionImage
+      imageList: entity.sectionImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),
     });
@@ -124,7 +124,7 @@ export class GetBrandIntroduceResponse {
 
     return plainToInstance(this, {
       id: entity.id,
-      bannerList: entity.brandBannerImage
+      bannerList: entity.bannerImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),
       name: nameField.getContentByLanguageWithFallback(language) || '',

@@ -26,7 +26,7 @@ export class NewsSectionImageEntity extends CommonEntity {
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
-  @ManyToOne(() => NewsSectionEntity, (section) => section.newsSectionImage, {
+  @ManyToOne(() => NewsSectionEntity, (section) => section.sectionImage, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })

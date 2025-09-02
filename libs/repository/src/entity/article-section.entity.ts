@@ -35,13 +35,13 @@ export class ArticleSectionEntity extends CommonEntity {
 
   @OneToMany(
     () => ArticleSectionImageEntity,
-    (newsSectionImage) => newsSectionImage.section,
+    (articleSectionImage) => articleSectionImage.section,
     {
       cascade: true,
       eager: true,
     },
   )
-  articleSectionImage: ArticleSectionImageEntity[];
+  sectionImage: ArticleSectionImageEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

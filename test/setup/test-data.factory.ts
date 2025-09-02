@@ -1,13 +1,22 @@
 /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
+import { ArticleSectionImageEntity } from '@app/repository/entity/article-section-image.entity';
+import { ArticleSectionEntity } from '@app/repository/entity/article-section.entity';
+import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
+import { CategoryEntity } from '@app/repository/entity/category.entity';
 import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { NewsSectionImageEntity } from '@app/repository/entity/news-section-image.entity';
+import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
+import { NewsEntity } from '@app/repository/entity/news.entity';
+import { ArticleStatus } from '@app/repository/enum/article.enum';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
 import { EntityEnum } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
+import { NewsStatus } from '@app/repository/enum/news.enum';
 import { DataSource } from 'typeorm';
 
 export class TestDataFactory {
@@ -43,7 +52,6 @@ export class TestDataFactory {
     const banner = bannerRepository.create({
       brandId: brand.id,
       imageUrl: 'https://example.com/banner.jpg',
-      altText: 'Test banner image',
       sortOrder: 1,
       ...overrides,
     });
@@ -83,7 +91,6 @@ export class TestDataFactory {
     const image = imageRepository.create({
       sectionId: section.id,
       imageUrl: 'https://example.com/section-image.jpg',
-      altText: 'Test section image',
       sortOrder: 1,
       ...overrides,
     });
@@ -106,10 +113,10 @@ export class TestDataFactory {
    */
   async createFullBrand(options: {
     brand?: Partial<BrandEntity>;
-    banners?: Array<{ sortOrder: number; imageUrl: string; altText?: string }>;
+    banners?: Array<{ sortOrder: number; imageUrl: string }>;
     sections?: Array<{
       sortOrder: number;
-      images?: Array<{ sortOrder: number; imageUrl: string; altText?: string }>;
+      images?: Array<{ sortOrder: number; imageUrl: string }>;
     }>;
   }): Promise<BrandEntity>;
 
@@ -126,14 +133,12 @@ export class TestDataFactory {
           banners?: Array<{
             sortOrder: number;
             imageUrl: string;
-            altText?: string;
           }>;
           sections?: Array<{
             sortOrder: number;
             images?: Array<{
               sortOrder: number;
               imageUrl: string;
-              altText?: string;
             }>;
           }>;
         },
@@ -154,7 +159,6 @@ export class TestDataFactory {
       for (const bannerData of banners) {
         await this.createBannerImage(brand, {
           imageUrl: bannerData.imageUrl,
-          altText: bannerData.altText || 'Banner image',
           sortOrder: bannerData.sortOrder,
         });
       }
@@ -170,7 +174,6 @@ export class TestDataFactory {
           for (const imageData of sectionData.images) {
             await this.createSectionImage(section, {
               imageUrl: imageData.imageUrl,
-              altText: imageData.altText || 'Section image',
               sortOrder: imageData.sortOrder,
             });
           }
@@ -181,11 +184,7 @@ export class TestDataFactory {
       const brandRepository = this.dataSource.getRepository(BrandEntity);
       const reloadedBrand = await brandRepository.findOne({
         where: { id: brand.id },
-        relations: [
-          'brandBannerImageList',
-          'brandSectionList',
-          'brandSectionList.brandSectionImageList',
-        ],
+        relations: ['bannerImage', 'section', 'section.sectionImage'],
       });
 
       return reloadedBrand || brand;
@@ -211,7 +210,6 @@ export class TestDataFactory {
     for (let i = 1; i <= bannerCount; i++) {
       await this.createBannerImage(brand, {
         imageUrl: `https://example.com/banner${i}.jpg`,
-        altText: `Banner ${i}`,
         sortOrder: i,
       });
     }
@@ -226,7 +224,6 @@ export class TestDataFactory {
       for (let j = 1; j <= imagesPerSection; j++) {
         await this.createSectionImage(section, {
           imageUrl: `https://example.com/section${i}-image${j}.jpg`,
-          altText: `Section ${i} Image ${j}`,
           sortOrder: j,
         });
       }
@@ -236,11 +233,7 @@ export class TestDataFactory {
     const brandRepository = this.dataSource.getRepository(BrandEntity);
     const reloadedBrand = await brandRepository.findOne({
       where: { id: brand.id },
-      relations: [
-        'brandBannerImageList',
-        'brandSectionList',
-        'brandSectionList.brandSectionImageList',
-      ],
+      relations: ['bannerImage', 'section', 'section.sectionImage'],
     });
 
     return reloadedBrand || brand;
@@ -428,5 +421,434 @@ export class TestDataFactory {
     }
 
     return { brand, languages, texts };
+  }
+
+  /**
+   * 카테고리 생성
+   */
+  async createCategory(
+    overrides: Partial<CategoryEntity> = {},
+  ): Promise<CategoryEntity> {
+    const categoryRepository = this.dataSource.getRepository(CategoryEntity);
+
+    const category = categoryRepository.create({
+      name: 'Test Category',
+      ...overrides,
+    });
+
+    return categoryRepository.save(category);
+  }
+
+  /**
+   * Article 생성
+   */
+  async createArticle(
+    category: CategoryEntity,
+    overrides: Partial<ArticleEntity> = {},
+  ): Promise<ArticleEntity> {
+    const articleRepository = this.dataSource.getRepository(ArticleEntity);
+
+    const article = articleRepository.create({
+      categoryId: category.id,
+      writer: 'Test Writer',
+      status: ArticleStatus.NORMAL,
+      ...overrides,
+    });
+
+    return articleRepository.save(article);
+  }
+
+  /**
+   * Article Section 생성
+   */
+  async createArticleSection(
+    article: ArticleEntity,
+    overrides: Partial<ArticleSectionEntity> = {},
+  ): Promise<ArticleSectionEntity> {
+    const sectionRepository =
+      this.dataSource.getRepository(ArticleSectionEntity);
+
+    const section = sectionRepository.create({
+      articleId: article.id,
+      sortOrder: 1,
+      ...overrides,
+    });
+
+    return sectionRepository.save(section);
+  }
+
+  /**
+   * Article Section Image 생성
+   */
+  async createArticleSectionImage(
+    section: ArticleSectionEntity,
+    overrides: Partial<ArticleSectionImageEntity> = {},
+  ): Promise<ArticleSectionImageEntity> {
+    const imageRepository = this.dataSource.getRepository(
+      ArticleSectionImageEntity,
+    );
+
+    const image = imageRepository.create({
+      sectionId: section.id,
+      imageUrl: 'https://example.com/article-section-image.jpg',
+      sortOrder: 1,
+      ...overrides,
+    });
+
+    return imageRepository.save(image);
+  }
+
+  /**
+   * 완전한 Article 데이터 생성 (카테고리, 섹션, 섹션 이미지 포함)
+   */
+  async createFullArticle(options?: {
+    category?: Partial<CategoryEntity>;
+    article?: Partial<ArticleEntity>;
+    sectionCount?: number;
+    imagesPerSection?: number;
+  }): Promise<ArticleEntity>;
+
+  async createFullArticle(options: {
+    category?: Partial<CategoryEntity>;
+    article?: Partial<ArticleEntity>;
+    sections?: Array<{
+      sortOrder: number;
+      images?: Array<{ sortOrder: number; imageUrl: string }>;
+    }>;
+  }): Promise<ArticleEntity>;
+
+  async createFullArticle(
+    options:
+      | {
+          category?: Partial<CategoryEntity>;
+          article?: Partial<ArticleEntity>;
+          sectionCount?: number;
+          imagesPerSection?: number;
+        }
+      | {
+          category?: Partial<CategoryEntity>;
+          article?: Partial<ArticleEntity>;
+          sections?: Array<{
+            sortOrder: number;
+            images?: Array<{
+              sortOrder: number;
+              imageUrl: string;
+            }>;
+          }>;
+        },
+  ): Promise<ArticleEntity> {
+    if (!options) {
+      options = {};
+    }
+
+    // 카테고리 생성
+    const category = await this.createCategory(options.category || {});
+
+    // 새로운 구조 처리
+    if ('sections' in options) {
+      const { article: articleData = {}, sections = [] } = options;
+
+      // Article 생성
+      const article = await this.createArticle(category, articleData);
+
+      // 섹션들과 섹션 이미지들 생성
+      for (const sectionData of sections) {
+        const section = await this.createArticleSection(article, {
+          sortOrder: sectionData.sortOrder,
+        });
+
+        // 각 섹션에 이미지들 생성
+        if (sectionData.images) {
+          for (const imageData of sectionData.images) {
+            await this.createArticleSectionImage(section, {
+              imageUrl: imageData.imageUrl,
+              sortOrder: imageData.sortOrder,
+            });
+          }
+        }
+      }
+
+      // 관계가 로드된 Article을 다시 조회해서 반환
+      const articleRepository = this.dataSource.getRepository(ArticleEntity);
+      const reloadedArticle = await articleRepository.findOne({
+        where: { id: article.id },
+        relations: ['category', 'section', 'section.sectionImage'],
+      });
+
+      return reloadedArticle || article;
+    }
+
+    // 기존 레거시 구조 처리
+    const {
+      article: articleData = {},
+      sectionCount = 2,
+      imagesPerSection = 2,
+    } = options as {
+      category?: Partial<CategoryEntity>;
+      article?: Partial<ArticleEntity>;
+      sectionCount?: number;
+      imagesPerSection?: number;
+    };
+
+    // Article 생성
+    const article = await this.createArticle(category, articleData);
+
+    // 섹션들과 섹션 이미지들 생성
+    for (let i = 1; i <= sectionCount; i++) {
+      const section = await this.createArticleSection(article, {
+        sortOrder: i,
+      });
+
+      // 각 섹션에 이미지들 생성
+      for (let j = 1; j <= imagesPerSection; j++) {
+        await this.createArticleSectionImage(section, {
+          imageUrl: `https://example.com/article-section${i}-image${j}.jpg`,
+          sortOrder: j,
+        });
+      }
+    }
+
+    // 관계가 로드된 Article을 다시 조회해서 반환
+    const articleRepository = this.dataSource.getRepository(ArticleEntity);
+    const reloadedArticle = await articleRepository.findOne({
+      where: { id: article.id },
+      relations: ['category', 'section', 'section.sectionImage'],
+    });
+
+    return reloadedArticle || article;
+  }
+
+  /**
+   * News 생성
+   */
+  async createNews(
+    category: CategoryEntity,
+    overrides: Partial<NewsEntity> = {},
+  ): Promise<NewsEntity> {
+    const newsRepository = this.dataSource.getRepository(NewsEntity);
+
+    const news = newsRepository.create({
+      categoryId: category.id,
+      writer: 'Test Writer',
+      status: NewsStatus.NORMAL,
+      ...overrides,
+    });
+
+    return newsRepository.save(news);
+  }
+
+  /**
+   * News Section 생성
+   */
+  async createNewsSection(
+    news: NewsEntity,
+    overrides: Partial<NewsSectionEntity> = {},
+  ): Promise<NewsSectionEntity> {
+    const sectionRepository = this.dataSource.getRepository(NewsSectionEntity);
+
+    const section = sectionRepository.create({
+      newsId: news.id,
+      sortOrder: 1,
+      ...overrides,
+    });
+
+    return sectionRepository.save(section);
+  }
+
+  /**
+   * News Section Image 생성
+   */
+  async createNewsSectionImage(
+    section: NewsSectionEntity,
+    overrides: Partial<NewsSectionImageEntity> = {},
+  ): Promise<NewsSectionImageEntity> {
+    const imageRepository = this.dataSource.getRepository(
+      NewsSectionImageEntity,
+    );
+
+    const image = imageRepository.create({
+      sectionId: section.id,
+      imageUrl: 'https://example.com/news-section-image.jpg',
+      sortOrder: 1,
+      ...overrides,
+    });
+
+    return imageRepository.save(image);
+  }
+
+  /**
+   * 완전한 News 데이터 생성 (카테고리, 섹션, 섹션 이미지 포함)
+   */
+  async createFullNews(options?: {
+    category?: Partial<CategoryEntity>;
+    news?: Partial<NewsEntity>;
+    sectionCount?: number;
+    imagesPerSection?: number;
+  }): Promise<NewsEntity>;
+
+  async createFullNews(options: {
+    category?: Partial<CategoryEntity>;
+    news?: Partial<NewsEntity>;
+    sections?: Array<{
+      sortOrder: number;
+      images?: Array<{ sortOrder: number; imageUrl: string }>;
+    }>;
+  }): Promise<NewsEntity>;
+
+  async createFullNews(
+    options:
+      | {
+          category?: Partial<CategoryEntity>;
+          news?: Partial<NewsEntity>;
+          sectionCount?: number;
+          imagesPerSection?: number;
+        }
+      | {
+          category?: Partial<CategoryEntity>;
+          news?: Partial<NewsEntity>;
+          sections?: Array<{
+            sortOrder: number;
+            images?: Array<{
+              sortOrder: number;
+              imageUrl: string;
+            }>;
+          }>;
+        },
+  ): Promise<NewsEntity> {
+    if (!options) {
+      options = {};
+    }
+
+    // 카테고리 생성
+    const category = await this.createCategory(options.category || {});
+
+    // 새로운 구조 처리
+    if ('sections' in options) {
+      const { news: newsData = {}, sections = [] } = options;
+
+      // News 생성
+      const news = await this.createNews(category, newsData);
+
+      // 섹션들과 섹션 이미지들 생성
+      for (const sectionData of sections) {
+        const section = await this.createNewsSection(news, {
+          sortOrder: sectionData.sortOrder,
+        });
+
+        // 각 섹션에 이미지들 생성
+        if (sectionData.images) {
+          for (const imageData of sectionData.images) {
+            await this.createNewsSectionImage(section, {
+              imageUrl: imageData.imageUrl,
+              sortOrder: imageData.sortOrder,
+            });
+          }
+        }
+      }
+
+      // 관계가 로드된 News를 다시 조회해서 반환
+      const newsRepository = this.dataSource.getRepository(NewsEntity);
+      const reloadedNews = await newsRepository.findOne({
+        where: { id: news.id },
+        relations: ['category', 'section', 'section.sectionImage'],
+      });
+
+      return reloadedNews || news;
+    }
+
+    // 기존 레거시 구조 처리
+    const {
+      news: newsData = {},
+      sectionCount = 2,
+      imagesPerSection = 2,
+    } = options as {
+      category?: Partial<CategoryEntity>;
+      news?: Partial<NewsEntity>;
+      sectionCount?: number;
+      imagesPerSection?: number;
+    };
+
+    // News 생성
+    const news = await this.createNews(category, newsData);
+
+    // 섹션들과 섹션 이미지들 생성
+    for (let i = 1; i <= sectionCount; i++) {
+      const section = await this.createNewsSection(news, {
+        sortOrder: i,
+      });
+
+      // 각 섹션에 이미지들 생성
+      for (let j = 1; j <= imagesPerSection; j++) {
+        await this.createNewsSectionImage(section, {
+          imageUrl: `https://example.com/news-section${i}-image${j}.jpg`,
+          sortOrder: j,
+        });
+      }
+    }
+
+    // 관계가 로드된 News를 다시 조회해서 반환
+    const newsRepository = this.dataSource.getRepository(NewsEntity);
+    const reloadedNews = await newsRepository.findOne({
+      where: { id: news.id },
+      relations: ['category', 'section', 'section.sectionImage'],
+    });
+
+    return reloadedNews || news;
+  }
+
+  /**
+   * 다양한 상태의 Article들 생성 (테스트용)
+   */
+  async createArticlesWithDifferentStatuses(
+    category?: CategoryEntity,
+  ): Promise<ArticleEntity[]> {
+    const testCategory = category || (await this.createCategory());
+    const articles = [];
+
+    // NORMAL 상태 Article
+    articles.push(
+      await this.createArticle(testCategory, {
+        status: ArticleStatus.NORMAL,
+        writer: 'Normal Writer',
+      }),
+    );
+
+    // DELETE 상태 Article
+    articles.push(
+      await this.createArticle(testCategory, {
+        status: ArticleStatus.DELETE,
+        writer: 'Deleted Writer',
+      }),
+    );
+
+    return articles;
+  }
+
+  /**
+   * 다양한 상태의 News들 생성 (테스트용)
+   */
+  async createNewsWithDifferentStatuses(
+    category?: CategoryEntity,
+  ): Promise<NewsEntity[]> {
+    const testCategory = category || (await this.createCategory());
+    const news = [];
+
+    // NORMAL 상태 News
+    news.push(
+      await this.createNews(testCategory, {
+        status: NewsStatus.NORMAL,
+        writer: 'Normal Writer',
+      }),
+    );
+
+    // DELETE 상태 News
+    news.push(
+      await this.createNews(testCategory, {
+        status: NewsStatus.DELETE,
+        writer: 'Deleted Writer',
+      }),
+    );
+
+    return news;
   }
 }

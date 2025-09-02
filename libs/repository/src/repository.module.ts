@@ -14,8 +14,10 @@ import { MultilingualTextEntity } from './entity/multilingual-text.entity';
 import { NewsSectionImageEntity } from './entity/news-section-image.entity';
 import { NewsSectionEntity } from './entity/news-section.entity';
 import { NewsEntity } from './entity/news.entity';
+import { ArticleRepositoryService } from './service/article.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
 import { LanguageRepositoryService } from './service/language.repository.service';
+import { NewsRepositoryService } from './service/news.repository.service';
 
 @Module({
   imports: [
@@ -35,7 +37,17 @@ import { LanguageRepositoryService } from './service/language.repository.service
       ArticleSectionImageEntity,
     ]),
   ],
-  providers: [BrandRepositoryService, LanguageRepositoryService],
-  exports: [BrandRepositoryService, LanguageRepositoryService],
+  providers: [
+    BrandRepositoryService,
+    LanguageRepositoryService,
+    NewsRepositoryService,
+    ArticleRepositoryService,
+  ],
+  exports: [
+    BrandRepositoryService,
+    LanguageRepositoryService,
+    NewsRepositoryService,
+    ArticleRepositoryService,
+  ],
 })
 export class RepositoryModule {}

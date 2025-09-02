@@ -125,11 +125,18 @@ export class TestSetup {
     try {
       // 자식 테이블부터 순서대로 정리 (외래키 참조 순서 고려)
       const tables = [
+        'article_section_image',
+        'news_section_image',
         'brand_section_image',
         'brand_banner_image',
         'multilingual_text',
+        'article_section',
+        'news_section',
         'brand_section',
+        'article',
+        'news',
         'brand',
+        'category',
         'language',
       ];
 

@@ -41,7 +41,7 @@ export class BrandSectionEntity extends CommonEntity {
       eager: true,
     },
   )
-  brandSectionImage: BrandSectionImageEntity[];
+  sectionImage: BrandSectionImageEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

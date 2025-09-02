@@ -41,7 +41,7 @@ export class NewsSectionEntity extends CommonEntity {
       eager: true,
     },
   )
-  newsSectionImage: NewsSectionImageEntity[];
+  sectionImage: NewsSectionImageEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,
