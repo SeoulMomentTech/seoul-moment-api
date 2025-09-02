@@ -19,6 +19,7 @@ import { NewsSectionEntity } from './entity/news-section.entity';
 import { NewsEntity } from './entity/news.entity';
 import { ArticleRepositoryService } from './service/article.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
+import { HomeRepositoryService } from './service/home.repository.service';
 import { LanguageRepositoryService } from './service/language.repository.service';
 import { NewsRepositoryService } from './service/news.repository.service';
 
@@ -48,12 +49,14 @@ import { NewsRepositoryService } from './service/news.repository.service';
     LanguageRepositoryService,
     NewsRepositoryService,
     ArticleRepositoryService,
+    HomeRepositoryService,
   ],
   exports: [
     BrandRepositoryService,
     LanguageRepositoryService,
     NewsRepositoryService,
     ArticleRepositoryService,
+    HomeRepositoryService,
   ],
 })
 export class RepositoryModule {}
