@@ -23,20 +23,13 @@ export class BrandSectionImageEntity extends CommonEntity {
   @Column('varchar', { name: 'image_url', length: 500, nullable: false })
   imageUrl: string;
 
-  @Column('varchar', { name: 'alt_text', length: 200, nullable: true })
-  altText: string;
-
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
-  @ManyToOne(
-    () => BrandSectionEntity,
-    (section) => section.brandSectionImageList,
-    {
-      onDelete: 'CASCADE',
-      createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-    },
-  )
+  @ManyToOne(() => BrandSectionEntity, (section) => section.brandSectionImage, {
+    onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
   @JoinColumn({ name: 'section_id' })
   section: BrandSectionEntity;
 

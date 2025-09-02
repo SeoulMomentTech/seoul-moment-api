@@ -30,7 +30,7 @@ export class BrandService {
       ),
       this.languageRepositoryService.findMultilingualTextsByEntities(
         'brand_section',
-        brandEntity.brandSectionList.map((section) => section.id),
+        brandEntity.section.map((section) => section.id),
         languageCode,
       ),
     ]);

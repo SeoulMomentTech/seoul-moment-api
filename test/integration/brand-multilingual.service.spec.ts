@@ -126,7 +126,7 @@ describe('BrandService Multilingual Integration Tests', () => {
       });
 
       const languages = await testDataFactory.createDefaultLanguages();
-      const sectionIds = brand.brandSectionList
+      const sectionIds = brand.section
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((section) => section.id);
 
@@ -269,7 +269,7 @@ describe('BrandService Multilingual Integration Tests', () => {
       ]);
 
       // Create multilingual texts for sections
-      const sectionIds = brand.brandSectionList
+      const sectionIds = brand.section
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((s) => s.id);
       await Promise.all([

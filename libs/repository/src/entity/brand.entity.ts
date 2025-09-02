@@ -27,13 +27,13 @@ export class BrandEntity extends CommonEntity {
       eager: true,
     },
   )
-  brandBannerImageList: BrandBannerImageEntity[];
+  brandBannerImage: BrandBannerImageEntity[];
 
   @OneToMany(() => BrandSectionEntity, (brandSection) => brandSection.brand, {
     cascade: true,
     eager: true,
   })
-  brandSectionList: BrandSectionEntity[];
+  section: BrandSectionEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

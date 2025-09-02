@@ -102,9 +102,9 @@ describe('BrandRepositoryService Integration Tests', () => {
       expect(result).toHaveLength(1);
 
       const brand = result[0];
-      expect(brand.brandBannerImageList).toHaveLength(2);
-      expect(brand.brandSectionList).toHaveLength(3);
-      expect(brand.brandSectionList[0].brandSectionImageList).toHaveLength(2);
+      expect(brand.brandBannerImage).toHaveLength(2);
+      expect(brand.section).toHaveLength(3);
+      expect(brand.section[0].brandSectionImage).toHaveLength(2);
     });
 
     it('should sort banners and sections by sortOrder', async () => {
@@ -132,7 +132,7 @@ describe('BrandRepositoryService Integration Tests', () => {
 
       // Then: sortOrder에 따라 정렬됨
       const brandResult = result[0];
-      const sortedBanners = brandResult.brandBannerImageList.sort(
+      const sortedBanners = brandResult.brandBannerImage.sort(
         (a, b) => a.sortOrder - b.sortOrder,
       );
       expect(sortedBanners[0].sortOrder).toBe(1);
@@ -196,8 +196,8 @@ describe('BrandRepositoryService Integration Tests', () => {
       // Then: 브랜드와 관련 데이터 반환
       expect(result).toBeDefined();
       expect(result.id).toBe(createdBrand.id);
-      expect(result.brandBannerImageList).toBeDefined();
-      expect(result.brandSectionList).toBeDefined();
+      expect(result.brandBannerImage).toBeDefined();
+      expect(result.section).toBeDefined();
     });
 
     it('should throw ServiceError when brand does not exist', async () => {
@@ -276,14 +276,14 @@ describe('BrandRepositoryService Integration Tests', () => {
       const result = await brandRepositoryService.getBrandById(brand.id);
 
       // Then: 모든 중첩된 관계 데이터 포함
-      expect(result.brandBannerImageList).toHaveLength(3);
-      expect(result.brandSectionList).toHaveLength(4);
+      expect(result.brandBannerImage).toHaveLength(3);
+      expect(result.section).toHaveLength(4);
 
-      result.brandSectionList.forEach((section) => {
-        expect(section.brandSectionImageList).toHaveLength(3);
-        expect(section.brandSectionImageList[0]).toHaveProperty('imageUrl');
-        expect(section.brandSectionImageList[0]).toHaveProperty('altText');
-        expect(section.brandSectionImageList[0]).toHaveProperty('sortOrder');
+      result.section.forEach((section) => {
+        expect(section.brandSectionImage).toHaveLength(3);
+        expect(section.brandSectionImage[0]).toHaveProperty('imageUrl');
+        expect(section.brandSectionImage[0]).toHaveProperty('altText');
+        expect(section.brandSectionImage[0]).toHaveProperty('sortOrder');
       });
     });
   });

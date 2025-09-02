@@ -8,17 +8,17 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
+import { NewsSectionEntity } from './news-section.entity';
 
-@Entity('brand_banner_image')
-@Index(['brandId', 'sortOrder'])
-export class BrandBannerImageEntity extends CommonEntity {
+@Entity('news_section_image')
+@Index(['sectionId', 'sortOrder'])
+export class NewsSectionImageEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column('int', { name: 'brand_id', nullable: false })
-  brandId: number;
+  @Column('int', { name: 'section_id', nullable: false })
+  sectionId: number;
 
   @Column('varchar', { name: 'image_url', length: 500, nullable: false })
   imageUrl: string;
@@ -26,12 +26,12 @@ export class BrandBannerImageEntity extends CommonEntity {
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
-  @ManyToOne(() => BrandEntity, (brand) => brand.brandBannerImage, {
+  @ManyToOne(() => NewsSectionEntity, (section) => section.newsSectionImage, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
-  @JoinColumn({ name: 'brand_id' })
-  brand: BrandEntity;
+  @JoinColumn({ name: 'section_id' })
+  section: NewsSectionEntity;
 
   getImage(): string {
     return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imageUrl}`;

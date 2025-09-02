@@ -8,40 +8,40 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { BrandSectionImageEntity } from './brand-section-image.entity';
-import { BrandEntity } from './brand.entity';
+import { ArticleSectionImageEntity } from './article-section-image.entity';
+import { ArticleEntity } from './article.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { EntityEnum } from '../enum/entity.enum';
 
-@Entity(EntityEnum.BRAND_SECTION)
-@Index(['brandId', 'sortOrder'])
-export class BrandSectionEntity extends CommonEntity {
+@Entity(EntityEnum.ARTICLE_SECTION)
+@Index(['articleId', 'sortOrder'])
+export class ArticleSectionEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column('int', { name: 'brand_id', nullable: false })
-  brandId: number;
+  @Column('int', { name: 'article_id', nullable: false })
+  articleId: number;
 
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
-  @ManyToOne(() => BrandEntity, (brand) => brand.section, {
+  @ManyToOne(() => ArticleEntity, (article) => article.section, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
-  @JoinColumn({ name: 'brand_id' })
-  brand: BrandEntity;
+  @JoinColumn({ name: 'article_id' })
+  article: ArticleEntity;
 
   @OneToMany(
-    () => BrandSectionImageEntity,
-    (brandSectionImage) => brandSectionImage.section,
+    () => ArticleSectionImageEntity,
+    (newsSectionImage) => newsSectionImage.section,
     {
       cascade: true,
       eager: true,
     },
   )
-  brandSectionImage: BrandSectionImageEntity[];
+  articleSectionImage: ArticleSectionImageEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

@@ -203,7 +203,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
         sections: [{ sortOrder: 1 }, { sortOrder: 2 }],
       });
 
-      const sectionIds = brand.brandSectionList.map((section) => section.id);
+      const sectionIds = brand.section.map((section) => section.id);
 
       // When: Save multilingual texts for sections
       await Promise.all([
