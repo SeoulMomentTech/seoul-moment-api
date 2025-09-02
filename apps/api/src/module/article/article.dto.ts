@@ -2,13 +2,22 @@ import { ArticleSectionEntity } from '@app/repository/entity/article-section.ent
 import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
+import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
 export class GetLastArticle {
+  @ApiProperty({ description: '아티클 ID', example: 1 })
   id: number;
+
+  @ApiProperty({
+    description: '배너 이미지 URL',
+    example: 'https://example.com/banner.jpg',
+  })
   banner: string;
+
+  @ApiProperty({ description: '아티클 제목', example: '서울의 특별한 순간들' })
   title: string;
 
   static from(
@@ -36,9 +45,26 @@ export class GetLastArticle {
 }
 
 export class GetArticleSection {
+  @ApiProperty({ description: '섹션 제목', example: '브랜드 스토리' })
   title: string;
+
+  @ApiProperty({ description: '섹션 부제목', example: '서울모먼트의 시작' })
   subTitle: string;
+
+  @ApiProperty({
+    description: '섹션 내용',
+    example: '서울모먼트는 서울의 특별한 순간들을 담은 브랜드입니다...',
+  })
   content: string;
+
+  @ApiProperty({
+    description: '섹션 이미지 URL 리스트',
+    example: [
+      'https://example.com/image1.jpg',
+      'https://example.com/image2.jpg',
+    ],
+    type: [String],
+  })
   iamgeList: string[];
 
   static from(
@@ -85,14 +111,40 @@ export class GetArticleSection {
 }
 
 export class GetArticleResponse {
+  @ApiProperty({ description: '아티클 ID', example: 1 })
   id: number;
+
+  @ApiProperty({ description: '작성자 이름', example: '김서울' })
   writer: string;
+
+  @ApiProperty({ description: '카테고리 이름', example: '문화' })
   category: string;
+
+  @ApiProperty({ description: '아티클 제목', example: '서울의 특별한 순간들' })
   title: string;
+
+  @ApiProperty({
+    description: '아티클 내용',
+    example: '서울모먼트는 서울의 특별한 순간들을 담은 브랜드입니다...',
+  })
   content: string;
+
+  @ApiProperty({
+    description: '배너 이미지 URL',
+    example: 'https://example.com/banner.jpg',
+  })
   banner: string;
+
+  @ApiProperty({
+    description: '프로필 이미지 URL',
+    example: 'https://example.com/profile.jpg',
+  })
   profileImage: string;
+
+  @ApiProperty({ description: '최신 아티클 목록', type: [GetLastArticle] })
   lastArticle: GetLastArticle[];
+
+  @ApiProperty({ description: '아티클 섹션 리스트', type: [GetArticleSection] })
   section: GetArticleSection;
 
   static from(
