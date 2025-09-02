@@ -5,9 +5,9 @@ import { BrandSectionEntity } from './brand-section.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { BrandStatus } from '../enum/brand.enum';
-import { EntityEnum } from '../enum/entity.enum';
+import { EntityType } from '../enum/entity.enum';
 
-@Entity(EntityEnum.BRAND)
+@Entity(EntityType.BRAND)
 export class BrandEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;

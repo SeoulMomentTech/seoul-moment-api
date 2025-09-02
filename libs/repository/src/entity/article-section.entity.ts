@@ -12,9 +12,9 @@ import { ArticleSectionImageEntity } from './article-section-image.entity';
 import { ArticleEntity } from './article.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
-import { EntityEnum } from '../enum/entity.enum';
+import { EntityType } from '../enum/entity.enum';
 
-@Entity(EntityEnum.ARTICLE_SECTION)
+@Entity(EntityType.ARTICLE_SECTION)
 @Index(['articleId', 'sortOrder'])
 export class ArticleSectionEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')

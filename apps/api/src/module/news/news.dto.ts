@@ -62,6 +62,7 @@ export class GetNewsResponse {
   title: string;
   content: string;
   banner: string;
+  profileImage: string;
   section: GetNewsSection;
 
   static from(
@@ -96,7 +97,8 @@ export class GetNewsResponse {
       category: entity.category.name,
       title: title.getContentByLanguage(language),
       content: content.getContentByLanguage(language),
-      banner: '',
+      banner: entity.getBannerImage(),
+      profileImage: entity.getProfileImage(),
       section: entity.section.map((v) =>
         GetNewsSection.from(v, multilingualText.sectionText, language),
       ),

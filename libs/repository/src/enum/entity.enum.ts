@@ -1,4 +1,4 @@
-export enum EntityEnum {
+export enum EntityType {
   BRAND = 'brand',
   BRAND_SECTION = 'brand_section',
   NEWS = 'news',

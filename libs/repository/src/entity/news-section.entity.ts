@@ -12,9 +12,9 @@ import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { NewsSectionImageEntity } from './news-section-image.entity';
 import { NewsEntity } from './news.entity';
-import { EntityEnum } from '../enum/entity.enum';
+import { EntityType } from '../enum/entity.enum';
 
-@Entity(EntityEnum.NEWS_SECTION)
+@Entity(EntityType.NEWS_SECTION)
 @Index(['newsId', 'sortOrder'])
 export class NewsSectionEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')

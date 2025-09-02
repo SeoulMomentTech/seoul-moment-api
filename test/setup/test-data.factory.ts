@@ -14,7 +14,7 @@ import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { ArticleStatus } from '@app/repository/enum/article.enum';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
-import { EntityEnum } from '@app/repository/enum/entity.enum';
+import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { NewsStatus } from '@app/repository/enum/news.enum';
 import { DataSource } from 'typeorm';
@@ -300,7 +300,7 @@ export class TestDataFactory {
    * 다국어 텍스트 생성
    */
   async createMultilingualText(
-    entityType: EntityEnum,
+    entityType: EntityType,
     entityId: number,
     fieldName: string,
     language: LanguageEntity,
@@ -389,7 +389,7 @@ export class TestDataFactory {
         );
         if (language && content) {
           const text = await this.createMultilingualText(
-            EntityEnum.BRAND,
+            EntityType.BRAND,
             brand.id,
             'name',
             language,
@@ -409,7 +409,7 @@ export class TestDataFactory {
         );
         if (language && content) {
           const text = await this.createMultilingualText(
-            EntityEnum.BRAND,
+            EntityType.BRAND,
             brand.id,
             'description',
             language,

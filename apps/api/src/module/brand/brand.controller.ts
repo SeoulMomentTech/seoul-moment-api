@@ -19,7 +19,7 @@ import { BrandService } from './brand.service';
 export class BrandController {
   constructor(private readonly brandService: BrandService) {}
 
-  @Get('introduce/:id')
+  @Get(':id')
   @ApiOperation({
     summary: 'Get Brand Introduce with Multilingual Support',
     description:

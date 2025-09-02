@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ServiceError } from '@app/common/exception/service.error';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
-import { EntityEnum } from '@app/repository/enum/entity.enum';
+import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { Test, TestingModule } from '@nestjs/testing';
 
@@ -133,35 +133,35 @@ describe('BrandService Multilingual Integration Tests', () => {
       // Create multilingual texts for sections
       await Promise.all([
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[0],
           'title',
           languages.korean,
           '브랜드 스토리',
         ),
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[0],
           'content',
           languages.korean,
           '우리 브랜드의 이야기입니다.',
         ),
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[0],
           'title',
           languages.english,
           'Brand Story',
         ),
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[0],
           'content',
           languages.english,
           'This is our brand story.',
         ),
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[1],
           'title',
           languages.korean,
@@ -246,21 +246,21 @@ describe('BrandService Multilingual Integration Tests', () => {
       // Create multilingual texts for brand
       await Promise.all([
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND,
+          EntityType.BRAND,
           brand.id,
           'name',
           languages.korean,
           '서울모먼트',
         ),
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND,
+          EntityType.BRAND,
           brand.id,
           'description',
           languages.korean,
           '서울의 특별한 순간들을 담은 브랜드입니다.',
         ),
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND,
+          EntityType.BRAND,
           brand.id,
           'name',
           languages.english,
@@ -274,21 +274,21 @@ describe('BrandService Multilingual Integration Tests', () => {
         .map((s) => s.id);
       await Promise.all([
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[0],
           'title',
           languages.korean,
           '브랜드 스토리',
         ),
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[0],
           'content',
           languages.korean,
           '우리는 서울의 아름다운 순간들을 포착합니다.',
         ),
         testDataFactory.createMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[1],
           'title',
           languages.english,

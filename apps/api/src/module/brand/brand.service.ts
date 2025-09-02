@@ -1,3 +1,4 @@
+import { EntityType } from '@app/repository/enum/entity.enum';
 import {
   LanguageCode,
   DEFAULT_LANGUAGE,
@@ -24,12 +25,12 @@ export class BrandService {
     // Fetch multilingual texts for brand and sections
     const [brandTexts, sectionTexts] = await Promise.all([
       this.languageRepositoryService.findMultilingualTexts(
-        'brand',
+        EntityType.BRAND,
         brandEntity.id,
         languageCode,
       ),
       this.languageRepositoryService.findMultilingualTextsByEntities(
-        'brand_section',
+        EntityType.BRAND_SECTION,
         brandEntity.section.map((section) => section.id),
         languageCode,
       ),
