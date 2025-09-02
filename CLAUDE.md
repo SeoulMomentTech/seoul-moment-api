@@ -549,6 +549,60 @@ expect(response.body).toHaveProperty('error', 'Bad Request');
 
 ## 최근 해결 사항
 
+### 2025-09-02: News & Article API Enhancement
+
+- ✅ **News API 완전 구현**: 다국어 지원 뉴스 조회 API (`GET /news/:id`) 구현
+- ✅ **Article API 완전 구현**: 다국어 지원 아티클 조회 API (`GET /article/:id`) 구현
+- ✅ **LastArticle 기능**: 각 API에서 최신 3개 관련 콘텐츠 목록 제공 기능 구현
+- ✅ **Performance Optimization**: `Promise.all`을 활용한 병렬 처리로 API 응답 속도 향상
+- ✅ **Repository Service Enhancement**: `findLastArticleByCount()`, `findLastNewsByCount()` 메서드 추가
+- ✅ **Complete Test Coverage**: Repository → Service → Controller → E2E 전 계층 테스트 구현
+  - Article: Repository Service (6개 메서드), Service (8개 시나리오), Controller E2E (8개 테스트)
+  - News: Repository Service (6개 메서드), Service (8개 시나리오), Controller E2E (8개 테스트)
+- ✅ **Test Data Factory Enhancement**: Article 및 News 엔티티 생성 헬퍼 메서드 추가
+
+#### 주요 API 구조
+
+**Article API** (`GET /article/:id`)
+```json
+{
+  "result": true,
+  "data": {
+    "id": 1,
+    "writer": "Writer Name",
+    "category": "Category Name",
+    "title": "다국어 제목",
+    "content": "다국어 내용",
+    "banner": "https://domain/banner.jpg",
+    "profileImage": "https://domain/profile.jpg",
+    "lastArticle": [
+      {"id": 2, "banner": "url", "title": "제목"},
+      {"id": 3, "banner": "url", "title": "제목"},
+      {"id": 4, "banner": "url", "title": "제목"}
+    ],
+    "section": [
+      {
+        "title": "섹션 제목",
+        "subTitle": "섹션 부제목", 
+        "content": "섹션 내용",
+        "iamgeList": ["image1.jpg", "image2.jpg"]
+      }
+    ]
+  }
+}
+```
+
+**News API** (`GET /news/:id`)
+- Article API와 동일한 구조
+- Accept-Language 헤더로 다국어 지원 (ko, en, zh)
+- 최신 3개 뉴스 목록 포함
+
+#### 기술적 개선사항
+- **병렬 처리**: Repository 조회와 다국어 텍스트 조회를 동시 처리
+- **TypeORM 최적화**: `createDate DESC` 정렬과 `take` 제한으로 효율적인 최신 목록 조회
+- **에러 처리**: 표준화된 ServiceError를 통한 일관된 404 처리
+- **테스트 안정성**: `--runInBand` 옵션과 데이터 격리로 deadlock 방지
+
 ### 2025-09-01: Multilingual System Implementation
 
 - ✅ **다국어 시스템 구축**: 한국어, 영어, 중국어 지원하는 완전한 multilingual 시스템 구현

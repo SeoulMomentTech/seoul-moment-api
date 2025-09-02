@@ -26,8 +26,9 @@ seoul-moment-api/
 ### API 애플리케이션
 
 - **브랜드 관리**: 브랜드 정보, 배너 이미지, 정보 섹션 관리
+- **뉴스 & 아티클**: 콘텐츠 관리 및 조회, 최신 3개 목록 제공 기능
 - **다국어 시스템**: 한국어, 영어, 중국어 지원하는 완전한 multilingual API
-- **Redis 캐시**: 성능 최적화를 위한 캐싱 시스템
+- **성능 최적화**: Promise.all 병렬 처리 및 Redis 캐싱 시스템
 - **환경별 설정**: local, development, test, production 환경 지원
 
 ### Batch 애플리케이션
@@ -166,8 +167,9 @@ multilingual_texts        # 다국어 텍스트 저장소
 #### 애플리케이션 기능
 
 - ✅ **브랜드 테이블 설계** (Brand, BannerImage, InfoSection, SectionImage)
+- ✅ **뉴스 & 아티클 시스템** (News, Article, Section, Image 엔티티 + 최신 목록 기능)
 - ✅ **다국어 시스템** (한국어/영어/중국어 지원, Generic Multilingual Entity)
-- ✅ **Repository/Service 계층** (데이터 접근 + 비즈니스 로직 분리)
+- ✅ **Repository/Service 계층** (데이터 접근 + 비즈니스 로직 분리, Promise.all 최적화)
 - ✅ **API 응답 DTO** (Swagger 문서화 + Accept-Language 헤더 지원)
 - ✅ **헬스체크 API** (GET /health)
 - ✅ **Google Sheets 크롤링** (외부 데이터 수집)
@@ -177,7 +179,8 @@ multilingual_texts        # 다국어 텍스트 저장소
 
 - ✅ **통합 테스트 환경** (Docker PostgreSQL + 실제 DB 테스트)
 - ✅ **완전한 테스트 격리** (외래키 제약조건 비활성화 + TRUNCATE 정리)
-- ✅ **70개 통합 테스트 완료** (CRUD, 다국어, 에러 처리, 동시성, CASCADE 테스트)
+- ✅ **100+ 통합 테스트 완료** (Repository/Service/E2E 전 계층, CRUD/다국어/에러처리/동시성)
+- ✅ **Article & News 테스트** (각 16개 테스트: Repository 6개 + Service 8개 + E2E 8개)
 - ✅ **Redis 캐시 테스트** (캐시 격리 및 성능 테스트)
 - ✅ **테스트 환경 안전성** (실제 DB 데이터 보호 장치)
 
@@ -191,20 +194,28 @@ multilingual_texts        # 다국어 텍스트 저장소
 
 ```
 GET /health                    # 헬스체크
-GET /brand/:id       # 브랜드 소개 페이지 조회 (다국어 지원)
+GET /brand/:id                 # 브랜드 소개 페이지 조회 (다국어 지원)
+GET /article/:id               # 아티클 조회 (다국어 지원 + 최신 3개 목록)
+GET /news/:id                  # 뉴스 조회 (다국어 지원 + 최신 3개 목록)
 ```
 
 #### 다국어 API 사용법
 
 ```bash
-# 한국어 (기본값)
-curl -H "Accept-Language: ko" GET /brand/1
+# 브랜드 조회
+curl -H "Accept-Language: ko" GET /brand/1      # 한국어
+curl -H "Accept-Language: en" GET /brand/1      # 영어
+curl -H "Accept-Language: zh" GET /brand/1      # 중국어
 
-# 영어
-curl -H "Accept-Language: en" GET /brand/1
+# 아티클 조회 (+ 최신 3개 목록 포함)
+curl -H "Accept-Language: ko" GET /article/1    # 한국어
+curl -H "Accept-Language: en" GET /article/1    # 영어
+curl -H "Accept-Language: zh" GET /article/1    # 중국어
 
-# 중국어
-curl -H "Accept-Language: zh" GET /brand/1
+# 뉴스 조회 (+ 최신 3개 목록 포함)
+curl -H "Accept-Language: ko" GET /news/1       # 한국어
+curl -H "Accept-Language: en" GET /news/1       # 영어
+curl -H "Accept-Language: zh" GET /news/1       # 중국어
 ```
 
 ## ✅ 테스트 현황

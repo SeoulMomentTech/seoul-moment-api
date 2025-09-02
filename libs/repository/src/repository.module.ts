@@ -9,6 +9,9 @@ import { BrandSectionImageEntity } from './entity/brand-section-image.entity';
 import { BrandSectionEntity } from './entity/brand-section.entity';
 import { BrandEntity } from './entity/brand.entity';
 import { CategoryEntity } from './entity/category.entity';
+import { HomeBannerImageEntity } from './entity/home-banner-image.entity';
+import { HomeSectionImageEntity } from './entity/home-section-image.entity';
+import { HomeSectionEntity } from './entity/home-section.entity';
 import { LanguageEntity } from './entity/language.entity';
 import { MultilingualTextEntity } from './entity/multilingual-text.entity';
 import { NewsSectionImageEntity } from './entity/news-section-image.entity';
@@ -35,6 +38,9 @@ import { NewsRepositoryService } from './service/news.repository.service';
       ArticleEntity,
       ArticleSectionEntity,
       ArticleSectionImageEntity,
+      HomeSectionEntity,
+      HomeSectionImageEntity,
+      HomeBannerImageEntity,
     ]),
   ],
   providers: [
