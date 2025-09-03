@@ -69,6 +69,7 @@ describe('ArticleRepositoryService Integration Tests', () => {
       // Given: 완전한 Article 데이터 생성 (카테고리, 섹션, 이미지 포함)
       await testDataFactory.createFullArticle({
         article: { status: ArticleStatus.NORMAL },
+        brand: {},
         sections: [
           {
             sortOrder: 1,
@@ -131,9 +132,13 @@ describe('ArticleRepositoryService Integration Tests', () => {
       // Given: NORMAL 상태 Article 생성
       const category = await testDataFactory.createCategory();
       const brand = await testDataFactory.createBrand();
-      const createdArticle = await testDataFactory.createArticle(category, brand, {
-        status: ArticleStatus.NORMAL,
-      });
+      const createdArticle = await testDataFactory.createArticle(
+        category,
+        brand,
+        {
+          status: ArticleStatus.NORMAL,
+        },
+      );
 
       // When: Article ID로 조회
       const result = await articleRepositoryService.findArticleById(
@@ -158,9 +163,13 @@ describe('ArticleRepositoryService Integration Tests', () => {
       // Given: DELETE 상태 Article 생성
       const category = await testDataFactory.createCategory();
       const brand = await testDataFactory.createBrand();
-      const deletedArticle = await testDataFactory.createArticle(category, brand, {
-        status: ArticleStatus.DELETE,
-      });
+      const deletedArticle = await testDataFactory.createArticle(
+        category,
+        brand,
+        {
+          status: ArticleStatus.DELETE,
+        },
+      );
 
       // When: Article ID로 조회
       const result = await articleRepositoryService.findArticleById(
@@ -254,6 +263,7 @@ describe('ArticleRepositoryService Integration Tests', () => {
       // Given: 완전한 Article 데이터 생성
       const article = await testDataFactory.createFullArticle({
         article: { status: ArticleStatus.NORMAL },
+        brand: {},
         sections: [
           {
             sortOrder: 1,
@@ -293,6 +303,7 @@ describe('ArticleRepositoryService Integration Tests', () => {
       // Given: 완전한 Article 데이터 생성
       const createdArticle = await testDataFactory.createFullArticle({
         article: { status: ArticleStatus.NORMAL },
+        brand: {},
       });
 
       // When: Article ID로 조회
@@ -326,9 +337,13 @@ describe('ArticleRepositoryService Integration Tests', () => {
       // Given: DELETE 상태 Article 생성
       const category = await testDataFactory.createCategory();
       const brand = await testDataFactory.createBrand();
-      const deletedArticle = await testDataFactory.createArticle(category, brand, {
-        status: ArticleStatus.DELETE,
-      });
+      const deletedArticle = await testDataFactory.createArticle(
+        category,
+        brand,
+        {
+          status: ArticleStatus.DELETE,
+        },
+      );
 
       // When & Then: DELETE 상태 Article 조회 시 에러 발생
       await expect(
@@ -340,6 +355,7 @@ describe('ArticleRepositoryService Integration Tests', () => {
       // Given: 복잡한 Article 데이터 생성
       const article = await testDataFactory.createFullArticle({
         article: { status: ArticleStatus.NORMAL },
+        brand: {},
         sections: [
           {
             sortOrder: 1,
@@ -408,7 +424,7 @@ describe('ArticleRepositoryService Integration Tests', () => {
 
     it('should maintain data integrity with cascading deletes', async () => {
       // Given: 완전한 Article 데이터 생성
-      const article = await testDataFactory.createFullArticle();
+      const article = await testDataFactory.createFullArticle({ brand: {} });
 
       // When: Article 삭제 (CASCADE로 관련 데이터도 삭제됨)
       const dataSource = TestSetup.getDataSource();
