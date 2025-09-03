@@ -1169,3 +1169,389 @@ describe('NewEntityService Integration Tests', () => {
 **이 가이드를 따르지 않으면 테스트 실행 시 엔티티를 찾을 수 없다는 에러가 발생합니다.**
 - @test/setup/test-data.factory.ts 에 createMultilingualText 메서드 를 테스트 코드에서 사용할떄 매개변수 EntityType을 꼭 사용해
 - 메서드를 하나 바꿨을때 그 메서드를 사용하고 있거나 영향을 주는 코드는 반듯히 확인하고 고쳐야함
+
+---
+
+## 15. 상품 옵션 관리 시스템 (Product-Variant Pattern)
+
+### 개요
+
+의류 등 옵션이 있는 상품을 체계적으로 관리하기 위한 데이터베이스 설계입니다. Shopify, 우아한형제들 등 대형 이커머스에서 사용하는 **Product-Variant 패턴**을 적용했습니다.
+
+### 핵심 개념
+
+#### Product vs ProductVariant
+- **Product**: 상품군 (예: "나이키 드라이핏 티셔츠") - 기본 정보, 설명, 브랜드
+- **ProductVariant**: 실제 판매 상품 (예: "나이키 드라이핏 티셔츠 빨강 M사이즈") - SKU, 가격, 재고
+
+#### SKU (Stock Keeping Unit)
+재고 관리 단위를 뜻하는 고유 식별 코드입니다.
+- 예시: `NK-DF-001-RED-M` = 나이키-드라이핏-001번상품-빨강-M사이즈
+- 재고, 가격, 주문 처리 모두 SKU 단위로 관리
+
+### 데이터베이스 스키마 설계
+
+#### 핵심 테이블 구조
+
+```
+1. Product (상품 기본 정보)
+   ├── id, name, description, brand_id, status
+   └── 다국어 지원 (MultilingualText 연결)
+
+2. Option (옵션 종류)
+   ├── id, type, name, sort_order  
+   └── 예: COLOR(색상), SIZE(사이즈), MATERIAL(소재)
+
+3. OptionValue (옵션 값)
+   ├── id, option_id, value, color_code, sort_order
+   └── 예: 빨강, M사이즈, 면100%
+
+4. ProductVariant (실제 판매 상품) ★ 핵심 테이블
+   ├── id, product_id, sku, price, discount_price
+   ├── stock_quantity, barcode, weight
+   ├── image_urls, is_active, status
+   └── 실제 구매하는 단위
+
+5. VariantOption (변형-옵션값 연결)
+   ├── variant_id, option_value_id
+   └── N:M 관계 매핑 테이블
+```
+
+#### 테이블 간 관계
+
+```
+Product 1:N ProductVariant
+Option 1:N OptionValue  
+ProductVariant N:M OptionValue (via VariantOption)
+Brand 1:N Product
+```
+
+### 실제 동작 시나리오
+
+#### 1. 상품 등록 과정
+
+관리자가 "기본 스웨터"를 등록할 때:
+
+```
+Product: "기본 스웨터" 생성
+
+실제 등록되는 ProductVariant들:
+├── "기본 스웨터 빨강 M사이즈" (SKU: SW001-RED-M, 가격: 59,000원, 재고: 10개)
+├── "기본 스웨터 빨강 L사이즈" (SKU: SW001-RED-L, 가격: 59,000원, 재고: 5개)
+├── "기본 스웨터 파랑 M사이즈" (SKU: SW001-BLU-M, 가격: 62,000원, 재고: 8개)
+└── "기본 스웨터 파랑 L사이즈" (SKU: SW001-BLU-L, 가격: 62,000원, 재고: 3개)
+```
+
+#### 2. 사용자 옵션 선택 → ProductVariant 매핑
+
+사용자가 상품 페이지에서 옵션을 선택하면:
+
+```
+1. 상품 페이지 표시: "기본 스웨터"
+   옵션 선택UI:
+   ├── 색상: ○빨강 ○파랑  
+   └── 사이즈: ○M ○L
+
+2. 사용자 선택: 빨강 + M사이즈
+
+3. 시스템 처리:
+   색상 "빨강" → OptionValue ID: 101
+   사이즈 "M" → OptionValue ID: 201
+   
+4. ProductVariant 조회 쿼리:
+   SELECT pv.* 
+   FROM product_variant pv
+   JOIN variant_option vo1 ON pv.id = vo1.variant_id AND vo1.option_value_id = 101
+   JOIN variant_option vo2 ON pv.id = vo2.variant_id AND vo2.option_value_id = 201
+   WHERE pv.product_id = 상품ID
+
+5. 결과: SKU "SW001-RED-M" ProductVariant 매핑 완료
+   ├── 가격: 59,000원 표시
+   ├── 재고: 10개 (구매 가능)
+   └── 장바구니: 이 ProductVariant가 담김
+```
+
+#### 3. SQL 쿼리 동작 원리
+
+**옵션이 3개인 경우 (색상 + 사이즈 + 소재):**
+
+```sql
+-- 사용자 선택: 빨강(101) + M(201) + 면100%(301)
+SELECT pv.* 
+FROM product_variant pv
+JOIN variant_option vo1 ON pv.id = vo1.variant_id AND vo1.option_value_id = 101  -- 빨강
+JOIN variant_option vo2 ON pv.id = vo2.variant_id AND vo2.option_value_id = 201  -- M사이즈  
+JOIN variant_option vo3 ON pv.id = vo3.variant_id AND vo3.option_value_id = 301  -- 면100%
+WHERE pv.product_id = 상품ID
+```
+
+**JOIN의 교집합 원리:**
+- vo1: "이 variant가 빨강을 가지고 있나?"
+- vo2: "이 variant가 M 사이즈도 가지고 있나?"  
+- vo3: "이 variant가 면100%도 가지고 있나?"
+- **세 조건을 모두 만족하는 variant만 결과로 반환**
+
+### 테이블 데이터 예시
+
+#### variant_option 테이블 (연결 테이블)
+| variant_id | option_value_id | 설명 |
+|------------|-----------------|------|
+| 1          | 101            | 빨강 |
+| 1          | 201            | M |
+| 1          | 301            | 면100% |
+| 2          | 101            | 빨강 |
+| 2          | 201            | M |
+| 2          | 302            | 폴리에스터 |
+
+#### 쿼리 실행 결과
+- **variant 1번**: 빨강 + M + 면100% ✅ (3개 조건 모두 만족)
+- **variant 2번**: 빨강 + M + 폴리에스터 ❌ (소재가 다름)
+
+### 시스템 장점
+
+#### 1. 확장성
+- 새로운 옵션 타입 (핏, 스타일 등) 쉽게 추가
+- 옵션값 재사용 (색상 "빨강"은 여러 상품에서 사용)
+
+#### 2. 성능
+- 적절한 인덱스 설계로 빠른 조회 성능
+- 옵션이 많아져도 JOIN 방식으로 효율적 처리
+
+#### 3. 관리 편의성
+- 재고/가격은 실제 판매 단위(ProductVariant)로 관리
+- SKU 기반의 체계적인 상품 추적
+
+#### 4. 데이터 무결성
+- 복합 키와 외래키 제약조건으로 데이터 정합성 보장
+- 논리적 삭제로 히스토리 보존
+
+### 구현 고려사항
+
+#### Entity 설계 시 주의점
+- ProductVariant가 실제 비즈니스 로직의 핵심
+- 모든 상품 관련 enum은 확장 가능하게 설계
+- 테스트 환경에서는 외래키 제약조건 비활성화
+
+#### 성능 최적화
+- variant_id, option_value_id 복합 인덱스 필수
+- product_id, sku에 개별 인덱스 생성
+- 자주 조회되는 컬럼(price, stock_quantity)에 인덱스 고려
+
+#### 테스트 환경 설정
+- TestDatabaseModule에 모든 상품 관련 Entity 등록
+- TestDataFactory에서 복잡한 옵션 조합 테스트 데이터 생성 지원
+
+### 다국어 지원 시스템
+
+상품 옵션 시스템은 기존 프로젝트의 MultilingualText 시스템을 활용하여 완전한 다국어 지원을 제공합니다.
+
+#### 다국어 지원 전략
+
+**기존 MultilingualText 시스템 확장 활용:**
+- 일관성: Brand, News, Article과 동일한 패턴 적용
+- 확장성: 새 언어(일본어, 베트남어 등) 쉽게 추가 가능
+- 유지보수: 중앙화된 다국어 시스템으로 관리
+
+**지원 언어:**
+- 한국어 (ko) - 기본 언어
+- 영어 (en)
+- 중국어 (zh)
+
+#### 다국어 지원 대상 Entity 및 필드
+
+##### 1. ProductEntity (상품 기본 정보)
+```
+다국어 필드:
+├── name (상품명): "나이키 드라이핏 티셔츠" → "Nike Dri-FIT T-Shirt" → "耐克Dri-FIT T恤"
+└── description (상품 설명): 상세 설명의 다국어 버전
+```
+
+##### 2. OptionEntity (옵션 종류)
+```
+다국어 필드:
+├── name (옵션명): "색상" → "Color" → "颜色"
+└── description (옵션 설명): 옵션에 대한 설명 (필요 시)
+```
+
+##### 3. OptionValueEntity (옵션 값) ⭐ 가장 중요!
+```
+다국어 필드:
+├── value (옵션값): "빨강" → "Red" → "红色"
+│                   "M사이즈" → "M Size" → "M码"
+│                   "면100%" → "100% Cotton" → "100%棉"
+└── description (옵션값 설명): 필요 시 상세 설명
+```
+
+#### 구현 방식
+
+##### EntityType enum 확장
+```typescript
+export enum EntityType {
+  // 기존
+  BRAND = 'brand',
+  BRAND_SECTION = 'brand_section',
+  NEWS = 'news',
+  ARTICLE = 'article',
+  
+  // 상품 관련 추가
+  PRODUCT = 'product',
+  OPTION = 'option',
+  OPTION_VALUE = 'option_value',
+}
+```
+
+##### Entity별 다국어 관계 추가
+```typescript
+// 모든 상품 관련 Entity에 추가
+@OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
+  cascade: true,
+  createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+})
+multilingualTexts: MultilingualTextEntity[];
+```
+
+#### 다국어 데이터 저장 구조
+
+**multilingual_text 테이블 예시:**
+| entityType | entityId | fieldName | languageId | textContent |
+|------------|----------|-----------|------------|-------------|
+| option_value | 101 | value | 1 (한국어) | 빨강 |
+| option_value | 101 | value | 2 (영어) | Red |
+| option_value | 101 | value | 3 (중국어) | 红色 |
+| option_value | 201 | value | 1 (한국어) | M사이즈 |
+| option_value | 201 | value | 2 (영어) | M Size |
+| option_value | 201 | value | 3 (중국어) | M码 |
+
+#### 다국어 API 동작 시나리오
+
+##### 1. 사용자별 언어 설정
+```http
+GET /product/1
+Accept-Language: en
+
+응답:
+{
+  "name": "Nike Dri-FIT T-Shirt",
+  "description": "Premium athletic t-shirt...",
+  "options": [
+    {
+      "name": "Color",
+      "values": ["Red", "Blue", "Black"]
+    },
+    {
+      "name": "Size", 
+      "values": ["S", "M", "L", "XL"]
+    }
+  ]
+}
+```
+
+##### 2. 옵션 선택 UI 다국어 표시
+```
+영어 사용자:
+├── Color: ○Red ○Blue ○Black
+└── Size: ○S ○M ○L ○XL
+
+중국어 사용자:
+├── 颜色: ○红色 ○蓝色 ○黑色  
+└── 尺码: ○S ○M ○L ○XL
+```
+
+##### 3. 상품 변형 매핑과 다국어
+```
+사용자 선택 (영어): Red + M Size
+시스템 처리: 
+1. "Red" → OptionValue ID: 101
+2. "M Size" → OptionValue ID: 201  
+3. ProductVariant 조회 및 매핑
+4. 결과: "Nike T-Shirt Red M Size" (영어로 표시)
+
+사용자 선택 (중국어): 红色 + M码
+시스템 처리:
+1. "红色" → OptionValue ID: 101  
+2. "M码" → OptionValue ID: 201
+3. ProductVariant 조회 및 매핑 (동일한 ID)
+4. 결과: "耐克T恤 红色 M码" (중국어로 표시)
+```
+
+#### 개발 시 고려사항
+
+##### TestDataFactory 다국어 지원
+```typescript
+// 다국어 상품 생성 헬퍼 메서드
+async createMultilingualProduct(
+  productData: Partial<ProductEntity>,
+  multilingualData: {
+    name: { ko: string; en: string; zh: string };
+    description?: { ko: string; en: string; zh: string };
+  }
+): Promise<{
+  product: ProductEntity;
+  languages: { korean: LanguageEntity; english: LanguageEntity; chinese: LanguageEntity };
+  texts: MultilingualTextEntity[];
+}>
+
+// 다국어 옵션값 생성
+async createMultilingualOptionValue(
+  optionValueData: Partial<OptionValueEntity>,
+  multilingualData: {
+    value: { ko: string; en: string; zh: string };
+  }
+): Promise<{...}>
+```
+
+##### API 응답 최적화
+- 사용자 언어별 캐싱 전략
+- 필요한 언어의 텍스트만 조회하는 효율적 쿼리
+- Accept-Language 헤더 파싱 및 기본값 처리
+
+##### 성능 최적화
+```sql
+-- 다국어 텍스트 조회 최적화
+CREATE INDEX idx_multilingual_text_lookup 
+ON multilingual_text(entity_type, entity_id, field_name, language_id);
+
+-- 상품 옵션 조회 시 다국어 텍스트 함께 조회
+SELECT pv.*, mt.text_content 
+FROM product_variant pv
+JOIN variant_option vo ON pv.id = vo.variant_id
+JOIN option_value ov ON vo.option_value_id = ov.id
+JOIN multilingual_text mt ON mt.entity_type = 'option_value' 
+                          AND mt.entity_id = ov.id 
+                          AND mt.field_name = 'value'
+                          AND mt.language_id = :languageId
+WHERE pv.product_id = :productId;
+```
+
+#### 테스트 환경 다국어 설정
+
+```typescript
+// 테스트 데이터 생성 예시
+describe('Multilingual Product Tests', () => {
+  it('should create product with multilingual options', async () => {
+    // Given: 다국어 옵션값 생성
+    const { optionValue } = await testDataFactory.createMultilingualOptionValue(
+      { sortOrder: 1 },
+      {
+        value: {
+          ko: '빨강',
+          en: 'Red', 
+          zh: '红色'
+        }
+      }
+    );
+
+    // When: 영어로 옵션값 조회
+    const result = await optionService.getOptionValue(optionValue.id, 'en');
+
+    // Then: 영어 텍스트 반환 확인
+    expect(result.value).toBe('Red');
+  });
+});
+```
+
+**이 다국어 시스템으로 글로벌 사용자를 위한 완전한 상품 옵션 관리가 가능합니다.**
+
+---
+
+이 시스템으로 확장성과 성능을 모두 확보한 상품 옵션 관리가 가능합니다.
