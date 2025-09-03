@@ -123,6 +123,12 @@ export class GetNewsResponse {
   @ApiProperty({ description: '작성자 이름', example: '김서울' })
   writer: string;
 
+  @ApiProperty({
+    description: '작성 일시',
+    example: '2025-09-03T01:20:45.123Z',
+  })
+  createDate: Date;
+
   @ApiProperty({ description: '카테고리 이름', example: '브랜드 뉴스' })
   category: string;
 
@@ -185,6 +191,7 @@ export class GetNewsResponse {
       id: entity.id,
       brandId: entity.brand.id,
       writer: entity.writer,
+      createDate: entity.createDate,
       category: entity.category.name,
       title: title.getContentByLanguage(language),
       content: content.getContentByLanguage(language),
