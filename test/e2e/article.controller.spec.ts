@@ -81,6 +81,7 @@ describe('ArticleController (E2E)', () => {
 
       const article = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: {
           writer: 'Test Writer',
           status: ArticleStatus.NORMAL,
@@ -199,6 +200,7 @@ describe('ArticleController (E2E)', () => {
 
       const article = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: {
           writer: 'Test Writer',
           status: ArticleStatus.NORMAL,
@@ -284,6 +286,7 @@ describe('ArticleController (E2E)', () => {
 
       const article = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: {
           writer: 'Test Writer',
           status: ArticleStatus.NORMAL,
@@ -367,7 +370,8 @@ describe('ArticleController (E2E)', () => {
     it('should return 404 when article exists but not in normal status', async () => {
       // Given: DELETE 상태의 아티클 생성
       const category = await testDataFactory.createCategory();
-      const article = await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      const article = await testDataFactory.createArticle(category, brand, {
         writer: 'Test Writer',
         status: ArticleStatus.DELETE,
       });
@@ -411,7 +415,8 @@ describe('ArticleController (E2E)', () => {
     it('should handle missing Accept-language header gracefully', async () => {
       // Given: 카테고리와 아티클 생성
       const category = await testDataFactory.createCategory();
-      const article = await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      const article = await testDataFactory.createArticle(category, brand, {
         writer: 'Test Writer',
         status: ArticleStatus.NORMAL,
       });
@@ -433,7 +438,8 @@ describe('ArticleController (E2E)', () => {
       // 3개의 아티클을 생성하여 lastArticle 목록 테스트
       const articles = [];
       for (let i = 1; i <= 3; i++) {
-        const article = await testDataFactory.createArticle(category, {
+        const brand = await testDataFactory.createBrand();
+        const article = await testDataFactory.createArticle(category, brand, {
           writer: `Writer ${i}`,
           status: ArticleStatus.NORMAL,
           banner: `/banner/test-banner-${i}.jpg`,
@@ -444,6 +450,7 @@ describe('ArticleController (E2E)', () => {
       // 메인 아티클 생성
       const mainArticle = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: {
           writer: 'Main Writer',
           status: ArticleStatus.NORMAL,
@@ -509,6 +516,7 @@ describe('ArticleController (E2E)', () => {
       const category = await testDataFactory.createCategory();
       const article = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: {
           writer: 'Test Writer',
           status: ArticleStatus.NORMAL,

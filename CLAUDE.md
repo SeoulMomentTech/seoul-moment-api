@@ -1167,3 +1167,5 @@ describe('NewEntityService Integration Tests', () => {
 4. **데이터 정리**: 각 테스트 후 `TestSetup.clearDatabase()` 호출로 데이터 격리 보장
 
 **이 가이드를 따르지 않으면 테스트 실행 시 엔티티를 찾을 수 없다는 에러가 발생합니다.**
+- @test/setup/test-data.factory.ts 에 createMultilingualText 메서드 를 테스트 코드에서 사용할떄 매개변수 EntityType을 꼭 사용해
+- 메서드를 하나 바꿨을때 그 메서드를 사용하고 있거나 영향을 주는 코드는 반듯히 확인하고 고쳐야함

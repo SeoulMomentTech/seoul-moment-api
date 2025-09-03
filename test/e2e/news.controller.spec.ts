@@ -81,6 +81,7 @@ describe('NewsController (E2E)', () => {
 
       const news = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: {
           writer: 'Test Writer',
           status: NewsStatus.NORMAL,
@@ -199,6 +200,7 @@ describe('NewsController (E2E)', () => {
 
       const news = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: {
           writer: 'Test Writer',
           status: NewsStatus.NORMAL,
@@ -284,6 +286,7 @@ describe('NewsController (E2E)', () => {
 
       const news = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: {
           writer: 'Test Writer',
           status: NewsStatus.NORMAL,
@@ -367,7 +370,8 @@ describe('NewsController (E2E)', () => {
     it('should return 404 when news exists but not in normal status', async () => {
       // Given: DELETE 상태의 뉴스 생성
       const category = await testDataFactory.createCategory();
-      const news = await testDataFactory.createNews(category, {
+      const brand = await testDataFactory.createBrand();
+      const news = await testDataFactory.createNews(category, brand, {
         writer: 'Test Writer',
         status: NewsStatus.DELETE,
       });
@@ -411,7 +415,8 @@ describe('NewsController (E2E)', () => {
     it('should handle missing Accept-language header gracefully', async () => {
       // Given: 카테고리와 뉴스 생성
       const category = await testDataFactory.createCategory();
-      const news = await testDataFactory.createNews(category, {
+      const brand = await testDataFactory.createBrand();
+      const news = await testDataFactory.createNews(category, brand, {
         writer: 'Test Writer',
         status: NewsStatus.NORMAL,
       });
@@ -433,7 +438,8 @@ describe('NewsController (E2E)', () => {
       // 3개의 뉴스를 생성하여 lastArticle 목록 테스트
       const newsList = [];
       for (let i = 1; i <= 3; i++) {
-        const newsItem = await testDataFactory.createNews(category, {
+        const brand = await testDataFactory.createBrand();
+        const newsItem = await testDataFactory.createNews(category, brand, {
           writer: `Writer ${i}`,
           status: NewsStatus.NORMAL,
           banner: `/banner/test-banner-${i}.jpg`,
@@ -444,6 +450,7 @@ describe('NewsController (E2E)', () => {
       // 메인 뉴스 생성
       const mainNews = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: {
           writer: 'Main Writer',
           status: NewsStatus.NORMAL,
@@ -509,6 +516,7 @@ describe('NewsController (E2E)', () => {
       const category = await testDataFactory.createCategory();
       const news = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: {
           writer: 'Test Writer',
           status: NewsStatus.NORMAL,

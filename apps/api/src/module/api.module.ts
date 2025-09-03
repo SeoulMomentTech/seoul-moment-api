@@ -16,6 +16,7 @@ import { HealthController } from '../health.controller';
 import { ArticleModule } from './article/article.module';
 import { BrandModule } from './brand/brand.module';
 import { GoogleModule } from './google/google.module';
+import { HomeModule } from './home/home.module';
 import { NewsModule } from './news/news.module';
 
 @Module({
@@ -42,6 +43,7 @@ import { NewsModule } from './news/news.module';
     GoogleModule,
     NewsModule,
     ArticleModule,
+    HomeModule,
   ],
   controllers: [HealthController],
   providers: [

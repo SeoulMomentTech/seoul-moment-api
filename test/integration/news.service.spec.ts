@@ -45,7 +45,8 @@ describe('NewsService Integration Tests', () => {
       // 최신 목록용 추가 뉴스들 생성
       const additionalNews = [];
       for (let i = 1; i <= 3; i++) {
-        const news = await testDataFactory.createNews(category, {
+        const brand = await testDataFactory.createBrand();
+        const news = await testDataFactory.createNews(category, brand, {
           status: NewsStatus.NORMAL,
           writer: `Additional Writer ${i}`,
           banner: `/banner/additional-${i}.jpg`,
@@ -58,6 +59,7 @@ describe('NewsService Integration Tests', () => {
       // 메인 뉴스 생성
       const mainNews = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: {
           status: NewsStatus.NORMAL,
           writer: 'Main Writer',
@@ -184,6 +186,7 @@ describe('NewsService Integration Tests', () => {
       const category = await testDataFactory.createCategory();
       const news = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: { status: NewsStatus.NORMAL },
         sections: [
           {
@@ -235,6 +238,7 @@ describe('NewsService Integration Tests', () => {
       const category = await testDataFactory.createCategory();
       const news = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: { status: NewsStatus.NORMAL },
         sections: [
           {
@@ -277,6 +281,7 @@ describe('NewsService Integration Tests', () => {
       const category = await testDataFactory.createCategory();
       const news = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: { status: NewsStatus.NORMAL },
         sections: [
           {
@@ -317,7 +322,8 @@ describe('NewsService Integration Tests', () => {
     it('should throw ServiceError when news exists but not in normal status', async () => {
       // Given: DELETE 상태 뉴스
       const category = await testDataFactory.createCategory();
-      const deletedNews = await testDataFactory.createNews(category, {
+      const brand = await testDataFactory.createBrand();
+      const deletedNews = await testDataFactory.createNews(category, brand, {
         status: NewsStatus.DELETE,
       });
 
@@ -334,7 +340,8 @@ describe('NewsService Integration Tests', () => {
       // NORMAL 상태 뉴스들 생성 (lastArticle에 포함되어야 함)
       const normalNews = [];
       for (let i = 1; i <= 5; i++) {
-        const news = await testDataFactory.createNews(category, {
+        const brand = await testDataFactory.createBrand();
+        const news = await testDataFactory.createNews(category, brand, {
           status: NewsStatus.NORMAL,
           writer: `Writer ${i}`,
         });
@@ -343,7 +350,8 @@ describe('NewsService Integration Tests', () => {
       }
 
       // DELETE 상태 뉴스 생성 (lastArticle에 포함되지 않아야 함)
-      await testDataFactory.createNews(category, {
+      const brandForDeleted = await testDataFactory.createBrand();
+      await testDataFactory.createNews(category, brandForDeleted, {
         status: NewsStatus.DELETE,
         writer: 'Deleted Writer',
       });
@@ -351,6 +359,7 @@ describe('NewsService Integration Tests', () => {
       // 메인 뉴스 생성
       const mainNews = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: { status: NewsStatus.NORMAL },
         sections: [{ sortOrder: 1, images: [] }],
       });
@@ -377,7 +386,8 @@ describe('NewsService Integration Tests', () => {
       // 추가 뉴스들 생성 및 다국어 텍스트 추가
       const additionalNews = [];
       for (let i = 1; i <= 2; i++) {
-        const news = await testDataFactory.createNews(category, {
+        const brand = await testDataFactory.createBrand();
+        const news = await testDataFactory.createNews(category, brand, {
           status: NewsStatus.NORMAL,
           writer: `Writer ${i}`,
           banner: `/banner/additional-${i}.jpg`,
@@ -398,6 +408,7 @@ describe('NewsService Integration Tests', () => {
       // 메인 뉴스 생성
       const mainNews = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: { status: NewsStatus.NORMAL },
         sections: [{ sortOrder: 1, images: [] }],
       });
@@ -429,6 +440,7 @@ describe('NewsService Integration Tests', () => {
       const category = await testDataFactory.createCategory();
       const news = await testDataFactory.createFullNews({
         category,
+        brand: {},
         news: { status: NewsStatus.NORMAL },
       });
 

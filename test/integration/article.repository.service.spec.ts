@@ -53,7 +53,8 @@ describe('ArticleRepositoryService Integration Tests', () => {
     it('should return empty array when no normal articles exist', async () => {
       // Given: NORMAL 상태가 아닌 Article들만 생성
       const category = await testDataFactory.createCategory();
-      await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.DELETE,
       });
 
@@ -101,7 +102,8 @@ describe('ArticleRepositoryService Integration Tests', () => {
     it('should sort sections by sortOrder', async () => {
       // Given: 정렬 순서가 다른 Article 데이터 생성
       const category = await testDataFactory.createCategory();
-      const article = await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      const article = await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.NORMAL,
       });
 
@@ -128,7 +130,8 @@ describe('ArticleRepositoryService Integration Tests', () => {
     it('should return article when exists with NORMAL status', async () => {
       // Given: NORMAL 상태 Article 생성
       const category = await testDataFactory.createCategory();
-      const createdArticle = await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      const createdArticle = await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.NORMAL,
       });
 
@@ -154,7 +157,8 @@ describe('ArticleRepositoryService Integration Tests', () => {
     it('should return null when article exists but not NORMAL status', async () => {
       // Given: DELETE 상태 Article 생성
       const category = await testDataFactory.createCategory();
-      const deletedArticle = await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      const deletedArticle = await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.DELETE,
       });
 
@@ -172,10 +176,11 @@ describe('ArticleRepositoryService Integration Tests', () => {
     it('should return latest articles by count with NORMAL status only', async () => {
       // Given: 여러 Article을 시간차로 생성
       const category = await testDataFactory.createCategory();
+      const brand = await testDataFactory.createBrand();
       const articles = [];
 
       for (let i = 1; i <= 5; i++) {
-        const article = await testDataFactory.createArticle(category, {
+        const article = await testDataFactory.createArticle(category, brand, {
           status: ArticleStatus.NORMAL,
           writer: `Writer ${i}`,
         });
@@ -185,7 +190,7 @@ describe('ArticleRepositoryService Integration Tests', () => {
       }
 
       // DELETE 상태 Article도 생성 (결과에 포함되지 않아야 함)
-      await testDataFactory.createArticle(category, {
+      await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.DELETE,
         writer: 'Deleted Writer',
       });
@@ -212,10 +217,11 @@ describe('ArticleRepositoryService Integration Tests', () => {
     it('should return empty array when no normal articles exist', async () => {
       // Given: DELETE 상태 Article들만 생성
       const category = await testDataFactory.createCategory();
-      await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.DELETE,
       });
-      await testDataFactory.createArticle(category, {
+      await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.DELETE,
       });
 
@@ -229,10 +235,11 @@ describe('ArticleRepositoryService Integration Tests', () => {
     it('should return fewer articles when requested count exceeds available', async () => {
       // Given: 2개의 NORMAL Article만 생성
       const category = await testDataFactory.createCategory();
-      await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.NORMAL,
       });
-      await testDataFactory.createArticle(category, {
+      await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.NORMAL,
       });
 
@@ -268,7 +275,8 @@ describe('ArticleRepositoryService Integration Tests', () => {
     it('should handle zero count parameter', async () => {
       // Given: Article 생성
       const category = await testDataFactory.createCategory();
-      await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.NORMAL,
       });
 
@@ -317,7 +325,8 @@ describe('ArticleRepositoryService Integration Tests', () => {
     it('should throw ServiceError when article exists but not NORMAL status', async () => {
       // Given: DELETE 상태 Article 생성
       const category = await testDataFactory.createCategory();
-      const deletedArticle = await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      const deletedArticle = await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.DELETE,
       });
 
@@ -378,7 +387,8 @@ describe('ArticleRepositoryService Integration Tests', () => {
     it('should handle concurrent access correctly', async () => {
       // Given: Article 생성
       const category = await testDataFactory.createCategory();
-      const article = await testDataFactory.createArticle(category, {
+      const brand = await testDataFactory.createBrand();
+      const article = await testDataFactory.createArticle(category, brand, {
         status: ArticleStatus.NORMAL,
       });
 

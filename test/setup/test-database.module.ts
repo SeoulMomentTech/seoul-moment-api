@@ -2,10 +2,13 @@ import { ArticleSectionImageEntity } from '@app/repository/entity/article-sectio
 import { ArticleSectionEntity } from '@app/repository/entity/article-section.entity';
 import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
-import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
+import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { CategoryEntity } from '@app/repository/entity/category.entity';
+import { HomeBannerImageEntity } from '@app/repository/entity/home-banner-image.entity';
+import { HomeSectionImageEntity } from '@app/repository/entity/home-section-image.entity';
+import { HomeSectionEntity } from '@app/repository/entity/home-section.entity';
 import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { NewsSectionImageEntity } from '@app/repository/entity/news-section-image.entity';
@@ -35,6 +38,9 @@ import { TestCacheModule } from './test-cache.module';
         BrandSectionEntity,
         BrandSectionImageEntity,
         CategoryEntity,
+        HomeBannerImageEntity,
+        HomeSectionEntity,
+        HomeSectionImageEntity,
         LanguageEntity,
         MultilingualTextEntity,
         NewsEntity,
@@ -54,6 +60,9 @@ import { TestCacheModule } from './test-cache.module';
       BrandSectionEntity,
       BrandSectionImageEntity,
       CategoryEntity,
+      HomeBannerImageEntity,
+      HomeSectionEntity,
+      HomeSectionImageEntity,
       LanguageEntity,
       MultilingualTextEntity,
       NewsEntity,

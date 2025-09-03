@@ -8,12 +8,16 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+import { BrandEntity } from './brand.entity';
 import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
 import { NewsSectionEntity } from './news-section.entity';
 import { EntityType } from '../enum/entity.enum';
 import { NewsStatus } from '../enum/news.enum';
 
+/**
+ * Multilgual column [title, content]
+ */
 @Entity(EntityType.NEWS)
 export class NewsEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
@@ -21,6 +25,9 @@ export class NewsEntity extends CommonEntity {
 
   @Column('int', { name: 'category_id', nullable: false })
   categoryId: number;
+
+  @Column('int', { name: 'brand_id', nullable: true })
+  brandId: number;
 
   @Column('varchar', { length: 255, nullable: false })
   writer: string;
@@ -43,6 +50,12 @@ export class NewsEntity extends CommonEntity {
   })
   @JoinColumn({ name: 'category_id' })
   category: CategoryEntity;
+
+  @ManyToOne(() => BrandEntity, (brand) => brand.news, {
+    eager: true,
+  })
+  @JoinColumn({ name: 'brand_id' })
+  brand: BrandEntity;
 
   @OneToMany(() => NewsSectionEntity, (section) => section.news, {
     eager: true,

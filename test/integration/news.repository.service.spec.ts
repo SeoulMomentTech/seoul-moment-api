@@ -53,7 +53,8 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should return empty array when no normal news exist', async () => {
       // Given: NORMAL 상태가 아닌 News들만 생성
       const category = await testDataFactory.createCategory();
-      await testDataFactory.createNews(category, {
+      const brand = await testDataFactory.createBrand();
+      await testDataFactory.createNews(category, brand, {
         status: NewsStatus.DELETE,
       });
 
@@ -67,6 +68,7 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should return news with eager loaded relations', async () => {
       // Given: 완전한 News 데이터 생성 (카테고리, 섹션, 이미지 포함)
       await testDataFactory.createFullNews({
+        brand: {},
         news: { status: NewsStatus.NORMAL },
         sections: [
           {
@@ -101,7 +103,8 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should sort sections by sortOrder', async () => {
       // Given: 정렬 순서가 다른 News 데이터 생성
       const category = await testDataFactory.createCategory();
-      const news = await testDataFactory.createNews(category, {
+      const brand = await testDataFactory.createBrand();
+      const news = await testDataFactory.createNews(category, brand, {
         status: NewsStatus.NORMAL,
       });
 
@@ -128,7 +131,8 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should return news when exists with NORMAL status', async () => {
       // Given: NORMAL 상태 News 생성
       const category = await testDataFactory.createCategory();
-      const createdNews = await testDataFactory.createNews(category, {
+      const brand = await testDataFactory.createBrand();
+      const createdNews = await testDataFactory.createNews(category, brand, {
         status: NewsStatus.NORMAL,
       });
 
@@ -152,7 +156,8 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should return null when news exists but not NORMAL status', async () => {
       // Given: DELETE 상태 News 생성
       const category = await testDataFactory.createCategory();
-      const deletedNews = await testDataFactory.createNews(category, {
+      const brand = await testDataFactory.createBrand();
+      const deletedNews = await testDataFactory.createNews(category, brand, {
         status: NewsStatus.DELETE,
       });
 
@@ -168,10 +173,11 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should return latest news by count with NORMAL status only', async () => {
       // Given: 여러 News을 시간차로 생성
       const category = await testDataFactory.createCategory();
+      const brand = await testDataFactory.createBrand();
       const newsList = [];
 
       for (let i = 1; i <= 5; i++) {
-        const news = await testDataFactory.createNews(category, {
+        const news = await testDataFactory.createNews(category, brand, {
           status: NewsStatus.NORMAL,
           writer: `Writer ${i}`,
         });
@@ -181,7 +187,7 @@ describe('NewsRepositoryService Integration Tests', () => {
       }
 
       // DELETE 상태 News도 생성 (결과에 포함되지 않아야 함)
-      await testDataFactory.createNews(category, {
+      await testDataFactory.createNews(category, brand, {
         status: NewsStatus.DELETE,
         writer: 'Deleted Writer',
       });
@@ -208,8 +214,9 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should return empty array when no normal news exist', async () => {
       // Given: DELETE 상태 News들만 생성
       const category = await testDataFactory.createCategory();
-      await testDataFactory.createNews(category, { status: NewsStatus.DELETE });
-      await testDataFactory.createNews(category, { status: NewsStatus.DELETE });
+      const brand = await testDataFactory.createBrand();
+      await testDataFactory.createNews(category, brand, { status: NewsStatus.DELETE });
+      await testDataFactory.createNews(category, brand, { status: NewsStatus.DELETE });
 
       // When: 최신 News 조회
       const result = await newsRepositoryService.findLastNewsByCount(3);
@@ -221,8 +228,9 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should return fewer news when requested count exceeds available', async () => {
       // Given: 2개의 NORMAL News만 생성
       const category = await testDataFactory.createCategory();
-      await testDataFactory.createNews(category, { status: NewsStatus.NORMAL });
-      await testDataFactory.createNews(category, { status: NewsStatus.NORMAL });
+      const brand = await testDataFactory.createBrand();
+      await testDataFactory.createNews(category, brand, { status: NewsStatus.NORMAL });
+      await testDataFactory.createNews(category, brand, { status: NewsStatus.NORMAL });
 
       // When: 5개 요청하지만 2개만 존재
       const result = await newsRepositoryService.findLastNewsByCount(5);
@@ -234,6 +242,7 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should return news with eager loaded relations', async () => {
       // Given: 완전한 News 데이터 생성
       const news = await testDataFactory.createFullNews({
+        brand: {},
         news: { status: NewsStatus.NORMAL },
         sections: [
           {
@@ -256,7 +265,8 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should handle zero count parameter', async () => {
       // Given: News 생성
       const category = await testDataFactory.createCategory();
-      await testDataFactory.createNews(category, { status: NewsStatus.NORMAL });
+      const brand = await testDataFactory.createBrand();
+      await testDataFactory.createNews(category, brand, { status: NewsStatus.NORMAL });
 
       // When: count가 0인 경우
       const result = await newsRepositoryService.findLastNewsByCount(0);
@@ -270,6 +280,7 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should return news when exists with NORMAL status', async () => {
       // Given: 완전한 News 데이터 생성
       const createdNews = await testDataFactory.createFullNews({
+        brand: {},
         news: { status: NewsStatus.NORMAL },
       });
 
@@ -301,7 +312,8 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should throw ServiceError when news exists but not NORMAL status', async () => {
       // Given: DELETE 상태 News 생성
       const category = await testDataFactory.createCategory();
-      const deletedNews = await testDataFactory.createNews(category, {
+      const brand = await testDataFactory.createBrand();
+      const deletedNews = await testDataFactory.createNews(category, brand, {
         status: NewsStatus.DELETE,
       });
 
@@ -314,6 +326,7 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should return news with all nested relations', async () => {
       // Given: 복잡한 News 데이터 생성
       const news = await testDataFactory.createFullNews({
+        brand: {},
         news: { status: NewsStatus.NORMAL },
         sections: [
           {
@@ -362,7 +375,8 @@ describe('NewsRepositoryService Integration Tests', () => {
     it('should handle concurrent access correctly', async () => {
       // Given: News 생성
       const category = await testDataFactory.createCategory();
-      const news = await testDataFactory.createNews(category, {
+      const brand = await testDataFactory.createBrand();
+      const news = await testDataFactory.createNews(category, brand, {
         status: NewsStatus.NORMAL,
       });
 
@@ -382,7 +396,7 @@ describe('NewsRepositoryService Integration Tests', () => {
 
     it('should maintain data integrity with cascading deletes', async () => {
       // Given: 완전한 News 데이터 생성
-      const news = await testDataFactory.createFullNews();
+      const news = await testDataFactory.createFullNews({ brand: {} });
 
       // When: News 삭제 (CASCADE로 관련 데이터도 삭제됨)
       const dataSource = TestSetup.getDataSource();

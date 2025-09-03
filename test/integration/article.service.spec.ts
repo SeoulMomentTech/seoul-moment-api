@@ -45,7 +45,8 @@ describe('ArticleService Integration Tests', () => {
       // 최신 목록용 추가 아티클들 생성
       const additionalArticles = [];
       for (let i = 1; i <= 3; i++) {
-        const article = await testDataFactory.createArticle(category, {
+        const brand = await testDataFactory.createBrand();
+        const article = await testDataFactory.createArticle(category, brand, {
           status: ArticleStatus.NORMAL,
           writer: `Additional Writer ${i}`,
           banner: `/banner/additional-${i}.jpg`,
@@ -58,6 +59,7 @@ describe('ArticleService Integration Tests', () => {
       // 메인 아티클 생성
       const mainArticle = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: {
           status: ArticleStatus.NORMAL,
           writer: 'Main Writer',
@@ -184,6 +186,7 @@ describe('ArticleService Integration Tests', () => {
       const category = await testDataFactory.createCategory();
       const article = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: { status: ArticleStatus.NORMAL },
         sections: [
           {
@@ -238,6 +241,7 @@ describe('ArticleService Integration Tests', () => {
       const category = await testDataFactory.createCategory();
       const article = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: { status: ArticleStatus.NORMAL },
         sections: [
           {
@@ -283,6 +287,7 @@ describe('ArticleService Integration Tests', () => {
       const category = await testDataFactory.createCategory();
       const article = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: { status: ArticleStatus.NORMAL },
         sections: [
           {
@@ -326,9 +331,14 @@ describe('ArticleService Integration Tests', () => {
     it('should throw ServiceError when article exists but not in normal status', async () => {
       // Given: DELETE 상태 아티클
       const category = await testDataFactory.createCategory();
-      const deletedArticle = await testDataFactory.createArticle(category, {
-        status: ArticleStatus.DELETE,
-      });
+      const brand = await testDataFactory.createBrand();
+      const deletedArticle = await testDataFactory.createArticle(
+        category,
+        brand,
+        {
+          status: ArticleStatus.DELETE,
+        },
+      );
 
       // When & Then: DELETE 상태 아티클 조회 시 에러 발생
       await expect(
@@ -343,7 +353,8 @@ describe('ArticleService Integration Tests', () => {
       // NORMAL 상태 아티클들 생성 (lastArticle에 포함되어야 함)
       const normalArticles = [];
       for (let i = 1; i <= 5; i++) {
-        const article = await testDataFactory.createArticle(category, {
+        const brand = await testDataFactory.createBrand();
+        const article = await testDataFactory.createArticle(category, brand, {
           status: ArticleStatus.NORMAL,
           writer: `Writer ${i}`,
         });
@@ -352,7 +363,8 @@ describe('ArticleService Integration Tests', () => {
       }
 
       // DELETE 상태 아티클 생성 (lastArticle에 포함되지 않아야 함)
-      await testDataFactory.createArticle(category, {
+      const brandForDeleted = await testDataFactory.createBrand();
+      await testDataFactory.createArticle(category, brandForDeleted, {
         status: ArticleStatus.DELETE,
         writer: 'Deleted Writer',
       });
@@ -360,6 +372,7 @@ describe('ArticleService Integration Tests', () => {
       // 메인 아티클 생성
       const mainArticle = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: { status: ArticleStatus.NORMAL },
         sections: [{ sortOrder: 1, images: [] }],
       });
@@ -386,7 +399,8 @@ describe('ArticleService Integration Tests', () => {
       // 추가 아티클들 생성 및 다국어 텍스트 추가
       const additionalArticles = [];
       for (let i = 1; i <= 2; i++) {
-        const article = await testDataFactory.createArticle(category, {
+        const brand = await testDataFactory.createBrand();
+        const article = await testDataFactory.createArticle(category, brand, {
           status: ArticleStatus.NORMAL,
           writer: `Writer ${i}`,
           banner: `/banner/additional-${i}.jpg`,
@@ -407,6 +421,7 @@ describe('ArticleService Integration Tests', () => {
       // 메인 아티클 생성
       const mainArticle = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: { status: ArticleStatus.NORMAL },
         sections: [{ sortOrder: 1, images: [] }],
       });
@@ -438,6 +453,7 @@ describe('ArticleService Integration Tests', () => {
       const category = await testDataFactory.createCategory();
       const article = await testDataFactory.createFullArticle({
         category,
+        brand: {},
         article: { status: ArticleStatus.NORMAL },
       });
 

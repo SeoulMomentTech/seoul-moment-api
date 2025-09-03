@@ -1,12 +1,17 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
+import { ArticleEntity } from './article.entity';
 import { BrandBannerImageEntity } from './brand-banner-image.entity';
 import { BrandSectionEntity } from './brand-section.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
+import { NewsEntity } from './news.entity';
 import { BrandStatus } from '../enum/brand.enum';
 import { EntityType } from '../enum/entity.enum';
 
+/**
+ * Multilgual column [name, description]
+ */
 @Entity(EntityType.BRAND)
 export class BrandEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
@@ -34,6 +39,16 @@ export class BrandEntity extends CommonEntity {
     eager: true,
   })
   section: BrandSectionEntity[];
+
+  @OneToMany(() => NewsEntity, (news) => news.brand, {
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  news: NewsEntity[];
+
+  @OneToMany(() => ArticleEntity, (article) => article.brand, {
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  article: ArticleEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

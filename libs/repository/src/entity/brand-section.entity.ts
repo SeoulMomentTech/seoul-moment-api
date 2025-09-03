@@ -14,6 +14,9 @@ import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { EntityType } from '../enum/entity.enum';
 
+/**
+ * Multilgual column [title, content]
+ */
 @Entity(EntityType.BRAND_SECTION)
 @Index(['brandId', 'sortOrder'])
 export class BrandSectionEntity extends CommonEntity {

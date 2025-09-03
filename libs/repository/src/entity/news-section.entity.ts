@@ -14,6 +14,9 @@ import { NewsSectionImageEntity } from './news-section-image.entity';
 import { NewsEntity } from './news.entity';
 import { EntityType } from '../enum/entity.enum';
 
+/**
+ * Multilgual column [title, subTitle, content]
+ */
 @Entity(EntityType.NEWS_SECTION)
 @Index(['newsId', 'sortOrder'])
 export class NewsSectionEntity extends CommonEntity {

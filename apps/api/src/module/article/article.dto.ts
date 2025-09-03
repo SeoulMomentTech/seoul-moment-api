@@ -114,6 +114,9 @@ export class GetArticleResponse {
   @ApiProperty({ description: '아티클 ID', example: 1 })
   id: number;
 
+  @ApiProperty({ description: '브랜드 ID', example: 1 })
+  brandId: number;
+
   @ApiProperty({ description: '작성자 이름', example: '김서울' })
   writer: string;
 
@@ -177,6 +180,7 @@ export class GetArticleResponse {
 
     return plainToInstance(this, {
       id: entity.id,
+      brandId: entity.brand.id,
       writer: entity.writer,
       category: entity.category.name,
       title: title.getContentByLanguage(language),
