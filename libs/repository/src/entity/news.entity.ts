@@ -26,7 +26,7 @@ export class NewsEntity extends CommonEntity {
   @Column('int', { name: 'category_id', nullable: false })
   categoryId: number;
 
-  @Column('int', { name: 'brand_id', nullable: true })
+  @Column('int', { name: 'brand_id', nullable: false })
   brandId: number;
 
   @Column('varchar', { length: 255, nullable: false })
