@@ -14,6 +14,12 @@ import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text
 import { NewsSectionImageEntity } from '@app/repository/entity/news-section-image.entity';
 import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
+import { OptionEntity } from '@app/repository/entity/option.entity';
+import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
+import { ProductEntity } from '@app/repository/entity/product.entity';
+import { ProductImageEntity } from '@app/repository/entity/product-image.entity';
+import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
+import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -46,6 +52,12 @@ import { TestCacheModule } from './test-cache.module';
         NewsEntity,
         NewsSectionEntity,
         NewsSectionImageEntity,
+        OptionEntity,
+        OptionValueEntity,
+        ProductEntity,
+        ProductImageEntity,
+        ProductVariantEntity,
+        VariantOptionEntity,
       ],
       synchronize: true, // 테스트용으로만 true 사용
       dropSchema: false, // 스키마를 유지하고 데이터만 정리
@@ -68,6 +80,12 @@ import { TestCacheModule } from './test-cache.module';
       NewsEntity,
       NewsSectionEntity,
       NewsSectionImageEntity,
+      OptionEntity,
+      OptionValueEntity,
+      ProductEntity,
+      ProductImageEntity,
+      ProductVariantEntity,
+      VariantOptionEntity,
     ]),
   ],
   exports: [TestCacheModule, TypeOrmModule],

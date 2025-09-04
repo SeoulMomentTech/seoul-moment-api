@@ -17,6 +17,12 @@ import { MultilingualTextEntity } from './entity/multilingual-text.entity';
 import { NewsSectionImageEntity } from './entity/news-section-image.entity';
 import { NewsSectionEntity } from './entity/news-section.entity';
 import { NewsEntity } from './entity/news.entity';
+import { OptionValueEntity } from './entity/option-value.entity';
+import { OptionEntity } from './entity/option.entity';
+import { ProductImageEntity } from './entity/product-image.entity';
+import { ProductVariantEntity } from './entity/product-variant.entity';
+import { ProductEntity } from './entity/product.entity';
+import { VariantOptionEntity } from './entity/variant-option.entity';
 import { ArticleRepositoryService } from './service/article.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
 import { HomeRepositoryService } from './service/home.repository.service';
@@ -42,6 +48,12 @@ import { NewsRepositoryService } from './service/news.repository.service';
       HomeSectionEntity,
       HomeSectionImageEntity,
       HomeBannerImageEntity,
+      ProductEntity,
+      ProductImageEntity,
+      ProductVariantEntity,
+      OptionEntity,
+      OptionValueEntity,
+      VariantOptionEntity,
     ]),
   ],
   providers: [

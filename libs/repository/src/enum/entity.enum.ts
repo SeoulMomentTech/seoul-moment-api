@@ -6,4 +6,7 @@ export enum EntityType {
   ARTICLE = 'article',
   ARTICLE_SECTION = 'article_section',
   HOME_SECTION = 'home_section',
+  PRODUCT = 'product',
+  OPTION = 'option',
+  OPTION_VALUE = 'option_value',
 }

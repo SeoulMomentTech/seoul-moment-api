@@ -1554,4 +1554,190 @@ describe('Multilingual Product Tests', () => {
 
 ---
 
+## 16. Product-Variant 상품 옵션 관리 시스템 (2025-09-04)
+
+### 개요
+
+의류 등 옵션이 있는 상품을 체계적으로 관리하기 위한 데이터베이스 설계입니다. Shopify, 우아한형제들 등 대형 이커머스에서 사용하는 **Product-Variant 패턴**을 적용했습니다.
+
+### 핵심 개념
+
+#### Product vs ProductVariant
+- **Product**: 상품군 (예: "나이키 드라이핏 티셔츠") - 기본 정보, 설명, 브랜드
+- **ProductVariant**: 실제 판매 상품 (예: "나이키 드라이핏 티셔츠 빨강 M사이즈") - SKU, 가격, 재고
+
+#### SKU (Stock Keeping Unit)
+재고 관리 단위를 뜻하는 고유 식별 코드입니다.
+- 예시: `NK-DF-001-RED-M` = 나이키-드라이핏-001번상품-빨강-M사이즈
+- 재고, 가격, 주문 처리 모두 SKU 단위로 관리
+
+### 이미지 관리 전략 (하이브리드 방식)
+
+#### 효율적인 이미지 관리를 위한 2단계 구조
+
+**ProductEntity 컬럼:**
+- `mainImageUrl`: 목록 페이지용 대표 이미지
+- `detailInfoImageUrl`: 상세 페이지 하단 긴 상품 정보 이미지
+
+**ProductImageEntity 테이블:**
+- 상세 페이지 상단 갤러리 이미지들 (여러 장)
+- imageType: `MAIN`, `GALLERY`, `THUMBNAIL`
+
+이 방식의 **장점:**
+- **단순성**: 자주 사용되는 이미지는 컬럼으로 빠른 접근
+- **유연성**: 갤러리 이미지는 별도 테이블로 개별 관리
+- **일관성**: 현재 프로젝트 패턴 유지 (brand-banner-image 등)
+
+### Entity 구조 (총 6개)
+
+```
+1. ProductEntity (상품 기본 정보)
+   ├── id, status, brandId, mainImageUrl, detailInfoImageUrl
+   └── 다국어 지원: name, description
+
+2. ProductImageEntity (갤러리 이미지)
+   ├── id, productId, imageUrl, imageType, altText, sortOrder
+   └── 상세페이지 상단 갤러리용
+
+3. OptionEntity (옵션 종류)
+   ├── id, type, sortOrder, isActive
+   └── type: COLOR, SIZE, MATERIAL, FIT, STYLE
+
+4. OptionValueEntity (옵션 값)
+   ├── id, optionId, colorCode, sortOrder, isActive  
+   └── 예: 빨강, M사이즈, 면100%
+
+5. ProductVariantEntity (실제 판매 상품) ★ 핵심
+   ├── id, productId, sku, price, discountPrice
+   ├── stockQuantity, weight, barcode, isActive, status
+   └── 실제 구매하는 단위
+
+6. VariantOptionEntity (변형-옵션값 연결)
+   ├── variantId, optionValueId (복합키)
+   └── N:M 관계 매핑 테이블
+```
+
+### 실제 동작 시나리오
+
+#### 사용자 옵션 선택 → ProductVariant 매핑
+
+사용자가 상품 페이지에서 옵션을 선택하면:
+
+```
+1. 상품 페이지 표시: "기본 스웨터"
+   옵션 선택UI:
+   ├── 색상: ○빨강 ○파랑  
+   └── 사이즈: ○M ○L
+
+2. 사용자 선택: 빨강 + M사이즈
+
+3. 시스템 처리:
+   색상 "빨강" → OptionValue ID: 101
+   사이즈 "M" → OptionValue ID: 201
+   
+4. ProductVariant 조회 쿼리:
+   SELECT pv.* 
+   FROM product_variant pv
+   JOIN variant_option vo1 ON pv.id = vo1.variant_id AND vo1.option_value_id = 101
+   JOIN variant_option vo2 ON pv.id = vo2.variant_id AND vo2.option_value_id = 201
+   WHERE pv.product_id = 상품ID
+
+5. 결과: 해당하는 ProductVariant 매핑 완료
+   ├── 가격: 59,000원 표시
+   ├── 재고: 10개 (구매 가능)
+   └── 장바구니: 이 ProductVariant가 담김
+```
+
+### 다국어 지원 시스템
+
+기존 MultilingualText 시스템을 활용하여 완전한 다국어 지원:
+
+**지원 언어:** 한국어(ko), 영어(en), 중국어(zh)
+
+**다국어 지원 대상:**
+- **ProductEntity**: name, description
+- **OptionEntity**: name, description  
+- **OptionValueEntity**: value ⭐ (가장 중요!)
+
+**API 사용 예시:**
+```http
+GET /product/1?lang=ko
+{
+  "name": "나이키 드라이핏 티셔츠",
+  "options": [
+    {"name": "색상", "values": ["빨강", "파랑"]},
+    {"name": "사이즈", "values": ["M", "L"]}
+  ]
+}
+
+GET /product/1?lang=en  
+{
+  "name": "Nike Dri-FIT T-Shirt",
+  "options": [
+    {"name": "Color", "values": ["Red", "Blue"]},
+    {"name": "Size", "values": ["M", "L"]}
+  ]
+}
+```
+
+### 구현 특징
+
+#### 현재 프로젝트와의 일관성
+- Entity 명명 규칙 동일 (`EntityType` enum 활용)
+- 테스트 환경 설정 동일 (`createForeignKeyConstraints` 패턴)
+- 이미지 관리 패턴 동일 (brand-banner-image 구조 참조)
+- 다국어 시스템 동일 (MultilingualText 활용)
+
+#### 확장성과 성능
+- **새로운 옵션 타입** 쉽게 추가 가능
+- **복합 인덱스**로 빠른 옵션 조합 검색  
+- **이미지 타입 확장**: HOVER, 360도 등 추가 용이
+- **글로벌 서비스** 완전한 다국어 지원
+
+#### 테스트 환경
+- **실제 DB 기반** 통합 테스트
+- **TestDataFactory** 복잡한 옵션 조합 테스트 지원
+- **테스트 안전성** 보장 (환경 검증)
+
+### 개발 가이드
+
+#### TestDataFactory 사용 예시
+```typescript
+// 복잡한 상품 생성
+const product = await testDataFactory.createFullProduct({
+  product: { name: 'Test Product' },
+  images: [
+    { type: 'MAIN', url: 'main.jpg' },
+    { type: 'GALLERY', url: 'gallery1.jpg' }
+  ],
+  variants: [
+    {
+      sku: 'TEST-RED-M',
+      price: 59000,
+      options: [
+        { optionType: 'COLOR', value: '빨강' },
+        { optionType: 'SIZE', value: 'M' }
+      ]
+    }
+  ]
+});
+```
+
+#### 성능 최적화 인덱스
+```sql
+-- variant_option 테이블 핵심 인덱스
+CREATE INDEX idx_variant_option_lookup ON variant_option(variant_id, option_value_id);
+CREATE INDEX idx_product_variant_product ON product_variant(product_id);
+CREATE INDEX idx_product_image_type ON product_image(product_id, image_type);
+```
+
+### 최근 해결 사항 (2025-09-04)
+
+- ✅ **Entity 설계 완료**: 6개 핵심 Entity 구조 설계
+- ✅ **이미지 관리 방식 결정**: 하이브리드 방식 (컬럼 + 테이블)
+- ✅ **다국어 지원 통합**: 기존 MultilingualText 시스템 활용
+- ✅ **현재 프로젝트 패턴 유지**: 일관성 있는 구조 설계
+
+---
+
 이 시스템으로 확장성과 성능을 모두 확보한 상품 옵션 관리가 가능합니다.
