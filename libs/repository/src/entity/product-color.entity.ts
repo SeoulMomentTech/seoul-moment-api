@@ -6,7 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  PrimaryColumn,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
@@ -17,13 +17,16 @@ import { ProductEntity } from './product.entity';
 @Entity('product_color')
 @Index(['productId', 'optionValueId'], { unique: true })
 export class ProductColorEntity extends CommonEntity {
-  @PrimaryColumn('int', {
+  @PrimaryGeneratedColumn('increment')
+  id: number;
+
+  @Column('int', {
     name: 'product_id',
     comment: '상품 변형 ID',
   })
   productId: number;
 
-  @PrimaryColumn('int', {
+  @Column('int', {
     name: 'option_value_id',
     comment: '옵션 값 ID',
   })
