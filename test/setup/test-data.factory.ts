@@ -18,6 +18,7 @@ import { NewsEntity } from '@app/repository/entity/news.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
 import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
+import { ProductColorImageEntity } from '@app/repository/entity/product-color-image.entity';
 import { ProductImageEntity } from '@app/repository/entity/product-image.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
@@ -1278,6 +1279,7 @@ export class TestDataFactory {
   async createProductColor(
     product: ProductEntity,
     optionValue: OptionValueEntity,
+    overrides: Partial<ProductColorEntity> = {},
   ): Promise<ProductColorEntity> {
     const productColorRepository =
       this.dataSource.getRepository(ProductColorEntity);
@@ -1285,9 +1287,29 @@ export class TestDataFactory {
     const productColor = productColorRepository.create({
       productId: product.id,
       optionValueId: optionValue.id,
+      ...overrides,
     });
 
     return productColorRepository.save(productColor);
+  }
+
+  /**
+   * 상품 색상 이미지 생성
+   */
+  async createProductColorImage(
+    productColor: ProductColorEntity,
+    overrides: Partial<ProductColorImageEntity> = {},
+  ): Promise<ProductColorImageEntity> {
+    const repository = this.dataSource.getRepository(ProductColorImageEntity);
+
+    const image = repository.create({
+      productColorId: productColor.productId, // ProductColorEntity는 복합키이므로 적절한 방식으로 참조
+      imageUrl: 'https://example.com/color-image.jpg',
+      sortOrder: 1,
+      ...overrides,
+    });
+
+    return repository.save(image);
   }
 
   /**

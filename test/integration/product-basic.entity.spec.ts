@@ -48,6 +48,7 @@ describe('Product Entities Basic Tests', () => {
 
       // When: 상품 생성
       const product = await testDataFactory.createProduct(brand, {
+        mainImageUrl: 'https://example.com/main.jpg',
         detailInfoImageUrl: 'https://example.com/detail.jpg',
       });
 
@@ -55,7 +56,9 @@ describe('Product Entities Basic Tests', () => {
       expect(product.id).toBeDefined();
       expect(product.brandId).toBe(brand.id);
       expect(product.status).toBe(ProductStatus.NORMAL);
+      expect(product.mainImageUrl).toBe('https://example.com/main.jpg');
       expect(product.detailInfoImageUrl).toBe('https://example.com/detail.jpg');
+      expect(product.getMainImage()).toContain('main.jpg');
       expect(product.getDetailInfoImage()).toContain('detail.jpg');
     });
 
@@ -110,15 +113,12 @@ describe('Product Entities Basic Tests', () => {
         sku: 'TEST-SIMPLE',
         price: 59000,
         stockQuantity: 10,
-        mainImageUrl: 'https://example.com/variant-main.jpg',
       });
 
       // Then: 변형이 정상 생성되어야 함
       expect(variant.id).toBeDefined();
       expect(variant.productId).toBe(product.id);
       expect(variant.sku).toBe('TEST-SIMPLE');
-      expect(variant.mainImageUrl).toBe('https://example.com/variant-main.jpg');
-      expect(variant.getMainImage()).toContain('variant-main.jpg');
       expect(variant.getEffectivePrice()).toBe(59000);
       expect(variant.isInStock()).toBe(true);
     });

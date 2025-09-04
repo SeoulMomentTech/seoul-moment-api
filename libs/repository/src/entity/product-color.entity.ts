@@ -1,7 +1,17 @@
-import { Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { Configuration } from '@app/config/configuration';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryColumn,
+} from 'typeorm';
 
 import { CommonEntity } from './common.entity';
 import { OptionValueEntity } from './option-value.entity';
+import { ProductColorImageEntity } from './product-color-image.entity';
 import { ProductEntity } from './product.entity';
 
 @Entity('product_color')
@@ -18,6 +28,21 @@ export class ProductColorEntity extends CommonEntity {
     comment: '옵션 값 ID',
   })
   optionValueId: number;
+
+  @Column('varchar', {
+    name: 'main_image_url',
+    length: 500,
+    nullable: true,
+    comment: '목록 페이지용 대표 이미지 URL',
+  })
+  mainImageUrl: string;
+
+  // Utility methods
+  getMainImage(): string {
+    return this.mainImageUrl
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.mainImageUrl}`
+      : '';
+  }
 
   // Relations
   @ManyToOne(() => ProductEntity, (product) => product.productColors, {
@@ -37,4 +62,10 @@ export class ProductColorEntity extends CommonEntity {
   )
   @JoinColumn({ name: 'option_value_id' })
   optionValue: OptionValueEntity;
+
+  @OneToMany(() => ProductColorImageEntity, (image) => image.productColor, {
+    cascade: true,
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  images: ProductColorImageEntity[];
 }

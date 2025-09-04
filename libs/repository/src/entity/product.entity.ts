@@ -51,6 +51,21 @@ export class ProductEntity extends CommonEntity {
   })
   detailInfoImageUrl: string;
 
+  @Column('varchar', {
+    name: 'main_image_url',
+    length: 500,
+    nullable: true,
+    comment: '목록 페이지용 대표 이미지 URL',
+  })
+  mainImageUrl: string;
+
+  // Utility methods
+  getMainImage(): string {
+    return this.mainImageUrl
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.mainImageUrl}`
+      : '';
+  }
+
   // Relations
   @ManyToOne(() => BrandEntity, (brand) => brand.products, {
     onDelete: 'CASCADE',

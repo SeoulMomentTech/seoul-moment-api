@@ -42,6 +42,7 @@ describe('Product Entities Integration Tests', () => {
 
       // When: 상품 생성
       const product = await testDataFactory.createProduct(brand, {
+        mainImageUrl: 'https://example.com/main.jpg',
         detailInfoImageUrl: 'https://example.com/detail.jpg',
       });
 
@@ -49,7 +50,9 @@ describe('Product Entities Integration Tests', () => {
       expect(product.id).toBeDefined();
       expect(product.brandId).toBe(brand.id);
       expect(product.status).toBe(ProductStatus.NORMAL);
+      expect(product.mainImageUrl).toBe('https://example.com/main.jpg');
       expect(product.detailInfoImageUrl).toBe('https://example.com/detail.jpg');
+      expect(product.getMainImage()).toContain('main.jpg');
       expect(product.getDetailInfoImage()).toContain('detail.jpg');
     });
 
@@ -108,7 +111,6 @@ describe('Product Entities Integration Tests', () => {
         sku: 'TEST-RED-M',
         price: 59000,
         stockQuantity: 10,
-        mainImageUrl: 'https://example.com/red-variant.jpg',
       });
 
       const variantOption = await testDataFactory.createVariantOption(
@@ -144,28 +146,35 @@ describe('Product Entities Integration Tests', () => {
         colorCode: '#0000FF',
       });
 
-      // When: 상품에 색상들 연결
+      // When: 상품에 색상들 연결 (mainImageUrl 포함)
       const redProductColor = await testDataFactory.createProductColor(
         product,
         redValue,
+        { mainImageUrl: 'https://example.com/red-main.jpg' }
       );
       
       const blueProductColor = await testDataFactory.createProductColor(
         product,
         blueValue,
+        { mainImageUrl: 'https://example.com/blue-main.jpg' }
       );
 
       // Then: ProductColor 관계가 정상 생성되어야 함
       expect(redProductColor.productId).toBe(product.id);
       expect(redProductColor.optionValueId).toBe(redValue.id);
+      expect(redProductColor.mainImageUrl).toBe('https://example.com/red-main.jpg');
+      expect(redProductColor.getMainImage()).toContain('red-main.jpg');
+      
       expect(blueProductColor.productId).toBe(product.id);
       expect(blueProductColor.optionValueId).toBe(blueValue.id);
+      expect(blueProductColor.mainImageUrl).toBe('https://example.com/blue-main.jpg');
+      expect(blueProductColor.getMainImage()).toContain('blue-main.jpg');
 
       // 상품 조회 시 productColors 관계 확인
       const productRepository = TestSetup.getDataSource().getRepository(ProductEntity);
       const foundProduct = await productRepository.findOne({
         where: { id: product.id },
-        relations: ['productColors'],
+        relations: ['productColors', 'productColors.images'],
       });
 
       expect(foundProduct.productColors).toBeDefined();
