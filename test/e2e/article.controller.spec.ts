@@ -75,9 +75,16 @@ describe('ArticleController (E2E)', () => {
   describe('GET /article/:id', () => {
     it('should return article successfully with Korean language', async () => {
       // Given: 카테고리와 아티클 생성
-      const category = await testDataFactory.createCategory({
-        name: 'Test Category',
-      });
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: 'Test Category',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       const article = await testDataFactory.createFullArticle({
         category,
@@ -194,9 +201,16 @@ describe('ArticleController (E2E)', () => {
 
     it('should return article successfully with English language', async () => {
       // Given: 카테고리와 아티클 생성
-      const category = await testDataFactory.createCategory({
-        name: 'Test Category',
-      });
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: 'Test Category',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       const article = await testDataFactory.createFullArticle({
         category,
@@ -280,9 +294,16 @@ describe('ArticleController (E2E)', () => {
 
     it('should return article successfully with Chinese language', async () => {
       // Given: 카테고리와 아티클 생성
-      const category = await testDataFactory.createCategory({
-        name: 'Test Category',
-      });
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: 'Test Category',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       const article = await testDataFactory.createFullArticle({
         category,
@@ -369,7 +390,16 @@ describe('ArticleController (E2E)', () => {
 
     it('should return 404 when article exists but not in normal status', async () => {
       // Given: DELETE 상태의 아티클 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: 'Test Category',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const brand = await testDataFactory.createBrand();
       const article = await testDataFactory.createArticle(category, brand, {
         writer: 'Test Writer',
@@ -414,7 +444,16 @@ describe('ArticleController (E2E)', () => {
 
     it('should handle missing Accept-language header gracefully', async () => {
       // Given: 카테고리와 아티클 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: 'Test Category',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const brand = await testDataFactory.createBrand();
       const article = await testDataFactory.createArticle(category, brand, {
         writer: 'Test Writer',
@@ -433,7 +472,16 @@ describe('ArticleController (E2E)', () => {
 
     it('should return lastArticle list with proper structure', async () => {
       // Given: 여러개의 아티클 생성 (최신 목록 확인용)
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: 'Test Category',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       // 3개의 아티클을 생성하여 lastArticle 목록 테스트
       const articles = [];
@@ -513,7 +561,16 @@ describe('ArticleController (E2E)', () => {
 
     it('should handle article without multilingual text', async () => {
       // Given: 다국어 텍스트가 없는 아티클 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: 'Test Category',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const article = await testDataFactory.createFullArticle({
         category,
         brand: {},

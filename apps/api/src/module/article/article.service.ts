@@ -22,23 +22,29 @@ export class ArticleService {
       this.articleRepositoryService.findLastArticleByCount(3),
     ]);
 
-    const [articleText, sectionText, lastArticleText] = await Promise.all([
-      this.languageRepositoryService.findMultilingualTexts(
-        EntityType.ARTICLE,
-        articleEntity.id,
-        languageCode,
-      ),
-      this.languageRepositoryService.findMultilingualTextsByEntities(
-        EntityType.ARTICLE_SECTION,
-        articleEntity.section.map((v) => v.id),
-        languageCode,
-      ),
-      this.languageRepositoryService.findMultilingualTextsByEntities(
-        EntityType.ARTICLE,
-        lastArticleEntityList.map((v) => v.id),
-        languageCode,
-      ),
-    ]);
+    const [articleText, sectionText, lastArticleText, categoryText] =
+      await Promise.all([
+        this.languageRepositoryService.findMultilingualTexts(
+          EntityType.ARTICLE,
+          articleEntity.id,
+          languageCode,
+        ),
+        this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.ARTICLE_SECTION,
+          articleEntity.section.map((v) => v.id),
+          languageCode,
+        ),
+        this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.ARTICLE,
+          lastArticleEntityList.map((v) => v.id),
+          languageCode,
+        ),
+        this.languageRepositoryService.findMultilingualTexts(
+          EntityType.CATEGORY,
+          articleEntity.category.id,
+          languageCode,
+        ),
+      ]);
 
     return GetArticleResponse.from(
       articleEntity,
@@ -48,6 +54,7 @@ export class ArticleService {
       },
       lastArticleEntityList,
       lastArticleText,
+      categoryText,
       languageCode,
     );
   }

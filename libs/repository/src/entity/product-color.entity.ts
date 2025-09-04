@@ -37,6 +37,28 @@ export class ProductColorEntity extends CommonEntity {
   })
   mainImageUrl: string;
 
+  @Column('decimal', {
+    precision: 10,
+    scale: 0,
+    nullable: false,
+    comment: '가격',
+  })
+  price: number;
+
+  @Column('decimal', {
+    name: 'discount_price',
+    precision: 10,
+    scale: 0,
+    nullable: true,
+    comment: '할인 가격',
+  })
+  discountPrice: number;
+
+  // Utility methods
+  getEffectivePrice(): number {
+    return this.discountPrice || this.price;
+  }
+
   // Utility methods
   getMainImage(): string {
     return this.mainImageUrl

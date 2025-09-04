@@ -40,7 +40,16 @@ describe('NewsService Integration Tests', () => {
   describe('getNews', () => {
     it('should return news with lastArticle list and multilingual content in Korean', async () => {
       // Given: 여러 뉴스와 다국어 텍스트 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       // 최신 목록용 추가 뉴스들 생성
       const additionalNews = [];
@@ -149,7 +158,7 @@ describe('NewsService Integration Tests', () => {
       expect(result).toBeInstanceOf(GetNewsResponse);
       expect(result.id).toBe(mainNews.id);
       expect(result.writer).toBe('Main Writer');
-      expect(result.category).toBe(category.name);
+      expect(result.category).toBe('테스트 카테고리');
       expect(result.title).toBe('메인 뉴스 제목');
       expect(result.content).toBe('메인 뉴스 내용입니다.');
       expect(result.banner).toContain('/banner/main-banner.jpg');
@@ -183,7 +192,16 @@ describe('NewsService Integration Tests', () => {
 
     it('should return news with English multilingual content', async () => {
       // Given: 영어 다국어 텍스트가 있는 뉴스
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const news = await testDataFactory.createFullNews({
         category,
         brand: {},
@@ -235,7 +253,16 @@ describe('NewsService Integration Tests', () => {
 
     it('should return news with Chinese multilingual content', async () => {
       // Given: 중국어 다국어 텍스트가 있는 뉴스
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const news = await testDataFactory.createFullNews({
         category,
         brand: {},
@@ -278,7 +305,16 @@ describe('NewsService Integration Tests', () => {
 
     it('should return news with null multilingual text when no content exists', async () => {
       // Given: 다국어 텍스트가 없는 뉴스
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const news = await testDataFactory.createFullNews({
         category,
         brand: {},
@@ -297,7 +333,7 @@ describe('NewsService Integration Tests', () => {
       // Then: 기본 구조는 유지하되 다국어 텍스트는 null
       expect(result.id).toBe(news.id);
       expect(result.writer).toBe(news.writer);
-      expect(result.category).toBe(category.name);
+      expect(result.category).toBe('테스트 카테고리');
       expect(result.title).toBeNull();
       expect(result.content).toBeNull();
       expect(result.section[0].title).toBeNull();
@@ -321,7 +357,16 @@ describe('NewsService Integration Tests', () => {
 
     it('should throw ServiceError when news exists but not in normal status', async () => {
       // Given: DELETE 상태 뉴스
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const brand = await testDataFactory.createBrand();
       const deletedNews = await testDataFactory.createNews(category, brand, {
         status: NewsStatus.DELETE,
@@ -335,7 +380,16 @@ describe('NewsService Integration Tests', () => {
 
     it('should handle lastArticle with various scenarios', async () => {
       // Given: 다양한 상태의 뉴스들 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       // NORMAL 상태 뉴스들 생성 (lastArticle에 포함되어야 함)
       const normalNews = [];
@@ -380,7 +434,16 @@ describe('NewsService Integration Tests', () => {
 
     it('should return lastArticle with proper multilingual content', async () => {
       // Given: 다국어 텍스트가 있는 여러 뉴스 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const languages = await testDataFactory.createDefaultLanguages();
 
       // 추가 뉴스들 생성 및 다국어 텍스트 추가
@@ -437,7 +500,16 @@ describe('NewsService Integration Tests', () => {
 
     it('should handle concurrent requests correctly', async () => {
       // Given: 뉴스와 다국어 텍스트 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const news = await testDataFactory.createFullNews({
         category,
         brand: {},

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { ArticleSectionEntity } from '@app/repository/entity/article-section.entity';
 import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
@@ -164,6 +165,7 @@ export class GetArticleResponse {
     },
     lastArticleList: ArticleEntity[],
     lastArticleMultilingual: MultilingualTextEntity[],
+    categoryMultilingual: MultilingualTextEntity[],
     language: LanguageCode,
   ) {
     const title = new MultilingualFieldDto(
@@ -184,12 +186,17 @@ export class GetArticleResponse {
         })),
     );
 
+    const categoryName = MultilingualFieldDto.fromByEntity(
+      categoryMultilingual,
+      'name',
+    );
+
     return plainToInstance(this, {
       id: entity.id,
       brandId: entity.brand.id,
       writer: entity.writer,
       createDate: entity.createDate,
-      category: entity.category.name,
+      category: categoryName.getContent(),
       title: title.getContentByLanguage(language),
       content: content.getContentByLanguage(language),
       banner: entity.getBannerImage(),

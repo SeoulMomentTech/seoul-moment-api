@@ -17,8 +17,9 @@ import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
-import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
+import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { ProductColorImageEntity } from '@app/repository/entity/product-color-image.entity';
+import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
 import { ProductImageEntity } from '@app/repository/entity/product-image.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
@@ -449,11 +450,57 @@ export class TestDataFactory {
     const categoryRepository = this.dataSource.getRepository(CategoryEntity);
 
     const category = categoryRepository.create({
-      name: 'Test Category',
       ...overrides,
     });
 
     return categoryRepository.save(category);
+  }
+
+  /**
+   * 다국어 카테고리 생성
+   */
+  async createMultilingualCategory(
+    categoryData: Partial<CategoryEntity> = {},
+    multilingualData?: {
+      name?: { [key in LanguageCode]?: string };
+    },
+  ): Promise<{
+    category: CategoryEntity;
+    languages: {
+      korean: LanguageEntity;
+      english: LanguageEntity;
+      chinese: LanguageEntity;
+    };
+    texts: MultilingualTextEntity[];
+  }> {
+    // 카테고리 생성
+    const category = await this.createCategory(categoryData);
+
+    // 언어 생성
+    const languages = await this.createDefaultLanguages();
+
+    // 다국어 텍스트 생성
+    const texts: MultilingualTextEntity[] = [];
+
+    if (multilingualData?.name) {
+      for (const [langCode, content] of Object.entries(multilingualData.name)) {
+        const language = Object.values(languages).find(
+          (l) => l.code === langCode,
+        );
+        if (language && content) {
+          const text = await this.createMultilingualText(
+            EntityType.CATEGORY,
+            category.id,
+            'name',
+            language,
+            content,
+          );
+          texts.push(text);
+        }
+      }
+    }
+
+    return { category, languages, texts };
   }
 
   /**
@@ -1157,6 +1204,24 @@ export class TestDataFactory {
   // ================================
 
   /**
+   * 상품 카테고리 생성
+   */
+  async createProductCategory(
+    overrides: Partial<ProductCategoryEntity> = {},
+  ): Promise<ProductCategoryEntity> {
+    const categoryRepository = this.dataSource.getRepository(
+      ProductCategoryEntity,
+    );
+
+    const category = categoryRepository.create({
+      sortOrder: 1,
+      ...overrides,
+    });
+
+    return categoryRepository.save(category);
+  }
+
+  /**
    * 기본 상품 생성
    */
   async createProduct(
@@ -1168,7 +1233,6 @@ export class TestDataFactory {
     const product = productRepository.create({
       brandId: brand.id,
       status: ProductStatus.NORMAL,
-      sortOrder: 1,
       ...overrides,
     });
 
@@ -1245,7 +1309,6 @@ export class TestDataFactory {
     const variant = variantRepository.create({
       productId: product.id,
       sku: `SKU-${Date.now()}`,
-      price: 59000,
       stockQuantity: 10,
       isActive: true,
       status: ProductVariantStatus.ACTIVE,
@@ -1287,6 +1350,7 @@ export class TestDataFactory {
     const productColor = productColorRepository.create({
       productId: product.id,
       optionValueId: optionValue.id,
+      price: 59000,
       ...overrides,
     });
 
@@ -1310,6 +1374,53 @@ export class TestDataFactory {
     });
 
     return repository.save(image);
+  }
+
+  /**
+   * 다국어 상품 카테고리 생성
+   */
+  async createMultilingualProductCategory(
+    categoryData: Partial<ProductCategoryEntity> = {},
+    multilingualData?: {
+      name?: { [key in LanguageCode]?: string };
+    },
+  ): Promise<{
+    category: ProductCategoryEntity;
+    languages: {
+      korean: LanguageEntity;
+      english: LanguageEntity;
+      chinese: LanguageEntity;
+    };
+    texts: MultilingualTextEntity[];
+  }> {
+    // 카테고리 생성
+    const category = await this.createProductCategory(categoryData);
+
+    // 언어 생성
+    const languages = await this.createDefaultLanguages();
+
+    // 다국어 텍스트 생성
+    const texts: MultilingualTextEntity[] = [];
+
+    if (multilingualData?.name) {
+      for (const [langCode, content] of Object.entries(multilingualData.name)) {
+        const language = Object.values(languages).find(
+          (l) => l.code === langCode,
+        );
+        if (language && content) {
+          const text = await this.createMultilingualText(
+            EntityType.PRODUCT_CATEGORY,
+            category.id,
+            'name',
+            language,
+            content,
+          );
+          texts.push(text);
+        }
+      }
+    }
+
+    return { category, languages, texts };
   }
 
   /**
@@ -1453,7 +1564,6 @@ export class TestDataFactory {
     }>;
     variants?: Array<{
       sku: string;
-      price: number;
       stockQuantity: number;
       optionValueIds: number[]; // 이 변형에 연결될 옵션값 ID들
     }>;
@@ -1556,7 +1666,6 @@ export class TestDataFactory {
       for (const variantData of options.variants) {
         const variant = await this.createProductVariant(product, {
           sku: variantData.sku,
-          price: variantData.price,
           stockQuantity: variantData.stockQuantity,
         });
 
@@ -1619,17 +1728,13 @@ export class TestDataFactory {
     const variants: ProductVariantEntity[] = [];
 
     for (let i = 1; i <= 3; i++) {
-      const product = await this.createProduct(testBrand, {
-        mainImageUrl: `https://example.com/product${i}-main.jpg`,
-        sortOrder: i,
-      });
+      const product = await this.createProduct(testBrand, {});
       products.push(product);
 
       // 각 상품에 대해 모든 색상의 변형 생성
       for (const colorValue of colorValues) {
         const variant = await this.createProductVariant(product, {
           sku: `PROD${i}-${colorValue.colorCode}`,
-          price: 50000 + i * 10000,
           stockQuantity: 10 + i,
         });
 

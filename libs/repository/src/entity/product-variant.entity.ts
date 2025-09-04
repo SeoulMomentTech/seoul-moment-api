@@ -41,23 +41,6 @@ export class ProductVariantEntity extends CommonEntity {
   })
   sku: string;
 
-  @Column('decimal', {
-    precision: 10,
-    scale: 0,
-    nullable: false,
-    comment: '가격',
-  })
-  price: number;
-
-  @Column('decimal', {
-    name: 'discount_price',
-    precision: 10,
-    scale: 0,
-    nullable: true,
-    comment: '할인 가격',
-  })
-  discountPrice: number;
-
   @Column('int', {
     name: 'stock_quantity',
     default: 0,
@@ -97,11 +80,6 @@ export class ProductVariantEntity extends CommonEntity {
     },
   )
   variantOptions: VariantOptionEntity[];
-
-  // Utility methods
-  getEffectivePrice(): number {
-    return this.discountPrice || this.price;
-  }
 
   isInStock(): boolean {
     return (

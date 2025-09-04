@@ -40,7 +40,16 @@ describe('ArticleService Integration Tests', () => {
   describe('getArticle', () => {
     it('should return article with lastArticle list and multilingual content in Korean', async () => {
       // Given: 여러 아티클과 다국어 텍스트 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       // 최신 목록용 추가 아티클들 생성
       const additionalArticles = [];
@@ -149,7 +158,7 @@ describe('ArticleService Integration Tests', () => {
       expect(result).toBeInstanceOf(GetArticleResponse);
       expect(result.id).toBe(mainArticle.id);
       expect(result.writer).toBe('Main Writer');
-      expect(result.category).toBe(category.name);
+      expect(result.category).toBe('테스트 카테고리');
       expect(result.title).toBe('메인 아티클 제목');
       expect(result.content).toBe('메인 아티클 내용입니다.');
       expect(result.banner).toContain('/banner/main-banner.jpg');
@@ -183,7 +192,16 @@ describe('ArticleService Integration Tests', () => {
 
     it('should return article with English multilingual content', async () => {
       // Given: 영어 다국어 텍스트가 있는 아티클
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const article = await testDataFactory.createFullArticle({
         category,
         brand: {},
@@ -238,7 +256,16 @@ describe('ArticleService Integration Tests', () => {
 
     it('should return article with Chinese multilingual content', async () => {
       // Given: 중국어 다국어 텍스트가 있는 아티클
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const article = await testDataFactory.createFullArticle({
         category,
         brand: {},
@@ -284,7 +311,16 @@ describe('ArticleService Integration Tests', () => {
 
     it('should return article with null multilingual text when no content exists', async () => {
       // Given: 다국어 텍스트가 없는 아티클
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const article = await testDataFactory.createFullArticle({
         category,
         brand: {},
@@ -306,7 +342,7 @@ describe('ArticleService Integration Tests', () => {
       // Then: 기본 구조는 유지하되 다국어 텍스트는 null
       expect(result.id).toBe(article.id);
       expect(result.writer).toBe(article.writer);
-      expect(result.category).toBe(category.name);
+      expect(result.category).toBe('테스트 카테고리');
       expect(result.title).toBeNull();
       expect(result.content).toBeNull();
       expect(result.section[0].title).toBeNull();
@@ -330,7 +366,16 @@ describe('ArticleService Integration Tests', () => {
 
     it('should throw ServiceError when article exists but not in normal status', async () => {
       // Given: DELETE 상태 아티클
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const brand = await testDataFactory.createBrand();
       const deletedArticle = await testDataFactory.createArticle(
         category,
@@ -348,7 +393,16 @@ describe('ArticleService Integration Tests', () => {
 
     it('should handle lastArticle with various scenarios', async () => {
       // Given: 다양한 상태의 아티클들 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       // NORMAL 상태 아티클들 생성 (lastArticle에 포함되어야 함)
       const normalArticles = [];
@@ -393,7 +447,16 @@ describe('ArticleService Integration Tests', () => {
 
     it('should return lastArticle with proper multilingual content', async () => {
       // Given: 다국어 텍스트가 있는 여러 아티클 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const languages = await testDataFactory.createDefaultLanguages();
 
       // 추가 아티클들 생성 및 다국어 텍스트 추가
@@ -450,7 +513,16 @@ describe('ArticleService Integration Tests', () => {
 
     it('should handle concurrent requests correctly', async () => {
       // Given: 아티클과 다국어 텍스트 생성
-      const category = await testDataFactory.createCategory();
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: '테스트 카테고리',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
       const article = await testDataFactory.createFullArticle({
         category,
         brand: {},

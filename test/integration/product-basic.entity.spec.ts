@@ -48,7 +48,6 @@ describe('Product Entities Basic Tests', () => {
 
       // When: 상품 생성
       const product = await testDataFactory.createProduct(brand, {
-        mainImageUrl: 'https://example.com/main.jpg',
         detailInfoImageUrl: 'https://example.com/detail.jpg',
       });
 
@@ -56,9 +55,7 @@ describe('Product Entities Basic Tests', () => {
       expect(product.id).toBeDefined();
       expect(product.brandId).toBe(brand.id);
       expect(product.status).toBe(ProductStatus.NORMAL);
-      expect(product.mainImageUrl).toBe('https://example.com/main.jpg');
       expect(product.detailInfoImageUrl).toBe('https://example.com/detail.jpg');
-      expect(product.getMainImage()).toContain('main.jpg');
       expect(product.getDetailInfoImage()).toContain('detail.jpg');
     });
 
@@ -111,7 +108,6 @@ describe('Product Entities Basic Tests', () => {
       // When: 상품 변형 생성
       const variant = await testDataFactory.createProductVariant(product, {
         sku: 'TEST-SIMPLE',
-        price: 59000,
         stockQuantity: 10,
       });
 
@@ -119,7 +115,6 @@ describe('Product Entities Basic Tests', () => {
       expect(variant.id).toBeDefined();
       expect(variant.productId).toBe(product.id);
       expect(variant.sku).toBe('TEST-SIMPLE');
-      expect(variant.getEffectivePrice()).toBe(59000);
       expect(variant.isInStock()).toBe(true);
     });
 
@@ -129,7 +124,6 @@ describe('Product Entities Basic Tests', () => {
       const product = await testDataFactory.createProduct(brand);
       const variant = await testDataFactory.createProductVariant(product, {
         sku: 'TEST-MAPPING',
-        price: 59000,
       });
 
       const option = await testDataFactory.createOption({

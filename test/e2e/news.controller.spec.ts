@@ -74,10 +74,17 @@ describe('NewsController (E2E)', () => {
 
   describe('GET /news/:id', () => {
     it('should return news successfully with Korean language', async () => {
-      // Given: 카테고리와 뉴스 생성
-      const category = await testDataFactory.createCategory({
-        name: 'Test Category',
-      });
+      // Given: 다국어 카테고리와 뉴스 생성
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: 'Test Category',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       const news = await testDataFactory.createFullNews({
         category,
@@ -193,10 +200,17 @@ describe('NewsController (E2E)', () => {
     });
 
     it('should return news successfully with English language', async () => {
-      // Given: 카테고리와 뉴스 생성
-      const category = await testDataFactory.createCategory({
-        name: 'Test Category',
-      });
+      // Given: 다국어 카테고리와 뉴스 생성
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: 'Test Category',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       const news = await testDataFactory.createFullNews({
         category,
@@ -279,10 +293,17 @@ describe('NewsController (E2E)', () => {
     });
 
     it('should return news successfully with Chinese language', async () => {
-      // Given: 카테고리와 뉴스 생성
-      const category = await testDataFactory.createCategory({
-        name: 'Test Category',
-      });
+      // Given: 다국어 카테고리와 뉴스 생성
+      const { category } = await testDataFactory.createMultilingualCategory(
+        {},
+        {
+          name: {
+            ko: 'Test Category',
+            en: 'Test Category',
+            zh: '测试分类',
+          },
+        },
+      );
 
       const news = await testDataFactory.createFullNews({
         category,

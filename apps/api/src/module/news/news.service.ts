@@ -22,23 +22,29 @@ export class NewsService {
       this.newsRepositoryService.findLastNewsByCount(3),
     ]);
 
-    const [newsText, sectionText, lastNewsText] = await Promise.all([
-      this.languageRepositoryService.findMultilingualTexts(
-        EntityType.NEWS,
-        newsEntity.id,
-        languageCode,
-      ),
-      this.languageRepositoryService.findMultilingualTextsByEntities(
-        EntityType.NEWS_SECTION,
-        newsEntity.section.map((v) => v.id),
-        languageCode,
-      ),
-      this.languageRepositoryService.findMultilingualTextsByEntities(
-        EntityType.NEWS,
-        lastNewsEntityList.map((v) => v.id),
-        languageCode,
-      ),
-    ]);
+    const [newsText, sectionText, lastNewsText, categoryText] =
+      await Promise.all([
+        this.languageRepositoryService.findMultilingualTexts(
+          EntityType.NEWS,
+          newsEntity.id,
+          languageCode,
+        ),
+        this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.NEWS_SECTION,
+          newsEntity.section.map((v) => v.id),
+          languageCode,
+        ),
+        this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.NEWS,
+          lastNewsEntityList.map((v) => v.id),
+          languageCode,
+        ),
+        this.languageRepositoryService.findMultilingualTexts(
+          EntityType.CATEGORY,
+          newsEntity.category.id,
+          languageCode,
+        ),
+      ]);
 
     return GetNewsResponse.from(
       newsEntity,
@@ -48,6 +54,7 @@ export class NewsService {
       },
       lastNewsEntityList,
       lastNewsText,
+      categoryText,
       languageCode,
     );
   }

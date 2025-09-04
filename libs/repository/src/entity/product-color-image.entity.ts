@@ -18,8 +18,8 @@ import { ProductImageType } from '../enum/product.enum';
  * - 현재 프로젝트 패턴 동일 (BrandBannerImageEntity 구조 참조)
  */
 @Entity('product_color_image')
-@Index(['productColotId', 'sortOrder'])
-@Index(['productColotId', 'imageType'])
+@Index(['productColorId', 'sortOrder'])
+@Index(['productColorId', 'imageType'])
 export class ProductColorImageEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -29,7 +29,7 @@ export class ProductColorImageEntity extends CommonEntity {
     nullable: false,
     comment: '상품 컬러 ID',
   })
-  productColotId: number;
+  productColorId: number;
 
   @Column('varchar', {
     name: 'image_url',

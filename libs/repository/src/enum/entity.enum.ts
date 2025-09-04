@@ -1,4 +1,5 @@
 export enum EntityType {
+  CATEGORY = 'category',
   BRAND = 'brand',
   BRAND_SECTION = 'brand_section',
   NEWS = 'news',
@@ -7,6 +8,7 @@ export enum EntityType {
   ARTICLE_SECTION = 'article_section',
   HOME_SECTION = 'home_section',
   PRODUCT = 'product',
+  PRODUCT_CATEGORY = 'product_category',
   OPTION = 'option',
   OPTION_VALUE = 'option_value',
 }
