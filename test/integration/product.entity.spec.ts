@@ -1,4 +1,6 @@
+import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
+import { EntityType } from '@app/repository/enum/entity.enum';
 import {
   OptionType,
   ProductImageType,
@@ -130,11 +132,24 @@ describe('Product Entities Integration Tests', () => {
     });
   });
 
-  describe('Eager Loading Tests', () => {
-    it('should eager load Product relationships', async () => {
+  describe('Manual Loading Tests', () => {
+    it('should manually load Product relationships', async () => {
       // Given: 완전한 상품 데이터 생성
       const brand = await testDataFactory.createBrand();
-      const product = await testDataFactory.createProduct(brand);
+
+      // 다국어 상품 생성
+      const { product, languages } =
+        await testDataFactory.createMultilingualProduct(
+          brand,
+          { status: ProductStatus.NORMAL },
+          {
+            name: {
+              ko: '테스트 상품',
+              en: 'Test Product',
+              zh: '测试产品',
+            },
+          },
+        );
 
       // 이미지 추가
       await testDataFactory.createProductImage(product, {
@@ -144,20 +159,39 @@ describe('Product Entities Integration Tests', () => {
       // 변형 추가
       await testDataFactory.createProductVariant(product);
 
-      // When: 상품 조회 (eager loading)
+      // When: 상품 조회 (relations으로 명시적 로딩)
       const productRepository =
         TestSetup.getDataSource().getRepository(ProductEntity);
       const foundProduct = await productRepository.findOne({
         where: { id: product.id },
+        relations: ['images', 'variants'],
       });
 
-      // Then: eager loading으로 관계 데이터가 자동 로드되어야 함
+      // MultilingualText는 별도 조회 (polymorphic 관계)
+      const multilingualRepository = TestSetup.getDataSource().getRepository(
+        MultilingualTextEntity,
+      );
+      const texts = await multilingualRepository.find({
+        where: {
+          entityType: EntityType.PRODUCT,
+          entityId: product.id,
+        },
+      });
+
+      // Then: relations으로 관계 데이터가 로드되어야 함
       expect(foundProduct).toBeDefined();
       expect(foundProduct.images).toBeDefined();
       expect(foundProduct.images).toHaveLength(1);
       expect(foundProduct.variants).toBeDefined();
       expect(foundProduct.variants).toHaveLength(1);
-      expect(foundProduct.multilingualTexts).toBeDefined();
+
+      // MultilingualText 별도 검증
+      expect(texts).toBeDefined();
+      expect(texts.length).toBeGreaterThan(0);
+
+      // 다국어 텍스트 내용 검증
+      const nameTexts = texts.filter((text) => text.fieldName === 'name');
+      expect(nameTexts).toHaveLength(3); // 한국어, 영어, 중국어
     });
   });
 

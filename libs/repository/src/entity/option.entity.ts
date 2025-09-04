@@ -40,14 +40,12 @@ export class OptionEntity extends CommonEntity {
   // Relations
   @OneToMany(() => OptionValueEntity, (value) => value.option, {
     cascade: true,
-    eager: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   values: OptionValueEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,
-    eager: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   multilingualTexts: MultilingualTextEntity[];

@@ -65,6 +65,7 @@ export class OptionValueEntity extends CommonEntity {
   // Relations
   @ManyToOne(() => OptionEntity, (option) => option.values, {
     onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'option_id' })
   option: OptionEntity;
@@ -73,7 +74,6 @@ export class OptionValueEntity extends CommonEntity {
     () => VariantOptionEntity,
     (variantOption) => variantOption.optionValue,
     {
-      eager: true,
       createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
     },
   )
@@ -81,7 +81,6 @@ export class OptionValueEntity extends CommonEntity {
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,
-    eager: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   multilingualTexts: MultilingualTextEntity[];

@@ -75,6 +75,7 @@ export class ProductImageEntity extends CommonEntity {
   // Relations
   @ManyToOne(() => ProductEntity, (product) => product.images, {
     onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'product_id' })
   product: ProductEntity;

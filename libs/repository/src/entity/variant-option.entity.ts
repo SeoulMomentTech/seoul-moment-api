@@ -28,6 +28,7 @@ export class VariantOptionEntity extends CommonEntity {
   // Relations
   @ManyToOne(() => ProductVariantEntity, (variant) => variant.variantOptions, {
     onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'variant_id' })
   variant: ProductVariantEntity;
@@ -37,6 +38,7 @@ export class VariantOptionEntity extends CommonEntity {
     (optionValue) => optionValue.variantOptions,
     {
       onDelete: 'CASCADE',
+      createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
     },
   )
   @JoinColumn({ name: 'option_value_id' })

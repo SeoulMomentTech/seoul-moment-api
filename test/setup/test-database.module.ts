@@ -14,11 +14,11 @@ import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text
 import { NewsSectionImageEntity } from '@app/repository/entity/news-section-image.entity';
 import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
-import { OptionEntity } from '@app/repository/entity/option.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
-import { ProductEntity } from '@app/repository/entity/product.entity';
+import { OptionEntity } from '@app/repository/entity/option.entity';
 import { ProductImageEntity } from '@app/repository/entity/product-image.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
+import { ProductEntity } from '@app/repository/entity/product.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';

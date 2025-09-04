@@ -68,27 +68,25 @@ export class ProductEntity extends CommonEntity {
   // Relations
   @ManyToOne(() => BrandEntity, (brand) => brand.products, {
     onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'brand_id' })
   brand: BrandEntity;
 
   @OneToMany(() => ProductVariantEntity, (variant) => variant.product, {
     cascade: true,
-    eager: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   variants: ProductVariantEntity[];
 
   @OneToMany(() => ProductImageEntity, (image) => image.product, {
     cascade: true,
-    eager: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   images: ProductImageEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,
-    eager: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   multilingualTexts: MultilingualTextEntity[];

@@ -98,6 +98,7 @@ export class ProductVariantEntity extends CommonEntity {
   // Relations
   @ManyToOne(() => ProductEntity, (product) => product.variants, {
     onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'product_id' })
   product: ProductEntity;
@@ -107,7 +108,6 @@ export class ProductVariantEntity extends CommonEntity {
     (variantOption) => variantOption.variant,
     {
       cascade: true,
-      eager: true,
       createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
     },
   )

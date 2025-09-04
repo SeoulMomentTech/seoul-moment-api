@@ -1554,7 +1554,173 @@ describe('Multilingual Product Tests', () => {
 
 ---
 
-## 16. Product-Variant 상품 옵션 관리 시스템 (2025-09-04)
+## 16. Product Entity 성능 최적화 및 테스트 환경 안전성 (2025-09-04)
+
+### 개요
+
+Product 관련 모든 Entity에서 테스트 환경 안전성과 성능 최적화를 위한 설정을 완료했습니다.
+
+### 적용된 Entity 목록
+
+**Product-Variant 시스템 핵심 Entity들:**
+- ✅ `ProductEntity` - 상품 기본 정보
+- ✅ `ProductVariantEntity` - 실제 판매 상품 (SKU, 가격, 재고)
+- ✅ `ProductImageEntity` - 상품 갤러리 이미지
+- ✅ `OptionEntity` - 옵션 종류 (색상, 사이즈 등)
+- ✅ `OptionValueEntity` - 옵션 값 (빨강, M사이즈 등)
+- ✅ `VariantOptionEntity` - 변형-옵션값 연결 테이블
+
+### 주요 변경사항
+
+#### 1. 테스트 환경 외래키 제약조건 비활성화
+
+**모든 관계**에 `createForeignKeyConstraints: process.env.NODE_ENV !== 'test'` 적용:
+
+```typescript
+// ManyToOne 관계 예시
+@ManyToOne(() => ProductEntity, (product) => product.variants, {
+  onDelete: 'CASCADE',
+  createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+})
+@JoinColumn({ name: 'product_id' })
+product: ProductEntity;
+
+// OneToMany 관계 예시
+@OneToMany(() => ProductVariantEntity, (variant) => variant.product, {
+  cascade: true,
+  createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+})
+variants: ProductVariantEntity[];
+```
+
+**적용된 관계 수:**
+- ProductEntity: OneToMany 관계 3개
+- ProductVariantEntity: ManyToOne 1개 + OneToMany 1개
+- ProductImageEntity: ManyToOne 1개
+- VariantOptionEntity: ManyToOne 2개
+- OptionValueEntity: ManyToOne 1개 + OneToMany 2개
+- OptionEntity: OneToMany 2개
+
+#### 2. Eager Loading 완전 제거
+
+성능 최적화를 위해 **모든 Product Entity에서 eager loading 제거**:
+
+```typescript
+// Before (성능 이슈)
+@OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
+  cascade: true,
+  eager: true,  // ❌ 제거됨
+  createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+})
+multilingualTexts: MultilingualTextEntity[];
+
+// After (성능 최적화)
+@OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
+  cascade: true,
+  createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+})
+multilingualTexts: MultilingualTextEntity[];
+```
+
+#### 3. 테스트 코드 업데이트
+
+Eager loading 제거에 따른 테스트 코드 수정:
+
+```typescript
+// Before (Eager Loading 의존)
+describe('Eager Loading Tests', () => {
+  it('should eager load Product relationships', async () => {
+    // 자동으로 관계 데이터가 로드될 것을 기대
+    const foundProduct = await productRepository.findOne({
+      where: { id: product.id },
+    });
+    
+    expect(foundProduct.images).toBeDefined(); // 실패할 수 있음
+  });
+});
+
+// After (명시적 Relations 사용)
+describe('Manual Loading Tests', () => {
+  it('should manually load Product relationships', async () => {
+    // relations 옵션으로 명시적 로딩
+    const foundProduct = await productRepository.findOne({
+      where: { id: product.id },
+      relations: ['images', 'variants', 'multilingualTexts'],
+    });
+    
+    expect(foundProduct.images).toBeDefined(); // 확실히 성공
+  });
+});
+```
+
+### 성능 및 안전성 향상 효과
+
+#### 1. 테스트 환경 안전성
+- **TRUNCATE CASCADE 최적화**: 외래키 제약조건 없이 빠른 데이터 정리
+- **데이터 격리 보장**: 테스트 간 데이터 오염 방지
+- **Deadlock 방지**: `--runInBand` 옵션과 함께 안정적 테스트 실행
+
+#### 2. 런타임 성능 최적화
+- **N+1 쿼리 방지**: 필요할 때만 relations로 데이터 로딩
+- **메모리 사용량 최적화**: 불필요한 관계 데이터 자동 로딩 방지
+- **쿼리 최적화**: 명시적 relations 사용으로 필요한 데이터만 조회
+
+#### 3. 개발 생산성 향상
+- **명확한 데이터 로딩**: 어떤 관계 데이터가 로드되는지 명시적
+- **테스트 안정성**: 예측 가능한 테스트 결과
+- **확장성**: 새로운 Entity 추가 시 일관된 패턴 적용
+
+### 적용 원칙
+
+#### 1. 모든 Product 관련 Entity에 적용
+```typescript
+// 새로운 Product 관련 Entity 생성 시 필수 적용
+@ManyToOne(() => ParentEntity, (parent) => parent.children, {
+  onDelete: 'CASCADE',
+  createForeignKeyConstraints: process.env.NODE_ENV !== 'test', // ✅ 필수
+})
+@OneToMany(() => ChildEntity, (child) => child.parent, {
+  cascade: true,
+  createForeignKeyConstraints: process.env.NODE_ENV !== 'test', // ✅ 필수
+  // eager: true, // ❌ 사용 금지
+})
+```
+
+#### 2. 테스트에서 관계 데이터 필요 시
+```typescript
+// ✅ 올바른 방법: relations 명시
+const product = await repository.findOne({
+  where: { id },
+  relations: ['images', 'variants'],
+});
+
+// ❌ 잘못된 방법: eager loading 의존
+const product = await repository.findOne({ where: { id } });
+// product.images는 undefined일 수 있음
+```
+
+### 향후 Product Entity 추가 시 체크리스트
+
+#### □ Entity 설계
+- [ ] `createForeignKeyConstraints: process.env.NODE_ENV !== 'test'` 모든 관계에 추가
+- [ ] `eager: true` 사용 금지
+- [ ] TypeORM 인덱스 최적화
+
+#### □ TestDataFactory 업데이트
+- [ ] 새 Entity 생성 헬퍼 메서드 추가
+- [ ] 다국어 지원 메서드 추가 (필요 시)
+- [ ] 복합 관계 데이터 생성 지원
+
+#### □ 테스트 작성
+- [ ] `relations` 옵션으로 명시적 로딩
+- [ ] TestDatabaseModule에 Entity 등록
+- [ ] 성능 테스트 시나리오 작성
+
+**이 최적화로 Product 시스템의 안정성과 성능이 크게 향상되었습니다.**
+
+---
+
+## 17. Product-Variant 상품 옵션 관리 시스템 (2025-09-04)
 
 ### 개요
 
