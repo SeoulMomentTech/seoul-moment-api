@@ -19,6 +19,7 @@ import { NewsSectionEntity } from './entity/news-section.entity';
 import { NewsEntity } from './entity/news.entity';
 import { OptionValueEntity } from './entity/option-value.entity';
 import { OptionEntity } from './entity/option.entity';
+import { ProductColorEntity } from './entity/product-color.entity';
 import { ProductImageEntity } from './entity/product-image.entity';
 import { ProductVariantEntity } from './entity/product-variant.entity';
 import { ProductEntity } from './entity/product.entity';
@@ -49,6 +50,7 @@ import { NewsRepositoryService } from './service/news.repository.service';
       HomeSectionImageEntity,
       HomeBannerImageEntity,
       ProductEntity,
+      ProductColorEntity,
       ProductImageEntity,
       ProductVariantEntity,
       OptionEntity,

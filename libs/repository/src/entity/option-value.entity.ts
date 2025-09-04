@@ -1,4 +1,3 @@
-import { Configuration } from '@app/config/configuration';
 import {
   Column,
   Entity,
@@ -40,14 +39,6 @@ export class OptionValueEntity extends CommonEntity {
   })
   colorCode: string;
 
-  @Column('varchar', {
-    name: 'representative_image_url',
-    length: 500,
-    nullable: true,
-    comment: '이 옵션값의 대표 이미지 URL (색상별 상품 리스트용)',
-  })
-  representativeImageUrl: string;
-
   @Column('int', {
     name: 'sort_order',
     default: 1,
@@ -84,11 +75,4 @@ export class OptionValueEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   multilingualTexts: MultilingualTextEntity[];
-
-  // Utility methods
-  getRepresentativeImage(): string {
-    return this.representativeImageUrl
-      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.representativeImageUrl}`
-      : '';
-  }
 }

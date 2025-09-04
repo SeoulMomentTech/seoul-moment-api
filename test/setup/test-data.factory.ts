@@ -17,6 +17,7 @@ import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
+import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
 import { ProductImageEntity } from '@app/repository/entity/product-image.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
@@ -1272,6 +1273,24 @@ export class TestDataFactory {
   }
 
   /**
+   * 상품-색상 연결 생성
+   */
+  async createProductColor(
+    product: ProductEntity,
+    optionValue: OptionValueEntity,
+  ): Promise<ProductColorEntity> {
+    const productColorRepository =
+      this.dataSource.getRepository(ProductColorEntity);
+
+    const productColor = productColorRepository.create({
+      productId: product.id,
+      optionValueId: optionValue.id,
+    });
+
+    return productColorRepository.save(productColor);
+  }
+
+  /**
    * 다국어 상품 생성
    */
   async createMultilingualProduct(
@@ -1408,7 +1427,6 @@ export class TestDataFactory {
       values: Array<{
         value: { [key in LanguageCode]?: string };
         colorCode?: string;
-        representativeImageUrl?: string;
       }>;
     }>;
     variants?: Array<{
@@ -1485,7 +1503,6 @@ export class TestDataFactory {
         for (const valueData of optionData.values) {
           const optionValue = await this.createOptionValue(option, {
             colorCode: valueData.colorCode,
-            representativeImageUrl: valueData.representativeImageUrl,
           });
 
           // 옵션값 다국어 텍스트 생성
@@ -1571,7 +1588,6 @@ export class TestDataFactory {
     for (const color of colors) {
       const optionValue = await this.createOptionValue(colorOption, {
         colorCode: color.code,
-        representativeImageUrl: `https://example.com/${color.name}.jpg`,
       });
       colorValues.push(optionValue);
     }

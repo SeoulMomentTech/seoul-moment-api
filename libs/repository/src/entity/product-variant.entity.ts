@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import {
   Column,
   Entity,
@@ -66,19 +67,12 @@ export class ProductVariantEntity extends CommonEntity {
   stockQuantity: number;
 
   @Column('varchar', {
-    length: 100,
+    name: 'main_image_url',
+    length: 500,
     nullable: true,
-    comment: '바코드',
+    comment: '목록 페이지용 대표 이미지 URL',
   })
-  barcode: string;
-
-  @Column('decimal', {
-    precision: 8,
-    scale: 2,
-    nullable: true,
-    comment: '무게(kg)',
-  })
-  weight: number;
+  mainImageUrl: string;
 
   @Column('boolean', {
     name: 'is_active',
@@ -112,6 +106,13 @@ export class ProductVariantEntity extends CommonEntity {
     },
   )
   variantOptions: VariantOptionEntity[];
+
+  // Utility methods
+  getMainImage(): string {
+    return this.mainImageUrl
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.mainImageUrl}`
+      : '';
+  }
 
   // Utility methods
   getEffectivePrice(): number {

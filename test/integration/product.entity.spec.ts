@@ -42,7 +42,6 @@ describe('Product Entities Integration Tests', () => {
 
       // When: 상품 생성
       const product = await testDataFactory.createProduct(brand, {
-        mainImageUrl: 'https://example.com/main.jpg',
         detailInfoImageUrl: 'https://example.com/detail.jpg',
       });
 
@@ -50,9 +49,7 @@ describe('Product Entities Integration Tests', () => {
       expect(product.id).toBeDefined();
       expect(product.brandId).toBe(brand.id);
       expect(product.status).toBe(ProductStatus.NORMAL);
-      expect(product.mainImageUrl).toBe('https://example.com/main.jpg');
       expect(product.detailInfoImageUrl).toBe('https://example.com/detail.jpg');
-      expect(product.getMainImage()).toContain('main.jpg');
       expect(product.getDetailInfoImage()).toContain('detail.jpg');
     });
 
@@ -86,7 +83,6 @@ describe('Product Entities Integration Tests', () => {
       // When: 옵션값 생성
       const optionValue = await testDataFactory.createOptionValue(option, {
         colorCode: '#FF0000',
-        representativeImageUrl: 'https://example.com/red.jpg',
       });
 
       // Then: 옵션과 옵션값이 정상 생성되고 연결되어야 함
@@ -96,7 +92,6 @@ describe('Product Entities Integration Tests', () => {
       expect(optionValue.id).toBeDefined();
       expect(optionValue.optionId).toBe(option.id);
       expect(optionValue.colorCode).toBe('#FF0000');
-      expect(optionValue.getRepresentativeImage()).toContain('red.jpg');
     });
 
     it('should create ProductVariant with VariantOption relationships', async () => {
@@ -113,6 +108,7 @@ describe('Product Entities Integration Tests', () => {
         sku: 'TEST-RED-M',
         price: 59000,
         stockQuantity: 10,
+        mainImageUrl: 'https://example.com/red-variant.jpg',
       });
 
       const variantOption = await testDataFactory.createVariantOption(
@@ -129,6 +125,51 @@ describe('Product Entities Integration Tests', () => {
 
       expect(variantOption.variantId).toBe(variant.id);
       expect(variantOption.optionValueId).toBe(redValue.id);
+    });
+
+    it('should create Product with ProductColor relationships', async () => {
+      // Given: 브랜드, 상품, 색상 옵션 생성
+      const brand = await testDataFactory.createBrand();
+      const product = await testDataFactory.createProduct(brand);
+      
+      const colorOption = await testDataFactory.createOption({
+        type: OptionType.COLOR,
+      });
+      
+      const redValue = await testDataFactory.createOptionValue(colorOption, {
+        colorCode: '#FF0000',
+      });
+      
+      const blueValue = await testDataFactory.createOptionValue(colorOption, {
+        colorCode: '#0000FF',
+      });
+
+      // When: 상품에 색상들 연결
+      const redProductColor = await testDataFactory.createProductColor(
+        product,
+        redValue,
+      );
+      
+      const blueProductColor = await testDataFactory.createProductColor(
+        product,
+        blueValue,
+      );
+
+      // Then: ProductColor 관계가 정상 생성되어야 함
+      expect(redProductColor.productId).toBe(product.id);
+      expect(redProductColor.optionValueId).toBe(redValue.id);
+      expect(blueProductColor.productId).toBe(product.id);
+      expect(blueProductColor.optionValueId).toBe(blueValue.id);
+
+      // 상품 조회 시 productColors 관계 확인
+      const productRepository = TestSetup.getDataSource().getRepository(ProductEntity);
+      const foundProduct = await productRepository.findOne({
+        where: { id: product.id },
+        relations: ['productColors'],
+      });
+
+      expect(foundProduct.productColors).toBeDefined();
+      expect(foundProduct.productColors).toHaveLength(2);
     });
   });
 
@@ -164,7 +205,7 @@ describe('Product Entities Integration Tests', () => {
         TestSetup.getDataSource().getRepository(ProductEntity);
       const foundProduct = await productRepository.findOne({
         where: { id: product.id },
-        relations: ['images', 'variants'],
+        relations: ['images', 'variants', 'productColors'],
       });
 
       // MultilingualText는 별도 조회 (polymorphic 관계)
@@ -184,6 +225,8 @@ describe('Product Entities Integration Tests', () => {
       expect(foundProduct.images).toHaveLength(1);
       expect(foundProduct.variants).toBeDefined();
       expect(foundProduct.variants).toHaveLength(1);
+      expect(foundProduct.productColors).toBeDefined();
+      expect(foundProduct.productColors).toHaveLength(0); // 아직 색상 연결 안됨
 
       // MultilingualText 별도 검증
       expect(texts).toBeDefined();

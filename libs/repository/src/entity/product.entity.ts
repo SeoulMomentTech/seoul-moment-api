@@ -11,6 +11,7 @@ import {
 import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
+import { ProductColorEntity } from './product-color.entity';
 import { ProductImageEntity } from './product-image.entity';
 import { ProductVariantEntity } from './product-variant.entity';
 import { EntityType } from '../enum/entity.enum';
@@ -20,7 +21,7 @@ import { ProductStatus } from '../enum/product.enum';
  * 상품 기본 정보 Entity
  * - 상품군을 나타냄 (예: "나이키 드라이핏 티셔츠")
  * - 실제 판매는 ProductVariant에서 이루어짐
- * - 다국어 지원: name, description
+ * - 다국어 지원: name
  */
 @Entity(EntityType.PRODUCT)
 export class ProductEntity extends CommonEntity {
@@ -43,27 +44,12 @@ export class ProductEntity extends CommonEntity {
   brandId: number;
 
   @Column('varchar', {
-    name: 'main_image_url',
-    length: 500,
-    nullable: true,
-    comment: '목록 페이지용 대표 이미지 URL',
-  })
-  mainImageUrl: string;
-
-  @Column('varchar', {
     name: 'detail_info_image_url',
     length: 500,
     nullable: true,
     comment: '상세 페이지 하단 긴 상품 정보 이미지 URL',
   })
   detailInfoImageUrl: string;
-
-  @Column('int', {
-    name: 'sort_order',
-    default: 1,
-    comment: '정렬 순서',
-  })
-  sortOrder: number;
 
   // Relations
   @ManyToOne(() => BrandEntity, (brand) => brand.products, {
@@ -91,12 +77,11 @@ export class ProductEntity extends CommonEntity {
   })
   multilingualTexts: MultilingualTextEntity[];
 
-  // Utility methods
-  getMainImage(): string {
-    return this.mainImageUrl
-      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.mainImageUrl}`
-      : '';
-  }
+  @OneToMany(() => ProductColorEntity, (productColor) => productColor.product, {
+    cascade: true,
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  productColors: ProductColorEntity[];
 
   getDetailInfoImage(): string {
     return this.detailInfoImageUrl

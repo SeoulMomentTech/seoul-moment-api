@@ -9,7 +9,7 @@ import { OptionType } from '../enum/product.enum';
 /**
  * 옵션 종류 Entity
  * - 옵션의 종류를 정의 (색상, 사이즈, 소재 등)
- * - 다국어 지원: name, description
+ * - 다국어 지원: name
  */
 @Entity(EntityType.OPTION)
 export class OptionEntity extends CommonEntity {
