@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
@@ -13,4 +14,8 @@ export class ProductBannerEntity extends CommonEntity {
 
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
+
+  getImage(): string {
+    return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.image}`;
+  }
 }
