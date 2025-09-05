@@ -1,8 +1,16 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 import { ArticleEntity } from './article.entity';
 import { BrandBannerImageEntity } from './brand-banner-image.entity';
 import { BrandSectionEntity } from './brand-section.entity';
+import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { NewsEntity } from './news.entity';
@@ -17,6 +25,9 @@ import { EntityType } from '../enum/entity.enum';
 export class BrandEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
+
+  @Column('int', { name: 'category_id', nullable: false })
+  categoryId: number;
 
   @Column('varchar', { length: 255, nullable: true })
   profileImage: string;
@@ -64,4 +75,11 @@ export class BrandEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   multilingualTexts: MultilingualTextEntity[];
+
+  @ManyToOne(() => CategoryEntity, (category) => category.brand, {
+    eager: true,
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  @JoinColumn({ name: 'category_id' })
+  category: CategoryEntity;
 }

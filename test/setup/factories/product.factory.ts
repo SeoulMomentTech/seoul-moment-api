@@ -3,6 +3,7 @@ import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
+import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { ProductColorImageEntity } from '@app/repository/entity/product-color-image.entity';
 import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
@@ -48,6 +49,23 @@ export class ProductFactory {
     });
 
     return categoryRepository.save(category);
+  }
+
+  /**
+   * 상품 배너 생성
+   */
+  async createProductBanner(
+    overrides: Partial<ProductBannerEntity> = {},
+  ): Promise<ProductBannerEntity> {
+    const bannerRepository = this.dataSource.getRepository(ProductBannerEntity);
+
+    const banner = bannerRepository.create({
+      image: 'https://example.com/banner-image.jpg',
+      sortOrder: 1,
+      ...overrides,
+    });
+
+    return bannerRepository.save(banner);
   }
 
   /**

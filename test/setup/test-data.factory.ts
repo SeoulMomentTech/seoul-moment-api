@@ -13,6 +13,7 @@ import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
+import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { ProductColorImageEntity } from '@app/repository/entity/product-color-image.entity';
 import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
@@ -343,6 +344,10 @@ export class TestDataFactory {
   // ================================
   async createProductCategory(overrides: Partial<ProductCategoryEntity> = {}) {
     return this.productFactory.createProductCategory(overrides);
+  }
+
+  async createProductBanner(overrides: Partial<ProductBannerEntity> = {}) {
+    return this.productFactory.createProductBanner(overrides);
   }
 
   async createProduct(

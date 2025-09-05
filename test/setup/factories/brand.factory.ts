@@ -2,6 +2,7 @@ import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-imag
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
+import { CategoryEntity } from '@app/repository/entity/category.entity';
 import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
@@ -9,13 +10,16 @@ import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { DataSource } from 'typeorm';
 
+import { CategoryFactory } from './category.factory';
 import { LanguageFactory } from './language.factory';
 
 export class BrandFactory {
   private languageFactory: LanguageFactory;
+  private categoryFactory: CategoryFactory;
 
   constructor(private dataSource: DataSource) {
     this.languageFactory = new LanguageFactory(dataSource);
+    this.categoryFactory = new CategoryFactory(dataSource);
   }
 
   /**
@@ -26,9 +30,17 @@ export class BrandFactory {
   ): Promise<BrandEntity> {
     const brandRepository = this.dataSource.getRepository(BrandEntity);
 
+    // categoryId가 제공되지 않은 경우 기본 카테고리 생성
+    let categoryId = overrides.categoryId;
+    if (!categoryId) {
+      const category = await this.categoryFactory.createCategory();
+      categoryId = category.id;
+    }
+
     const brand = brandRepository.create({
       status: BrandStatus.NORMAL,
       ...overrides,
+      categoryId,
     });
 
     return brandRepository.save(brand);

@@ -1,5 +1,6 @@
 import { Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
+import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { NewsEntity } from './news.entity';
@@ -23,6 +24,11 @@ export class CategoryEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   products: ProductEntity[];
+
+  @OneToMany(() => BrandEntity, (brand) => brand.category, {
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  brand: BrandEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

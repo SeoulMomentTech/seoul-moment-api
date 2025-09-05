@@ -22,6 +22,7 @@ import { ProductColorEntity } from '@app/repository/entity/product-color.entity'
 import { ProductImageEntity } from '@app/repository/entity/product-image.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
+import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -64,6 +65,7 @@ import { TestCacheModule } from './test-cache.module';
         ProductImageEntity,
         ProductVariantEntity,
         VariantOptionEntity,
+        ProductBannerEntity,
       ],
       synchronize: true, // 테스트용으로만 true 사용
       dropSchema: false, // 스키마를 유지하고 데이터만 정리
@@ -95,6 +97,7 @@ import { TestCacheModule } from './test-cache.module';
       ProductImageEntity,
       ProductVariantEntity,
       VariantOptionEntity,
+      ProductBannerEntity,
     ]),
   ],
   exports: [TestCacheModule, TypeOrmModule],

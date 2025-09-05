@@ -1,9 +1,11 @@
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { BrandNameFilter } from '@app/repository/enum/brand.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { ApiProperty } from '@nestjs/swagger';
-import { plainToInstance } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { plainToInstance, Type } from 'class-transformer';
+import { IsDefined, IsEnum, IsNumber, IsOptional } from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
@@ -139,6 +141,45 @@ export class GetBrandIntroduceResponse {
             language,
           ),
         ),
+    });
+  }
+}
+export class GetBrandListByNameFilterTypeRequest {
+  @ApiProperty({
+    description: '브랜드 이름 필터 타입',
+    enum: BrandNameFilter,
+    example: BrandNameFilter.A_TO_D,
+  })
+  @IsEnum(BrandNameFilter)
+  @IsDefined()
+  filter: BrandNameFilter;
+
+  @ApiPropertyOptional({
+    description: '카테고리 ID (선택사항)',
+    example: 1,
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  categoryId?: number;
+}
+
+export class GetBrandListByNameFilterTypeResponse {
+  @ApiProperty({ description: '브랜드 ID', example: 1 })
+  id: number;
+
+  @ApiProperty({ description: '브랜드 이름', example: '서울모먼트' })
+  name: string;
+
+  static from(entity: BrandEntity, multilingualText: MultilingualTextEntity[]) {
+    multilingualText = multilingualText.filter((v) => v.entityId === entity.id);
+
+    const name = MultilingualFieldDto.fromByEntity(multilingualText, 'name');
+
+    return plainToInstance(this, {
+      id: entity.id,
+      name: name.getContent(),
     });
   }
 }

@@ -1,6 +1,8 @@
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseException } from '@app/common/decorator/response-exception.decorator';
+import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { ResponseDataDto } from '@app/common/type/response-data';
+import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   Controller,
@@ -9,15 +11,38 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiHeader } from '@nestjs/swagger';
 
-import { GetBrandIntroduceResponse } from './brand.dto';
+import {
+  GetBrandIntroduceResponse,
+  GetBrandListByNameFilterTypeRequest,
+  GetBrandListByNameFilterTypeResponse,
+} from './brand.dto';
 import { BrandService } from './brand.service';
 
 @Controller('brand')
 export class BrandController {
   constructor(private readonly brandService: BrandService) {}
+
+  @Get('/list/filter')
+  @ApiOperation({
+    summary: 'Get Brand List by First Letter Filter',
+    description:
+      'Returns brand list filtered by the first letter of brand names in English. Available filters: A_TO_D, E_TO_H, I_TO_L, M_TO_P, Q_TO_T, U_TO_Z, NUMBER_SYMBOL.',
+  })
+  @ResponseList(GetBrandListByNameFilterTypeResponse)
+  @ResponseException(HttpStatus.NOT_FOUND, '존재하는 브랜드가 없음')
+  async getBrandListByNameFilterType(
+    @Query() query: GetBrandListByNameFilterTypeRequest,
+  ): Promise<ResponseListDto<GetBrandListByNameFilterTypeResponse>> {
+    const result = await this.brandService.getBrandListByNameFilterType(
+      query.filter,
+      query.categoryId,
+    );
+    return new ResponseListDto(result);
+  }
 
   @Get(':id')
   @ApiOperation({

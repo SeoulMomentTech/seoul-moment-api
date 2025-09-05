@@ -1,3 +1,4 @@
+import { BrandNameFilter } from '@app/repository/enum/brand.enum';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import {
   LanguageCode,
@@ -7,7 +8,10 @@ import { BrandRepositoryService } from '@app/repository/service/brand.repository
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
 
-import { GetBrandIntroduceResponse } from './brand.dto';
+import {
+  GetBrandIntroduceResponse,
+  GetBrandListByNameFilterTypeResponse,
+} from './brand.dto';
 
 @Injectable()
 export class BrandService {
@@ -46,5 +50,27 @@ export class BrandService {
       brandMultilingual,
       languageCode,
     );
+  }
+
+  async getBrandListByNameFilterType(
+    filter: BrandNameFilter,
+    categoryId?: number,
+  ): Promise<GetBrandListByNameFilterTypeResponse[]> {
+    const brandEntityList =
+      await this.brandRepositoryService.findAllNormalBrandListByFilter(
+        filter,
+        categoryId,
+      );
+
+    const brandText =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND,
+        brandEntityList.map((v) => v.id),
+        LanguageCode.ENGLISH, // 영어 고정
+      );
+
+    return brandEntityList
+      .map((v) => GetBrandListByNameFilterTypeResponse.from(v, brandText))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 }
