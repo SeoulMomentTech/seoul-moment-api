@@ -15,6 +15,7 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
 import { HealthController } from '../health.controller';
 import { ArticleModule } from './article/article.module';
 import { BrandModule } from './brand/brand.module';
+import { CategoryModdule } from './category/category.module';
 import { GoogleModule } from './google/google.module';
 import { HomeModule } from './home/home.module';
 import { NewsModule } from './news/news.module';
@@ -46,6 +47,7 @@ import { ProductModule } from './product/product.module';
     ArticleModule,
     HomeModule,
     ProductModule,
+    CategoryModdule,
   ],
   controllers: [HealthController],
   providers: [

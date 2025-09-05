@@ -15,5 +15,19 @@ export class CategoryRepositoryService {
     private readonly productCategoryRepository: Repository<ProductCategoryEntity>,
   ) {}
 
-  async findCategory() {}
+  async findCategory(): Promise<CategoryEntity[]> {
+    return this.categoryRepository.find({
+      order: {
+        sortOrder: 'ASC',
+      },
+    });
+  }
+
+  async findProductCategory(): Promise<ProductCategoryEntity[]> {
+    return this.productCategoryRepository.find({
+      order: {
+        sortOrder: 'ASC',
+      },
+    });
+  }
 }

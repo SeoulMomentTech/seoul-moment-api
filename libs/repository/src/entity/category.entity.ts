@@ -1,4 +1,4 @@
-import { Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
@@ -14,6 +14,9 @@ import { EntityType } from '../enum/entity.enum';
 export class CategoryEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
+
+  @Column('int', { name: 'sort_order', default: 1, nullable: false })
+  sortOrder: number;
 
   @OneToMany(() => NewsEntity, (news) => news.category, {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',

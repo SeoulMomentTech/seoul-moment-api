@@ -29,6 +29,7 @@ import { ProductBannerEntity } from './entity/product_banner.entity';
 import { VariantOptionEntity } from './entity/variant-option.entity';
 import { ArticleRepositoryService } from './service/article.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
+import { CategoryRepositoryService } from './service/category.repository.service';
 import { HomeRepositoryService } from './service/home.repository.service';
 import { LanguageRepositoryService } from './service/language.repository.service';
 import { NewsRepositoryService } from './service/news.repository.service';
@@ -72,6 +73,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     ArticleRepositoryService,
     HomeRepositoryService,
     ProductRepositoryService,
+    CategoryRepositoryService,
   ],
   exports: [
     BrandRepositoryService,
@@ -80,6 +82,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     ArticleRepositoryService,
     HomeRepositoryService,
     ProductRepositoryService,
+    CategoryRepositoryService,
   ],
 })
 export class RepositoryModule {}

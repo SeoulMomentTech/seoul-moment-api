@@ -33,7 +33,6 @@ export class BrandController {
       'Returns brand list filtered by the first letter of brand names in English. Available filters: A_TO_D, E_TO_H, I_TO_L, M_TO_P, Q_TO_T, U_TO_Z, NUMBER_SYMBOL.',
   })
   @ResponseList(GetBrandListByNameFilterTypeResponse)
-  @ResponseException(HttpStatus.NOT_FOUND, '존재하는 브랜드가 없음')
   async getBrandListByNameFilterType(
     @Query() query: GetBrandListByNameFilterTypeRequest,
   ): Promise<ResponseListDto<GetBrandListByNameFilterTypeResponse>> {
