@@ -26,7 +26,7 @@ export class BrandEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column('int', { name: 'category_id', nullable: false })
+  @Column('int', { name: 'category_id', nullable: true })
   categoryId: number;
 
   @Column('varchar', { length: 255, nullable: true })
