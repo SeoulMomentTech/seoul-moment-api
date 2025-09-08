@@ -13,6 +13,7 @@ import { CommonEntity } from './common.entity';
 import { OptionValueEntity } from './option-value.entity';
 import { ProductColorImageEntity } from './product-color-image.entity';
 import { ProductEntity } from './product.entity';
+import { ProductColorStatus } from '../enum/product.enum';
 
 @Entity('product_color')
 @Index(['productId', 'optionValueId'], { unique: true })
@@ -56,6 +57,14 @@ export class ProductColorEntity extends CommonEntity {
     comment: '할인 가격',
   })
   discountPrice: number;
+
+  @Column('enum', {
+    enum: ProductColorStatus,
+    default: ProductColorStatus.NORMAL,
+    nullable: false,
+    comment: '상품 상태',
+  })
+  status: ProductColorStatus;
 
   // Utility methods
   getEffectivePrice(): number {

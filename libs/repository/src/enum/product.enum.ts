@@ -9,6 +9,13 @@ export enum ProductStatus {
   DELETE = 'DELETE', // 삭제됨 (논리적 삭제)
 }
 
+export enum ProductColorStatus {
+  NORMAL = 'NORMAL', // 정상 판매 중
+  WAIT = 'WAIT', // 판매 대기 (관리자 승인 대기)
+  BLOCK = 'BLOCK', // 판매 중단 (임시 차단)
+  DELETE = 'DELETE', // 삭제됨 (논리적 삭제)
+}
+
 /**
  * 상품 변형 상태
  * - 실제 판매 단위(ProductVariant)의 상태를 관리
