@@ -1,3 +1,5 @@
+import { PagingDto } from '@app/common/dto/global.dto';
+import { ProductSortDto } from '@app/repository/dto/product.dto';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
@@ -7,6 +9,8 @@ import { Injectable } from '@nestjs/common';
 import {
   GetProductBannerResponse,
   GetProductCategoryResponse,
+  GetProductRequest,
+  GetProductResponse,
 } from './product.dto';
 
 @Injectable()
@@ -39,6 +43,43 @@ export class ProductService {
     );
   }
 
-  // TODO Response 만들어야 함
-  async getProduct(): Promise<void> {}
+  async getProduct(
+    dto: GetProductRequest,
+    language: LanguageCode,
+  ): Promise<[GetProductResponse[], number]> {
+    const [productColorList, count] =
+      await this.productRepositoryService.findProductColor(
+        PagingDto.from(dto.page, dto.count),
+        dto.isNotExistSort()
+          ? undefined
+          : ProductSortDto.from(dto.sortColum, dto.sort),
+        dto.brandId,
+        dto.categoryId,
+        dto.productCategoryId,
+        dto.search,
+      );
+
+    const [brandText, productText] = await Promise.all([
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND,
+        productColorList.map((v) => v.product.brand.id),
+        language,
+      ),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.PRODUCT,
+        productColorList.map((v) => v.product.id),
+        language,
+      ),
+    ]);
+
+    return [
+      productColorList.map((v) =>
+        GetProductResponse.from(v, {
+          brand: brandText,
+          product: productText,
+        }),
+      ),
+      count,
+    ];
+  }
 }

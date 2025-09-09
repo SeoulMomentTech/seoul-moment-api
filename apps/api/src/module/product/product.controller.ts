@@ -1,12 +1,14 @@
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { Controller, Get, Headers } from '@nestjs/common';
+import { Controller, Get, Headers, Query } from '@nestjs/common';
 import { ApiHeader, ApiOperation } from '@nestjs/swagger';
 
 import {
   GetProductBannerResponse,
   GetProductCategoryResponse,
+  GetProductRequest,
+  GetProductResponse,
 } from './product.dto';
 import { ProductService } from './product.service';
 
@@ -44,5 +46,38 @@ export class ProductController {
     const result = await this.productService.getProductCategory(acceptLanguage);
 
     return new ResponseListDto(result);
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: 'Product list with Multilingual Support',
+    description:
+      'Returns product in the specified language. Supports Korean (ko), English (en), and Chinese (zh).',
+  })
+  @ApiHeader({
+    name: 'Accept-language',
+    required: true,
+    description: 'Alternative way to specify language preference (ko, en, zh)',
+    enum: LanguageCode,
+  })
+  @ResponseList(GetProductResponse)
+  async getProduct(
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
+    @Query() query: GetProductRequest,
+  ): Promise<ResponseListDto<GetProductResponse>> {
+    const [result, count] = await this.productService.getProduct(
+      GetProductRequest.from(
+        query.page,
+        query.count,
+        query.sortColum,
+        query.sort,
+        query.search,
+        query.brandId,
+        query.categoryId,
+        query.productCategoryId,
+      ),
+      acceptLanguage,
+    );
+    return new ResponseListDto(result, count);
   }
 }

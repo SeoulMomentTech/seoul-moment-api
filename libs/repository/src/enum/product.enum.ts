@@ -48,3 +48,8 @@ export enum ProductImageType {
   GALLERY = 'GALLERY', // 갤러리 이미지 (추가 이미지들)
   THUMBNAIL = 'THUMBNAIL', // 썸네일 이미지 (작은 미리보기)
 }
+
+export enum ProductSortColumn {
+  CREATE = 'createDate',
+  PRICE = 'price',
+}

@@ -14,6 +14,7 @@ import { EntityType } from '../enum/entity.enum';
 
 @Entity('multilingual_text')
 @Index(['entityType', 'entityId', 'fieldName'])
+@Index(['entityType', 'fieldName', 'textContent'])
 @Unique(['entityType', 'entityId', 'fieldName', 'languageId'])
 export class MultilingualTextEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
