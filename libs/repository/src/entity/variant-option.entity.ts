@@ -11,7 +11,7 @@ import { ProductVariantEntity } from './product-variant.entity';
  * - 핵심 쿼리: 옵션 조합으로 ProductVariant 찾기
  */
 @Entity('variant_option')
-@Index(['variantId', 'optionValueId'], { unique: true })
+@Index(['variantId', 'optionValueId'])
 export class VariantOptionEntity extends CommonEntity {
   @PrimaryColumn('int', {
     name: 'variant_id',

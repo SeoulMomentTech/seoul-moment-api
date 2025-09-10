@@ -214,7 +214,7 @@ export class ProductFactory {
     const repository = this.dataSource.getRepository(ProductColorImageEntity);
 
     const image = repository.create({
-      productColorId: productColor.productId, // ProductColorEntity는 복합키이므로 적절한 방식으로 참조
+      productColorId: productColor.id,
       imageUrl: 'https://example.com/color-image.jpg',
       sortOrder: 1,
       ...overrides,

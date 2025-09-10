@@ -1,12 +1,24 @@
+import { ResponseData } from '@app/common/decorator/response-data.decorator';
+import { ResponseException } from '@app/common/decorator/response-exception.decorator';
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
+import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { Controller, Get, Headers, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Headers,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Query,
+} from '@nestjs/common';
 import { ApiHeader, ApiOperation } from '@nestjs/swagger';
 
 import {
   GetProductBannerResponse,
   GetProductCategoryResponse,
+  GetProductDetailResponse,
   GetProductRequest,
   GetProductResponse,
 } from './product.dto';
@@ -79,5 +91,31 @@ export class ProductController {
       acceptLanguage,
     );
     return new ResponseListDto(result, count);
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Product detail with Multilingual Support',
+    description:
+      'Returns product detail in the specified language. Supports Korean (ko), English (en), and Chinese (zh).',
+  })
+  @ApiHeader({
+    name: 'Accept-language',
+    required: true,
+    description: 'Alternative way to specify language preference (ko, en, zh)',
+    enum: LanguageCode,
+  })
+  @ResponseData(GetProductDetailResponse)
+  @ResponseException(HttpStatus.NOT_FOUND, '상품이 존재하지 않습니다.')
+  async getProductDetail(
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ResponseDataDto<GetProductDetailResponse>> {
+    const result = await this.productService.getProductDetail(
+      id,
+      acceptLanguage,
+    );
+
+    return new ResponseDataDto(result);
   }
 }

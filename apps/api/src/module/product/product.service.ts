@@ -1,4 +1,7 @@
+/* eslint-disable max-lines-per-function */
 import { PagingDto } from '@app/common/dto/global.dto';
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { ProductSortDto } from '@app/repository/dto/product.dto';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
@@ -9,6 +12,8 @@ import { Injectable } from '@nestjs/common';
 import {
   GetProductBannerResponse,
   GetProductCategoryResponse,
+  GetProductDetailResponse,
+  GetProductDetailOption,
   GetProductRequest,
   GetProductResponse,
 } from './product.dto';
@@ -81,5 +86,71 @@ export class ProductService {
       ),
       count,
     ];
+  }
+
+  async getProductDetail(
+    productColorId: number,
+    language: LanguageCode,
+  ): Promise<GetProductDetailResponse> {
+    const languageEntity =
+      await this.languageRepositoryService.findLanguageByCode(language);
+
+    const productDetail =
+      await this.productRepositoryService.getProductColorDetail(productColorId);
+
+    // 필수 관계 데이터 검증
+    if (!productDetail.product) {
+      throw new ServiceError(
+        'Product information not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    if (!productDetail.product.brand) {
+      throw new ServiceError(
+        'Brand information not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    const optionType =
+      await this.productRepositoryService.getProductOptionTypes(
+        productDetail.product.id,
+      );
+
+    const optionValueList = await Promise.all(
+      optionType.map(async (v) =>
+        GetProductDetailOption.from(
+          v,
+          await this.productRepositoryService.getProductOption(
+            v,
+            productDetail.product.id,
+            languageEntity.id,
+          ),
+        ),
+      ),
+    );
+
+    const [brandtext, productText] = await Promise.all([
+      this.languageRepositoryService.findMultilingualTexts(
+        EntityType.BRAND,
+        productDetail.product.brand.id,
+        language,
+      ),
+      this.languageRepositoryService.findMultilingualTexts(
+        EntityType.PRODUCT,
+        productDetail.product.id,
+        language,
+      ),
+    ]);
+
+    return GetProductDetailResponse.from(
+      productDetail,
+      {
+        brand: brandtext,
+        product: productText,
+      },
+      optionValueList,
+    );
   }
 }

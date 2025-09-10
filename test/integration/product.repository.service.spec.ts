@@ -1,8 +1,12 @@
 import { PagingDto } from '@app/common/dto/global.dto';
 import { DatabaseSort } from '@app/common/enum/global.enum';
+import { ServiceError } from '@app/common/exception/service.error';
 import { ProductSortDto } from '@app/repository/dto/product.dto';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
+import { EntityType } from '@app/repository/enum/entity.enum';
+import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
+  OptionType,
   ProductColorStatus,
   ProductSortColumn,
   ProductStatus,
@@ -40,6 +44,22 @@ describe('ProductRepositoryService Integration Tests', () => {
 
   beforeEach(async () => {
     await TestSetup.clearDatabase();
+    // 추가적으로 관련 테이블들 직접 정리
+    const dataSource = TestSetup.getDataSource();
+    await dataSource.query('TRUNCATE TABLE multilingual_text CASCADE;');
+    await dataSource.query('TRUNCATE TABLE product_color_image CASCADE;');
+    await dataSource.query('TRUNCATE TABLE product_image CASCADE;');
+    await dataSource.query('TRUNCATE TABLE variant_option CASCADE;');
+    await dataSource.query('TRUNCATE TABLE product_variant CASCADE;');
+    await dataSource.query('TRUNCATE TABLE product_color CASCADE;');
+    await dataSource.query('TRUNCATE TABLE product CASCADE;');
+    await dataSource.query('TRUNCATE TABLE brand CASCADE;');
+    await dataSource.query('TRUNCATE TABLE category CASCADE;');
+    await dataSource.query('TRUNCATE TABLE product_category CASCADE;');
+    await dataSource.query('TRUNCATE TABLE product_banner CASCADE;');
+    await dataSource.query('TRUNCATE TABLE "option" CASCADE;');
+    await dataSource.query('TRUNCATE TABLE option_value CASCADE;');
+    await dataSource.query('TRUNCATE TABLE language CASCADE;');
   });
 
   describe('findBanner', () => {
@@ -401,6 +421,264 @@ describe('ProductRepositoryService Integration Tests', () => {
       // Then: 1개만 반환되어야 하지만 전체 개수는 5개
       expect(page3).toHaveLength(1);
       expect(totalCount3).toBe(5);
+    });
+  });
+
+  describe('getProductColorDetail', () => {
+    beforeEach(async () => {
+      await TestSetup.clearDatabase();
+    });
+
+    it('존재하는 상품 색상 상세 정보를 반환해야 함', async () => {
+      // Given: 정상 브랜드, 상품, 상품 색상 생성
+      const brand = await testDataFactory.createBrand({
+        status: BrandStatus.NORMAL,
+      });
+      const category = await testDataFactory.createCategory();
+      const product = await testDataFactory.createProduct(brand, {
+        status: ProductStatus.NORMAL,
+        categoryId: category.id,
+      });
+      const option = await testDataFactory.createOption();
+      const optionValue = await testDataFactory.createOptionValue(option);
+      const productColor = await testDataFactory.createProductColor(
+        product,
+        optionValue,
+        {
+          status: ProductColorStatus.NORMAL,
+          price: 10000,
+        },
+      );
+
+      // ProductColorImage 생성
+      await testDataFactory.createProductColorImage(productColor, {
+        imageUrl: 'https://example.com/image1.jpg',
+        sortOrder: 1,
+      });
+
+      // When: 상품 색상 상세 정보 조회
+      const result = await productRepositoryService.getProductColorDetail(
+        productColor.id,
+      );
+
+      // Then: 정상적으로 상세 정보가 반환되어야 함
+      expect(result).toBeDefined();
+      expect(result.id).toBe(productColor.id);
+      expect(result.product).toBeDefined();
+      expect(result.product.brand).toBeDefined();
+      expect(result.images).toBeDefined();
+      expect(result.images).toHaveLength(1);
+    });
+
+    it('존재하지 않는 상품 색상 조회 시 에러가 발생해야 함', async () => {
+      // When & Then: 존재하지 않는 ID로 조회 시 에러 발생
+      await expect(
+        productRepositoryService.getProductColorDetail(999999),
+      ).rejects.toThrow(ServiceError);
+    });
+
+    it('차단된 상품 색상 조회 시 에러가 발생해야 함', async () => {
+      // Given: 차단된 상품 색상 생성
+      const brand = await testDataFactory.createBrand({
+        status: BrandStatus.NORMAL,
+      });
+      const category = await testDataFactory.createCategory();
+      const product = await testDataFactory.createProduct(brand, {
+        status: ProductStatus.NORMAL,
+        categoryId: category.id,
+      });
+      const option = await testDataFactory.createOption();
+      const optionValue = await testDataFactory.createOptionValue(option);
+      const productColor = await testDataFactory.createProductColor(
+        product,
+        optionValue,
+        {
+          status: ProductColorStatus.BLOCK,
+          price: 10000,
+        },
+      );
+
+      // When & Then: 차단된 상품 색상 조회 시 에러 발생
+      await expect(
+        productRepositoryService.getProductColorDetail(productColor.id),
+      ).rejects.toThrow(ServiceError);
+    });
+  });
+
+  describe('getProductOptionTypes', () => {
+    beforeEach(async () => {
+      await TestSetup.clearDatabase();
+    });
+
+    it('상품의 옵션 타입들을 반환해야 함', async () => {
+      // Given: 다양한 옵션이 있는 상품 생성
+      const brand = await testDataFactory.createBrand({
+        status: BrandStatus.NORMAL,
+      });
+      const category = await testDataFactory.createCategory();
+      const product = await testDataFactory.createProduct(brand, {
+        status: ProductStatus.NORMAL,
+        categoryId: category.id,
+      });
+
+      // 색상과 사이즈 옵션 생성
+      const colorOption = await testDataFactory.createOption({
+        type: OptionType.COLOR,
+      });
+      const sizeOption = await testDataFactory.createOption({
+        type: OptionType.SIZE,
+      });
+
+      const colorValue = await testDataFactory.createOptionValue(colorOption);
+      const sizeValue = await testDataFactory.createOptionValue(sizeOption);
+
+      // 상품 variant 생성
+      const variant = await testDataFactory.createProductVariant(product, {
+        sku: 'TEST-SKU-001',
+      });
+
+      // variant-option 연결
+      await testDataFactory.createVariantOption(variant, colorValue);
+      await testDataFactory.createVariantOption(variant, sizeValue);
+
+      // When: 상품의 옵션 타입들 조회
+      const optionTypes = await productRepositoryService.getProductOptionTypes(
+        product.id,
+      );
+
+      // Then: 생성한 옵션 타입들이 반환되어야 함
+      expect(optionTypes).toHaveLength(2);
+      expect(optionTypes).toContain(OptionType.COLOR);
+      expect(optionTypes).toContain(OptionType.SIZE);
+    });
+
+    it('옵션이 없는 상품의 경우 빈 배열을 반환해야 함', async () => {
+      // Given: 옵션이 없는 상품 생성
+      const brand = await testDataFactory.createBrand({
+        status: BrandStatus.NORMAL,
+      });
+      const category = await testDataFactory.createCategory();
+      const product = await testDataFactory.createProduct(brand, {
+        status: ProductStatus.NORMAL,
+        categoryId: category.id,
+      });
+
+      // When: 상품의 옵션 타입들 조회
+      const optionTypes = await productRepositoryService.getProductOptionTypes(
+        product.id,
+      );
+
+      // Then: 빈 배열이 반환되어야 함
+      expect(optionTypes).toEqual([]);
+    });
+  });
+
+  describe('getProductOption', () => {
+    beforeEach(async () => {
+      await TestSetup.clearDatabase();
+    });
+
+    it('특정 타입의 상품 옵션값들을 반환해야 함', async () => {
+      // Given: 언어와 상품 설정
+      const language = await testDataFactory.createLanguage({
+        code: LanguageCode.ENGLISH,
+        name: 'Test Language Option',
+      });
+      const brand = await testDataFactory.createBrand({
+        status: BrandStatus.NORMAL,
+      });
+      const category = await testDataFactory.createCategory();
+      const product = await testDataFactory.createProduct(brand, {
+        status: ProductStatus.NORMAL,
+        categoryId: category.id,
+      });
+
+      // 색상 옵션 생성
+      const colorOption = await testDataFactory.createOption({
+        type: OptionType.COLOR,
+      });
+
+      const redValue = await testDataFactory.createOptionValue(colorOption, {
+        sortOrder: 1,
+      });
+      const blueValue = await testDataFactory.createOptionValue(colorOption, {
+        sortOrder: 2,
+      });
+
+      // 다국어 텍스트 생성
+      await testDataFactory.createMultilingualText(
+        EntityType.OPTION_VALUE,
+        redValue.id,
+        'value',
+        language,
+        'Red',
+      );
+      await testDataFactory.createMultilingualText(
+        EntityType.OPTION_VALUE,
+        blueValue.id,
+        'value',
+        language,
+        'Blue',
+      );
+
+      // 상품 variant 생성
+      const variant = await testDataFactory.createProductVariant(product, {
+        sku: 'TEST-SKU-001',
+      });
+
+      // variant-option 연결
+      await testDataFactory.createVariantOption(variant, redValue);
+      await testDataFactory.createVariantOption(variant, blueValue);
+
+      // When: 색상 옵션값들 조회
+      const colorOptions = await productRepositoryService.getProductOption(
+        OptionType.COLOR,
+        product.id,
+        language.id,
+      );
+
+      // Then: 정렬된 옵션값들이 반환되어야 함
+      expect(colorOptions).toHaveLength(2);
+      expect(colorOptions[0].value).toBe('Red');
+      expect(colorOptions[1].value).toBe('Blue');
+      expect(colorOptions[0].id).toBe(redValue.id);
+      expect(colorOptions[1].id).toBe(blueValue.id);
+    });
+
+    it('해당 타입의 옵션이 없는 경우 빈 배열을 반환해야 함', async () => {
+      // Given: 사이즈 옵션만 있는 상품
+      const language = await testDataFactory.createLanguage({
+        code: LanguageCode.CHINESE,
+        name: 'Test Language Empty',
+      });
+      const brand = await testDataFactory.createBrand({
+        status: BrandStatus.NORMAL,
+      });
+      const category = await testDataFactory.createCategory();
+      const product = await testDataFactory.createProduct(brand, {
+        status: ProductStatus.NORMAL,
+        categoryId: category.id,
+      });
+
+      const sizeOption = await testDataFactory.createOption({
+        type: OptionType.SIZE,
+      });
+      const sizeValue = await testDataFactory.createOptionValue(sizeOption);
+
+      const variant = await testDataFactory.createProductVariant(product, {
+        sku: 'TEST-SKU-001',
+      });
+      await testDataFactory.createVariantOption(variant, sizeValue);
+
+      // When: 색상 옵션값들 조회 (존재하지 않음)
+      const colorOptions = await productRepositoryService.getProductOption(
+        OptionType.COLOR,
+        product.id,
+        language.id,
+      );
+
+      // Then: 빈 배열이 반환되어야 함
+      expect(colorOptions).toEqual([]);
     });
   });
 });

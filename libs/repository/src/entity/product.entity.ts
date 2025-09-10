@@ -23,7 +23,7 @@ import { ProductStatus } from '../enum/product.enum';
  * 상품 기본 정보 Entity
  * - 상품군을 나타냄 (예: "나이키 드라이핏 티셔츠")
  * - 실제 판매는 ProductVariant에서 이루어짐
- * - 다국어 지원: name
+ * - 다국어 지원: name, origin(원산지)
  */
 @Entity(EntityType.PRODUCT)
 export class ProductEntity extends CommonEntity {

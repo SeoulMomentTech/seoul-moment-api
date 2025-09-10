@@ -3,7 +3,10 @@ import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
 import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
-import { ProductSortColumn } from '@app/repository/enum/product.enum';
+import {
+  OptionType,
+  ProductSortColumn,
+} from '@app/repository/enum/product.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
@@ -241,6 +244,153 @@ export class GetProductResponse {
       review: Math.floor(Math.random() * 10001),
       reviewAverage: Math.round(Math.random() * 5 * 10) / 10,
       image: entity.getMainImage(),
+    });
+  }
+}
+
+export class GetProductDetailOptionValue {
+  @ApiProperty({
+    description: '옵션값 ID',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '옵션값',
+    example: 'Red',
+  })
+  value: string;
+}
+
+export class GetProductDetailOption {
+  @ApiProperty({
+    description: '색상 옵션',
+    type: [GetProductDetailOptionValue],
+    required: false,
+  })
+  [OptionType.COLOR]?: GetProductDetailOptionValue[];
+
+  @ApiProperty({
+    description: '사이즈 옵션',
+    type: [GetProductDetailOptionValue],
+    required: false,
+  })
+  [OptionType.SIZE]?: GetProductDetailOptionValue[];
+
+  @ApiProperty({
+    description: '소재 옵션',
+    type: [GetProductDetailOptionValue],
+    required: false,
+  })
+  [OptionType.MATERIAL]?: GetProductDetailOptionValue[];
+
+  @ApiProperty({
+    description: '핏 옵션',
+    type: [GetProductDetailOptionValue],
+    required: false,
+  })
+  [OptionType.FIT]?: GetProductDetailOptionValue[];
+
+  @ApiProperty({
+    description: '스타일 옵션',
+    type: [GetProductDetailOptionValue],
+    required: false,
+  })
+  [OptionType.STYLE]?: GetProductDetailOptionValue[];
+
+  static from(
+    optionType: OptionType,
+    valueList: GetProductDetailOptionValue[],
+  ) {
+    return plainToInstance(this, {
+      [optionType]: valueList,
+    });
+  }
+}
+
+export class GetProductDetailBrand {
+  profileImg: string;
+  name: string;
+
+  static from(profileImg: string, name: string) {
+    return plainToInstance(this, {
+      profileImg,
+      name,
+    });
+  }
+}
+
+export class GetProductDetailResponse {
+  id: number;
+  name: string;
+  brand: GetProductDetailBrand;
+  price: number;
+  discoountPrice: number;
+  origin: string;
+  shippingInfo: number;
+  shippingCost: number;
+  option: GetProductDetailOption[];
+  @ApiProperty({
+    description: '좋아요 수',
+    example: 54244,
+  })
+  like: number;
+
+  @ApiProperty({
+    description: '리뷰 수',
+    example: 54244,
+  })
+  review: number;
+
+  @ApiProperty({
+    description: '별점 평균',
+    example: 4.5,
+  })
+  reviewAverage: number;
+  detailImg: string;
+  subImage: string[];
+
+  static from(
+    entity: ProductColorEntity,
+    multilingualText: {
+      brand: MultilingualTextEntity[];
+      product: MultilingualTextEntity[];
+    },
+    option: GetProductDetailOption[],
+  ) {
+    const name = MultilingualFieldDto.fromByEntity(
+      multilingualText.product,
+      'name',
+    );
+
+    const origin = MultilingualFieldDto.fromByEntity(
+      multilingualText.product,
+      'origin',
+    );
+
+    const brandName = MultilingualFieldDto.fromByEntity(
+      multilingualText.brand,
+      'name',
+    );
+
+    return plainToInstance(this, {
+      id: entity.id,
+      name: name.getContent(),
+      brand: GetProductDetailBrand.from(
+        entity.product.brand.getProfileImage(),
+        brandName.getContent(),
+      ),
+      price: entity.price,
+      discoountPrice: entity.discountPrice,
+      origin: origin.getContent(),
+      shippingInfo: entity.shippingInfo,
+      shippingCost: entity.shippingCost,
+      option,
+      like: Math.floor(Math.random() * 50001),
+      review: Math.floor(Math.random() * 10001),
+      reviewAverage: Math.round(Math.random() * 5 * 10) / 10,
+      detailImg: entity.product.getDetailInfoImage(),
+      subImage: entity.images.map((v) => v.getImage()),
     });
   }
 }

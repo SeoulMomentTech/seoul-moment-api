@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import {
   Column,
   Entity,
@@ -82,4 +83,8 @@ export class BrandEntity extends CommonEntity {
   })
   @JoinColumn({ name: 'category_id' })
   category: CategoryEntity;
+
+  getProfileImage(): string {
+    return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.profileImage}`;
+  }
 }

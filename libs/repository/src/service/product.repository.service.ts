@@ -1,8 +1,11 @@
 /* eslint-disable max-lines-per-function */
 import { PagingDto } from '@app/common/dto/global.dto';
 import { DatabaseSort } from '@app/common/enum/global.enum';
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { GetProductDetailOptionValue } from 'apps/api/src/module/product/product.dto';
 import { Repository } from 'typeorm';
 
 import { ProductSortDto } from '../dto/product.dto';
@@ -12,6 +15,7 @@ import { ProductEntity } from '../entity/product.entity';
 import { ProductBannerEntity } from '../entity/product_banner.entity';
 import { BrandStatus } from '../enum/brand.enum';
 import {
+  OptionType,
   ProductColorStatus,
   ProductSortColumn,
   ProductStatus,
@@ -56,89 +60,204 @@ export class ProductRepositoryService {
     productCategoryId?: number,
     search?: string,
   ): Promise<[ProductColorEntity[], number]> {
-    // 공통 조건을 적용하는 함수
-    const applyConditions = (queryBuilder: any) => {
-      queryBuilder
-        .leftJoin('pc.product', 'p')
-        .leftJoin('p.brand', 'b')
-        .leftJoin('p.category', 'c')
-        .where('b.status = :brandStatus', { brandStatus: BrandStatus.NORMAL })
-        .andWhere('p.status = :productStatus', {
-          productStatus: ProductStatus.NORMAL,
-        })
-        .andWhere('pc.status = :productColorStatus', {
-          productColorStatus: ProductColorStatus.NORMAL,
-        });
+    // 대용량 최적화: 인덱스 힌트를 위한 조건 순서 최적화
+    const buildBaseQuery = () => {
+      const query = this.productColorRepository
+        .createQueryBuilder('pc')
+        .innerJoin('pc.product', 'p') // LEFT → INNER: 성능 개선
+        .innerJoin('p.brand', 'b')
+        .leftJoin('p.category', 'c'); // category는 nullable할 수 있으므로 LEFT 유지
 
+      // 인덱스 활용을 위한 조건 순서 최적화 (선택도가 높은 순서)
       if (brandId) {
-        queryBuilder.andWhere('b.id = :brandId', { brandId });
-      }
-
-      if (categoryId) {
-        queryBuilder.andWhere('c.id = :categoryId', { categoryId });
+        query.where('b.id = :brandId', { brandId });
       }
 
       if (productCategoryId) {
-        queryBuilder.andWhere('p.product_category_id = :productCategoryId', {
+        query.andWhere('p.product_category_id = :productCategoryId', {
           productCategoryId,
         });
       }
 
+      if (categoryId) {
+        query.andWhere('c.id = :categoryId', { categoryId });
+      }
+
+      // status 조건들 (인덱스된 컬럼들)
+      query
+        .andWhere('pc.status = :productColorStatus', {
+          productColorStatus: ProductColorStatus.NORMAL,
+        })
+        .andWhere('p.status = :productStatus', {
+          productStatus: ProductStatus.NORMAL,
+        })
+        .andWhere('b.status = :brandStatus', {
+          brandStatus: BrandStatus.NORMAL,
+        });
+
+      return query;
+    };
+
+    // 검색 조건 추가 (가장 비용이 큰 조건을 마지막에)
+    const applySearchCondition = (query: any) => {
       if (search) {
-        queryBuilder
-          .leftJoin(
+        query
+          .innerJoin(
+            // 검색시에만 INNER JOIN으로 성능 최적화
             'multilingual_text',
             'mt',
-            "mt.entity_type = 'product' AND mt.entity_id = p.id AND mt.field_name = 'name'",
+            `mt.entityType = 'product' AND mt.entity_id = p.id AND mt.field_name = 'name'`,
           )
-          .andWhere('mt.text_content ILIKE :search', { search: `%${search}%` })
-          .groupBy('pc.id');
+          .andWhere('mt.text_content ILIKE :search', { search: `%${search}%` });
       }
     };
 
-    // 1. 전체 개수 조회 (조건만 적용, 페이징/정렬 없음)
-    const countQuery = this.productColorRepository.createQueryBuilder('pc');
-    applyConditions(countQuery);
-    const totalCount = await countQuery.getCount();
+    // Count 쿼리 최적화: 불필요한 JOIN 제거
+    const getOptimizedCount = async (): Promise<number> => {
+      if (!search && !categoryId && !productCategoryId && !brandId) {
+        // 간단한 조건만 있을 때는 단일 테이블 COUNT
+        return this.productColorRepository
+          .createQueryBuilder('pc')
+          .where('pc.status = :status', { status: ProductColorStatus.NORMAL })
+          .getCount();
+      }
+
+      const countQuery = buildBaseQuery().select(
+        'COUNT(DISTINCT pc.id)',
+        'count',
+      );
+      applySearchCondition(countQuery);
+
+      const result = await countQuery.getRawOne();
+      return parseInt(result.count, 10);
+    };
+
+    const totalCount = await getOptimizedCount();
 
     if (totalCount === 0) {
       return [[], 0];
     }
 
-    // 2. 페이징된 ID 조회 (정렬 적용)
-    const idQuery = this.productColorRepository
-      .createQueryBuilder('pc')
-      .select('pc.id');
+    // ID 조회 쿼리 (대용량 최적화: 필요한 컬럼만 SELECT)
+    const idQuery = buildBaseQuery().select('pc.id');
+    applySearchCondition(idQuery);
 
-    applyConditions(idQuery);
-
-    // 정렬 처리
+    // 정렬 최적화: 계산된 가격 vs 단일 컬럼
     if (sortDto.sortColum === ProductSortColumn.PRICE) {
-      idQuery.orderBy('COALESCE(pc.discount_price, pc.price)', sortDto.sort);
+      // 0보다 큰 할인가가 있으면 할인가, 없으면 원가
+      idQuery.orderBy(
+        'CASE WHEN pc.discountPrice > 0 THEN pc.discountPrice ELSE pc.price END',
+        sortDto.sort,
+      );
     } else {
       idQuery.orderBy(`pc.${sortDto.sortColum}`, sortDto.sort);
     }
 
+    // 페이징 적용
     idQuery.limit(pageDto.count).offset((pageDto.page - 1) * pageDto.count);
 
+    if (search) {
+      idQuery.groupBy('pc.id'); // 검색시에만 GROUP BY 적용
+    }
+
     const productColorIds = await idQuery.getRawMany();
+
+    if (productColorIds.length === 0) {
+      return [[], totalCount];
+    }
+
     const ids = productColorIds.map((item) => item.pc_id);
 
-    // 3. 실제 데이터 조회 (관계 포함)
+    // 메인 데이터 조회: IN 절 최적화
     const results = await this.productColorRepository
       .createQueryBuilder('pc')
       .leftJoinAndSelect('pc.product', 'p')
       .leftJoinAndSelect('p.brand', 'b')
       .leftJoinAndSelect('p.category', 'c')
-      .where('pc.id IN (:...ids)', { ids })
+      .where('pc.id = ANY(:ids)', { ids }) // IN 대신 ANY 사용 (PostgreSQL 최적화)
       .orderBy(
+        // 동일한 정렬 조건 적용
         sortDto.sortColum === ProductSortColumn.PRICE
-          ? 'COALESCE(pc.discount_price, pc.price)'
+          ? 'CASE WHEN pc.discountPrice > 0 THEN pc.discountPrice ELSE pc.price END'
           : `pc.${sortDto.sortColum}`,
         sortDto.sort,
       )
       .getMany();
 
     return [results, totalCount];
+  }
+
+  async getProductColorDetail(id: number): Promise<ProductColorEntity> {
+    const result = await this.productColorRepository.findOne({
+      where: {
+        id,
+        status: ProductColorStatus.NORMAL,
+      },
+      relations: ['product', 'product.brand', 'images'],
+    });
+
+    if (!result)
+      throw new ServiceError(
+        'no exist product',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+
+    return result;
+  }
+
+  async getProductOption(
+    type: OptionType,
+    productId: number,
+    languageId: number,
+  ): Promise<GetProductDetailOptionValue[]> {
+    const subQuery = this.productRepository.manager
+      .createQueryBuilder()
+      .select('pv.id')
+      .from('product_variant', 'pv')
+      .where('pv.product_id = :productId', { productId });
+
+    const result = await this.productRepository.manager
+      .createQueryBuilder()
+      .select('ov.id', 'id')
+      .addSelect('mt.text_content', 'value')
+      .from('variant_option', 'vo')
+      .leftJoin('option_value', 'ov', 'vo.option_value_id = ov.id')
+      .leftJoin('option', 'o', 'o.id = ov.option_id')
+      .leftJoin(
+        'multilingual_text',
+        'mt',
+        "mt.entity_id = ov.id AND mt.field_name = 'value' AND mt.language_id = :languageId AND mt.entityType = 'option_value'",
+        { languageId },
+      )
+      .where(`vo.variant_id IN (${subQuery.getQuery()})`)
+      .andWhere('o.type = :type', { type })
+      .groupBy('ov.id')
+      .addGroupBy('mt.text_content')
+      .orderBy('ov.sort_order')
+      .setParameters(subQuery.getParameters())
+      .getRawMany();
+
+    return result;
+  }
+
+  async getProductOptionTypes(productId: number): Promise<OptionType[]> {
+    const subQuery = this.productRepository.manager
+      .createQueryBuilder()
+      .select('pv.id')
+      .from('product_variant', 'pv')
+      .where('pv.product_id = :productId', { productId });
+
+    const result = await this.productRepository.manager
+      .createQueryBuilder()
+      .select('o.type', 'type')
+      .from('variant_option', 'vo')
+      .leftJoin('option_value', 'ov', 'vo.option_value_id = ov.id')
+      .leftJoin('option', 'o', 'o.id = ov.option_id')
+      .where(`vo.variant_id IN (${subQuery.getQuery()})`)
+      .groupBy('o.type')
+      .setParameters(subQuery.getParameters())
+      .getRawMany();
+
+    return result.map((item) => item.type);
   }
 }

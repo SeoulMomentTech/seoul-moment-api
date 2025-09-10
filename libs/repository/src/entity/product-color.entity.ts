@@ -41,22 +41,33 @@ export class ProductColorEntity extends CommonEntity {
   })
   mainImageUrl: string;
 
-  @Column('decimal', {
-    precision: 10,
-    scale: 0,
+  @Column('int', {
+    default: 0,
     nullable: false,
     comment: '가격',
   })
   price: number;
 
-  @Column('decimal', {
-    name: 'discount_price',
-    precision: 10,
-    scale: 0,
+  @Column('int', {
+    default: 0,
     nullable: true,
     comment: '할인 가격',
   })
   discountPrice: number;
+
+  @Column('int', {
+    nullable: false,
+    default: 0,
+    comment: '배송비용',
+  })
+  shippingCost: number;
+
+  @Column('int', {
+    nullable: false,
+    default: 0,
+    comment: '배송출고 정보',
+  })
+  shippingInfo: number;
 
   @Column('enum', {
     enum: ProductColorStatus,
@@ -66,19 +77,16 @@ export class ProductColorEntity extends CommonEntity {
   })
   status: ProductColorStatus;
 
-  // Utility methods
   getEffectivePrice(): number {
     return this.discountPrice || this.price;
   }
 
-  // Utility methods
   getMainImage(): string {
     return this.mainImageUrl
       ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.mainImageUrl}`
       : '';
   }
 
-  // Relations
   @ManyToOne(() => ProductEntity, (product) => product.productColors, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',

@@ -1,4 +1,10 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
@@ -12,6 +18,7 @@ import { OptionType } from '../enum/product.enum';
  * - 다국어 지원: name
  */
 @Entity(EntityType.OPTION)
+@Index(['type'])
 export class OptionEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
