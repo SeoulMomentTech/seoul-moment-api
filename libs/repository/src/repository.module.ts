@@ -19,6 +19,7 @@ import { NewsSectionEntity } from './entity/news-section.entity';
 import { NewsEntity } from './entity/news.entity';
 import { OptionValueEntity } from './entity/option-value.entity';
 import { OptionEntity } from './entity/option.entity';
+import { PartnerEntity } from './entity/partner.entity';
 import { ProductCategoryEntity } from './entity/product-category.entity';
 import { ProductColorImageEntity } from './entity/product-color-image.entity';
 import { ProductColorEntity } from './entity/product-color.entity';
@@ -33,6 +34,7 @@ import { CategoryRepositoryService } from './service/category.repository.service
 import { HomeRepositoryService } from './service/home.repository.service';
 import { LanguageRepositoryService } from './service/language.repository.service';
 import { NewsRepositoryService } from './service/news.repository.service';
+import { PartnerRepositoryService } from './service/partner.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
 
 @Module({
@@ -64,6 +66,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
       OptionEntity,
       OptionValueEntity,
       VariantOptionEntity,
+      PartnerEntity,
     ]),
   ],
   providers: [
@@ -74,6 +77,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     HomeRepositoryService,
     ProductRepositoryService,
     CategoryRepositoryService,
+    PartnerRepositoryService,
   ],
   exports: [
     BrandRepositoryService,
@@ -83,6 +87,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     HomeRepositoryService,
     ProductRepositoryService,
     CategoryRepositoryService,
+    PartnerRepositoryService,
   ],
 })
 export class RepositoryModule {}

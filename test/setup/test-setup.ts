@@ -17,19 +17,25 @@ export class TestSetup {
   private static validateTestEnvironment(): void {
     // NODE_ENV가 test가 아니면 에러
     if (process.env.NODE_ENV !== 'test') {
-      throw new Error(`DANGER: Tests running in non-test environment! NODE_ENV=${process.env.NODE_ENV}`);
+      throw new Error(
+        `DANGER: Tests running in non-test environment! NODE_ENV=${process.env.NODE_ENV}`,
+      );
     }
 
     // 실제 프로덕션/개발 DB를 가리키고 있으면 에러
     const dbName = process.env.DATABASE_NAME;
     if (!dbName || !dbName.includes('test')) {
-      throw new Error(`DANGER: Test database name must contain 'test'. Current: ${dbName}`);
+      throw new Error(
+        `DANGER: Test database name must contain 'test'. Current: ${dbName}`,
+      );
     }
 
     // 테스트용 포트가 아니면 에러
     const dbPort = process.env.DATABASE_PORT;
     if (dbPort !== '5433') {
-      throw new Error(`DANGER: Test database must use port 5433. Current: ${dbPort}`);
+      throw new Error(
+        `DANGER: Test database must use port 5433. Current: ${dbPort}`,
+      );
     }
 
     console.log('✅ Test environment validation passed');
@@ -40,7 +46,7 @@ export class TestSetup {
    */
   static async initializeCache(): Promise<void> {
     this.validateTestEnvironment();
-    
+
     if (this.cacheService && this.cacheModule) {
       return;
     }
@@ -57,7 +63,7 @@ export class TestSetup {
    */
   static async initialize(): Promise<void> {
     this.validateTestEnvironment();
-    
+
     if (this.dataSource && this.cacheService && this.fullModule) {
       return;
     }
@@ -87,25 +93,28 @@ export class TestSetup {
       } catch (error) {
         // Suppress Redis connection warnings for cache-only tests
         if (error.message !== 'Connection is closed.') {
-          console.warn('Warning: Failed to clear cache during cleanup:', error.message);
+          console.warn(
+            'Warning: Failed to clear cache during cleanup:',
+            error.message,
+          );
         }
       }
     }
-    
+
     if (this.dataSource && this.dataSource.isInitialized) {
       await this.dataSource.destroy();
     }
-    
+
     if (this.cacheModule) {
       await this.cacheModule.close();
       this.cacheModule = null;
     }
-    
+
     if (this.fullModule) {
       await this.fullModule.close();
       this.fullModule = null;
     }
-    
+
     this.dataSource = null;
     this.cacheService = null;
   }
@@ -116,7 +125,7 @@ export class TestSetup {
   static async clearDatabase(): Promise<void> {
     // Clear Redis cache first
     await this.clearCache();
-    
+
     // Skip DB operations if no DataSource (cache-only tests)
     if (!this.dataSource) {
       return;
