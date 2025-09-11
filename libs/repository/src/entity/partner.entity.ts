@@ -8,10 +8,11 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
+import { PartnerCategoryEntity } from './partner-category.entity';
 import { EntityType } from '../enum/entity.enum';
+import { LanguageCode } from '../enum/language.enum';
 
 /**
  * 협력사 테이블
@@ -22,20 +23,27 @@ export class PartnerEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({ name: 'category_id', nullable: false })
-  categoryId: number;
+  @Column({ name: 'partner_category_id', nullable: false })
+  partnerCategoryId: number;
+
+  @Column('enum', {
+    enum: LanguageCode,
+    default: LanguageCode.KOREAN,
+    nullable: false,
+  })
+  country: LanguageCode;
 
   @Column('varchar', { length: 255, nullable: true })
   image: string;
 
-  @Column('varchar', { length: 255, nullable: true })
+  @Column('varchar', { length: 500, nullable: true })
   link: string;
 
-  @ManyToOne(() => CategoryEntity, (category) => category.partner, {
+  @ManyToOne(() => PartnerCategoryEntity, (category) => category.partner, {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
-  @JoinColumn({ name: 'category_id' })
-  category: CategoryEntity;
+  @JoinColumn({ name: 'partner_category_id' })
+  partnerCategory: PartnerCategoryEntity;
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

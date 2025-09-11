@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { PartnerEntity } from '../entity/partner.entity';
+import { LanguageCode } from '../enum/language.enum';
 
 @Injectable()
 export class PartnerRepositoryService {
@@ -15,9 +16,13 @@ export class PartnerRepositoryService {
     return this.partnerRepository.find();
   }
 
-  async findByCategoryId(categoryId): Promise<PartnerEntity[]> {
+  async findByCategoryIdAndCountry(
+    partnerCategoryId: number,
+    country: LanguageCode,
+  ): Promise<PartnerEntity[]> {
     return this.partnerRepository.findBy({
-      categoryId,
+      partnerCategoryId,
+      country,
     });
   }
 }

@@ -55,13 +55,9 @@ export class LanguageFactory {
   }
 
   /**
-   * 기본 언어들 생성 (한국어, 영어, 중국어)
+   * 기본 언어들 생성 (한국어, 영어, 중국어) - 배열 형태 반환
    */
-  async createDefaultLanguages(): Promise<{
-    korean: LanguageEntity;
-    english: LanguageEntity;
-    chinese: LanguageEntity;
-  }> {
+  async createLanguages(): Promise<LanguageEntity[]> {
     const korean = await this.createLanguage({
       code: LanguageCode.KOREAN,
       name: '한국어',
@@ -83,6 +79,18 @@ export class LanguageFactory {
       sortOrder: 3,
     });
 
+    return [korean, english, chinese];
+  }
+
+  /**
+   * 기본 언어들 생성 (한국어, 영어, 중국어) - 객체 형태 반환
+   */
+  async createDefaultLanguages(): Promise<{
+    korean: LanguageEntity;
+    english: LanguageEntity;
+    chinese: LanguageEntity;
+  }> {
+    const [korean, english, chinese] = await this.createLanguages();
     return { korean, english, chinese };
   }
 }

@@ -13,6 +13,8 @@ import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
+import { PartnerCategoryEntity } from '@app/repository/entity/partner-category.entity';
+import { PartnerEntity } from '@app/repository/entity/partner.entity';
 import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { ProductColorImageEntity } from '@app/repository/entity/product-color-image.entity';
@@ -34,6 +36,7 @@ import { CategoryFactory } from './factories/category.factory';
 import { HomeFactory } from './factories/home.factory';
 import { LanguageFactory } from './factories/language.factory';
 import { NewsFactory } from './factories/news.factory';
+import { PartnerFactory } from './factories/partner.factory';
 import { ProductFactory } from './factories/product.factory';
 
 export class TestDataFactory {
@@ -43,6 +46,7 @@ export class TestDataFactory {
   public readonly articleFactory: ArticleFactory;
   public readonly newsFactory: NewsFactory;
   public readonly homeFactory: HomeFactory;
+  public readonly partnerFactory: PartnerFactory;
   public readonly productFactory: ProductFactory;
 
   constructor(private dataSource: DataSource) {
@@ -52,6 +56,7 @@ export class TestDataFactory {
     this.articleFactory = new ArticleFactory(dataSource);
     this.newsFactory = new NewsFactory(dataSource);
     this.homeFactory = new HomeFactory(dataSource);
+    this.partnerFactory = new PartnerFactory(dataSource);
     this.productFactory = new ProductFactory(dataSource);
   }
 
@@ -143,6 +148,10 @@ export class TestDataFactory {
       textContent,
       overrides,
     );
+  }
+
+  async createLanguages() {
+    return this.languageFactory.createLanguages();
   }
 
   async createDefaultLanguages() {
@@ -476,5 +485,41 @@ export class TestDataFactory {
 
   async createProductsForColorList(brand?: BrandEntity) {
     return this.productFactory.createProductsForColorList(brand);
+  }
+
+  // ================================
+  // Partner-related methods - delegating to PartnerFactory
+  // ================================
+  async createPartnerCategory(overrides: Partial<PartnerCategoryEntity> = {}) {
+    return this.partnerFactory.createPartnerCategory(overrides);
+  }
+
+  async createPartner(overrides: Partial<PartnerEntity> = {}) {
+    return this.partnerFactory.createPartner(overrides);
+  }
+
+  async createMultilingualPartnerCategory(
+    overrides: Partial<PartnerCategoryEntity> = {},
+    multilingualData?: {
+      name?: Partial<Record<LanguageCode, string>>;
+    },
+  ) {
+    return this.partnerFactory.createMultilingualPartnerCategory(
+      overrides,
+      multilingualData,
+    );
+  }
+
+  async createMultilingualPartner(
+    overrides: Partial<PartnerEntity> = {},
+    multilingualData?: {
+      title?: Partial<Record<LanguageCode, string>>;
+      description?: Partial<Record<LanguageCode, string>>;
+    },
+  ) {
+    return this.partnerFactory.createMultilingualPartner(
+      overrides,
+      multilingualData,
+    );
   }
 }

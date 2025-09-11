@@ -16,6 +16,7 @@ import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
+import { PartnerCategoryEntity } from '@app/repository/entity/partner-category.entity';
 import { PartnerEntity } from '@app/repository/entity/partner.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { ProductColorImageEntity } from '@app/repository/entity/product-color-image.entity';
@@ -68,6 +69,7 @@ import { TestCacheModule } from './test-cache.module';
         VariantOptionEntity,
         ProductBannerEntity,
         PartnerEntity,
+        PartnerCategoryEntity,
       ],
       synchronize: true, // 테스트용으로만 true 사용
       dropSchema: false, // 스키마를 유지하고 데이터만 정리
@@ -101,6 +103,7 @@ import { TestCacheModule } from './test-cache.module';
       VariantOptionEntity,
       ProductBannerEntity,
       PartnerEntity,
+      PartnerCategoryEntity,
     ]),
   ],
   exports: [TestCacheModule, TypeOrmModule],
