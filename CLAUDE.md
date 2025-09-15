@@ -610,3 +610,4 @@ export class TestDataFactory {
 ---
 
 **이 가이드로 안전하고 효율적인 Seoul Moment API 개발이 가능합니다! 🚀**
+- Entity 관련 test code를 짤땐 Entity의 변수 타입을 꼭 확인

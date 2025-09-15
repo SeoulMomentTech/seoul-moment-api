@@ -30,6 +30,19 @@ export class CategoryFactory {
   }
 
   /**
+   * 카테고리 엔티티 인스턴스만 생성 (저장하지 않음)
+   */
+  createCategoryEntity(
+    overrides: Partial<CategoryEntity> = {},
+  ): CategoryEntity {
+    const categoryRepository = this.dataSource.getRepository(CategoryEntity);
+
+    return categoryRepository.create({
+      ...overrides,
+    });
+  }
+
+  /**
    * 다국어 카테고리 생성
    */
   async createMultilingualCategory(

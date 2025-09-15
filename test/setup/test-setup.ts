@@ -1,6 +1,7 @@
 import { CacheService } from '@app/cache/cache.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
+import { initializeTransactionalContext, addTransactionalDataSource } from 'typeorm-transactional';
 
 import { TestCacheModule } from './test-cache.module';
 import { TestDatabaseModule } from './test-database.module';
@@ -68,6 +69,9 @@ export class TestSetup {
       return;
     }
 
+    // 트랜잭션 컨텍스트 초기화
+    initializeTransactionalContext();
+
     // Cache-only 모듈이 이미 있다면 정리
     if (this.cacheModule) {
       await this.cacheModule.close();
@@ -81,6 +85,9 @@ export class TestSetup {
 
     this.dataSource = this.fullModule.get<DataSource>(DataSource);
     this.cacheService = this.fullModule.get<CacheService>(CacheService);
+
+    // 트랜잭션 데이터 소스 등록
+    addTransactionalDataSource(this.dataSource);
   }
 
   /**
