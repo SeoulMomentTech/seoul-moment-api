@@ -30,4 +30,21 @@ export class CategoryRepositoryService {
       },
     });
   }
+
+  async insert(entity: CategoryEntity): Promise<CategoryEntity> {
+    if (!entity.sortOrder) {
+      const maxSortOrder = await this.categoryRepository
+        .createQueryBuilder('category')
+        .select('MAX(category.sortOrder)', 'max')
+        .getRawOne();
+
+      entity.sortOrder = (maxSortOrder?.max || 0) + 1;
+    }
+
+    return this.categoryRepository.save(entity);
+  }
+
+  async bulkInsert(entity: CategoryEntity[]): Promise<CategoryEntity[]> {
+    return this.categoryRepository.save(entity);
+  }
 }

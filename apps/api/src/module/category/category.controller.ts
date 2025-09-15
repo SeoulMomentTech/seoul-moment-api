@@ -1,10 +1,18 @@
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { Controller, Get, Headers } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { ApiHeader, ApiOperation } from '@nestjs/swagger';
 
-import { GetCategoryResponse } from './category.dto';
+import { GetCategoryResponse, PostCategoryRequest } from './category.dto';
 import { CategoryService } from './category.service';
 
 @Controller('category')
@@ -30,5 +38,14 @@ export class CategoryController {
     const result = await this.categoryService.getCategory(acceptLanguage);
 
     return new ResponseListDto(result);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: '카테고리 다국어 등록',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async postCategory(@Body() body: PostCategoryRequest) {
+    await this.categoryService.postCategory(body);
   }
 }

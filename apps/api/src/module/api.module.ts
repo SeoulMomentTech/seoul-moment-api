@@ -18,6 +18,7 @@ import { BrandModule } from './brand/brand.module';
 import { CategoryModdule } from './category/category.module';
 import { GoogleModule } from './google/google.module';
 import { HomeModule } from './home/home.module';
+import { LanguageModule } from './language/language.module';
 import { NewsModule } from './news/news.module';
 import { PartnerModule } from './partner/partner.module';
 import { ProductModule } from './product/product.module';
@@ -50,6 +51,7 @@ import { ProductModule } from './product/product.module';
     ProductModule,
     CategoryModdule,
     PartnerModule,
+    LanguageModule,
   ],
   controllers: [HealthController],
   providers: [
