@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 
 import { CategoryEntity } from '../entity/category.entity';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
+import { SortOrderHelper } from '../helper/sort-order.helper';
 
 @Injectable()
 export class CategoryRepositoryService {
@@ -13,6 +14,8 @@ export class CategoryRepositoryService {
 
     @InjectRepository(ProductCategoryEntity)
     private readonly productCategoryRepository: Repository<ProductCategoryEntity>,
+
+    private readonly sortOrderHelper: SortOrderHelper,
   ) {}
 
   async findCategory(): Promise<CategoryEntity[]> {
@@ -32,14 +35,10 @@ export class CategoryRepositoryService {
   }
 
   async insert(entity: CategoryEntity): Promise<CategoryEntity> {
-    if (!entity.sortOrder) {
-      const maxSortOrder = await this.categoryRepository
-        .createQueryBuilder('category')
-        .select('MAX(category.sortOrder)', 'max')
-        .getRawOne();
-
-      entity.sortOrder = (maxSortOrder?.max || 0) + 1;
-    }
+    await this.sortOrderHelper.setNextSortOrder(
+      entity,
+      this.categoryRepository,
+    );
 
     return this.categoryRepository.save(entity);
   }
