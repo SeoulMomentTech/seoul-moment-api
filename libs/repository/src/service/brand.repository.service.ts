@@ -4,15 +4,30 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { BrandBannerImageEntity } from '../entity/brand-banner-image.entity';
+import { BrandSectionImageEntity } from '../entity/brand-section-image.entity';
+import { BrandSectionEntity } from '../entity/brand-section.entity';
 import { BrandEntity } from '../entity/brand.entity';
 import { BrandStatus, BrandNameFilter } from '../enum/brand.enum';
 import { EntityType } from '../enum/entity.enum';
+import { SortOrderHelper } from '../helper/sort-order.helper';
 
 @Injectable()
 export class BrandRepositoryService {
   constructor(
     @InjectRepository(BrandEntity)
     private readonly brandRepository: Repository<BrandEntity>,
+
+    @InjectRepository(BrandBannerImageEntity)
+    private readonly brandBannerImageRepository: Repository<BrandBannerImageEntity>,
+
+    @InjectRepository(BrandSectionEntity)
+    private readonly brandSectionRepository: Repository<BrandSectionEntity>,
+
+    @InjectRepository(BrandSectionImageEntity)
+    private readonly brandSectionImageRepository: Repository<BrandSectionImageEntity>,
+
+    private readonly sortOrderHelper: SortOrderHelper,
   ) {}
 
   async findAllNormalBrandList(): Promise<BrandEntity[]> {
@@ -70,6 +85,53 @@ export class BrandRepositoryService {
     }
 
     return query.getMany();
+  }
+
+  async insert(entity: BrandEntity): Promise<BrandEntity> {
+    return await this.brandRepository.save(entity);
+  }
+
+  async insertSection(entity: BrandSectionEntity): Promise<BrandSectionEntity> {
+    await this.sortOrderHelper.setNextSortOrder(
+      entity,
+      this.brandSectionRepository,
+    );
+
+    return await this.brandSectionRepository.save(entity);
+  }
+
+  async insertSectionImage(
+    entity: BrandSectionImageEntity,
+  ): Promise<BrandSectionImageEntity> {
+    await this.sortOrderHelper.setNextSortOrder(
+      entity,
+      this.brandSectionImageRepository,
+    );
+
+    return await this.brandSectionImageRepository.save(entity);
+  }
+
+  async bulkInsertInitSectionImage(
+    entites: BrandSectionImageEntity[],
+  ): Promise<BrandSectionImageEntity[]> {
+    return this.brandSectionImageRepository.save(entites);
+  }
+
+  async bulkInsertInitBannerImage(
+    entites: BrandBannerImageEntity[],
+  ): Promise<BrandBannerImageEntity[]> {
+    return this.brandBannerImageRepository.save(entites);
+  }
+
+  async insertBannerImage(
+    entity: BrandBannerImageEntity,
+  ): Promise<BrandBannerImageEntity> {
+    await this.sortOrderHelper.setNextSortOrder(
+      entity,
+      this.brandBannerImageRepository,
+    );
+
+    return await this.brandBannerImageRepository.save(entity);
   }
 
   private getFirstLetterCondition(type: BrandNameFilter): string {

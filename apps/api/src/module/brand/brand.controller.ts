@@ -5,12 +5,15 @@ import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
+  Body,
   Controller,
   Get,
   Headers,
+  HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
+  Post,
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiHeader } from '@nestjs/swagger';
@@ -19,6 +22,7 @@ import {
   GetBrandIntroduceResponse,
   GetBrandListByNameFilterTypeRequest,
   GetBrandListByNameFilterTypeResponse,
+  PostBrandRequest,
 } from './brand.dto';
 import { BrandService } from './brand.service';
 
@@ -66,5 +70,14 @@ export class BrandController {
       acceptLanguage,
     );
     return new ResponseDataDto(result);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: '브랜드 다국어 등록',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async postBrand(@Body() body: PostBrandRequest) {
+    await this.brandService.postBrand(body);
   }
 }

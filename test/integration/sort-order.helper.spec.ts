@@ -18,7 +18,6 @@ describe('SortOrderHelper Integration Tests', () => {
 
     module = await Test.createTestingModule({
       imports: [TestDatabaseModule],
-      providers: [SortOrderHelper],
     }).compile();
 
     sortOrderHelper = module.get<SortOrderHelper>(SortOrderHelper);

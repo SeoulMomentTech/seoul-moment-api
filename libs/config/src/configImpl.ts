@@ -7,6 +7,11 @@ export interface ConfigImpl {
   API_VERSION: string;
   IMAGE_DOMAIN_NAME: string;
 
+  AWS_ACCESS_KEY_ID: string;
+  AWS_SECRET_ACCESS_KEY: string;
+  AWS_REGION: string;
+  AWS_S3_BUCKET_NAME: string;
+
   // Database Config (PostgreSQL)
   DATABASE_HOST: string;
   DATABASE_PORT: number;

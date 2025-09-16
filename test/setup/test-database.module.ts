@@ -26,6 +26,7 @@ import { ProductVariantEntity } from '@app/repository/entity/product-variant.ent
 import { ProductEntity } from '@app/repository/entity/product.entity';
 import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
+import { SortOrderHelper } from '@app/repository/helper/sort-order.helper';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -106,6 +107,7 @@ import { TestCacheModule } from './test-cache.module';
       PartnerCategoryEntity,
     ]),
   ],
-  exports: [TestCacheModule, TypeOrmModule],
+  providers: [SortOrderHelper],
+  exports: [TestCacheModule, TypeOrmModule, SortOrderHelper],
 })
 export class TestDatabaseModule {}

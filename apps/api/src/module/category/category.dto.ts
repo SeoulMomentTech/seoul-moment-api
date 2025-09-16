@@ -56,6 +56,20 @@ export class PostCategoryRequest {
   @ApiProperty({
     description: '카테고리 국가별 object list',
     type: [PostCategoryInfo],
+    example: [
+      {
+        languageId: 1,
+        name: '패션',
+      },
+      {
+        languageId: 2,
+        name: 'Fashion',
+      },
+      {
+        languageId: 3,
+        name: '时尚',
+      },
+    ],
   })
   @IsArray()
   @ValidateNested({ each: true })

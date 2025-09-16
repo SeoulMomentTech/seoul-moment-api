@@ -39,14 +39,16 @@ export class CategoryService {
       plainToInstance(CategoryEntity, {}),
     );
 
-    for (const v of dto.list) {
-      await this.languageRepositoryService.saveMultilingualText(
-        EntityType.CATEGORY,
-        categoryEntity.id,
-        'name',
-        v.languageId,
-        v.name,
-      );
-    }
+    await Promise.all(
+      dto.list.flatMap((v) => [
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.CATEGORY,
+          categoryEntity.id,
+          'name',
+          v.languageId,
+          v.name,
+        ),
+      ]),
+    );
   }
 }

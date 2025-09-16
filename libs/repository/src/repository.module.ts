@@ -29,6 +29,7 @@ import { ProductVariantEntity } from './entity/product-variant.entity';
 import { ProductEntity } from './entity/product.entity';
 import { ProductBannerEntity } from './entity/product_banner.entity';
 import { VariantOptionEntity } from './entity/variant-option.entity';
+import { SortOrderHelper } from './helper/sort-order.helper';
 import { ArticleRepositoryService } from './service/article.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
 import { CategoryRepositoryService } from './service/category.repository.service';
@@ -72,6 +73,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     ]),
   ],
   providers: [
+    SortOrderHelper,
     BrandRepositoryService,
     LanguageRepositoryService,
     NewsRepositoryService,
@@ -82,6 +84,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PartnerRepositoryService,
   ],
   exports: [
+    SortOrderHelper,
     BrandRepositoryService,
     LanguageRepositoryService,
     NewsRepositoryService,

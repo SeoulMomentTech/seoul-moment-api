@@ -1,4 +1,5 @@
 import { CategoryEntity } from '@app/repository/entity/category.entity';
+import { SortOrderHelper } from '@app/repository/helper/sort-order.helper';
 import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { Test, TestingModule } from '@nestjs/testing';
 
@@ -16,7 +17,7 @@ describe('CategoryRepositoryService Integration Tests', () => {
 
     module = await Test.createTestingModule({
       imports: [TestDatabaseModule],
-      providers: [CategoryRepositoryService],
+      providers: [CategoryRepositoryService, SortOrderHelper],
     }).compile();
 
     categoryRepositoryService = module.get<CategoryRepositoryService>(

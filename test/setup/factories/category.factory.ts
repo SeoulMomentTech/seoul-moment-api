@@ -3,15 +3,18 @@ import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
+import { SortOrderHelper } from '@app/repository/helper/sort-order.helper';
 import { DataSource } from 'typeorm';
 
 import { LanguageFactory } from './language.factory';
 
 export class CategoryFactory {
   private languageFactory: LanguageFactory;
+  private sortOrderHelper: SortOrderHelper;
 
   constructor(private dataSource: DataSource) {
     this.languageFactory = new LanguageFactory(dataSource);
+    this.sortOrderHelper = new SortOrderHelper();
   }
 
   /**
@@ -25,6 +28,9 @@ export class CategoryFactory {
     const category = categoryRepository.create({
       ...overrides,
     });
+
+    // SortOrderHelper를 사용하여 sortOrder 설정
+    await this.sortOrderHelper.setNextSortOrder(category, categoryRepository);
 
     return categoryRepository.save(category);
   }
