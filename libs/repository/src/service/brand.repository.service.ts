@@ -68,7 +68,7 @@ export class BrandRepositoryService {
       .leftJoin(
         'multilingual_text',
         'mt',
-        'mt.entity_type = :entityType AND mt.entity_id = brand.id AND mt.field_name = :fieldName AND mt.language_id = :languageId',
+        'mt.entityType = :entityType AND mt.entity_id = brand.id AND mt.field_name = :fieldName AND mt.language_id = :languageId',
         {
           entityType: EntityType.BRAND,
           fieldName: 'name',

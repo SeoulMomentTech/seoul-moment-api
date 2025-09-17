@@ -32,6 +32,7 @@
     "test:db:up": "docker-compose -f docker-compose.test.yml up -d",
     "test:db:down": "docker-compose -f docker-compose.test.yml down -v",
     "test:db:logs": "docker-compose -f docker-compose.test.yml logs -f test-db",
+    "test:db:cleanup": "npm run test:db:down && sleep 2 && npm run test:db:up",
     "test:full": "npm run test:db:down && sleep 2 && npm run test:db:up && sleep 5 && npm run test:integration && npm run test:db:down",
     "prepare": "husky || true"
   },

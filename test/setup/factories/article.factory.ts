@@ -127,7 +127,9 @@ export class ArticleFactory {
     }
 
     // 카테고리 생성
-    const category = await this.categoryFactory.createCategory(options.category || {});
+    const category = await this.categoryFactory.createCategory(
+      options.category || {},
+    );
 
     // 브랜드 생성 (옵션)
     const brand = options.brand
@@ -215,7 +217,8 @@ export class ArticleFactory {
     category?: CategoryEntity,
     brand?: BrandEntity,
   ): Promise<ArticleEntity[]> {
-    const testCategory = category || (await this.categoryFactory.createCategory());
+    const testCategory =
+      category || (await this.categoryFactory.createCategory());
     const testBrand = brand || (await this.brandFactory.createBrand());
     const articles = [];
 

@@ -2,16 +2,17 @@ import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-imag
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
-import { CategoryEntity } from '@app/repository/entity/category.entity';
 import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { BrandStatus } from '@app/repository/enum/brand.enum';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
+import { plainToInstance } from 'class-transformer';
 import { DataSource } from 'typeorm';
 
 import { CategoryFactory } from './category.factory';
 import { LanguageFactory } from './language.factory';
+import { PostBrandRequest } from '../../../apps/api/src/module/brand/brand.dto';
 
 export class BrandFactory {
   private languageFactory: LanguageFactory;
@@ -350,5 +351,124 @@ export class BrandFactory {
     }
 
     return { brand, languages, texts };
+  }
+
+  getPostBrandDto(sectionCount: number): PostBrandRequest {
+    const sectionTemplates = [
+      {
+        ko: {
+          title: '브랜드 스토리',
+          content: '테스트 브랜드의 스토리입니다.',
+        },
+        en: { title: 'Brand Story', content: 'This is the test brand story.' },
+        zh: { title: '品牌故事', content: '這是測試品牌的故事。' },
+        imagePrefix: 'section',
+      },
+      {
+        ko: {
+          title: '브랜드 연혁',
+          content: '테스트 브랜드의 발전 과정입니다.',
+        },
+        en: {
+          title: 'Brand History',
+          content: 'The development process of the test brand.',
+        },
+        zh: { title: '品牌歷史', content: '測試品牌的發展過程。' },
+        imagePrefix: 'history',
+      },
+      {
+        ko: {
+          title: '브랜드 철학',
+          content: '테스트 브랜드의 핵심 가치와 철학입니다.',
+        },
+        en: {
+          title: 'Brand Philosophy',
+          content: 'The core values and philosophy of the test brand.',
+        },
+        zh: { title: '品牌理念', content: '測試品牌的核心價值與理念。' },
+        imagePrefix: 'philosophy',
+      },
+      {
+        ko: {
+          title: '브랜드 비전',
+          content: '테스트 브랜드의 미래 비전입니다.',
+        },
+        en: {
+          title: 'Brand Vision',
+          content: 'The future vision of the test brand.',
+        },
+        zh: { title: '品牌願景', content: '測試品牌的未來願景。' },
+        imagePrefix: 'vision',
+      },
+      {
+        ko: {
+          title: '브랜드 가치',
+          content: '테스트 브랜드의 핵심 가치입니다.',
+        },
+        en: {
+          title: 'Brand Values',
+          content: 'The core values of the test brand.',
+        },
+        zh: { title: '品牌價值', content: '測試品牌的核心價值。' },
+        imagePrefix: 'values',
+      },
+    ];
+
+    const sectionList = Array.from({ length: sectionCount }, (_, index) => {
+      const template = sectionTemplates[index] || sectionTemplates[0];
+
+      return {
+        textList: [
+          {
+            languageId: 1,
+            title: template.ko.title,
+            content: template.ko.content,
+          },
+          {
+            languageId: 2,
+            title: template.en.title,
+            content: template.en.content,
+          },
+          {
+            languageId: 3,
+            title: template.zh.title,
+            content: template.zh.content,
+          },
+        ],
+        imageUrlList: [
+          `/brand-sections/2025-09-16/test-${template.imagePrefix}-01.jpg`,
+          `/brand-sections/2025-09-16/test-${template.imagePrefix}-02.jpg`,
+        ],
+      };
+    });
+
+    const defaultData: PostBrandRequest = {
+      textList: [
+        {
+          languageId: 1,
+          name: '테스트 브랜드',
+          description: '테스트 브랜드 설명입니다.',
+        },
+        {
+          languageId: 2,
+          name: 'Test Brand',
+          description: 'This is a test brand description.',
+        },
+        {
+          languageId: 3,
+          name: '測試品牌',
+          description: '這是測試品牌描述。',
+        },
+      ],
+      categoryId: 1,
+      profileImageUrl: '/brand-profiles/2025-09-16/test-brand-profile.jpg',
+      sectionList,
+      bannerImageUrlList: [
+        '/brand-banners/2025-09-16/test-banner-01.jpg',
+        '/brand-banners/2025-09-16/test-banner-02.jpg',
+      ],
+    };
+
+    return plainToInstance(PostBrandRequest, defaultData);
   }
 }
