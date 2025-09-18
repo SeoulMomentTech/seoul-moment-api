@@ -10,11 +10,14 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
+  IsArray,
   IsDefined,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
+  ValidateNested,
 } from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
@@ -393,4 +396,53 @@ export class GetProductDetailResponse {
       subImage: entity.images.map((v) => v.getImage()),
     });
   }
+}
+
+export class PostProductCategoryInfo {
+  @ApiProperty({ description: '언어 ID' })
+  @IsInt()
+  @IsDefined()
+  languageId: number;
+
+  @ApiProperty({ description: '카테고리 이름' })
+  @IsString()
+  @IsDefined()
+  name: string;
+}
+
+export class PostProductCategoryRequest {
+  @ApiProperty({
+    description: '카테고리 국가별 object list',
+    type: [PostProductCategoryInfo],
+    example: [
+      {
+        languageId: 1,
+        name: '귀걸이',
+      },
+      {
+        languageId: 2,
+        name: 'Earrings',
+      },
+      {
+        languageId: 3,
+        name: '耳環',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PostProductCategoryInfo)
+  @IsDefined()
+  list: PostProductCategoryInfo[];
+}
+
+export class GetProductCategoryRequest {
+  @ApiProperty({
+    description: '카테고리 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  categoryId: number;
 }

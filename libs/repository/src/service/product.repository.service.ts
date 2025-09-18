@@ -49,6 +49,19 @@ export class ProductRepositoryService {
     });
   }
 
+  async findCategoryByCategoryId(
+    categoryId: number,
+  ): Promise<ProductCategoryEntity[]> {
+    return this.productCategoryRepository.find({
+      where: {
+        category: {
+          id: categoryId,
+        },
+      },
+      order: { sortOrder: 'ASC' },
+    });
+  }
+
   async findProductColor(
     pageDto: PagingDto,
     sortDto: ProductSortDto = ProductSortDto.from(

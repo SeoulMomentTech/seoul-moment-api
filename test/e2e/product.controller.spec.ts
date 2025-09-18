@@ -129,7 +129,9 @@ describe('ProductController (E2E)', () => {
 
   describe('/product/category (GET)', () => {
     it('Accept-Language 헤더 없이 요청 시 정상 동작해야 함', async () => {
-      await request(app.getHttpServer()).get('/product/category').expect(200);
+      await request(app.getHttpServer())
+        .get('/product/category?categoryId=1')
+        .expect(200);
     });
 
     it('다국어 지원 카테고리 목록을 반환해야 함', async () => {
@@ -137,14 +139,18 @@ describe('ProductController (E2E)', () => {
       const language = await testDataFactory.createLanguage({
         code: LanguageCode.ENGLISH,
       });
-      const category = await testDataFactory.createProductCategory({
+
+      const category = await testDataFactory.createCategory();
+
+      const productCategory = await testDataFactory.createProductCategory({
+        category,
         sortOrder: 1,
       });
 
       // 다국어 텍스트 추가
       await testDataFactory.createMultilingualText(
         EntityType.PRODUCT_CATEGORY,
-        category.id,
+        productCategory.id,
         'name',
         language,
         'Top Category',
@@ -152,13 +158,16 @@ describe('ProductController (E2E)', () => {
 
       // When & Then
       const response = await request(app.getHttpServer())
-        .get('/product/category')
+        .get('/product/category?categoryId=1')
         .set('Accept-Language', 'en')
         .expect(200);
 
       expect(response.body).toHaveProperty('result', true);
       expect(response.body.data.list).toHaveLength(1);
-      expect(response.body.data.list[0]).toHaveProperty('id', category.id);
+      expect(response.body.data.list[0]).toHaveProperty(
+        'id',
+        productCategory.id,
+      );
       expect(response.body.data.list[0]).toHaveProperty('name', 'Top Category');
     });
   });

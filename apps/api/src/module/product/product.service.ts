@@ -32,9 +32,11 @@ export class ProductService {
   }
 
   async getProductCategory(
+    categoryId: number,
     language: LanguageCode,
   ): Promise<GetProductCategoryResponse[]> {
-    const categoryList = await this.productRepositoryService.findCategory();
+    const categoryList =
+      await this.productRepositoryService.findCategoryByCategoryId(categoryId);
 
     const categoryText =
       await this.languageRepositoryService.findMultilingualTextsByEntities(

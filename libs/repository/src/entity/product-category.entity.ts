@@ -1,5 +1,13 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
+import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { ProductEntity } from './product.entity';
@@ -13,6 +21,9 @@ export class ProductCategoryEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
+  @Column({ name: 'category_id', nullable: true })
+  categoryId: number;
+
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
@@ -20,6 +31,10 @@ export class ProductCategoryEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   products: ProductEntity[];
+
+  @ManyToOne(() => CategoryEntity, (category) => category.productCategory)
+  @JoinColumn({ name: 'category_id' })
+  category: CategoryEntity;
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

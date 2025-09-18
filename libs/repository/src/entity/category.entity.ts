@@ -4,6 +4,7 @@ import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { NewsEntity } from './news.entity';
+import { ProductCategoryEntity } from './product-category.entity';
 import { ProductEntity } from './product.entity';
 import { EntityType } from '../enum/entity.enum';
 
@@ -32,6 +33,15 @@ export class CategoryEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   brand: BrandEntity[];
+
+  @OneToMany(
+    () => ProductCategoryEntity,
+    (productCategory) => productCategory.category,
+    {
+      createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+    },
+  )
+  productCategory: ProductCategoryEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

@@ -17,6 +17,7 @@ import { ApiHeader, ApiOperation } from '@nestjs/swagger';
 
 import {
   GetProductBannerResponse,
+  GetProductCategoryRequest,
   GetProductCategoryResponse,
   GetProductDetailResponse,
   GetProductRequest,
@@ -54,8 +55,12 @@ export class ProductController {
   @ResponseList(GetProductCategoryResponse)
   async getProductCategory(
     @Headers('Accept-language') acceptLanguage: LanguageCode,
+    @Query() query: GetProductCategoryRequest,
   ): Promise<ResponseListDto<GetProductCategoryResponse>> {
-    const result = await this.productService.getProductCategory(acceptLanguage);
+    const result = await this.productService.getProductCategory(
+      query.categoryId,
+      acceptLanguage,
+    );
 
     return new ResponseListDto(result);
   }

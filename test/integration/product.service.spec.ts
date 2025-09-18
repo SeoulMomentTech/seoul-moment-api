@@ -94,14 +94,18 @@ describe('ProductService Integration Tests', () => {
       const language = await testDataFactory.createLanguage({
         code: LanguageCode.ENGLISH,
       });
-      const category = await testDataFactory.createProductCategory({
+
+      const category = await testDataFactory.createCategory();
+
+      const productCategory = await testDataFactory.createProductCategory({
+        category,
         sortOrder: 1,
       });
 
       // 다국어 텍스트 추가
       await testDataFactory.createMultilingualText(
         EntityType.PRODUCT_CATEGORY,
-        category.id,
+        productCategory.id,
         'name',
         language,
         'Top Category',
@@ -109,12 +113,13 @@ describe('ProductService Integration Tests', () => {
 
       // When: 영어로 카테고리 목록 조회
       const categories = await productService.getProductCategory(
+        category.id,
         LanguageCode.ENGLISH,
       );
 
       // Then: 영어로 변환된 카테고리가 반환되어야 함
       expect(categories).toHaveLength(1);
-      expect(categories[0].id).toBe(category.id);
+      expect(categories[0].id).toBe(productCategory.id);
       expect(categories[0].name).toBe('Top Category');
     });
   });
