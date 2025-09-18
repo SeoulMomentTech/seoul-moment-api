@@ -1,3 +1,4 @@
+import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { PartnerRepositoryService } from '@app/repository/service/partner.repository.service';
@@ -264,6 +265,42 @@ describe('PartnerService Integration Tests', () => {
         image: expect.stringContaining(partner.image),
         link: partner.link,
       });
+    });
+
+    it('카테고리 리스트를 불러와야 한다.', async () => {
+      const partnerCategory = await testDataFactory.createPartnerCategory();
+      const languages =
+        await testDataFactory.languageFactory.createDefaultLanguages();
+
+      await testDataFactory.createMultilingualText(
+        EntityType.PARTNER_CATEGORY,
+        partnerCategory.id,
+        'title',
+        languages.korean,
+        '한국',
+      );
+
+      await testDataFactory.createMultilingualText(
+        EntityType.PARTNER_CATEGORY,
+        partnerCategory.id,
+        'content',
+        languages.english,
+        '영어',
+      );
+
+      await testDataFactory.createMultilingualText(
+        EntityType.PARTNER_CATEGORY,
+        partnerCategory.id,
+        'content',
+        languages.chinese,
+        '중국',
+      );
+
+      const response = await partnerService.getPartnerCategory(
+        LanguageCode.KOREAN,
+      );
+
+      expect(response.length).toBe(1);
     });
   });
 });

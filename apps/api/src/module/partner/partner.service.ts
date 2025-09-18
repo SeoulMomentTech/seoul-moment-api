@@ -4,7 +4,7 @@ import { LanguageRepositoryService } from '@app/repository/service/language.repo
 import { PartnerRepositoryService } from '@app/repository/service/partner.repository.service';
 import { Injectable } from '@nestjs/common';
 
-import { GetPartnerResponse } from './partner.dto';
+import { GetPartnerCategoryResponse, GetPartnerResponse } from './partner.dto';
 
 @Injectable()
 export class PartnerService {
@@ -32,5 +32,23 @@ export class PartnerService {
       );
 
     return partnerEntitis.map((v) => GetPartnerResponse.from(v, partnerText));
+  }
+
+  async getPartnerCategory(
+    language: LanguageCode,
+  ): Promise<GetPartnerCategoryResponse[]> {
+    const partnerCategoryEntites =
+      await this.partnerRepositoryService.findCategoryAll();
+
+    const partnerCategoryTexts =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.PARTNER_CATEGORY,
+        partnerCategoryEntites.map((v) => v.id),
+        language,
+      );
+
+    return partnerCategoryEntites.map((v) =>
+      GetPartnerCategoryResponse.from(v, partnerCategoryTexts),
+    );
   }
 }

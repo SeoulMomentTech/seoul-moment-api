@@ -1,4 +1,5 @@
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { PartnerCategoryEntity } from '@app/repository/entity/partner-category.entity';
 import { PartnerEntity } from '@app/repository/entity/partner.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty } from '@nestjs/swagger';
@@ -51,6 +52,34 @@ export class GetPartnerResponse {
       description: description.getContent(),
       link: entity.link,
       country: entity.country,
+    });
+  }
+}
+
+export class GetPartnerCategoryResponse {
+  @ApiProperty({
+    description: '협력사 카테고리 id',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '협력사 카테고리 이름',
+    example: '뷰티',
+  })
+  name: string;
+
+  static from(
+    entity: PartnerCategoryEntity,
+    multilingual: MultilingualTextEntity[],
+  ) {
+    multilingual = multilingual.filter((v) => v.entityId === entity.id);
+
+    const name = MultilingualFieldDto.fromByEntity(multilingual, 'name');
+
+    return plainToInstance(this, {
+      id: entity.id,
+      name: name.getContent(),
     });
   }
 }

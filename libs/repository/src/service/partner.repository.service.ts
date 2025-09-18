@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { PartnerCategoryEntity } from '../entity/partner-category.entity';
 import { PartnerEntity } from '../entity/partner.entity';
 import { LanguageCode } from '../enum/language.enum';
 
@@ -10,6 +11,9 @@ export class PartnerRepositoryService {
   constructor(
     @InjectRepository(PartnerEntity)
     private readonly partnerRepository: Repository<PartnerEntity>,
+
+    @InjectRepository(PartnerCategoryEntity)
+    private readonly partnerCategoryRepository: Repository<PartnerCategoryEntity>,
   ) {}
 
   async find(): Promise<PartnerEntity[]> {
@@ -23,6 +27,14 @@ export class PartnerRepositoryService {
     return this.partnerRepository.findBy({
       partnerCategoryId,
       country,
+    });
+  }
+
+  async findCategoryAll(): Promise<PartnerCategoryEntity[]> {
+    return this.partnerCategoryRepository.find({
+      order: {
+        sortOrder: 'ASC',
+      },
     });
   }
 }
