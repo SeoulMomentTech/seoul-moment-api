@@ -170,20 +170,19 @@ describe('NewsController (E2E)', () => {
       const data = response.body.data;
       expect(data.id).toBe(news.id);
       expect(data.writer).toBe('Test Writer');
-      expect(data.category).toBe('Test Category');
       expect(data.title).toBe('테스트 뉴스 제목');
       expect(data.content).toBe('테스트 뉴스 내용입니다.');
       expect(data.banner).toContain('/banner/test-banner.jpg');
       expect(data.profileImage).toContain('/profile/test-profile.jpg');
 
       // LastArticle 검증 (최신 3개 뉴스 목록)
-      expect(data.lastArticle).toBeInstanceOf(Array);
-      expect(data.lastArticle.length).toBeLessThanOrEqual(3);
+      expect(data.lastNews).toBeInstanceOf(Array);
+      expect(data.lastNews.length).toBeLessThanOrEqual(3);
       // 현재 뉴스가 포함되어 있을 수 있음
-      if (data.lastArticle.length > 0) {
-        expect(data.lastArticle[0]).toHaveProperty('id');
-        expect(data.lastArticle[0]).toHaveProperty('banner');
-        expect(data.lastArticle[0]).toHaveProperty('title');
+      if (data.lastNews.length > 0) {
+        expect(data.lastNews[0]).toHaveProperty('id');
+        expect(data.lastNews[0]).toHaveProperty('banner');
+        expect(data.lastNews[0]).toHaveProperty('title');
       }
 
       // Section 검증
@@ -288,8 +287,8 @@ describe('NewsController (E2E)', () => {
       expect(data.section[0].content).toBe('This is section 1 content.');
 
       // LastArticle 검증
-      expect(data.lastArticle).toBeInstanceOf(Array);
-      expect(data.lastArticle.length).toBeLessThanOrEqual(3);
+      expect(data.lastNews).toBeInstanceOf(Array);
+      expect(data.lastNews.length).toBeLessThanOrEqual(3);
     });
 
     it('should return news successfully with Chinese language', async () => {
@@ -363,8 +362,8 @@ describe('NewsController (E2E)', () => {
       expect(data.section[0].title).toBe('第1节标题');
 
       // LastArticle 검증
-      expect(data.lastArticle).toBeInstanceOf(Array);
-      expect(data.lastArticle.length).toBeLessThanOrEqual(3);
+      expect(data.lastNews).toBeInstanceOf(Array);
+      expect(data.lastNews.length).toBeLessThanOrEqual(3);
     });
 
     it('should return 404 when news not found', async () => {
@@ -517,11 +516,11 @@ describe('NewsController (E2E)', () => {
       expect(response.body).toHaveProperty('result', true);
       const data = response.body.data;
 
-      expect(data.lastArticle).toBeInstanceOf(Array);
-      expect(data.lastArticle.length).toBeLessThanOrEqual(3);
+      expect(data.lastNews).toBeInstanceOf(Array);
+      expect(data.lastNews.length).toBeLessThanOrEqual(3);
 
       // 각 lastArticle 항목 구조 검증
-      data.lastArticle.forEach((lastNews: any) => {
+      data.lastNews.forEach((lastNews: any) => {
         expect(lastNews).toHaveProperty('id');
         expect(typeof lastNews.id).toBe('number');
         expect(lastNews).toHaveProperty('banner');
@@ -565,8 +564,8 @@ describe('NewsController (E2E)', () => {
       expect(data.section[0].iamgeList).toHaveLength(1);
 
       // LastArticle 검증 (다국어 텍스트가 없어도 배열 구조는 유지)
-      expect(data.lastArticle).toBeInstanceOf(Array);
-      expect(data.lastArticle.length).toBeLessThanOrEqual(3);
+      expect(data.lastNews).toBeInstanceOf(Array);
+      expect(data.lastNews.length).toBeLessThanOrEqual(3);
 
       // 다국어 텍스트가 없으면 빈 문자열이나 undefined 반환
       expect(data.title).toBeNull();

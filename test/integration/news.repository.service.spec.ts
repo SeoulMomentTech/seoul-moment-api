@@ -95,7 +95,7 @@ describe('NewsRepositoryService Integration Tests', () => {
       expect(result).toHaveLength(1);
 
       const news = result[0];
-      expect(news.category).toBeDefined();
+      expect(news.brand).toBeDefined();
       expect(news.section).toHaveLength(2);
       expect(news.section[0].sectionImage).toHaveLength(2);
     });
@@ -215,8 +215,12 @@ describe('NewsRepositoryService Integration Tests', () => {
       // Given: DELETE 상태 News들만 생성
       const category = await testDataFactory.createCategory();
       const brand = await testDataFactory.createBrand();
-      await testDataFactory.createNews(category, brand, { status: NewsStatus.DELETE });
-      await testDataFactory.createNews(category, brand, { status: NewsStatus.DELETE });
+      await testDataFactory.createNews(category, brand, {
+        status: NewsStatus.DELETE,
+      });
+      await testDataFactory.createNews(category, brand, {
+        status: NewsStatus.DELETE,
+      });
 
       // When: 최신 News 조회
       const result = await newsRepositoryService.findLastNewsByCount(3);
@@ -229,8 +233,12 @@ describe('NewsRepositoryService Integration Tests', () => {
       // Given: 2개의 NORMAL News만 생성
       const category = await testDataFactory.createCategory();
       const brand = await testDataFactory.createBrand();
-      await testDataFactory.createNews(category, brand, { status: NewsStatus.NORMAL });
-      await testDataFactory.createNews(category, brand, { status: NewsStatus.NORMAL });
+      await testDataFactory.createNews(category, brand, {
+        status: NewsStatus.NORMAL,
+      });
+      await testDataFactory.createNews(category, brand, {
+        status: NewsStatus.NORMAL,
+      });
 
       // When: 5개 요청하지만 2개만 존재
       const result = await newsRepositoryService.findLastNewsByCount(5);
@@ -257,7 +265,7 @@ describe('NewsRepositoryService Integration Tests', () => {
 
       // Then: 관련 데이터가 eager loading으로 포함됨
       expect(result).toHaveLength(1);
-      expect(result[0].category).toBeDefined();
+      expect(result[0].brand).toBeDefined();
       expect(result[0].section).toHaveLength(1);
       expect(result[0].section[0].sectionImage).toHaveLength(1);
     });
@@ -266,7 +274,9 @@ describe('NewsRepositoryService Integration Tests', () => {
       // Given: News 생성
       const category = await testDataFactory.createCategory();
       const brand = await testDataFactory.createBrand();
-      await testDataFactory.createNews(category, brand, { status: NewsStatus.NORMAL });
+      await testDataFactory.createNews(category, brand, {
+        status: NewsStatus.NORMAL,
+      });
 
       // When: count가 0인 경우
       const result = await newsRepositoryService.findLastNewsByCount(0);
@@ -290,7 +300,7 @@ describe('NewsRepositoryService Integration Tests', () => {
       // Then: News와 관련 데이터 반환
       expect(result).toBeDefined();
       expect(result.id).toBe(createdNews.id);
-      expect(result.category).toBeDefined();
+      expect(result.brand).toBeDefined();
       expect(result.section).toBeDefined();
     });
 
@@ -360,7 +370,7 @@ describe('NewsRepositoryService Integration Tests', () => {
       const result = await newsRepositoryService.getNewsById(news.id);
 
       // Then: 모든 중첩된 관계 데이터 포함
-      expect(result.category).toBeDefined();
+      expect(result.brand).toBeDefined();
       expect(result.section).toHaveLength(3);
 
       result.section.forEach((section) => {

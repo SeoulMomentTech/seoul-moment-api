@@ -158,7 +158,6 @@ describe('NewsService Integration Tests', () => {
       expect(result).toBeInstanceOf(GetNewsResponse);
       expect(result.id).toBe(mainNews.id);
       expect(result.writer).toBe('Main Writer');
-      expect(result.category).toBe('테스트 카테고리');
       expect(result.title).toBe('메인 뉴스 제목');
       expect(result.content).toBe('메인 뉴스 내용입니다.');
       expect(result.banner).toContain('/banner/main-banner.jpg');
@@ -333,7 +332,6 @@ describe('NewsService Integration Tests', () => {
       // Then: 기본 구조는 유지하되 다국어 텍스트는 null
       expect(result.id).toBe(news.id);
       expect(result.writer).toBe(news.writer);
-      expect(result.category).toBe('테스트 카테고리');
       expect(result.title).toBeNull();
       expect(result.content).toBeNull();
       expect(result.section[0].title).toBeNull();

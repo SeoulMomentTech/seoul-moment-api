@@ -162,7 +162,7 @@ export class NewsFactory {
       const newsRepository = this.dataSource.getRepository(NewsEntity);
       const reloadedNews = await newsRepository.findOne({
         where: { id: news.id },
-        relations: ['category', 'section', 'section.sectionImage'],
+        relations: ['brand', 'section', 'section.sectionImage'],
       });
 
       return reloadedNews || news;
@@ -202,7 +202,7 @@ export class NewsFactory {
     const newsRepository = this.dataSource.getRepository(NewsEntity);
     const reloadedNews = await newsRepository.findOne({
       where: { id: news.id },
-      relations: ['category', 'section', 'section.sectionImage'],
+      relations: ['brand', 'section', 'section.sectionImage'],
     });
 
     return reloadedNews || news;

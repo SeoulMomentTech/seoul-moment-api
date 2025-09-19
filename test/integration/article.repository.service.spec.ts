@@ -95,7 +95,7 @@ describe('ArticleRepositoryService Integration Tests', () => {
       expect(result).toHaveLength(1);
 
       const article = result[0];
-      expect(article.category).toBeDefined();
+      expect(article.brand).toBeDefined();
       expect(article.section).toHaveLength(2);
       expect(article.section[0].sectionImage).toHaveLength(2);
     });
@@ -277,7 +277,7 @@ describe('ArticleRepositoryService Integration Tests', () => {
 
       // Then: 관련 데이터가 eager loading으로 포함됨
       expect(result).toHaveLength(1);
-      expect(result[0].category).toBeDefined();
+      expect(result[0].brand).toBeDefined();
       expect(result[0].section).toHaveLength(1);
       expect(result[0].section[0].sectionImage).toHaveLength(1);
     });
@@ -314,7 +314,6 @@ describe('ArticleRepositoryService Integration Tests', () => {
       // Then: Article과 관련 데이터 반환
       expect(result).toBeDefined();
       expect(result.id).toBe(createdArticle.id);
-      expect(result.category).toBeDefined();
       expect(result.section).toBeDefined();
     });
 
@@ -388,7 +387,7 @@ describe('ArticleRepositoryService Integration Tests', () => {
       const result = await articleRepositoryService.getArticleById(article.id);
 
       // Then: 모든 중첩된 관계 데이터 포함
-      expect(result.category).toBeDefined();
+      expect(result.brand).toBeDefined();
       expect(result.section).toHaveLength(3);
 
       result.section.forEach((section) => {

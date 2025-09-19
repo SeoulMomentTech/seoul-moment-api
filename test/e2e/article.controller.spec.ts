@@ -170,7 +170,6 @@ describe('ArticleController (E2E)', () => {
       const data = response.body.data;
       expect(data.id).toBe(article.id);
       expect(data.writer).toBe('Test Writer');
-      expect(data.category).toBe('Test Category');
       expect(data.title).toBe('테스트 아티클 제목');
       expect(data.content).toBe('테스트 아티클 내용입니다.');
       expect(data.banner).toContain('/banner/test-banner.jpg');

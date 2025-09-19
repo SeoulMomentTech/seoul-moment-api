@@ -29,7 +29,6 @@ export class ArticleFactory {
     const articleRepository = this.dataSource.getRepository(ArticleEntity);
 
     const article = articleRepository.create({
-      categoryId: category.id,
       brandId: brand?.id,
       writer: 'Test Writer',
       status: ArticleStatus.NORMAL,
@@ -164,7 +163,7 @@ export class ArticleFactory {
       const articleRepository = this.dataSource.getRepository(ArticleEntity);
       const reloadedArticle = await articleRepository.findOne({
         where: { id: article.id },
-        relations: ['category', 'section', 'section.sectionImage'],
+        relations: ['brand', 'section', 'section.sectionImage'],
       });
 
       return reloadedArticle || article;
@@ -204,7 +203,7 @@ export class ArticleFactory {
     const articleRepository = this.dataSource.getRepository(ArticleEntity);
     const reloadedArticle = await articleRepository.findOne({
       where: { id: article.id },
-      relations: ['category', 'section', 'section.sectionImage'],
+      relations: ['brand', 'section', 'section.sectionImage'],
     });
 
     return reloadedArticle || article;
