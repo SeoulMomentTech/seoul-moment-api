@@ -5,12 +5,15 @@ import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
+  Body,
   Controller,
   Get,
   Headers,
+  HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
+  Post,
   Query,
 } from '@nestjs/common';
 import { ApiHeader, ApiOperation } from '@nestjs/swagger';
@@ -19,6 +22,7 @@ import {
   GetNewsListRequest,
   GetNewsListResponse,
   GetNewsResponse,
+  PostNewsRequest,
 } from './news.dto';
 import { NewsService } from './news.service';
 
@@ -73,5 +77,14 @@ export class NewsController {
     const result = await this.newsService.getNews(id, acceptLanguage);
 
     return new ResponseDataDto(result);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: '뉴스 데이터 입력',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async postNews(@Body() body: PostNewsRequest) {
+    await this.newsService.postNews(body);
   }
 }

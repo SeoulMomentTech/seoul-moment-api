@@ -177,11 +177,11 @@ describe('NewsService Integration Tests', () => {
       expect(result.section[1].iamgeList).toHaveLength(1);
 
       // lastArticle 목록 검증
-      expect(result.lastArticle).toBeInstanceOf(Array);
-      expect(result.lastArticle.length).toBeLessThanOrEqual(3);
+      expect(result.lastNews).toBeInstanceOf(Array);
+      expect(result.lastNews.length).toBeLessThanOrEqual(3);
 
       // lastArticle 구조 검증
-      result.lastArticle.forEach((lastNews) => {
+      result.lastNews.forEach((lastNews) => {
         expect(lastNews).toHaveProperty('id');
         expect(lastNews).toHaveProperty('banner');
         expect(lastNews).toHaveProperty('title');
@@ -248,7 +248,7 @@ describe('NewsService Integration Tests', () => {
       expect(result.title).toBe('English News Title');
       expect(result.content).toBe('English news content.');
       expect(result.section[0].title).toBe('English Section Title');
-      expect(result.lastArticle).toBeInstanceOf(Array);
+      expect(result.lastNews).toBeInstanceOf(Array);
     });
 
     it('should return news with Chinese multilingual content', async () => {
@@ -300,7 +300,7 @@ describe('NewsService Integration Tests', () => {
       // Then: 중국어 콘텐츠 반환
       expect(result.title).toBe('中文新闻标题');
       expect(result.content).toBe('这是中文新闻内容。');
-      expect(result.lastArticle).toBeInstanceOf(Array);
+      expect(result.lastNews).toBeInstanceOf(Array);
     });
 
     it('should return news with null multilingual text when no content exists', async () => {
@@ -337,7 +337,7 @@ describe('NewsService Integration Tests', () => {
       expect(result.title).toBeNull();
       expect(result.content).toBeNull();
       expect(result.section[0].title).toBeNull();
-      expect(result.lastArticle).toBeInstanceOf(Array);
+      expect(result.lastNews).toBeInstanceOf(Array);
     });
 
     it('should throw ServiceError when news does not exist', async () => {
@@ -425,11 +425,11 @@ describe('NewsService Integration Tests', () => {
       );
 
       // Then: lastArticle은 최대 3개, NORMAL 상태만 포함
-      expect(result.lastArticle.length).toBeLessThanOrEqual(3);
+      expect(result.lastNews.length).toBeLessThanOrEqual(3);
 
       // DELETE 상태 뉴스는 포함되지 않음을 간접적으로 확인
       // (전체 NORMAL 뉴스가 6개인데 lastArticle은 최대 3개만 반환)
-      expect(result.lastArticle.length).toBeLessThanOrEqual(3);
+      expect(result.lastNews.length).toBeLessThanOrEqual(3);
     });
 
     it('should return lastArticle with proper multilingual content', async () => {
@@ -483,15 +483,15 @@ describe('NewsService Integration Tests', () => {
       );
 
       // Then: lastArticle에 다국어 제목이 포함됨
-      expect(result.lastArticle.length).toBeGreaterThan(0);
+      expect(result.lastNews.length).toBeGreaterThan(0);
 
-      const lastNewsWithTitle = result.lastArticle.filter(
+      const lastNewsWithTitle = result.lastNews.filter(
         (news) => news.title !== null,
       );
       expect(lastNewsWithTitle.length).toBeGreaterThan(0);
 
       // 추가한 뉴스들의 제목이 포함되어 있는지 확인
-      const titleTexts = result.lastArticle
+      const titleTexts = result.lastNews
         .map((news) => news.title)
         .filter((title) => title !== null);
       expect(titleTexts).toContain('추가 뉴스 1 제목');
@@ -536,7 +536,7 @@ describe('NewsService Integration Tests', () => {
       results.forEach((result) => {
         expect(result.id).toBe(news.id);
         expect(result.title).toBe('동시 요청 테스트');
-        expect(result.lastArticle).toBeInstanceOf(Array);
+        expect(result.lastNews).toBeInstanceOf(Array);
       });
     });
   });

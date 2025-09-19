@@ -1,10 +1,19 @@
+/* eslint-disable max-lines-per-function */
+import { NewsSectionImageEntity } from '@app/repository/entity/news-section-image.entity';
+import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
+import { NewsEntity } from '@app/repository/entity/news.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { NewsRepositoryService } from '@app/repository/service/news.repository.service';
 import { Injectable } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
 
-import { GetNewsListResponse, GetNewsResponse } from './news.dto';
+import {
+  GetNewsListResponse,
+  GetNewsResponse,
+  PostNewsRequest,
+} from './news.dto';
 
 @Injectable()
 export class NewsService {
@@ -74,5 +83,78 @@ export class NewsService {
       );
 
     return newsEntites.map((v) => GetNewsListResponse.from(v, newsText));
+  }
+
+  async postNews(dto: PostNewsRequest) {
+    const newsEntity = await this.newsRepositoryService.insert(
+      plainToInstance(NewsEntity, {
+        brandId: dto.brandId,
+        writer: dto.writer,
+        banner: dto.banner,
+        profileImage: dto.profile,
+      }),
+    );
+
+    await Promise.all(
+      dto.list.flatMap((v) => [
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS,
+          newsEntity.id,
+          'title',
+          v.languageId,
+          v.title,
+        ),
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS,
+          newsEntity.id,
+          'content',
+          v.languageId,
+          v.content,
+        ),
+      ]),
+    );
+
+    for (const section of dto.sectionList) {
+      const newsSectionEntity = await this.newsRepositoryService.insertSection(
+        plainToInstance(NewsSectionEntity, {
+          newsId: newsEntity.id,
+        }),
+      );
+
+      await Promise.all(
+        section.textList.flatMap((v) => [
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.NEWS_SECTION,
+            newsSectionEntity.id,
+            'title',
+            v.languageId,
+            v.title,
+          ),
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.NEWS_SECTION,
+            newsSectionEntity.id,
+            'subTitle',
+            v.languageId,
+            v.subTitle,
+          ),
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.NEWS_SECTION,
+            newsSectionEntity.id,
+            'content',
+            v.languageId,
+            v.content,
+          ),
+        ]),
+      );
+
+      for (const sectionImage of section.imageUrlList) {
+        await this.newsRepositoryService.insertSectionImage(
+          plainToInstance(NewsSectionImageEntity, {
+            sectionId: newsSectionEntity.id,
+            imageUrl: sectionImage,
+          }),
+        );
+      }
+    }
   }
 }

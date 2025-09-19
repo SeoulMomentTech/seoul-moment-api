@@ -4,14 +4,25 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { NewsSectionImageEntity } from '../entity/news-section-image.entity';
+import { NewsSectionEntity } from '../entity/news-section.entity';
 import { NewsEntity } from '../entity/news.entity';
 import { NewsStatus } from '../enum/news.enum';
+import { SortOrderHelper } from '../helper/sort-order.helper';
 
 @Injectable()
 export class NewsRepositoryService {
   constructor(
     @InjectRepository(NewsEntity)
     private readonly newsRepository: Repository<NewsEntity>,
+
+    @InjectRepository(NewsSectionEntity)
+    private readonly newsSectionRepository: Repository<NewsSectionEntity>,
+
+    @InjectRepository(NewsSectionImageEntity)
+    private readonly newsSectionImageRepository: Repository<NewsSectionImageEntity>,
+
+    private readonly sortOrderHelper: SortOrderHelper,
   ) {}
 
   async findAllNormalNewsList(): Promise<NewsEntity[]> {
@@ -57,5 +68,25 @@ export class NewsRepositoryService {
 
   async insert(entity: NewsEntity): Promise<NewsEntity> {
     return this.newsRepository.save(entity);
+  }
+
+  async insertSection(entity: NewsSectionEntity): Promise<NewsSectionEntity> {
+    await this.sortOrderHelper.setNextSortOrder(
+      entity,
+      this.newsSectionRepository,
+    );
+
+    return this.newsSectionRepository.save(entity);
+  }
+
+  async insertSectionImage(
+    entity: NewsSectionImageEntity,
+  ): Promise<NewsSectionImageEntity> {
+    await this.sortOrderHelper.setNextSortOrder(
+      entity,
+      this.newsSectionImageRepository,
+    );
+
+    return this.newsSectionImageRepository.save(entity);
   }
 }
