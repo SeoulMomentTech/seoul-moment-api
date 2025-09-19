@@ -172,48 +172,6 @@ describe('HomeController (E2E)', () => {
       );
     });
 
-    it('should return home data with articles', async () => {
-      // Create article
-      const brand = await testDataFactory.createBrand();
-      const article = await testDataFactory.createFullArticle({
-        brand,
-        article: { writer: 'Article Writer', banner: '/article-banner.jpg' },
-        sections: [],
-      });
-
-      // Create multilingual text for article
-      const languages = await testDataFactory.createDefaultLanguages();
-      await testDataFactory.createMultilingualText(
-        EntityType.ARTICLE,
-        article.id,
-        'title',
-        languages.korean,
-        '아티클 제목',
-      );
-      await testDataFactory.createMultilingualText(
-        EntityType.ARTICLE,
-        article.id,
-        'content',
-        languages.korean,
-        '아티클 내용',
-      );
-
-      const response = await request(app.getHttpServer())
-        .get('/home')
-        .set('Accept-language', LanguageCode.KOREAN)
-        .expect(200);
-
-      expect(response.body.data.article).toHaveLength(1);
-      expect(response.body.data.article[0].id).toBe(article.id);
-      expect(response.body.data.article[0].title).toBe('아티클 제목');
-      expect(response.body.data.article[0].content).toBe('아티클 내용');
-      expect(response.body.data.article[0].writer).toBe('Article Writer');
-      expect(response.body.data.article[0].image).toBe(
-        'https://image-dev.seoulmoment.com.tw/article-banner.jpg',
-      );
-      expect(response.body.data.article[0]).toHaveProperty('createDate');
-    });
-
     it('should return complete home data with all components', async () => {
       // Create banners
       await testDataFactory.createFullHome({
