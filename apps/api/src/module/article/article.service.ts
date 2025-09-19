@@ -41,7 +41,7 @@ export class ArticleService {
         ),
         this.languageRepositoryService.findMultilingualTexts(
           EntityType.CATEGORY,
-          articleEntity.category.id,
+          articleEntity.brand.category.id,
           languageCode,
         ),
       ]);

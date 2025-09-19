@@ -10,7 +10,6 @@ import {
 
 import { ArticleSectionEntity } from './article-section.entity';
 import { BrandEntity } from './brand.entity';
-import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
 import { ArticleStatus } from '../enum/article.enum';
 import { EntityType } from '../enum/entity.enum';
@@ -22,9 +21,6 @@ import { EntityType } from '../enum/entity.enum';
 export class ArticleEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
-
-  @Column('int', { name: 'category_id', nullable: false })
-  categoryId: number;
 
   @Column('int', { name: 'brand_id', nullable: false })
   brandId: number;
@@ -45,13 +41,7 @@ export class ArticleEntity extends CommonEntity {
   })
   status: ArticleStatus;
 
-  @ManyToOne(() => CategoryEntity, (category) => category.news, {
-    eager: true,
-  })
-  @JoinColumn({ name: 'category_id' })
-  category: CategoryEntity;
-
-  @ManyToOne(() => BrandEntity, (brand) => brand.news, {
+  @ManyToOne(() => BrandEntity, (brand) => brand.article, {
     eager: true,
   })
   @JoinColumn({ name: 'brand_id' })

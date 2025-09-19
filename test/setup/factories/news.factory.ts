@@ -29,7 +29,6 @@ export class NewsFactory {
     const newsRepository = this.dataSource.getRepository(NewsEntity);
 
     const news = newsRepository.create({
-      categoryId: category.id,
       brandId: brand?.id,
       writer: 'Test Writer',
       status: NewsStatus.NORMAL,

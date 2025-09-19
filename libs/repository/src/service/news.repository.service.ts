@@ -54,4 +54,8 @@ export class NewsRepositoryService {
 
     return result;
   }
+
+  async insert(entity: NewsEntity): Promise<NewsEntity> {
+    return this.newsRepository.save(entity);
+  }
 }
