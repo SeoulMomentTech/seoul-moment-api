@@ -4,7 +4,8 @@ import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty } from '@nestjs/swagger';
-import { plainToInstance } from 'class-transformer';
+import { plainToInstance, Type } from 'class-transformer';
+import { IsDefined, IsNumber } from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
@@ -207,6 +208,68 @@ export class GetArticleResponse {
       section: entity.section.map((v) =>
         GetArticleSection.from(v, multilingualText.sectionText, language),
       ),
+    });
+  }
+}
+
+export class GetArticleListRequest {
+  @ApiProperty({
+    description: 'list 갯수',
+    example: 3,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  count: number;
+}
+
+export class GetArticleListResponse {
+  @ApiProperty({ description: '아티클 ID', example: 1 })
+  id: number;
+
+  @ApiProperty({ description: '아티클 제목', example: '서울의 특별한 순간들' })
+  title: string;
+
+  @ApiProperty({
+    description: '아티클 내용',
+    example: '서울모먼트는 서울의 특별한 순간들을 담은 브랜드입니다...',
+  })
+  content: string;
+
+  @ApiProperty({ description: '작성자 이름', example: '김서울' })
+  writer: string;
+
+  @ApiProperty({
+    description: '작성 일시',
+    example: '2025-09-03T01:20:45.123Z',
+  })
+  createDate: string;
+
+  @ApiProperty({
+    description: '이미지 URL',
+    example: 'https://example.com/banner.jpg',
+  })
+  image: string;
+
+  static from(
+    entity: ArticleEntity,
+    multilingualText: MultilingualTextEntity[],
+  ) {
+    multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
+
+    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
+    const content = MultilingualFieldDto.fromByEntity(
+      multilingualText,
+      'content',
+    );
+
+    return plainToInstance(this, {
+      id: entity.id,
+      title: title.getContent(),
+      content: content.getContent(),
+      writer: entity.writer,
+      createDate: entity.createDate,
+      image: entity.getBannerImage(),
     });
   }
 }

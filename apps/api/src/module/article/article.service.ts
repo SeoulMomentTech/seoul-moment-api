@@ -4,7 +4,7 @@ import { ArticleRepositoryService } from '@app/repository/service/article.reposi
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
 
-import { GetArticleResponse } from './article.dto';
+import { GetArticleListResponse, GetArticleResponse } from './article.dto';
 
 @Injectable()
 export class ArticleService {
@@ -57,5 +57,22 @@ export class ArticleService {
       categoryText,
       languageCode,
     );
+  }
+
+  async getArticleList(
+    count: number,
+    language: LanguageCode,
+  ): Promise<GetArticleListResponse[]> {
+    const articleEntites =
+      await this.articleRepositoryService.findLastArticleByCount(count);
+
+    const newsText =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.NEWS,
+        articleEntites.map((v) => v.id),
+        language,
+      );
+
+    return articleEntites.map((v) => GetArticleListResponse.from(v, newsText));
   }
 }

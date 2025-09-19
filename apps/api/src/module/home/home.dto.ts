@@ -159,26 +159,16 @@ export class GetHomeArticle {
 export class GetHomeResponse {
   banner: string[];
   section: GetHomeSection[];
-  news: GetHomeNews[];
-  article: GetHomeArticle[];
 
   static from(
     banner: HomeBannerImageEntity[],
     section: HomeSectionEntity[],
     sectionMultilingualTextEntity: MultilingualTextEntity[],
-    news: NewsEntity[],
-    newsMultilingualTextEntity: MultilingualTextEntity[],
-    article: ArticleEntity[],
-    articleMultilingualTextEntity: MultilingualTextEntity[],
   ) {
     return plainToInstance(this, {
       banner: banner.map((v) => v.getImage()),
       section: section.map((v) =>
         GetHomeSection.from(v, sectionMultilingualTextEntity),
-      ),
-      news: news.map((v) => GetHomeNews.from(v, newsMultilingualTextEntity)),
-      article: article.map((v) =>
-        GetHomeArticle.from(v, articleMultilingualTextEntity),
       ),
     });
   }

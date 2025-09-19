@@ -4,7 +4,7 @@ import { LanguageRepositoryService } from '@app/repository/service/language.repo
 import { NewsRepositoryService } from '@app/repository/service/news.repository.service';
 import { Injectable } from '@nestjs/common';
 
-import { GetNewsResponse } from './news.dto';
+import { GetNewsListResponse, GetNewsResponse } from './news.dto';
 
 @Injectable()
 export class NewsService {
@@ -57,5 +57,22 @@ export class NewsService {
       categoryText,
       languageCode,
     );
+  }
+
+  async getNewsList(
+    count: number,
+    language: LanguageCode,
+  ): Promise<GetNewsListResponse[]> {
+    const newsEntites =
+      await this.newsRepositoryService.findLastNewsByCount(count);
+
+    const newsText =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.NEWS,
+        newsEntites.map((v) => v.id),
+        language,
+      );
+
+    return newsEntites.map((v) => GetNewsListResponse.from(v, newsText));
   }
 }

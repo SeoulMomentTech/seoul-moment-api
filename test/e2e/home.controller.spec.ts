@@ -79,8 +79,6 @@ describe('HomeController (E2E)', () => {
       expect(response.body).toHaveProperty('data');
       expect(response.body.data.banner).toEqual([]);
       expect(response.body.data.section).toEqual([]);
-      expect(response.body.data.news).toEqual([]);
-      expect(response.body.data.article).toEqual([]);
     });
 
     it('should return home data with banners only', async () => {
@@ -107,8 +105,6 @@ describe('HomeController (E2E)', () => {
         'https://image-dev.seoulmoment.com.tw/banner2.jpg',
       );
       expect(response.body.data.section).toEqual([]);
-      expect(response.body.data.news).toEqual([]);
-      expect(response.body.data.article).toEqual([]);
     });
 
     it('should return home data with sections and multilingual content', async () => {
@@ -174,48 +170,6 @@ describe('HomeController (E2E)', () => {
       expect(englishResponse.body.data.section[0].description).toBe(
         'English Description',
       );
-    });
-
-    it('should return home data with news', async () => {
-      // Create news
-      const brand = await testDataFactory.createBrand();
-      const news = await testDataFactory.createFullNews({
-        brand,
-        news: { writer: 'News Writer', banner: '/news-banner.jpg' },
-        sections: [],
-      });
-
-      // Create multilingual text for news
-      const languages = await testDataFactory.createDefaultLanguages();
-      await testDataFactory.createMultilingualText(
-        EntityType.NEWS,
-        news.id,
-        'title',
-        languages.korean,
-        '뉴스 제목',
-      );
-      await testDataFactory.createMultilingualText(
-        EntityType.NEWS,
-        news.id,
-        'content',
-        languages.korean,
-        '뉴스 내용',
-      );
-
-      const response = await request(app.getHttpServer())
-        .get('/home')
-        .set('Accept-language', LanguageCode.KOREAN)
-        .expect(200);
-
-      expect(response.body.data.news).toHaveLength(1);
-      expect(response.body.data.news[0].id).toBe(news.id);
-      expect(response.body.data.news[0].title).toBe('뉴스 제목');
-      expect(response.body.data.news[0].content).toBe('뉴스 내용');
-      expect(response.body.data.news[0].writer).toBe('News Writer');
-      expect(response.body.data.news[0].image).toBe(
-        'https://image-dev.seoulmoment.com.tw/news-banner.jpg',
-      );
-      expect(response.body.data.news[0]).toHaveProperty('createDate');
     });
 
     it('should return home data with articles', async () => {
@@ -343,80 +297,6 @@ describe('HomeController (E2E)', () => {
       expect(response.body.data.banner).toHaveLength(2);
       expect(response.body.data.section).toHaveLength(1);
       expect(response.body.data.section[0].title).toBe('섹션 제목');
-      expect(response.body.data.news).toHaveLength(1);
-      expect(response.body.data.news[0].title).toBe('뉴스 제목');
-      expect(response.body.data.article).toHaveLength(1);
-      expect(response.body.data.article[0].title).toBe('아티클 제목');
-    });
-
-    it('should limit news to 3 items and articles to 2 items', async () => {
-      // Create 5 news and 4 articles to test pagination
-      const languages = await testDataFactory.createDefaultLanguages();
-
-      // Create brand first
-      const brand = await testDataFactory.createBrand();
-
-      // Create 5 news
-      for (let i = 1; i <= 5; i++) {
-        const news = await testDataFactory.createFullNews({
-          brand,
-          news: { writer: `Writer ${i}`, banner: `/news${i}-banner.jpg` },
-          sections: [],
-        });
-        await testDataFactory.createMultilingualText(
-          EntityType.NEWS,
-          news.id,
-          'title',
-          languages.korean,
-          `뉴스 ${i} 제목`,
-        );
-        await testDataFactory.createMultilingualText(
-          EntityType.NEWS,
-          news.id,
-          'content',
-          languages.korean,
-          `뉴스 ${i} 내용`,
-        );
-      }
-
-      // Create 4 articles
-      for (let i = 1; i <= 4; i++) {
-        const article = await testDataFactory.createFullArticle({
-          brand,
-          article: { writer: `Writer ${i}`, banner: `/article${i}-banner.jpg` },
-          sections: [],
-        });
-        await testDataFactory.createMultilingualText(
-          EntityType.ARTICLE,
-          article.id,
-          'title',
-          languages.korean,
-          `아티클 ${i} 제목`,
-        );
-        await testDataFactory.createMultilingualText(
-          EntityType.ARTICLE,
-          article.id,
-          'content',
-          languages.korean,
-          `아티클 ${i} 내용`,
-        );
-      }
-
-      const response = await request(app.getHttpServer())
-        .get('/home')
-        .set('Accept-language', LanguageCode.KOREAN)
-        .expect(200);
-
-      // Should return only 3 news (latest)
-      expect(response.body.data.news).toHaveLength(3);
-      expect(response.body.data.news[0].title).toBe('뉴스 5 제목'); // Latest first
-      expect(response.body.data.news[1].title).toBe('뉴스 4 제목');
-      expect(response.body.data.news[2].title).toBe('뉴스 3 제목');
-
-      // Should return only 2 articles (latest)
-      expect(response.body.data.article).toHaveLength(2);
-      expect(response.body.data.article[0].title).toBe('아티클 4 제목'); // Latest first
-      expect(response.body.data.article[1].title).toBe('아티클 3 제목');
     });
 
     it('should return 400 when Accept-language header is missing', async () => {

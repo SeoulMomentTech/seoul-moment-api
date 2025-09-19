@@ -4,7 +4,8 @@ import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty } from '@nestjs/swagger';
-import { plainToInstance } from 'class-transformer';
+import { plainToInstance, Type } from 'class-transformer';
+import { IsDefined, IsNumber } from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
@@ -212,4 +213,63 @@ export class GetNewsResponse {
       ),
     });
   }
+}
+
+export class GetNewsListResponse {
+  @ApiProperty({ description: '뉴스 ID', example: 1 })
+  id: number;
+
+  @ApiProperty({ description: '뉴스 제목', example: '서울모먼트 신제품 출시' })
+  title: string;
+
+  @ApiProperty({
+    description: '뉴스 내용',
+    example: '서울모먼트의 새로운 제품이 출시되었습니다...',
+  })
+  content: string;
+
+  @ApiProperty({ description: '작성자 이름', example: '김서울' })
+  writer: string;
+
+  @ApiProperty({
+    description: '작성 일시',
+    example: '2025-09-03T01:20:45.123Z',
+  })
+  createDate: string;
+
+  @ApiProperty({
+    description: '이미지 URL',
+    example: 'https://example.com/banner.jpg',
+  })
+  image: string;
+
+  static from(entity: NewsEntity, multilingualText: MultilingualTextEntity[]) {
+    multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
+
+    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
+    const content = MultilingualFieldDto.fromByEntity(
+      multilingualText,
+      'content',
+    );
+
+    return plainToInstance(this, {
+      id: entity.id,
+      title: title.getContent(),
+      content: content.getContent(),
+      writer: entity.writer,
+      createDate: entity.createDate,
+      image: entity.getBannerImage(),
+    });
+  }
+}
+
+export class GetNewsListRequest {
+  @ApiProperty({
+    description: 'list 갯수',
+    example: 3,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  count: number;
 }

@@ -40,8 +40,6 @@ describe('HomeService Integration Tests', () => {
       expect(result).toBeDefined();
       expect(result.banner).toEqual([]);
       expect(result.section).toEqual([]);
-      expect(result.news).toEqual([]);
-      expect(result.article).toEqual([]);
     });
 
     it('should return home with banners and sections only when no news/articles exist', async () => {
@@ -96,9 +94,6 @@ describe('HomeService Integration Tests', () => {
       expect(result.section[0].image[0]).toBe(
         'https://image-dev.seoulmoment.com.tw/section1-image1.jpg',
       );
-
-      expect(result.news).toEqual([]);
-      expect(result.article).toEqual([]);
     });
 
     it('should return home with news when news exist', async () => {
@@ -196,16 +191,6 @@ describe('HomeService Integration Tests', () => {
 
       expect(result.banner).toHaveLength(1);
       expect(result.section).toEqual([]);
-      expect(result.news).toHaveLength(3); // 최신 3개만
-      expect(result.article).toEqual([]);
-
-      // 최신 3개 뉴스 확인 (createDate DESC 순서)
-      expect(result.news[0].title).toBe('뉴스 4 제목');
-      expect(result.news[0].writer).toBe('Writer 4');
-      expect(result.news[1].title).toBe('뉴스 3 제목');
-      expect(result.news[1].writer).toBe('Writer 3');
-      expect(result.news[2].title).toBe('뉴스 2 제목');
-      expect(result.news[2].writer).toBe('Writer 2');
     });
 
     it('should return home with articles when articles exist', async () => {
@@ -283,14 +268,6 @@ describe('HomeService Integration Tests', () => {
 
       expect(result.banner).toHaveLength(1);
       expect(result.section).toEqual([]);
-      expect(result.news).toEqual([]);
-      expect(result.article).toHaveLength(2); // 최신 2개만
-
-      // 최신 2개 아티클 확인 (createDate DESC 순서)
-      expect(result.article[0].title).toBe('아티클 3 제목');
-      expect(result.article[0].writer).toBe('Writer 3');
-      expect(result.article[1].title).toBe('아티클 2 제목');
-      expect(result.article[1].writer).toBe('Writer 2');
     });
 
     it('should return complete home data with all components', async () => {
@@ -380,10 +357,6 @@ describe('HomeService Integration Tests', () => {
       expect(result.section).toHaveLength(1);
       expect(result.section[0].title).toBe('섹션 제목');
       expect(result.section[0].image).toHaveLength(2);
-      expect(result.news).toHaveLength(1);
-      expect(result.news[0].title).toBe('뉴스 제목');
-      expect(result.article).toHaveLength(1);
-      expect(result.article[0].title).toBe('아티클 제목');
     });
 
     it('should return different content based on language', async () => {
