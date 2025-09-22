@@ -77,7 +77,7 @@ export class GetNewsSection {
     ],
     type: [String],
   })
-  iamgeList: string[];
+  imageList: string[];
 
   static from(
     entity: NewsSectionEntity,
@@ -115,7 +115,7 @@ export class GetNewsSection {
       title: title.getContentByLanguage(language),
       subTitle: subTitle.getContentByLanguage(language),
       content: content.getContentByLanguage(language),
-      iamgeList: entity.sectionImage
+      imageList: entity.sectionImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),
     });
@@ -166,7 +166,7 @@ export class GetNewsResponse {
   lastNews: GetLastNews[];
 
   @ApiProperty({ description: '뉴스 섹션 리스트', type: [GetNewsSection] })
-  section: GetNewsSection;
+  section: GetNewsSection[];
 
   static from(
     entity: NewsEntity,
@@ -393,11 +393,11 @@ export class PostNewsSection {
   textList: PostNewsSectionInfo[];
 
   @ApiProperty({
-    description: 'S3 업로드 후 섹션 이미지 이미지 경로',
+    description: 'S3 업로드 후 뉴스 섹션 이미지 경로',
     example: [
-      '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
-      '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
-      '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
+      '/news-section/2025-09-16/seoul-moment-news.jpg',
+      '/news-section/2025-09-16/seoul-moment-news.jpg',
+      '/news-section/2025-09-16/seoul-moment-news.jpg',
     ],
   })
   @IsArray()

@@ -190,12 +190,12 @@ describe('ArticleController (E2E)', () => {
       expect(data.section[0].title).toBe('섹션 1 제목');
       expect(data.section[0].subTitle).toBe('섹션 1 부제목');
       expect(data.section[0].content).toBe('섹션 1 내용입니다.');
-      expect(data.section[0].iamgeList).toHaveLength(2);
+      expect(data.section[0].imageList).toHaveLength(2);
 
       expect(data.section[1].title).toBe('섹션 2 제목');
       expect(data.section[1].subTitle).toBe('섹션 2 부제목');
       expect(data.section[1].content).toBe('섹션 2 내용입니다.');
-      expect(data.section[1].iamgeList).toHaveLength(1);
+      expect(data.section[1].imageList).toHaveLength(1);
     });
 
     it('should return article successfully with English language', async () => {
@@ -597,7 +597,7 @@ describe('ArticleController (E2E)', () => {
       expect(data.id).toBe(article.id);
       expect(data.writer).toBe('Test Writer');
       expect(data.section).toHaveLength(1);
-      expect(data.section[0].iamgeList).toHaveLength(1);
+      expect(data.section[0].imageList).toHaveLength(1);
 
       // LastArticle 검증 (다국어 텍스트가 없어도 배열 구조는 유지)
       expect(data.lastArticle).toBeInstanceOf(Array);

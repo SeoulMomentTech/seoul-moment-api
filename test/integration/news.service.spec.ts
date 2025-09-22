@@ -168,12 +168,12 @@ describe('NewsService Integration Tests', () => {
       expect(result.section[0].title).toBe('섹션 1 제목');
       expect(result.section[0].subTitle).toBe('섹션 1 부제목');
       expect(result.section[0].content).toBe('섹션 1 내용입니다.');
-      expect(result.section[0].iamgeList).toHaveLength(2);
+      expect(result.section[0].imageList).toHaveLength(2);
 
       expect(result.section[1].title).toBe('섹션 2 제목');
       expect(result.section[1].subTitle).toBe('섹션 2 부제목');
       expect(result.section[1].content).toBe('섹션 2 내용입니다.');
-      expect(result.section[1].iamgeList).toHaveLength(1);
+      expect(result.section[1].imageList).toHaveLength(1);
 
       // lastArticle 목록 검증
       expect(result.lastNews).toBeInstanceOf(Array);

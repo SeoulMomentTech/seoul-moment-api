@@ -1,10 +1,19 @@
+/* eslint-disable max-lines-per-function */
+import { ArticleSectionImageEntity } from '@app/repository/entity/article-section-image.entity';
+import { ArticleSectionEntity } from '@app/repository/entity/article-section.entity';
+import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ArticleRepositoryService } from '@app/repository/service/article.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
 
-import { GetArticleListResponse, GetArticleResponse } from './article.dto';
+import {
+  GetArticleListResponse,
+  GetArticleResponse,
+  PostArticleRequest,
+} from './article.dto';
 
 @Injectable()
 export class ArticleService {
@@ -66,13 +75,89 @@ export class ArticleService {
     const articleEntites =
       await this.articleRepositoryService.findLastArticleByCount(count);
 
-    const newsText =
+    const articleText =
       await this.languageRepositoryService.findMultilingualTextsByEntities(
-        EntityType.NEWS,
+        EntityType.ARTICLE,
         articleEntites.map((v) => v.id),
         language,
       );
 
-    return articleEntites.map((v) => GetArticleListResponse.from(v, newsText));
+    return articleEntites.map((v) =>
+      GetArticleListResponse.from(v, articleText),
+    );
+  }
+
+  async postArticle(dto: PostArticleRequest) {
+    const articleEntity = await this.articleRepositoryService.insert(
+      plainToInstance(ArticleEntity, {
+        brandId: dto.brandId,
+        writer: dto.writer,
+        banner: dto.banner,
+        profileImage: dto.profile,
+      }),
+    );
+
+    await Promise.all(
+      dto.list.flatMap((v) => [
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.ARTICLE,
+          articleEntity.id,
+          'title',
+          v.languageId,
+          v.title,
+        ),
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.ARTICLE,
+          articleEntity.id,
+          'content',
+          v.languageId,
+          v.content,
+        ),
+      ]),
+    );
+
+    for (const section of dto.sectionList) {
+      const articleSectionEntity =
+        await this.articleRepositoryService.insertSection(
+          plainToInstance(ArticleSectionEntity, {
+            articleId: articleEntity.id,
+          }),
+        );
+
+      await Promise.all(
+        section.textList.flatMap((v) => [
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.ARTICLE_SECTION,
+            articleSectionEntity.id,
+            'title',
+            v.languageId,
+            v.title,
+          ),
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.ARTICLE_SECTION,
+            articleSectionEntity.id,
+            'subTitle',
+            v.languageId,
+            v.subTitle,
+          ),
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.NEWS_SECTION,
+            articleSectionEntity.id,
+            'content',
+            v.languageId,
+            v.content,
+          ),
+        ]),
+      );
+
+      for (const sectionImage of section.imageUrlList) {
+        await this.articleRepositoryService.insertSectionImage(
+          plainToInstance(ArticleSectionImageEntity, {
+            sectionId: articleSectionEntity.id,
+            imageUrl: sectionImage,
+          }),
+        );
+      }
+    }
   }
 }
