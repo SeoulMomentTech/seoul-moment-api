@@ -8,8 +8,7 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
   ECR_REPOSITORY: ${{ vars.ECR_BATCH_REPOSITORY }}
-  ECS_CLUSTER: ${{ vars.ECS_BATCH_CLUSTER }}
-  ECS_SERVICE: ${{ vars.ECS_BATCH_SERVICE }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }} # 🔄 API와 같은 클러스터 사용
   IMAGE_TAG_PREFIX: ${{ vars.IMAGE_TAG_PREFIX || 'dev' }}
 
 jobs:
@@ -59,17 +58,41 @@ jobs:
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: .github/ecs/taskdef-batch.json
-          container-name: seoul-moment-batch
+          container-name: seoul-moment-api
           image: ${{ steps.vars.outputs.IMAGE_URI }}
 
-      - name: Deploy to Amazon ECS
-        id: deploy
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.render.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
-          deployment-configuration: |
-            minimumHealthyPercent: 0
-            maximumPercent: 100
+      - name: Register ECS Task Definition
+        run: |
+          aws ecs register-task-definition \
+            --cli-input-json file://${{ steps.render.outputs.task-definition }}
+
+      - name: Create or Update EventBridge Rule for Batch Schedule
+        run: |
+          # EventBridge Rule 생성/업데이트 (매일 13:50 실행 - 테스트용)
+          aws events put-rule \
+            --name "seoul-moment-batch-schedule" \
+            --schedule-expression "cron(50 13 * * ? *)" \
+            --description "Seoul Moment Batch Job - Daily at 13:50 KST (TEST)" \
+            --state ENABLED
+
+          # ECS Task를 타겟으로 설정
+          aws events put-targets \
+            --rule "seoul-moment-batch-schedule" \
+            --targets "[
+              {
+                \"Id\": \"1\",
+                \"Arn\": \"arn:aws:ecs:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:cluster/${{ env.ECS_CLUSTER }}\",
+                \"RoleArn\": \"arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole\",
+                \"EcsParameters\": {
+                  \"TaskDefinitionArn\": \"seoul-moment-dev-batch\",
+                  \"LaunchType\": \"FARGATE\",
+                  \"NetworkConfiguration\": {
+                    \"awsvpcConfiguration\": {
+                      \"Subnets\": [\"subnet-0e3141a22ee6d130b\", \"subnet-09df92dc6b52888f4\"],
+                      \"SecurityGroups\": [\"sg-0f702a083865cbb48\"],
+                      \"AssignPublicIp\": \"ENABLED\"
+                    }
+                  }
+                }
+              }
+            ]"

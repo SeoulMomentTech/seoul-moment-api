@@ -12,6 +12,36 @@ import { v4 as uuidV4 } from 'uuid';
 
 import { BatchModule } from './module/batch.module';
 
+function scheduleShutdown(logger: LoggerService) {
+  const now = moment();
+  const shutdownTime = moment()
+    .startOf('day')
+    .add(14, 'hour')
+    .add(10, 'minute'); // 14:10
+
+  // 만약 현재 시간이 14:10 이후라면, 다음날 14:10으로 설정
+  if (now.hour() > 14 || (now.hour() === 14 && now.minute() >= 10)) {
+    shutdownTime.add(1, 'day');
+  }
+
+  const msUntilShutdown = shutdownTime.diff(now);
+
+  logger.info(
+    `⏰ Scheduled shutdown at: ${shutdownTime.format('YYYY-MM-DD HH:mm:ss')}`,
+  );
+  logger.info(
+    `⏱️  Time until shutdown: ${moment.duration(msUntilShutdown).humanize()}`,
+  );
+
+  setTimeout(() => {
+    logger.info('🛑 Scheduled shutdown initiated...');
+    logger.info('📊 Batch processing completed for today');
+
+    // Graceful shutdown
+    process.exit(0);
+  }, msUntilShutdown);
+}
+
 async function bootstrap() {
   const config = Configuration.getConfig();
 
@@ -49,6 +79,9 @@ async function bootstrap() {
 
   logger.info(`✅ Server is running on http://localhost:${config.PORT}`);
   logger.info(`📚 Environment configuration loaded successfully`);
+
+  // 🕐 스케줄링된 종료 (01:00에 자동 종료)
+  scheduleShutdown(logger);
 }
 
 bootstrap().catch((error) => {
