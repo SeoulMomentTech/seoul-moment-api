@@ -8,7 +8,7 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
   ECR_REPOSITORY: ${{ vars.ECR_BATCH_REPOSITORY }}
-  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }} # 🔄 API와 같은 클러스터 사용
+  ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY }} # 클러스터 이름
   IMAGE_TAG_PREFIX: ${{ vars.IMAGE_TAG_PREFIX || 'dev' }}
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
             --targets "[
               {
                 \"Id\": \"1\",
-                \"Arn\": \"arn:aws:ecs:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:cluster/${{ env.ECS_CLUSTER }}\",
+                \"Arn\": \"arn:aws:ecs:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:cluster/${{ env.ECS_TASK_FAMILY }}\",
                 \"RoleArn\": \"arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole\",
                 \"EcsParameters\": {
                   \"TaskDefinitionArn\": \"seoul-moment-dev-batch\",
