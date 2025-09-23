@@ -161,15 +161,15 @@ export class GetHomeResponse {
     description: '홈 배너 이미지 URL 리스트',
     example: [
       'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01.jpg',
-      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-02.jpg'
+      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-02.jpg',
     ],
-    type: [String]
+    type: [String],
   })
   banner: string[];
 
   @ApiProperty({
     description: '홈 섹션 리스트',
-    type: [GetHomeSection]
+    type: [GetHomeSection],
   })
   section: GetHomeSection[];
 

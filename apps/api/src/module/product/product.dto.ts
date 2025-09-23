@@ -314,13 +314,14 @@ export class GetProductDetailOption {
 export class GetProductDetailBrand {
   @ApiProperty({
     description: '브랜드 프로필 이미지 URL',
-    example: 'https://image-dev.seoulmoment.com.tw/brand-profiles/2025-09-16/seoul-moment-profile.jpg'
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
   })
   profileImg: string;
 
   @ApiProperty({
     description: '브랜드 이름',
-    example: '서울모먼트'
+    example: '서울모먼트',
   })
   name: string;
 
@@ -335,55 +336,55 @@ export class GetProductDetailBrand {
 export class GetProductDetailResponse {
   @ApiProperty({
     description: '상품 ID',
-    example: 1
+    example: 1,
   })
   id: number;
 
   @ApiProperty({
     description: '상품 이름',
-    example: '오가닉 코튼 티셔츠'
+    example: '오가닉 코튼 티셔츠',
   })
   name: string;
 
   @ApiProperty({
     description: '브랜드 정보',
-    type: GetProductDetailBrand
+    type: GetProductDetailBrand,
   })
   brand: GetProductDetailBrand;
 
   @ApiProperty({
     description: '정가',
-    example: 259000
+    example: 259000,
   })
   price: number;
 
   @ApiProperty({
     description: '할인가',
-    example: 189000
+    example: 189000,
   })
   discoountPrice: number;
 
   @ApiProperty({
     description: '원산지',
-    example: '대한민국'
+    example: '대한민국',
   })
   origin: string;
 
   @ApiProperty({
     description: '배송 정보 (일)',
-    example: 3
+    example: 3,
   })
   shippingInfo: number;
 
   @ApiProperty({
     description: '배송비',
-    example: 3000
+    example: 3000,
   })
   shippingCost: number;
 
   @ApiProperty({
     description: '상품 옵션 목록',
-    type: [GetProductDetailOption]
+    type: [GetProductDetailOption],
   })
   option: GetProductDetailOption[];
 
@@ -407,7 +408,8 @@ export class GetProductDetailResponse {
 
   @ApiProperty({
     description: '상품 상세 이미지 URL',
-    example: 'https://image-dev.seoulmoment.com.tw/product/detail/product-detail-01.jpg'
+    example:
+      'https://image-dev.seoulmoment.com.tw/product/detail/product-detail-01.jpg',
   })
   detailImg: string;
 
@@ -415,9 +417,9 @@ export class GetProductDetailResponse {
     description: '서브 이미지 URL 목록',
     example: [
       'https://image-dev.seoulmoment.com.tw/product/sub/product-sub-01.jpg',
-      'https://image-dev.seoulmoment.com.tw/product/sub/product-sub-02.jpg'
+      'https://image-dev.seoulmoment.com.tw/product/sub/product-sub-02.jpg',
     ],
-    type: [String]
+    type: [String],
   })
   subImage: string[];
 
@@ -469,7 +471,7 @@ export class GetProductDetailResponse {
 export class PostProductCategoryInfo {
   @ApiProperty({
     description: '언어 ID',
-    example: 1
+    example: 1,
   })
   @IsInt()
   @IsDefined()
@@ -477,7 +479,7 @@ export class PostProductCategoryInfo {
 
   @ApiProperty({
     description: '카테고리 이름',
-    example: '상의'
+    example: '상의',
   })
   @IsString()
   @IsDefined()

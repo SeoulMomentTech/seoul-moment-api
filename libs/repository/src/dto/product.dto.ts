@@ -8,14 +8,14 @@ export class ProductSortDto {
   @ApiProperty({
     description: '정렬할 컬럼',
     enum: ProductSortColumn,
-    example: ProductSortColumn.CREATE
+    example: ProductSortColumn.CREATE,
   })
   sortColum: ProductSortColumn;
 
   @ApiProperty({
     description: '정렬 방향',
     enum: DatabaseSort,
-    example: DatabaseSort.DESC
+    example: DatabaseSort.DESC,
   })
   sort: DatabaseSort;
 

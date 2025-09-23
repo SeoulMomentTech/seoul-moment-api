@@ -284,7 +284,7 @@ export class GetNewsListRequest {
 export class PostNewsInfo {
   @ApiProperty({
     description: '언어 ID',
-    example: 1
+    example: 1,
   })
   @IsInt()
   @IsDefined()
@@ -292,7 +292,7 @@ export class PostNewsInfo {
 
   @ApiProperty({
     description: '뉴스 타이틀',
-    example: '서울모먼트 신제품 출시'
+    example: '서울모먼트 신제품 출시',
   })
   @IsString()
   @IsDefined()
@@ -300,7 +300,7 @@ export class PostNewsInfo {
 
   @ApiProperty({
     description: '뉴스 컨텐츠',
-    example: '서울모먼트의 새로운 제품이 출시되었습니다...'
+    example: '서울모먼트의 새로운 제품이 출시되었습니다...',
   })
   @IsString()
   @IsDefined()

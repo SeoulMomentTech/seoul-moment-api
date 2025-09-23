@@ -284,7 +284,7 @@ export class GetArticleListResponse {
 export class PostArticleInfo {
   @ApiProperty({
     description: '언어 ID',
-    example: 1
+    example: 1,
   })
   @IsInt()
   @IsDefined()
@@ -292,7 +292,7 @@ export class PostArticleInfo {
 
   @ApiProperty({
     description: '아티클 타이틀',
-    example: '서울의 특별한 순간들'
+    example: '서울의 특별한 순간들',
   })
   @IsString()
   @IsDefined()
@@ -300,7 +300,7 @@ export class PostArticleInfo {
 
   @ApiProperty({
     description: '아티클 컨텐츠',
-    example: '서울모먼트는 서울의 특별한 순간들을 담은 브랜드입니다...'
+    example: '서울모먼트는 서울의 특별한 순간들을 담은 브랜드입니다...',
   })
   @IsString()
   @IsDefined()

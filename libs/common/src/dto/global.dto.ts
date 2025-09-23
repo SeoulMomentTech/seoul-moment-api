@@ -6,13 +6,13 @@ import moment from 'moment-timezone';
 export class PagingDto {
   @ApiProperty({
     description: '현재 페이지 번호',
-    example: 1
+    example: 1,
   })
   page: number;
 
   @ApiProperty({
     description: '페이지당 항목 수',
-    example: 10
+    example: 10,
   })
   count: number;
 
@@ -65,13 +65,13 @@ export class CalendarDto {
 export class DateChartDto {
   @ApiProperty({
     description: '날짜 (YYYY-MM-DD 형식)',
-    example: '2025-09-16'
+    example: '2025-09-16',
   })
   date: string;
 
   @ApiProperty({
     description: '해당 날짜의 카운트',
-    example: 5
+    example: 5,
   })
   count: number;
 
@@ -86,13 +86,13 @@ export class DateChartDto {
 export class DetailChart {
   @ApiProperty({
     description: '차트 데이터 배열',
-    type: [DateChartDto]
+    type: [DateChartDto],
   })
   chart: DateChartDto[];
 
   @ApiProperty({
     description: '총 카운트',
-    example: 150
+    example: 150,
   })
   count: number;
 }
