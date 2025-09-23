@@ -41,12 +41,18 @@ export class GetCategoryResponse {
 }
 
 export class PostCategoryInfo {
-  @ApiProperty({ description: '언어 ID' })
+  @ApiProperty({
+    description: '언어 ID',
+    example: 1,
+  })
   @IsInt()
   @IsDefined()
   languageId: number;
 
-  @ApiProperty({ description: '카테고리 이름' })
+  @ApiProperty({
+    description: '카테고리 이름',
+    example: '패션',
+  })
   @IsString()
   @IsDefined()
   name: string;

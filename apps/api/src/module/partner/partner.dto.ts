@@ -29,11 +29,41 @@ export class GetPartnerRequest {
 }
 
 export class GetPartnerResponse {
+  @ApiProperty({
+    description: '협력사 ID',
+    example: 1
+  })
   id: number;
+
+  @ApiProperty({
+    description: '협력사 이미지 URL',
+    example: 'https://image-dev.seoulmoment.com.tw/partners/2025-09-16/partner-logo.jpg'
+  })
   image: string;
+
+  @ApiProperty({
+    description: '협력사 제목',
+    example: '뷰티 파트너'
+  })
   title: string;
+
+  @ApiProperty({
+    description: '협력사 설명',
+    example: '고품질 뷰티 제품을 제공하는 파트너사입니다.'
+  })
   description: string;
+
+  @ApiProperty({
+    description: '협력사 링크 URL',
+    example: 'https://partner.example.com'
+  })
   link: string;
+
+  @ApiProperty({
+    description: '협력사 국가 코드',
+    example: LanguageCode.KOREAN,
+    enum: LanguageCode
+  })
   country: LanguageCode;
 
   static from(entity: PartnerEntity, multilingual: MultilingualTextEntity[]) {

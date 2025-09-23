@@ -31,6 +31,10 @@ const getConfig = (): ConfigImpl => ({
 
   SERPER_URL: process.env.SERPER_URL || '',
   SERPER_API_KEY: process.env.SERPER_API_KEY || '',
+
+  RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY || '',
+
+  GOOGLE_APP_PASS: process.env.GOOGLE_APP_PASS || '',
 });
 
 export default getConfig;

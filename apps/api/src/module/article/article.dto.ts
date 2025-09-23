@@ -282,17 +282,26 @@ export class GetArticleListResponse {
 }
 
 export class PostArticleInfo {
-  @ApiProperty({ description: '언어 ID' })
+  @ApiProperty({
+    description: '언어 ID',
+    example: 1
+  })
   @IsInt()
   @IsDefined()
   languageId: number;
 
-  @ApiProperty({ description: '아티클 타이틀' })
+  @ApiProperty({
+    description: '아티클 타이틀',
+    example: '서울의 특별한 순간들'
+  })
   @IsString()
   @IsDefined()
   title: string;
 
-  @ApiProperty({ description: '아티클 컨텐츠' })
+  @ApiProperty({
+    description: '아티클 컨텐츠',
+    example: '서울모먼트는 서울의 특별한 순간들을 담은 브랜드입니다...'
+  })
   @IsString()
   @IsDefined()
   content: string;

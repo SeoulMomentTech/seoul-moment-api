@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import { Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
@@ -13,7 +14,7 @@ import { ExternalGoogleSheetService } from './google-sheet.service';
         service: 'gmail',
         auth: {
           user: 'seoulmomenttw@gmail.com',
-          pass: 'rupwwojavqopkayp',
+          pass: Configuration.getConfig().GOOGLE_APP_PASS,
         },
       },
       defaults: {

@@ -34,4 +34,8 @@ export interface ConfigImpl {
 
   SERPER_URL: string;
   SERPER_API_KEY: string;
+
+  RECAPTCHA_SECRET_KEY: string;
+
+  GOOGLE_APP_PASS: string;
 }

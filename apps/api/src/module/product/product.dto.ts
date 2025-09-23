@@ -312,7 +312,16 @@ export class GetProductDetailOption {
 }
 
 export class GetProductDetailBrand {
+  @ApiProperty({
+    description: '브랜드 프로필 이미지 URL',
+    example: 'https://image-dev.seoulmoment.com.tw/brand-profiles/2025-09-16/seoul-moment-profile.jpg'
+  })
   profileImg: string;
+
+  @ApiProperty({
+    description: '브랜드 이름',
+    example: '서울모먼트'
+  })
   name: string;
 
   static from(profileImg: string, name: string) {
@@ -324,15 +333,60 @@ export class GetProductDetailBrand {
 }
 
 export class GetProductDetailResponse {
+  @ApiProperty({
+    description: '상품 ID',
+    example: 1
+  })
   id: number;
+
+  @ApiProperty({
+    description: '상품 이름',
+    example: '오가닉 코튼 티셔츠'
+  })
   name: string;
+
+  @ApiProperty({
+    description: '브랜드 정보',
+    type: GetProductDetailBrand
+  })
   brand: GetProductDetailBrand;
+
+  @ApiProperty({
+    description: '정가',
+    example: 259000
+  })
   price: number;
+
+  @ApiProperty({
+    description: '할인가',
+    example: 189000
+  })
   discoountPrice: number;
+
+  @ApiProperty({
+    description: '원산지',
+    example: '대한민국'
+  })
   origin: string;
+
+  @ApiProperty({
+    description: '배송 정보 (일)',
+    example: 3
+  })
   shippingInfo: number;
+
+  @ApiProperty({
+    description: '배송비',
+    example: 3000
+  })
   shippingCost: number;
+
+  @ApiProperty({
+    description: '상품 옵션 목록',
+    type: [GetProductDetailOption]
+  })
   option: GetProductDetailOption[];
+
   @ApiProperty({
     description: '좋아요 수',
     example: 54244,
@@ -350,7 +404,21 @@ export class GetProductDetailResponse {
     example: 4.5,
   })
   reviewAverage: number;
+
+  @ApiProperty({
+    description: '상품 상세 이미지 URL',
+    example: 'https://image-dev.seoulmoment.com.tw/product/detail/product-detail-01.jpg'
+  })
   detailImg: string;
+
+  @ApiProperty({
+    description: '서브 이미지 URL 목록',
+    example: [
+      'https://image-dev.seoulmoment.com.tw/product/sub/product-sub-01.jpg',
+      'https://image-dev.seoulmoment.com.tw/product/sub/product-sub-02.jpg'
+    ],
+    type: [String]
+  })
   subImage: string[];
 
   static from(
@@ -399,12 +467,18 @@ export class GetProductDetailResponse {
 }
 
 export class PostProductCategoryInfo {
-  @ApiProperty({ description: '언어 ID' })
+  @ApiProperty({
+    description: '언어 ID',
+    example: 1
+  })
   @IsInt()
   @IsDefined()
   languageId: number;
 
-  @ApiProperty({ description: '카테고리 이름' })
+  @ApiProperty({
+    description: '카테고리 이름',
+    example: '상의'
+  })
   @IsString()
   @IsDefined()
   name: string;
