@@ -16,10 +16,12 @@ function scheduleShutdown(logger: LoggerService) {
   const now = moment();
   const shutdownTime = moment()
     .startOf('day')
-    .add(16, 'hour'); // 16:00
+    .add(1, 'day')
+    .add(0, 'hour')
+    .add(30, 'minute'); // 다음날 00:30
 
-  // 만약 현재 시간이 16:00 이후라면, 다음날 16:00으로 설정
-  if (now.hour() >= 16) {
+  // 만약 현재 시간이 00:30 이후라면, 다음날 00:30으로 설정
+  if (now.hour() > 0 || (now.hour() === 0 && now.minute() >= 30)) {
     shutdownTime.add(1, 'day');
   }
 
