@@ -58,7 +58,7 @@ jobs:
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: .github/ecs/taskdef-batch.json
-          container-name: seoul-moment-api
+          container-name: seoul-moment-batch
           image: ${{ steps.vars.outputs.IMAGE_URI }}
 
       - name: Register ECS Task Definition
