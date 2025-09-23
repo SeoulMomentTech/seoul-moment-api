@@ -21,7 +21,7 @@ import { ExternalGoogleSheetService } from './google-sheet.service';
         from: 'SeoulMoment <seoulmomenttw@gmail.com>',
       },
       template: {
-        dir: path.join(process.cwd(), 'public', 'templates'), // ← 중요!
+        dir: path.join(process.cwd(), 'public', 'templates'), // 기본 경로
         adapter: new HandlebarsAdapter(),
         options: {
           strict: true,

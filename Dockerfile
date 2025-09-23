@@ -37,6 +37,9 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copy public directory for templates and static files
+COPY --from=builder /app/public ./public
+
 EXPOSE $PORT
 
 CMD ["sh", "-c", "node dist/apps/${APP_NAME}/main.js"]
