@@ -84,7 +84,7 @@ jobs:
                 \"Arn\": \"arn:aws:ecs:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:cluster/${{ env.ECS_TASK_FAMILY }}\",
                 \"RoleArn\": \"arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole\",
                 \"EcsParameters\": {
-                  \"TaskDefinitionArn\": \"seoul-moment-dev-batch\",
+                  \"TaskDefinitionArn\": \"arn:aws:ecs:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:task-definition/seoul-moment-dev-batch:ACTIVE\",
                   \"LaunchType\": \"FARGATE\",
                   \"NetworkConfiguration\": {
                     \"awsvpcConfiguration\": {
