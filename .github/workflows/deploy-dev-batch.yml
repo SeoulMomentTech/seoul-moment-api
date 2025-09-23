@@ -62,17 +62,21 @@ jobs:
           image: ${{ steps.vars.outputs.IMAGE_URI }}
 
       - name: Register ECS Task Definition
+        id: register-task
         run: |
-          aws ecs register-task-definition \
-            --cli-input-json file://${{ steps.render.outputs.task-definition }}
+          TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://${{ steps.render.outputs.task-definition }} \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+          echo "TASK_DEFINITION_ARN=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
 
       - name: Create or Update EventBridge Rule for Batch Schedule
         run: |
-          # EventBridge Rule 생성/업데이트 (매일 13:50 실행 - 테스트용)
+          # EventBridge Rule 생성/업데이트 (매일 14:30 실행 - 테스트용)
           aws events put-rule \
             --name "seoul-moment-batch-schedule" \
-            --schedule-expression "cron(50 13 * * ? *)" \
-            --description "Seoul Moment Batch Job - Daily at 13:50 KST (TEST)" \
+            --schedule-expression "cron(30 14 * * ? *)" \
+            --description "Seoul Moment Batch Job - Daily at 14:30 KST (TEST)" \
             --state ENABLED
 
           # ECS Task를 타겟으로 설정
@@ -84,7 +88,7 @@ jobs:
                 \"Arn\": \"arn:aws:ecs:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:cluster/${{ env.ECS_TASK_FAMILY }}\",
                 \"RoleArn\": \"arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole\",
                 \"EcsParameters\": {
-                  \"TaskDefinitionArn\": \"arn:aws:ecs:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:task-definition/seoul-moment-dev-batch:ACTIVE\",
+                  \"TaskDefinitionArn\": \"${{ steps.register-task.outputs.TASK_DEFINITION_ARN }}\",
                   \"LaunchType\": \"FARGATE\",
                   \"NetworkConfiguration\": {
                     \"awsvpcConfiguration\": {

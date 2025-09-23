@@ -17,10 +17,10 @@ function scheduleShutdown(logger: LoggerService) {
   const shutdownTime = moment()
     .startOf('day')
     .add(14, 'hour')
-    .add(10, 'minute'); // 14:10
+    .add(50, 'minute'); // 14:50
 
-  // 만약 현재 시간이 14:10 이후라면, 다음날 14:10으로 설정
-  if (now.hour() > 14 || (now.hour() === 14 && now.minute() >= 10)) {
+  // 만약 현재 시간이 14:50 이후라면, 다음날 14:50으로 설정
+  if (now.hour() > 14 || (now.hour() === 14 && now.minute() >= 50)) {
     shutdownTime.add(1, 'day');
   }
 
