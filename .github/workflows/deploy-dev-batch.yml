@@ -8,8 +8,10 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
   ECR_REPOSITORY: ${{ vars.ECR_BATCH_REPOSITORY }}
-  ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY }} # 클러스터 이름
+  ECS_CLUSTER_NAME: ${{ vars.ECS_TASK_FAMILY }} # ✅ Family와 클러스터명이 동일하다고 하셨으므로 그대로 사용
+  ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY }}
   IMAGE_TAG_PREFIX: ${{ vars.IMAGE_TAG_PREFIX || 'dev' }}
+  EVENTBRIDGE_INVOKE_ROLE_ARN: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/EventBridgeInvokeECSRole # ✅ 새로 만든 Role
 
 jobs:
   deploy:
@@ -72,11 +74,11 @@ jobs:
 
       - name: Create or Update EventBridge Rule for Batch Schedule
         run: |
-          # EventBridge Rule 생성/업데이트 (매일 23:50 KST = 14:50 UTC 실행 - 운영용)
+          # EventBridge Rule 생성/업데이트 (테스트용: 5분마다 실행)
           aws events put-rule \
             --name "seoul-moment-batch-schedule" \
-            --schedule-expression "cron(50 14 * * ? *)" \
-            --description "Seoul Moment Batch Job - Daily at 23:50 KST (14:50 UTC) - PRODUCTION" \
+            --schedule-expression "rate(5 minutes)" \
+            --description "Seoul Moment Batch Job - Test every 5 minutes" \
             --state ENABLED
 
           # ECS Task를 타겟으로 설정
@@ -85,11 +87,12 @@ jobs:
             --targets "[
               {
                 \"Id\": \"1\",
-                \"Arn\": \"arn:aws:ecs:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:cluster/${{ env.ECS_TASK_FAMILY }}\",
-                \"RoleArn\": \"arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole\",
+                \"Arn\": \"arn:aws:ecs:${AWS_REGION}:${AWS_ACCOUNT_ID}:cluster/${ECS_CLUSTER_NAME}\",
+                \"RoleArn\": \"${EVENTBRIDGE_INVOKE_ROLE_ARN}\",
                 \"EcsParameters\": {
                   \"TaskDefinitionArn\": \"${{ steps.register-task.outputs.TASK_DEFINITION_ARN }}\",
                   \"LaunchType\": \"FARGATE\",
+                  \"TaskCount\": 1,
                   \"NetworkConfiguration\": {
                     \"awsvpcConfiguration\": {
                       \"Subnets\": [\"subnet-0e3141a22ee6d130b\", \"subnet-09df92dc6b52888f4\"],
