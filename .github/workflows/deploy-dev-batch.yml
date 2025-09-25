@@ -97,7 +97,7 @@ jobs:
                     \"awsvpcConfiguration\": {
                       \"Subnets\": [\"subnet-0e3141a22ee6d130b\", \"subnet-09df92dc6b52888f4\"],
                       \"SecurityGroups\": [\"sg-0f702a083865cbb48\"],
-                      \"AssignPublicIp\": \"DISABLED\"
+                      \"AssignPublicIp\": \"ENABLED\"
                     }
                   }
                 }
