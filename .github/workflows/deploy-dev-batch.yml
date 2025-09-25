@@ -74,11 +74,11 @@ jobs:
 
       - name: Create or Update EventBridge Rule for Batch Schedule
         run: |
-          # EventBridge Rule 생성/업데이트 (테스트용: 5분마다 실행)
+          # EventBridge Rule 생성/업데이트 (매일 23:50 KST = 14:50 UTC 실행)
           aws events put-rule \
             --name "seoul-moment-batch-schedule" \
-            --schedule-expression "rate(5 minutes)" \
-            --description "Seoul Moment Batch Job - Test every 5 minutes" \
+            --schedule-expression "cron(50 14 * * ? *)" \
+            --description "Seoul Moment Batch Job - Daily at 23:50 KST (14:50 UTC)" \
             --state ENABLED
 
           # ECS Task를 타겟으로 설정
