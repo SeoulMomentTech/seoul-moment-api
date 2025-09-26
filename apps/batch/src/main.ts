@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable max-lines-per-function */
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import { LoggerService } from '@app/common/log/logger.service';
@@ -12,19 +13,13 @@ import { v4 as uuidV4 } from 'uuid';
 
 import { BatchModule } from './module/batch.module';
 
-function scheduleShutdown(logger: LoggerService) {
+function scheduleShutdown(
+  app: NestExpressApplication,
+  logger: LoggerService,
+  minutes = 60, // 기본 60분
+) {
   const now = moment();
-  const shutdownTime = moment()
-    .startOf('day')
-    .add(1, 'day')
-    .add(0, 'hour')
-    .add(30, 'minute'); // 다음날 00:30
-
-  // 만약 현재 시간이 00:30 이후라면, 다음날 00:30으로 설정
-  if (now.hour() > 0 || (now.hour() === 0 && now.minute() >= 30)) {
-    shutdownTime.add(1, 'day');
-  }
-
+  const shutdownTime = now.clone().add(minutes, 'minutes');
   const msUntilShutdown = shutdownTime.diff(now);
 
   logger.info(
@@ -34,12 +29,16 @@ function scheduleShutdown(logger: LoggerService) {
     `⏱️  Time until shutdown: ${moment.duration(msUntilShutdown).humanize()}`,
   );
 
-  setTimeout(() => {
-    logger.info('🛑 Scheduled shutdown initiated...');
-    logger.info('📊 Batch processing completed for today');
+  setTimeout(async () => {
+    try {
+      logger.info('🛑 Scheduled shutdown initiated...');
+      logger.info('📊 Batch processing completed');
 
-    // Graceful shutdown
-    process.exit(0);
+      // Graceful shutdown (DB/Redis 등 Nest lifecycle 종료)
+      await app.close();
+    } finally {
+      process.exit(0); // 컨테이너 종료
+    }
   }, msUntilShutdown);
 }
 
@@ -81,8 +80,21 @@ async function bootstrap() {
   logger.info(`✅ Server is running on http://localhost:${config.PORT}`);
   logger.info(`📚 Environment configuration loaded successfully`);
 
-  // 🕐 스케줄링된 종료 (01:00에 자동 종료)
-  scheduleShutdown(logger);
+  // 🕐 시작 시점 기준 일정 시간 뒤 종료 (기본 60분)
+  scheduleShutdown(app, logger);
+
+  // 종료 시그널 핸들링 (ECS에서 SIGTERM 보냈을 때 대비)
+  process.on('SIGTERM', async () => {
+    logger.warn('⚠️ SIGTERM received, shutting down gracefully...');
+    await app.close();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', async () => {
+    logger.warn('⚠️ SIGINT received, shutting down gracefully...');
+    await app.close();
+    process.exit(0);
+  });
 }
 
 bootstrap().catch((error) => {
