@@ -77,7 +77,7 @@ jobs:
           # EventBridge Rule 생성/업데이트 (매일 23:50 KST = 14:50 UTC 실행)
           aws events put-rule \
             --name "seoul-moment-batch-schedule" \
-            --schedule-expression "cron(50 14 * * ? *)" \
+            --schedule-expression "cron(30 14 * * ? *)" \
             --description "Seoul Moment Batch Job - Daily at 23:50 KST (14:50 UTC)" \
             --state ENABLED
 
