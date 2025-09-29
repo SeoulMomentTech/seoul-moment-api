@@ -13,34 +13,34 @@ import { v4 as uuidV4 } from 'uuid';
 
 import { BatchModule } from './module/batch.module';
 
-function scheduleShutdown(
-  app: NestExpressApplication,
-  logger: LoggerService,
-  minutes = 60, // 기본 60분
-) {
-  const now = moment();
-  const shutdownTime = now.clone().add(minutes, 'minutes');
-  const msUntilShutdown = shutdownTime.diff(now);
+// function scheduleShutdown(
+//   app: NestExpressApplication,
+//   logger: LoggerService,
+//   minutes = 60, // 기본 60분
+// ) {
+//   const now = moment();
+//   const shutdownTime = now.clone().add(minutes, 'minutes');
+//   const msUntilShutdown = shutdownTime.diff(now);
 
-  logger.info(
-    `⏰ Scheduled shutdown at: ${shutdownTime.format('YYYY-MM-DD HH:mm:ss')}`,
-  );
-  logger.info(
-    `⏱️  Time until shutdown: ${moment.duration(msUntilShutdown).humanize()}`,
-  );
+//   logger.info(
+//     `⏰ Scheduled shutdown at: ${shutdownTime.format('YYYY-MM-DD HH:mm:ss')}`,
+//   );
+//   logger.info(
+//     `⏱️  Time until shutdown: ${moment.duration(msUntilShutdown).humanize()}`,
+//   );
 
-  setTimeout(async () => {
-    try {
-      logger.info('🛑 Scheduled shutdown initiated...');
-      logger.info('📊 Batch processing completed');
+//   setTimeout(async () => {
+//     try {
+//       logger.info('🛑 Scheduled shutdown initiated...');
+//       logger.info('📊 Batch processing completed');
 
-      // Graceful shutdown (DB/Redis 등 Nest lifecycle 종료)
-      await app.close();
-    } finally {
-      process.exit(0); // 컨테이너 종료
-    }
-  }, msUntilShutdown);
-}
+//       // Graceful shutdown (DB/Redis 등 Nest lifecycle 종료)
+//       await app.close();
+//     } finally {
+//       process.exit(0); // 컨테이너 종료
+//     }
+//   }, msUntilShutdown);
+// }
 
 async function bootstrap() {
   const config = Configuration.getConfig();
@@ -81,7 +81,7 @@ async function bootstrap() {
   logger.info(`📚 Environment configuration loaded successfully`);
 
   // 🕐 시작 시점 기준 일정 시간 뒤 종료 (기본 60분)
-  scheduleShutdown(app, logger);
+  // scheduleShutdown(app, logger);
 
   // 종료 시그널 핸들링 (ECS에서 SIGTERM 보냈을 때 대비)
   process.on('SIGTERM', async () => {
