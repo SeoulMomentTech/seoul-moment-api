@@ -17,7 +17,8 @@ import { Transactional } from 'typeorm-transactional';
 
 import {
   GetBrandIntroduceResponse,
-  GetBrandListByNameFilterTypeResponse,
+  GetBrandListByName,
+  GetBrandListByNameResponse,
   PostBrandRequest,
 } from './brand.dto';
 
@@ -63,7 +64,7 @@ export class BrandService {
   async getBrandListByNameFilterType(
     filter: BrandNameFilter,
     categoryId?: number,
-  ): Promise<GetBrandListByNameFilterTypeResponse[]> {
+  ): Promise<GetBrandListByName[]> {
     const brandEntityList =
       await this.brandRepositoryService.findAllNormalBrandListByFilter(
         filter,
@@ -78,8 +79,27 @@ export class BrandService {
       );
 
     return brandEntityList
-      .map((v) => GetBrandListByNameFilterTypeResponse.from(v, brandText))
+      .map((v) => GetBrandListByName.from(v, brandText))
       .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getBrandListByName(
+    categoryId?: number,
+  ): Promise<GetBrandListByNameResponse[]> {
+    const result: GetBrandListByNameResponse[] = [];
+
+    for (const value of Object.values(BrandNameFilter)) {
+      const brandListByNameFilterType = await this.getBrandListByNameFilterType(
+        value,
+        categoryId,
+      );
+
+      result.push(
+        GetBrandListByNameResponse.from(value, brandListByNameFilterType),
+      );
+    }
+
+    return result;
   }
 
   @Transactional()

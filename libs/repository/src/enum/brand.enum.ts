@@ -12,5 +12,4 @@ export enum BrandNameFilter {
   M_TO_P = 'M_TO_P',
   Q_TO_T = 'Q_TO_T',
   U_TO_Z = 'U_TO_Z',
-  NUMBER_SYMBOL = 'NUMBER_SYMBOL',
 }

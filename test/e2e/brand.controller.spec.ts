@@ -3,9 +3,7 @@ import { HttpExceptionFilter } from '@app/common/exception/http-exception-filter
 import { ServiceErrorFilter } from '@app/common/exception/service-exception-filter';
 import { LoggerService } from '@app/common/log/logger.service';
 import { Configuration } from '@app/config/configuration';
-import { BrandNameFilter, BrandStatus } from '@app/repository/enum/brand.enum';
-import { EntityType } from '@app/repository/enum/entity.enum';
-import { LanguageCode } from '@app/repository/enum/language.enum';
+import { BrandStatus } from '@app/repository/enum/brand.enum';
 import {
   INestApplication,
   ValidationPipe,
@@ -13,7 +11,6 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { language } from 'googleapis/build/src/apis/language';
 import request from 'supertest';
 
 import { BrandModule } from '../../apps/api/src/module/brand/brand.module';
@@ -389,72 +386,6 @@ describe('BrandController (E2E)', () => {
       expect(secondResponse.body.data.bannerList).toContain(
         `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/new-banner.jpg`,
       );
-    });
-
-    it('should return brand name List ', async () => {
-      const brand = await testDataFactory.createBrand();
-      await testDataFactory.createLanguage({
-        code: LanguageCode.ENGLISH,
-        englishName: 'english',
-        name: '영어',
-      });
-      const languageENtity = await testDataFactory.createLanguage({
-        code: LanguageCode.ENGLISH,
-        englishName: 'english',
-        name: '영어',
-      });
-
-      await testDataFactory.createMultilingualText(
-        EntityType.BRAND,
-        brand.id,
-        'name',
-        languageENtity,
-        'abc',
-      );
-
-      // When: 존재하지 않는 브랜드 ID로 요청
-      const response = await request(app.getHttpServer())
-        .get(`/brand/list/filter?filter=${BrandNameFilter.A_TO_D}`)
-        .expect(200);
-
-      console.log('RESPONSE ::: ', response.body);
-
-      expect(response.body.result).toBe(true);
-      expect(response.body.data.total).toBe(1);
-      expect(response.body.data.list[0].id).toBe(1);
-      expect(response.body.data.list[0].name).toBe('abc');
-    });
-
-    it('if use categoryId, should return brand name List ', async () => {
-      const brand = await testDataFactory.createBrand();
-      await testDataFactory.createLanguage({
-        code: LanguageCode.ENGLISH,
-        englishName: 'english',
-        name: '영어',
-      });
-      const languageENtity = await testDataFactory.createLanguage({
-        code: LanguageCode.ENGLISH,
-        englishName: 'english',
-        name: '영어',
-      });
-
-      await testDataFactory.createMultilingualText(
-        EntityType.BRAND,
-        brand.id,
-        'name',
-        languageENtity,
-        'abc',
-      );
-
-      // When: 존재하지 않는 브랜드 ID로 요청
-      const response = await request(app.getHttpServer())
-        .get(`/brand/list/filter?filter=${BrandNameFilter.A_TO_D}&categoryId=1`)
-        .expect(200);
-
-      expect(response.body.result).toBe(true);
-      expect(response.body.data.total).toBe(1);
-      expect(response.body.data.list[0].id).toBe(1);
-      expect(response.body.data.list[0].name).toBe('abc');
     });
   });
 });

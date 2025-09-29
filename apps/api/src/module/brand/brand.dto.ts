@@ -8,7 +8,6 @@ import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
-  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,
@@ -168,15 +167,6 @@ export class GetBrandIntroduceResponse {
   }
 }
 export class GetBrandListByNameFilterTypeRequest {
-  @ApiProperty({
-    description: '브랜드 이름 필터 타입',
-    enum: BrandNameFilter,
-    example: BrandNameFilter.A_TO_D,
-  })
-  @IsEnum(BrandNameFilter)
-  @IsDefined()
-  filter: BrandNameFilter;
-
   @ApiPropertyOptional({
     description: '카테고리 ID (선택사항)',
     example: 1,
@@ -187,8 +177,7 @@ export class GetBrandListByNameFilterTypeRequest {
   @Type(() => Number)
   categoryId?: number;
 }
-
-export class GetBrandListByNameFilterTypeResponse {
+export class GetBrandListByName {
   @ApiProperty({
     description: '브랜드 ID',
     example: 1,
@@ -209,6 +198,33 @@ export class GetBrandListByNameFilterTypeResponse {
     return plainToInstance(this, {
       id: entity.id,
       name: name.getContent(),
+    });
+  }
+}
+
+export class GetBrandListByNameResponse {
+  @ApiProperty({
+    description: '이니셜별 filter enum',
+    example: BrandNameFilter.A_TO_D,
+    enum: BrandNameFilter,
+  })
+  filter: BrandNameFilter;
+
+  @ApiProperty({
+    description: '브랜드 Object 리스트',
+    type: GetBrandListByName,
+    isArray: true,
+    example: [
+      { id: 1, name: '서울모먼트' },
+      { id: 2, name: '부산메모리' },
+    ],
+  })
+  brandNameList: GetBrandListByName[];
+
+  static from(filter: BrandNameFilter, brandNameList: GetBrandListByName[]) {
+    return plainToInstance(this, {
+      filter,
+      brandNameList,
     });
   }
 }

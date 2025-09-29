@@ -21,7 +21,7 @@ import { ApiOperation, ApiHeader } from '@nestjs/swagger';
 import {
   GetBrandIntroduceResponse,
   GetBrandListByNameFilterTypeRequest,
-  GetBrandListByNameFilterTypeResponse,
+  GetBrandListByNameResponse,
   PostBrandRequest,
 } from './brand.dto';
 import { BrandService } from './brand.service';
@@ -32,18 +32,15 @@ export class BrandController {
 
   @Get('/list/filter')
   @ApiOperation({
-    summary: 'Get Brand List by First Letter Filter',
+    summary: 'Get Brand List',
     description:
-      'Returns brand list filtered by the first letter of brand names in English. Available filters: A_TO_D, E_TO_H, I_TO_L, M_TO_P, Q_TO_T, U_TO_Z, NUMBER_SYMBOL.',
+      'Returns brand list of brand names in English. Available filters: A_TO_D, E_TO_H, I_TO_L, M_TO_P, Q_TO_T, U_TO_Z, NUMBER_SYMBOL.',
   })
-  @ResponseList(GetBrandListByNameFilterTypeResponse)
-  async getBrandListByNameFilterType(
+  @ResponseList(GetBrandListByNameResponse)
+  async getBrandListByName(
     @Query() query: GetBrandListByNameFilterTypeRequest,
-  ): Promise<ResponseListDto<GetBrandListByNameFilterTypeResponse>> {
-    const result = await this.brandService.getBrandListByNameFilterType(
-      query.filter,
-      query.categoryId,
-    );
+  ): Promise<ResponseListDto<GetBrandListByNameResponse>> {
+    const result = await this.brandService.getBrandListByName(query.categoryId);
     return new ResponseListDto(result);
   }
 

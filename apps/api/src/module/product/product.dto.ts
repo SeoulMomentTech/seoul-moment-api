@@ -141,12 +141,12 @@ export class GetProductRequest {
   static from(
     page: number,
     count: number,
-    sortColum: ProductSortColumn,
-    sort: DatabaseSort,
-    search: string,
-    brandId: number,
-    categoryId: number,
-    productCategoryId: number,
+    sortColum?: ProductSortColumn,
+    sort?: DatabaseSort,
+    search?: string,
+    brandId?: number,
+    categoryId?: number,
+    productCategoryId?: number,
   ) {
     return plainToInstance(this, {
       page,
@@ -423,6 +423,36 @@ export class GetProductDetailResponse {
   })
   subImage: string[];
 
+  @ApiProperty({
+    description: '연관 상품 목록',
+    type: () => GetProductResponse,
+    isArray: true,
+    example: [
+      {
+        id: 1,
+        brandName: '51퍼센트',
+        productName: '오버핏 맨투맨',
+        price: 189000,
+        like: 3200,
+        review: 150,
+        reviewAverage: 4.3,
+        image: 'https://image-dev.seoulmoment.com.tw/product/product_red_1.png',
+      },
+      {
+        id: 2,
+        brandName: 'ABC 브랜드',
+        productName: '데님 팬츠',
+        price: 99000,
+        like: 2100,
+        review: 88,
+        reviewAverage: 4.6,
+        image:
+          'https://image-dev.seoulmoment.com.tw/product/product_blue_2.png',
+      },
+    ],
+  })
+  relate: GetProductResponse[];
+
   static from(
     entity: ProductColorEntity,
     multilingualText: {
@@ -430,6 +460,7 @@ export class GetProductDetailResponse {
       product: MultilingualTextEntity[];
     },
     option: GetProductDetailOption[],
+    relate: GetProductResponse[],
   ) {
     const name = MultilingualFieldDto.fromByEntity(
       multilingualText.product,
@@ -464,6 +495,7 @@ export class GetProductDetailResponse {
       reviewAverage: Math.round(Math.random() * 5 * 10) / 10,
       detailImg: entity.product.getDetailInfoImage(),
       subImage: entity.images.map((v) => v.getImage()),
+      relate,
     });
   }
 }

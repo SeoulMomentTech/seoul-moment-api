@@ -1,3 +1,5 @@
+/* eslint-disable unused-imports/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable max-lines-per-function */
 import { PagingDto } from '@app/common/dto/global.dto';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
@@ -53,6 +55,7 @@ export class ProductService {
   async getProduct(
     dto: GetProductRequest,
     language: LanguageCode,
+    withoutId?: number,
   ): Promise<[GetProductResponse[], number]> {
     const [productColorList, count] =
       await this.productRepositoryService.findProductColor(
@@ -64,6 +67,7 @@ export class ProductService {
         dto.categoryId,
         dto.productCategoryId,
         dto.search,
+        withoutId,
       );
 
     const [brandText, productText] = await Promise.all([
@@ -146,6 +150,12 @@ export class ProductService {
       ),
     ]);
 
+    const [relate, count] = await this.getProduct(
+      GetProductRequest.from(1, 5),
+      language,
+      productDetail.product.id,
+    );
+
     return GetProductDetailResponse.from(
       productDetail,
       {
@@ -153,6 +163,7 @@ export class ProductService {
         product: productText,
       },
       optionValueList,
+      relate,
     );
   }
 }

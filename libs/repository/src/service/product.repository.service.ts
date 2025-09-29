@@ -72,6 +72,7 @@ export class ProductRepositoryService {
     categoryId?: number,
     productCategoryId?: number,
     search?: string,
+    withoutId?: number,
   ): Promise<[ProductColorEntity[], number]> {
     // 대용량 최적화: 인덱스 힌트를 위한 조건 순서 최적화
     const buildBaseQuery = () => {
@@ -94,6 +95,10 @@ export class ProductRepositoryService {
 
       if (categoryId) {
         query.andWhere('c.id = :categoryId', { categoryId });
+      }
+
+      if (withoutId) {
+        query.andWhere('p.id != :withoutId', { withoutId });
       }
 
       // status 조건들 (인덱스된 컬럼들)

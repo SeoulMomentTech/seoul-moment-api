@@ -135,10 +135,6 @@ export class BrandRepositoryService {
   }
 
   private getFirstLetterCondition(type: BrandNameFilter): string {
-    if (type === BrandNameFilter.NUMBER_SYMBOL) {
-      return "NOT (UPPER(SUBSTRING(mt.text_content, 1, 1)) BETWEEN 'A' AND 'Z')";
-    }
-
     // 'A_TO_D' -> ['A', 'TO', 'D'] -> startLetter: 'A', endLetter: 'D'
     const parts = type.split('_');
     const startLetter = parts[0];
