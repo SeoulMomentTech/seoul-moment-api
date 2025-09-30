@@ -36,6 +36,7 @@ import { CategoryRepositoryService } from './service/category.repository.service
 import { HomeRepositoryService } from './service/home.repository.service';
 import { LanguageRepositoryService } from './service/language.repository.service';
 import { NewsRepositoryService } from './service/news.repository.service';
+import { OptionRepositoryService } from './service/option.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
 
@@ -82,6 +83,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     ProductRepositoryService,
     CategoryRepositoryService,
     PartnerRepositoryService,
+    OptionRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -93,6 +95,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     ProductRepositoryService,
     CategoryRepositoryService,
     PartnerRepositoryService,
+    OptionRepositoryService,
   ],
 })
 export class RepositoryModule {}
