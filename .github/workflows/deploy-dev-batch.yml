@@ -45,10 +45,10 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t "${{ steps.vars.outputs.IMAGE_URI }}" -t "${{ steps.vars.outputs.IMAGE_URI_LATEST }}" \
-            --build-arg APP=batch \
-            --build-arg PORT=3000 \
-            .
+          docker build -f Dockerfile.batch \
+            -t "${{ steps.vars.outputs.IMAGE_URI }}" \
+            -t "${{ steps.vars.outputs.IMAGE_URI_LATEST }}" \
+            --build-arg APP=batch .
 
       - name: Push Docker image
         run: |
