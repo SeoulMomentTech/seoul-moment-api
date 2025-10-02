@@ -20,6 +20,9 @@ import {
   GetProductCategoryRequest,
   GetProductCategoryResponse,
   GetProductDetailResponse,
+  GetProductOptionResponse,
+  GetProductOptionValueRequest,
+  GetProductOptionValueResponse,
   GetProductRequest,
   GetProductResponse,
 } from './product.dto';
@@ -59,6 +62,40 @@ export class ProductController {
   ): Promise<ResponseListDto<GetProductCategoryResponse>> {
     const result = await this.productService.getProductCategory(
       query.categoryId,
+      acceptLanguage,
+    );
+
+    return new ResponseListDto(result);
+  }
+
+  @Get('option')
+  @ApiOperation({
+    summary: '상품 옵션 리스트',
+  })
+  @ResponseList(GetProductOptionResponse)
+  async getProductOption(): Promise<ResponseListDto<GetProductOptionResponse>> {
+    const result = await this.productService.getOption();
+
+    return new ResponseListDto(result);
+  }
+
+  @Get('option/value')
+  @ApiOperation({
+    summary: '상품 옵션 리스트',
+  })
+  @ApiHeader({
+    name: 'Accept-language',
+    required: true,
+    description: 'Alternative way to specify language preference (ko, en, zh)',
+    enum: LanguageCode,
+  })
+  @ResponseList(GetProductOptionValueResponse)
+  async getProductValueOption(
+    @Query() query: GetProductOptionValueRequest,
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
+  ): Promise<ResponseListDto<GetProductOptionValueResponse>> {
+    const result = await this.productService.getOptionValue(
+      query.optionId,
       acceptLanguage,
     );
 

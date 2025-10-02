@@ -1,5 +1,7 @@
 import { DatabaseSort } from '@app/common/enum/global.enum';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
+import { OptionEntity } from '@app/repository/entity/option.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
 import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
@@ -553,4 +555,62 @@ export class GetProductCategoryRequest {
   @Type(() => Number)
   @IsDefined()
   categoryId: number;
+}
+export class GetProductOptionResponse {
+  @ApiProperty({
+    description: 'option id',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '상품 옵션 타입',
+    example: OptionType.COLOR,
+    enum: OptionType,
+  })
+  type: OptionType;
+
+  static from(entity: OptionEntity) {
+    return plainToInstance(this, {
+      id: entity.id,
+      type: entity.type,
+    });
+  }
+}
+
+export class GetProductOptionValueRequest {
+  @ApiProperty({
+    description: 'option Id',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  optionId: number;
+}
+
+export class GetProductOptionValueResponse {
+  @ApiProperty({
+    description: 'option value id',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: 'option 값',
+    example: '빨강',
+  })
+  value: string;
+
+  static from(
+    entity: OptionValueEntity,
+    multilingual: MultilingualTextEntity[],
+  ) {
+    const value = MultilingualFieldDto.fromByEntity(multilingual, 'value');
+
+    return plainToInstance(this, {
+      id: entity.id,
+      value: value.getContent(),
+    });
+  }
 }

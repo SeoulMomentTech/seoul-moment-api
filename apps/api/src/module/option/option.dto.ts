@@ -58,6 +58,8 @@ export class GetOptionValueResponse {
     entity: OptionValueEntity,
     multilingual: MultilingualTextEntity[],
   ) {
+    multilingual = multilingual.filter((v) => v.entityId === entity.id);
+
     const value = MultilingualFieldDto.fromByEntity(multilingual, 'value');
 
     return plainToInstance(this, {
