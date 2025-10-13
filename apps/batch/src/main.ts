@@ -65,7 +65,6 @@ async function bootstrap() {
   // 환경 정보 로깅
   logger.info(`🚀 Starting Seoul Moment Batch Server`);
   logger.info(`📦 Environment: ${config.NODE_ENV}`);
-  logger.info(`🔧 Port: ${config.PORT}`);
   logger.info(`📊 API Version: ${config.API_VERSION}`);
   logger.info(
     `🗄️  Database: ${config.DATABASE_HOST}:${config.DATABASE_PORT}/${config.DATABASE_NAME}`,
@@ -75,9 +74,6 @@ async function bootstrap() {
     logger.info(`🔴 Redis: ${config.REDIS_HOST}:${config.REDIS_PORT}`);
   }
 
-  await app.listen(config.PORT);
-
-  logger.info(`✅ Server is running on http://localhost:${config.PORT}`);
   logger.info(`📚 Environment configuration loaded successfully`);
 
   // 🕐 시작 시점 기준 일정 시간 뒤 종료 (기본 60분)

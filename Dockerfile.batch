@@ -2,25 +2,26 @@
 FROM node:20 AS builder
 
 ARG APP
+
 WORKDIR /app
 
 COPY package*.json ./
+
 RUN npm ci
+
 COPY . .
+
 RUN npm run build:$APP
 
 # ---- Production stage ----
 FROM node:20-slim AS production
 
-# 권장: 보안/성능 기본값
-ENV NODE_ENV=production \
-    TZ=Asia/Seoul
-
 WORKDIR /app
 
 COPY package*.json ./
+
 # npm v9+ 기준: --only=production 대신 --omit=dev 권장
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --only=production && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
 

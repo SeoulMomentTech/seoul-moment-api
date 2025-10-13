@@ -11,13 +11,6 @@
       "name": "seoul-moment-batch",
       "image": "156321659479.dkr.ecr.ap-northeast-2.amazonaws.com/seoul-moment-batch-dev",
       "essential": true,
-
-      "command": ["node", "dist/apps/batch/batch.main.js"],
-
-      "stopTimeout": 30,
-
-      "environment": [{ "name": "TZ", "value": "Asia/Seoul" }],
-
       "secrets": [
         {
           "name": "NODE_ENV",
@@ -31,7 +24,6 @@
           "name": "IMAGE_DOMAIN_NAME",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:IMAGE_DOMAIN_NAME::"
         },
-
         {
           "name": "DATABASE_HOST",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:DATABASE_HOST::"
@@ -52,7 +44,6 @@
           "name": "DATABASE_NAME",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:DATABASE_NAME::"
         },
-
         {
           "name": "JWT_SECRET",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:JWT_SECRET::"
@@ -61,7 +52,6 @@
           "name": "JWT_EXPIRES_IN",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:JWT_EXPIRES_IN::"
         },
-
         {
           "name": "REDIS_HOST",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:REDIS_HOST::"
@@ -74,7 +64,6 @@
           "name": "REDIS_DB",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:REDIS_DB::"
         },
-
         {
           "name": "GOOGLE_SHEET_SERVICE_EMAIL",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:GOOGLE_SHEET_SERVICE_EMAIL::"
@@ -83,7 +72,6 @@
           "name": "GOOGLE_SHEET_SERVICE_PRIMARY",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:GOOGLE_SHEET_SERVICE_PRIMARY::"
         },
-
         {
           "name": "SERPER_URL",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:SERPER_URL::"
