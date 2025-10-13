@@ -5,12 +5,15 @@ import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
+  Body,
   Controller,
   Get,
   Headers,
+  HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
+  Post,
   Query,
 } from '@nestjs/common';
 import { ApiHeader, ApiOperation } from '@nestjs/swagger';
@@ -25,6 +28,7 @@ import {
   GetProductOptionValueResponse,
   GetProductRequest,
   GetProductResponse,
+  PostProductRequest,
 } from './product.dto';
 import { ProductService } from './product.service';
 
@@ -81,7 +85,7 @@ export class ProductController {
 
   @Get('option/value')
   @ApiOperation({
-    summary: '상품 옵션 리스트',
+    summary: '상품 옵션 값 리스트',
   })
   @ApiHeader({
     name: 'Accept-language',
@@ -133,6 +137,15 @@ export class ProductController {
       acceptLanguage,
     );
     return new ResponseListDto(result, count);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: '상품 대분류 등록',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async postProduct(@Body() body: PostProductRequest) {
+    await this.productService.postProduct(body);
   }
 
   @Get(':id')

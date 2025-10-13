@@ -5,12 +5,15 @@ import { PagingDto } from '@app/common/dto/global.dto';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { ProductSortDto } from '@app/repository/dto/product.dto';
+import { ProductEntity } from '@app/repository/entity/product.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { OptionRepositoryService } from '@app/repository/service/option.repository.service';
 import { ProductRepositoryService } from '@app/repository/service/product.repository.service';
 import { Injectable } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { Transactional } from 'typeorm-transactional';
 
 import {
   GetProductBannerResponse,
@@ -19,6 +22,7 @@ import {
   GetProductDetailOption,
   GetProductRequest,
   GetProductResponse,
+  PostProductRequest,
 } from './product.dto';
 import {
   GetOptionResponse,
@@ -196,5 +200,34 @@ export class ProductService {
     return optionValueEntites.map((v) =>
       GetOptionValueResponse.from(v, optionValueText),
     );
+  }
+
+  @Transactional()
+  async postProduct(dto: PostProductRequest) {
+    const productEntity = await this.productRepositoryService.insert(
+      plainToInstance(ProductEntity, {
+        brandId: dto.brandId,
+        categoryId: dto.categoryId,
+        productCategoryId: dto.productCategoryId,
+        detailInfoImageUrl: dto.detailInfoImageUrl,
+      }),
+    );
+
+    for (const text of dto.text) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.PRODUCT,
+        productEntity.id,
+        'name',
+        text.lenguageId,
+        text.name,
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.PRODUCT,
+        productEntity.id,
+        'origin',
+        text.lenguageId,
+        text.origin,
+      );
+    }
   }
 }

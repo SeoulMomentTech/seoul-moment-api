@@ -278,4 +278,14 @@ export class ProductRepositoryService {
 
     return result.map((item) => item.type);
   }
+
+  async insert(entity: ProductEntity): Promise<ProductEntity> {
+    return this.productRepository.save(entity);
+  }
+
+  async bulkInsertBanner(
+    entity: ProductBannerEntity[],
+  ): Promise<ProductBannerEntity[]> {
+    return this.productBannerRepository.save(entity);
+  }
 }

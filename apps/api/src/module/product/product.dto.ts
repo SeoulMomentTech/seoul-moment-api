@@ -614,3 +614,93 @@ export class GetProductOptionValueResponse {
     });
   }
 }
+
+export class PostProductLanguage {
+  @ApiProperty({
+    description: '국가 코드 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  lenguageId: number;
+
+  @ApiProperty({
+    description: '상품 이름',
+    example: '나이키 드라이핏 티셔츠',
+  })
+  @IsString()
+  @IsDefined()
+  name: string;
+
+  @ApiProperty({
+    description: '상품 원산지',
+    example: '일본',
+  })
+  @IsString()
+  @IsDefined()
+  origin: string;
+}
+
+export class PostProductRequest {
+  @ApiProperty({
+    description: '브랜드 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandId: number;
+
+  @ApiProperty({
+    description: '카테고리 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  categoryId: number;
+
+  @ApiProperty({
+    description: '상품 카테고리 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  productCategoryId: number;
+
+  @ApiProperty({
+    description: '삼품 상세 페이지 (원 이미지 상세 페이지)',
+    example: '/product/product_detail_1.png',
+  })
+  @IsString()
+  @IsDefined()
+  detailInfoImageUrl: string;
+
+  @ApiProperty({
+    description: '국가별 글자',
+    type: [PostProductLanguage],
+    example: [
+      {
+        lenguageId: 1,
+        name: '나이키 드라이핏 티셔츠',
+        origin: '일본',
+      },
+      {
+        lenguageId: 2,
+        name: 'Nike Dri-FIT T-shirt',
+        origin: 'USA',
+      },
+      {
+        lenguageId: 3,
+        name: '耐克 Dri-FIT T恤',
+        origin: '中国',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PostProductLanguage)
+  text: PostProductLanguage[];
+}
