@@ -2,6 +2,7 @@
 /* eslint-disable max-lines-per-function */
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import { LoggerService } from '@app/common/log/logger.service';
+import { GoogleSheetService } from '@app/common/module/google-sheet/google-sheet.service';
 import { Configuration } from '@app/config/configuration';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -51,6 +52,7 @@ async function bootstrap() {
   });
 
   const logger = app.get(LoggerService);
+  const googleSheetService = app.get(GoogleSheetService);
 
   app.use((req: Request, res: Response, next: NextFunction) =>
     logger.scope(uuidV4(), next),
@@ -61,6 +63,10 @@ async function bootstrap() {
       contentSecurityPolicy: false,
     }),
   );
+
+  logger.info('❗Start Crawling Batch');
+  await googleSheetService.progressGoogleSheet();
+  logger.info('❗Finish Crawling Batch');
 
   // 환경 정보 로깅
   logger.info(`🚀 Starting Seoul Moment Batch Server`);
