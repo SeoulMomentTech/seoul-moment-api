@@ -13,6 +13,7 @@ import { LanguageCode } from '@app/repository/enum/language.enum';
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { OptionRepositoryService } from '@app/repository/service/option.repository.service';
+import { ProductFilterRepositoryService } from '@app/repository/service/product-filter.repository.service';
 import { ProductRepositoryService } from '@app/repository/service/product.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -27,6 +28,7 @@ import {
   GetProductResponse,
   PostProductRequest,
   GetProductBannerByBrandResponse,
+  GetProductFilterResponse,
 } from './product.dto';
 import {
   GetOptionResponse,
@@ -40,6 +42,7 @@ export class ProductService {
     private readonly optionRepositoryService: OptionRepositoryService,
     private readonly languageRepositoryService: LanguageRepositoryService,
     private readonly brandRepositoryService: BrandRepositoryService,
+    private readonly productFilterRepositoryService: ProductFilterRepositoryService,
   ) {}
 
   async getProductBanner(): Promise<GetProductBannerResponse[]> {
@@ -272,5 +275,21 @@ export class ProductService {
         text.origin,
       );
     }
+  }
+
+  async getProductFilter(
+    language: LanguageCode,
+  ): Promise<GetProductFilterResponse[]> {
+    const productFilterEntities =
+      await this.productFilterRepositoryService.findAllProductFilters();
+    const multilingualTexts =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.PRODUCT_FILTER,
+        productFilterEntities.map((v) => v.id),
+        language,
+      );
+    return productFilterEntities.map((v) =>
+      GetProductFilterResponse.from(v, multilingualTexts),
+    );
   }
 }

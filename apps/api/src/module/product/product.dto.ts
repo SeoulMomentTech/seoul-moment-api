@@ -5,6 +5,7 @@ import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
+import { ProductFilterEntity } from '@app/repository/entity/product-filter.entity';
 import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
 import {
   OptionType,
@@ -790,4 +791,31 @@ export class GetProductBannerRequest {
   @IsNumber()
   @Type(() => Number)
   brandId: number;
+}
+
+export class GetProductFilterResponse {
+  @ApiProperty({
+    description: '필터 아이디',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '필터 이름',
+    example: '새로운 상품',
+  })
+  name: string;
+
+  static from(
+    entity: ProductFilterEntity,
+    multilingual: MultilingualTextEntity[],
+  ) {
+    multilingual = multilingual.filter((v) => v.entityId === entity.id);
+
+    const name = MultilingualFieldDto.fromByEntity(multilingual, 'name');
+    return plainToInstance(this, {
+      id: entity.id,
+      name: name.getContent(),
+    });
+  }
 }

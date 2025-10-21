@@ -25,6 +25,7 @@ import {
   GetProductCategoryRequest,
   GetProductCategoryResponse,
   GetProductDetailResponse,
+  GetProductFilterResponse,
   GetProductOptionResponse,
   GetProductOptionValueRequest,
   GetProductOptionValueResponse,
@@ -170,6 +171,24 @@ export class ProductController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async postProduct(@Body() body: PostProductRequest) {
     await this.productService.postProduct(body);
+  }
+
+  @Get('filter')
+  @ApiOperation({
+    summary: 'Product filter list',
+  })
+  @ApiHeader({
+    name: 'Accept-language',
+    required: true,
+    description: 'Alternative way to specify language preference (ko, en, zh)',
+    enum: LanguageCode,
+  })
+  @ResponseList(GetProductFilterResponse)
+  async getProductFilter(
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
+  ): Promise<ResponseListDto<GetProductFilterResponse>> {
+    const result = await this.productService.getProductFilter(acceptLanguage);
+    return new ResponseListDto(result);
   }
 
   @Get(':id')

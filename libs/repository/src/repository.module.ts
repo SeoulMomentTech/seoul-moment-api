@@ -24,6 +24,7 @@ import { PartnerEntity } from './entity/partner.entity';
 import { ProductCategoryEntity } from './entity/product-category.entity';
 import { ProductColorImageEntity } from './entity/product-color-image.entity';
 import { ProductColorEntity } from './entity/product-color.entity';
+import { ProductFilterEntity } from './entity/product-filter.entity';
 import { ProductImageEntity } from './entity/product-image.entity';
 import { ProductVariantEntity } from './entity/product-variant.entity';
 import { ProductEntity } from './entity/product.entity';
@@ -38,6 +39,7 @@ import { LanguageRepositoryService } from './service/language.repository.service
 import { NewsRepositoryService } from './service/news.repository.service';
 import { OptionRepositoryService } from './service/option.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
+import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
 
 @Module({
@@ -71,6 +73,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
       VariantOptionEntity,
       PartnerEntity,
       PartnerCategoryEntity,
+      ProductFilterEntity,
     ]),
   ],
   providers: [
@@ -84,6 +87,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     CategoryRepositoryService,
     PartnerRepositoryService,
     OptionRepositoryService,
+    ProductFilterRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -96,6 +100,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     CategoryRepositoryService,
     PartnerRepositoryService,
     OptionRepositoryService,
+    ProductFilterRepositoryService,
   ],
 })
 export class RepositoryModule {}

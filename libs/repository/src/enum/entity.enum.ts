@@ -13,4 +13,5 @@ export enum EntityType {
   OPTION_VALUE = 'option_value',
   PARTNER = 'partner',
   PARTNER_CATEGORY = 'partner_category',
+  PRODUCT_FILTER = 'product_filter',
 }
