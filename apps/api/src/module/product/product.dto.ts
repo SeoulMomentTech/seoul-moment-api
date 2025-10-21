@@ -1,4 +1,5 @@
 import { DatabaseSort } from '@app/common/enum/global.enum';
+import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
@@ -24,6 +25,75 @@ import {
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
+export class GetProductBannerByBrandResponse {
+  @ApiProperty({
+    description: '브랜드 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandId: number;
+
+  @ApiProperty({
+    description: '배너 이미지',
+    example: 'https://example.com/image1.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  banner: string;
+
+  @ApiProperty({
+    description: '브랜드 이름',
+    example: '브랜드 이름',
+  })
+  @IsString()
+  @IsDefined()
+  name: string;
+
+  @ApiProperty({
+    description: '브랜드 영문 이름',
+    example: 'Brand Name',
+  })
+  @IsString()
+  @IsDefined()
+  englishName: string;
+
+  @ApiProperty({
+    description: '브랜드 설명',
+    example: '브랜드 설명',
+  })
+  @IsString()
+  @IsDefined()
+  description: string;
+
+  @ApiProperty({
+    description: '좋아요 수',
+    example: 54244,
+  })
+  @IsNumber()
+  @IsDefined()
+  @Type(() => Number)
+  like: number;
+
+  static from(entity: BrandEntity, multilingualText: MultilingualTextEntity[]) {
+    const name = MultilingualFieldDto.fromByEntity(multilingualText, 'name');
+    const description = MultilingualFieldDto.fromByEntity(
+      multilingualText,
+      'description',
+    );
+
+    return plainToInstance(this, {
+      brandId: entity.id,
+      banner: entity.getBannerImage(),
+      name: name.getContent(),
+      englishName: entity.englishName,
+      description: description.getContent(),
+      like: Math.floor(Math.random() * 50001),
+    });
+  }
+}
+
 export class GetProductBannerResponse {
   @ApiProperty({
     description: '상품 배너',
@@ -46,6 +116,12 @@ export class GetProductCategoryResponse {
   id: number;
 
   @ApiProperty({
+    description: '상품 카테고리 이미지',
+    example: 'https://example.com/image1.jpg',
+  })
+  image: string;
+
+  @ApiProperty({
     description: '상품 카테고리',
     example: '상의(kr), top(en), 上衣(zh)',
   })
@@ -62,6 +138,7 @@ export class GetProductCategoryResponse {
     return plainToInstance(this, {
       id: entity.id,
       name: name.getContent(),
+      image: entity.getImage(),
     });
   }
 }
@@ -547,13 +624,13 @@ export class PostProductCategoryRequest {
 }
 
 export class GetProductCategoryRequest {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '카테고리 아이디',
     example: 1,
   })
   @IsNumber()
   @Type(() => Number)
-  @IsDefined()
+  @IsOptional()
   categoryId: number;
 }
 export class GetProductOptionResponse {
@@ -703,4 +780,14 @@ export class PostProductRequest {
   @ValidateNested({ each: true })
   @Type(() => PostProductLanguage)
   text: PostProductLanguage[];
+}
+
+export class GetProductBannerRequest {
+  @ApiProperty({
+    description: '브랜드 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  brandId: number;
 }

@@ -31,7 +31,13 @@ export class BrandEntity extends CommonEntity {
   categoryId: number;
 
   @Column('varchar', { length: 255, nullable: true })
+  englishName: string;
+
+  @Column('varchar', { length: 255, nullable: true })
   profileImage: string;
+
+  @Column('varchar', { length: 255, nullable: true })
+  bannerImageUrl: string;
 
   @Column('enum', {
     enum: BrandStatus,
@@ -86,5 +92,8 @@ export class BrandEntity extends CommonEntity {
 
   getProfileImage(): string {
     return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.profileImage}`;
+  }
+  getBannerImage(): string {
+    return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.bannerImageUrl}`;
   }
 }

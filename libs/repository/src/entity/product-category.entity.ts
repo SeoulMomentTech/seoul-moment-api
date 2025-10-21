@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import {
   Column,
   Entity,
@@ -24,6 +25,9 @@ export class ProductCategoryEntity extends CommonEntity {
   @Column({ name: 'category_id', nullable: true })
   categoryId: number;
 
+  @Column('varchar', { length: 255, nullable: true })
+  imageUrl: string;
+
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
@@ -41,4 +45,8 @@ export class ProductCategoryEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   multilingualTexts: MultilingualTextEntity[];
+
+  getImage(): string {
+    return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imageUrl}`;
+  }
 }

@@ -19,6 +19,8 @@ import {
 import { ApiHeader, ApiOperation } from '@nestjs/swagger';
 
 import {
+  GetProductBannerByBrandResponse,
+  GetProductBannerRequest,
   GetProductBannerResponse,
   GetProductCategoryRequest,
   GetProductCategoryResponse,
@@ -47,6 +49,28 @@ export class ProductController {
     return new ResponseListDto(result);
   }
 
+  @Get('banner/brand')
+  @ApiOperation({
+    summary: 'Product banner list by brand',
+  })
+  @ApiHeader({
+    name: 'Accept-language',
+    required: true,
+    description: 'Alternative way to specify language preference (ko, en, zh)',
+    enum: LanguageCode,
+  })
+  @ResponseData(GetProductBannerByBrandResponse)
+  async getProductBannerByBrand(
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
+    @Query() query: GetProductBannerRequest,
+  ): Promise<ResponseDataDto<GetProductBannerByBrandResponse>> {
+    const result = await this.productService.getProductBannerByBrand(
+      query.brandId,
+      acceptLanguage,
+    );
+    return new ResponseDataDto(result);
+  }
+
   @Get('category')
   @ApiOperation({
     summary: 'Product category list with Multilingual Support',
@@ -61,8 +85,8 @@ export class ProductController {
   })
   @ResponseList(GetProductCategoryResponse)
   async getProductCategory(
-    @Headers('Accept-language') acceptLanguage: LanguageCode,
     @Query() query: GetProductCategoryRequest,
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
   ): Promise<ResponseListDto<GetProductCategoryResponse>> {
     const result = await this.productService.getProductCategory(
       query.categoryId,

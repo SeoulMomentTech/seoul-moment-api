@@ -5,9 +5,12 @@ import { PagingDto } from '@app/common/dto/global.dto';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { ProductSortDto } from '@app/repository/dto/product.dto';
+import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
+import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { OptionRepositoryService } from '@app/repository/service/option.repository.service';
 import { ProductRepositoryService } from '@app/repository/service/product.repository.service';
@@ -23,6 +26,7 @@ import {
   GetProductRequest,
   GetProductResponse,
   PostProductRequest,
+  GetProductBannerByBrandResponse,
 } from './product.dto';
 import {
   GetOptionResponse,
@@ -35,6 +39,7 @@ export class ProductService {
     private readonly productRepositoryService: ProductRepositoryService,
     private readonly optionRepositoryService: OptionRepositoryService,
     private readonly languageRepositoryService: LanguageRepositoryService,
+    private readonly brandRepositoryService: BrandRepositoryService,
   ) {}
 
   async getProductBanner(): Promise<GetProductBannerResponse[]> {
@@ -43,19 +48,57 @@ export class ProductService {
     return bannerList.map((v) => GetProductBannerResponse.from(v));
   }
 
+  async getProductBannerByBrand(
+    brandId: number,
+    language: LanguageCode,
+  ): Promise<GetProductBannerByBrandResponse> {
+    const brandEntity =
+      await this.brandRepositoryService.findBrandById(brandId);
+
+    if (!brandEntity) {
+      throw new ServiceError(
+        'Brand not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    const multilingualText =
+      await this.languageRepositoryService.findMultilingualTexts(
+        EntityType.BRAND,
+        brandEntity.id,
+        language,
+      );
+
+    return GetProductBannerByBrandResponse.from(brandEntity, multilingualText);
+  }
+
   async getProductCategory(
     categoryId: number,
     language: LanguageCode,
   ): Promise<GetProductCategoryResponse[]> {
-    const categoryList =
-      await this.productRepositoryService.findCategoryByCategoryId(categoryId);
+    let categoryList: ProductCategoryEntity[] = [];
+    let categoryText: MultilingualTextEntity[] = [];
 
-    const categoryText =
-      await this.languageRepositoryService.findMultilingualTextsByEntities(
-        EntityType.PRODUCT_CATEGORY,
-        categoryList.map((v) => v.id),
-        language,
-      );
+    if (!categoryId) {
+      categoryList = await this.productRepositoryService.findCategory();
+      categoryText =
+        await this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.PRODUCT_CATEGORY,
+          categoryList.map((v) => v.id),
+          language,
+        );
+    } else {
+      categoryList =
+        await this.productRepositoryService.findCategoryByCategoryId(
+          categoryId,
+        );
+      categoryText =
+        await this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.PRODUCT_CATEGORY,
+          categoryList.map((v) => v.id),
+          language,
+        );
+    }
 
     return categoryList.map((v) =>
       GetProductCategoryResponse.from(v, categoryText),
