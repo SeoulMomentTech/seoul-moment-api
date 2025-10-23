@@ -173,7 +173,7 @@ export class ProductController {
     await this.productService.postProduct(body);
   }
 
-  @Get('filter')
+  @Get('sort/filter')
   @ApiOperation({
     summary: 'Product filter list',
   })
