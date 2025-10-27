@@ -4,7 +4,7 @@ import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   OptionType,
-  ProductColorStatus,
+  ProductItemStatus,
   ProductStatus,
 } from '@app/repository/enum/product.enum';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -158,11 +158,11 @@ describe('ProductService Integration Tests', () => {
       // 상품 색상 생성
       const option = await testDataFactory.createOption();
       const optionValue = await testDataFactory.createOptionValue(option);
-      const productColor = await testDataFactory.createProductColor(
+      const productItem = await testDataFactory.createProductItem(
         product,
         optionValue,
         {
-          status: ProductColorStatus.NORMAL,
+          status: ProductItemStatus.NORMAL,
           price: 10000,
         },
       );
@@ -266,11 +266,11 @@ describe('ProductService Integration Tests', () => {
       );
 
       // 상품 색상 생성
-      const productColor = await testDataFactory.createProductColor(
+      const productItem = await testDataFactory.createProductItem(
         product,
         redValue,
         {
-          status: ProductColorStatus.NORMAL,
+          status: ProductItemStatus.NORMAL,
           price: 20000,
           discountPrice: 15000,
           shippingInfo: 3,
@@ -279,11 +279,11 @@ describe('ProductService Integration Tests', () => {
       );
 
       // 상품 색상 이미지 생성
-      await testDataFactory.createProductColorImage(productColor, {
+      await testDataFactory.createProductItemImage(productItem, {
         imageUrl: '/product-image1.jpg',
         sortOrder: 1,
       });
-      await testDataFactory.createProductColorImage(productColor, {
+      await testDataFactory.createProductItemImage(productItem, {
         imageUrl: '/product-image2.jpg',
         sortOrder: 2,
       });
@@ -299,13 +299,13 @@ describe('ProductService Integration Tests', () => {
 
       // When: 상품 상세 정보 조회
       const productDetail = await productService.getProductDetail(
-        productColor.id,
+        productItem.id,
         LanguageCode.KOREAN,
       );
 
       // Then: 완전한 상품 상세 정보가 반환되어야 함
       expect(productDetail).toBeDefined();
-      expect(productDetail.id).toBe(productColor.id);
+      expect(productDetail.id).toBe(productItem.id);
       expect(productDetail.name).toBe('Test Product EN');
       expect(productDetail.brand.name).toBe('Test Brand EN');
       expect(productDetail.brand.profileImg).toBe(
@@ -366,18 +366,18 @@ describe('ProductService Integration Tests', () => {
       });
       const option = await testDataFactory.createOption();
       const optionValue = await testDataFactory.createOptionValue(option);
-      const productColor = await testDataFactory.createProductColor(
+      const productItem = await testDataFactory.createProductItem(
         product,
         optionValue,
         {
-          status: ProductColorStatus.BLOCK,
+          status: ProductItemStatus.BLOCK,
           price: 10000,
         },
       );
 
       // When & Then: 차단된 상품 색상 조회 시 에러 발생
       await expect(
-        productService.getProductDetail(productColor.id, LanguageCode.KOREAN),
+        productService.getProductDetail(productItem.id, LanguageCode.KOREAN),
       ).rejects.toThrow(ServiceError);
     });
   });

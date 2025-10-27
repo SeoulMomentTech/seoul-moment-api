@@ -142,7 +142,7 @@ describe('Product Entities Basic Tests', () => {
       expect(variantOption.optionValueId).toBe(optionValue.id);
     });
 
-    it('should create ProductColor mapping', async () => {
+    it('should create ProductItem mapping', async () => {
       // Given: 브랜드, 상품, 색상 옵션 생성
       const brand = await testDataFactory.createBrand();
       const product = await testDataFactory.createProduct(brand);
@@ -153,14 +153,14 @@ describe('Product Entities Basic Tests', () => {
       const optionValue = await testDataFactory.createOptionValue(option);
 
       // When: 상품-색상 매핑 생성
-      const productColor = await testDataFactory.createProductColor(
+      const productItem = await testDataFactory.createProductItem(
         product,
         optionValue,
       );
 
       // Then: 매핑이 정상 생성되어야 함
-      expect(productColor.productId).toBe(product.id);
-      expect(productColor.optionValueId).toBe(optionValue.id);
+      expect(productItem.productId).toBe(product.id);
+      expect(productItem.optionValueId).toBe(optionValue.id);
     });
   });
 });

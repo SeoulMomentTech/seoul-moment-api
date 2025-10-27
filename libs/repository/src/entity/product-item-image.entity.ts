@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
-import { ProductColorEntity } from './product-color.entity';
+import { ProductItemEntity } from './product-item.entity';
 import { ProductImageType } from '../enum/product.enum';
 
 /**
@@ -17,19 +17,19 @@ import { ProductImageType } from '../enum/product.enum';
  * - 상세 페이지 상단 갤러리용 이미지들
  * - 현재 프로젝트 패턴 동일 (BrandBannerImageEntity 구조 참조)
  */
-@Entity('product_color_image')
-@Index(['productColorId', 'sortOrder'])
-@Index(['productColorId', 'imageType'])
-export class ProductColorImageEntity extends CommonEntity {
+@Entity('product_item_image')
+@Index(['productItemId', 'sortOrder'])
+@Index(['productItemId', 'imageType'])
+export class ProductItemImageEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
   @Column('int', {
-    name: 'product_color_id',
+    name: 'product_item_id',
     nullable: false,
-    comment: '상품 컬러 ID',
+    comment: '상품 아이템 ID',
   })
-  productColorId: number;
+  productItemId: number;
 
   @Column('varchar', {
     name: 'image_url',
@@ -73,12 +73,12 @@ export class ProductColorImageEntity extends CommonEntity {
   sortOrder: number;
 
   // Relations
-  @ManyToOne(() => ProductColorEntity, (product) => product.images, {
+  @ManyToOne(() => ProductItemEntity, (product) => product.images, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
-  @JoinColumn({ name: 'product_color_id' })
-  productColor: ProductColorEntity;
+  @JoinColumn({ name: 'product_item_id' })
+  productItem: ProductItemEntity;
 
   // Utility methods
   getImage(): string {

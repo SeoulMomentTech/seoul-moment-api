@@ -6,7 +6,7 @@ import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   OptionType,
-  ProductColorStatus,
+  ProductItemStatus,
   ProductStatus,
 } from '@app/repository/enum/product.enum';
 import {
@@ -219,8 +219,8 @@ describe('ProductController (E2E)', () => {
       // 상품 색상 생성
       const option = await testDataFactory.createOption();
       const optionValue = await testDataFactory.createOptionValue(option);
-      await testDataFactory.createProductColor(product, optionValue, {
-        status: ProductColorStatus.NORMAL,
+      await testDataFactory.createProductItem(product, optionValue, {
+        status: ProductItemStatus.NORMAL,
         price: 10000,
       });
 
@@ -332,11 +332,11 @@ describe('ProductController (E2E)', () => {
       );
 
       // 상품 색상 생성
-      const productColor = await testDataFactory.createProductColor(
+      const productItem = await testDataFactory.createProductItem(
         product,
         redValue,
         {
-          status: ProductColorStatus.NORMAL,
+          status: ProductItemStatus.NORMAL,
           price: 20000,
           discountPrice: 15000,
           shippingInfo: 3,
@@ -345,11 +345,11 @@ describe('ProductController (E2E)', () => {
       );
 
       // 상품 색상 이미지 생성
-      await testDataFactory.createProductColorImage(productColor, {
+      await testDataFactory.createProductItemImage(productItem, {
         imageUrl: '/product-image1.jpg',
         sortOrder: 1,
       });
-      await testDataFactory.createProductColorImage(productColor, {
+      await testDataFactory.createProductItemImage(productItem, {
         imageUrl: '/product-image2.jpg',
         sortOrder: 2,
       });
@@ -365,12 +365,12 @@ describe('ProductController (E2E)', () => {
 
       // When & Then
       const response = await request(app.getHttpServer())
-        .get(`/product/${productColor.id}`)
+        .get(`/product/${productItem.id}`)
         .set('Accept-Language', 'en')
         .expect(200);
 
       expect(response.body).toHaveProperty('result', true);
-      expect(response.body.data).toHaveProperty('id', productColor.id);
+      expect(response.body.data).toHaveProperty('id', productItem.id);
       expect(response.body.data).toHaveProperty('name', 'Test Product EN');
       expect(response.body.data.brand).toHaveProperty('name', 'Test Brand EN');
       expect(response.body.data.brand).toHaveProperty(
@@ -429,18 +429,18 @@ describe('ProductController (E2E)', () => {
       });
       const option = await testDataFactory.createOption();
       const optionValue = await testDataFactory.createOptionValue(option);
-      const productColor = await testDataFactory.createProductColor(
+      const productItem = await testDataFactory.createProductItem(
         product,
         optionValue,
         {
-          status: ProductColorStatus.BLOCK,
+          status: ProductItemStatus.BLOCK,
           price: 10000,
         },
       );
 
       // When & Then: 차단된 상품 색상 조회 시 404 에러 발생
       await request(app.getHttpServer())
-        .get(`/product/${productColor.id}`)
+        .get(`/product/${productItem.id}`)
         .set('Accept-Language', 'en')
         .expect(404);
     });

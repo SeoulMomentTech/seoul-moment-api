@@ -113,8 +113,8 @@ export class ProductService {
     language: LanguageCode,
     withoutId?: number,
   ): Promise<[GetProductResponse[], number]> {
-    const [productColorList, count] =
-      await this.productRepositoryService.findProductColor(
+    const [productItemList, count] =
+      await this.productRepositoryService.findProductItem(
         PagingDto.from(dto.page, dto.count),
         dto.isNotExistSort()
           ? undefined
@@ -129,18 +129,18 @@ export class ProductService {
     const [brandText, productText] = await Promise.all([
       this.languageRepositoryService.findMultilingualTextsByEntities(
         EntityType.BRAND,
-        productColorList.map((v) => v.product.brand.id),
+        productItemList.map((v) => v.product.brand.id),
         language,
       ),
       this.languageRepositoryService.findMultilingualTextsByEntities(
         EntityType.PRODUCT,
-        productColorList.map((v) => v.product.id),
+        productItemList.map((v) => v.product.id),
         language,
       ),
     ]);
 
     return [
-      productColorList.map((v) =>
+      productItemList.map((v) =>
         GetProductResponse.from(v, {
           brand: brandText,
           product: productText,
@@ -151,14 +151,14 @@ export class ProductService {
   }
 
   async getProductDetail(
-    productColorId: number,
+    productItemId: number,
     language: LanguageCode,
   ): Promise<GetProductDetailResponse> {
     const languageEntity =
       await this.languageRepositoryService.findLanguageByCode(language);
 
     const productDetail =
-      await this.productRepositoryService.getProductColorDetail(productColorId);
+      await this.productRepositoryService.getProductItemDetail(productItemId);
 
     // 필수 관계 데이터 검증
     if (!productDetail.product) {

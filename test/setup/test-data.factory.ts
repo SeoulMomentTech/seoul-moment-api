@@ -16,9 +16,9 @@ import { OptionEntity } from '@app/repository/entity/option.entity';
 import { PartnerCategoryEntity } from '@app/repository/entity/partner-category.entity';
 import { PartnerEntity } from '@app/repository/entity/partner.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
-import { ProductColorImageEntity } from '@app/repository/entity/product-color-image.entity';
-import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
 import { ProductImageEntity } from '@app/repository/entity/product-image.entity';
+import { ProductItemImageEntity } from '@app/repository/entity/product-item-image.entity';
+import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
 import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
@@ -402,23 +402,23 @@ export class TestDataFactory {
     return this.productFactory.createVariantOption(variant, optionValue);
   }
 
-  async createProductColor(
+  async createProductItem(
     product: ProductEntity,
     optionValue: OptionValueEntity,
-    overrides: Partial<ProductColorEntity> = {},
+    overrides: Partial<ProductItemEntity> = {},
   ) {
-    return this.productFactory.createProductColor(
+    return this.productFactory.createProductItem(
       product,
       optionValue,
       overrides,
     );
   }
 
-  async createProductColorImage(
-    productColor: ProductColorEntity,
-    overrides: Partial<ProductColorImageEntity> = {},
+  async createProductItemImage(
+    productItem: ProductItemEntity,
+    overrides: Partial<ProductItemImageEntity> = {},
   ) {
-    return this.productFactory.createProductColorImage(productColor, overrides);
+    return this.productFactory.createProductItemImage(productItem, overrides);
   }
 
   async createMultilingualProductCategory(

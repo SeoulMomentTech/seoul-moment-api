@@ -10,13 +10,13 @@ import { Repository } from 'typeorm';
 
 import { ProductSortDto } from '../dto/product.dto';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
-import { ProductColorEntity } from '../entity/product-color.entity';
+import { ProductItemEntity } from '../entity/product-item.entity';
 import { ProductEntity } from '../entity/product.entity';
 import { ProductBannerEntity } from '../entity/product_banner.entity';
 import { BrandStatus } from '../enum/brand.enum';
 import {
   OptionType,
-  ProductColorStatus,
+  ProductItemStatus,
   ProductSortColumn,
   ProductStatus,
 } from '../enum/product.enum';
@@ -27,8 +27,8 @@ export class ProductRepositoryService {
     @InjectRepository(ProductEntity)
     private readonly productRepository: Repository<ProductEntity>,
 
-    @InjectRepository(ProductColorEntity)
-    private readonly productColorRepository: Repository<ProductColorEntity>,
+    @InjectRepository(ProductItemEntity)
+    private readonly productItemRepository: Repository<ProductItemEntity>,
 
     @InjectRepository(ProductBannerEntity)
     private readonly productBannerRepository: Repository<ProductBannerEntity>,
@@ -62,7 +62,7 @@ export class ProductRepositoryService {
     });
   }
 
-  async findProductColor(
+  async findProductItem(
     pageDto: PagingDto,
     sortDto: ProductSortDto = ProductSortDto.from(
       ProductSortColumn.CREATE,
@@ -73,10 +73,10 @@ export class ProductRepositoryService {
     productCategoryId?: number,
     search?: string,
     withoutId?: number,
-  ): Promise<[ProductColorEntity[], number]> {
+  ): Promise<[ProductItemEntity[], number]> {
     // 대용량 최적화: 인덱스 힌트를 위한 조건 순서 최적화
     const buildBaseQuery = () => {
-      const query = this.productColorRepository
+      const query = this.productItemRepository
         .createQueryBuilder('pc')
         .innerJoin('pc.product', 'p') // LEFT → INNER: 성능 개선
         .innerJoin('p.brand', 'b')
@@ -103,8 +103,8 @@ export class ProductRepositoryService {
 
       // status 조건들 (인덱스된 컬럼들)
       query
-        .andWhere('pc.status = :productColorStatus', {
-          productColorStatus: ProductColorStatus.NORMAL,
+        .andWhere('pc.status = :productItemStatus', {
+          productItemStatus: ProductItemStatus.NORMAL,
         })
         .andWhere('p.status = :productStatus', {
           productStatus: ProductStatus.NORMAL,
@@ -134,9 +134,9 @@ export class ProductRepositoryService {
     const getOptimizedCount = async (): Promise<number> => {
       if (!search && !categoryId && !productCategoryId && !brandId) {
         // 간단한 조건만 있을 때는 단일 테이블 COUNT
-        return this.productColorRepository
+        return this.productItemRepository
           .createQueryBuilder('pc')
-          .where('pc.status = :status', { status: ProductColorStatus.NORMAL })
+          .where('pc.status = :status', { status: ProductItemStatus.NORMAL })
           .getCount();
       }
 
@@ -178,16 +178,16 @@ export class ProductRepositoryService {
       idQuery.groupBy('pc.id'); // 검색시에만 GROUP BY 적용
     }
 
-    const productColorIds = await idQuery.getRawMany();
+    const productItemIds = await idQuery.getRawMany();
 
-    if (productColorIds.length === 0) {
+    if (productItemIds.length === 0) {
       return [[], totalCount];
     }
 
-    const ids = productColorIds.map((item) => item.pc_id);
+    const ids = productItemIds.map((item) => item.pc_id);
 
     // 메인 데이터 조회: IN 절 최적화
-    const results = await this.productColorRepository
+    const results = await this.productItemRepository
       .createQueryBuilder('pc')
       .leftJoinAndSelect('pc.product', 'p')
       .leftJoinAndSelect('p.brand', 'b')
@@ -205,11 +205,11 @@ export class ProductRepositoryService {
     return [results, totalCount];
   }
 
-  async getProductColorDetail(id: number): Promise<ProductColorEntity> {
-    const result = await this.productColorRepository.findOne({
+  async getProductItemDetail(id: number): Promise<ProductItemEntity> {
+    const result = await this.productItemRepository.findOne({
       where: {
         id,
-        status: ProductColorStatus.NORMAL,
+        status: ProductItemStatus.NORMAL,
       },
       relations: ['product', 'product.brand', 'images'],
     });

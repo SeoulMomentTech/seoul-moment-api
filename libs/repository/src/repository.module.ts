@@ -22,8 +22,8 @@ import { OptionEntity } from './entity/option.entity';
 import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
 import { ProductCategoryEntity } from './entity/product-category.entity';
-import { ProductColorImageEntity } from './entity/product-color-image.entity';
-import { ProductColorEntity } from './entity/product-color.entity';
+import { ProductItemImageEntity } from './entity/product-item-image.entity';
+import { ProductItemEntity } from './entity/product-item.entity';
 import { ProductFilterEntity } from './entity/product-filter.entity';
 import { ProductImageEntity } from './entity/product-image.entity';
 import { ProductVariantEntity } from './entity/product-variant.entity';
@@ -64,8 +64,8 @@ import { ProductRepositoryService } from './service/product.repository.service';
       ProductEntity,
       ProductBannerEntity,
       ProductCategoryEntity,
-      ProductColorEntity,
-      ProductColorImageEntity,
+      ProductItemEntity,
+      ProductItemImageEntity,
       ProductImageEntity,
       ProductVariantEntity,
       OptionEntity,

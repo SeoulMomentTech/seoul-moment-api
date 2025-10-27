@@ -11,13 +11,13 @@ import {
 
 import { CommonEntity } from './common.entity';
 import { OptionValueEntity } from './option-value.entity';
-import { ProductColorImageEntity } from './product-color-image.entity';
+import { ProductItemImageEntity } from './product-item-image.entity';
 import { ProductEntity } from './product.entity';
-import { ProductColorStatus } from '../enum/product.enum';
+import { ProductItemStatus } from '../enum/product.enum';
 
-@Entity('product_color')
+@Entity('product_item')
 @Index(['productId', 'optionValueId'], { unique: true })
-export class ProductColorEntity extends CommonEntity {
+export class ProductItemEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
@@ -70,12 +70,12 @@ export class ProductColorEntity extends CommonEntity {
   shippingInfo: number;
 
   @Column('enum', {
-    enum: ProductColorStatus,
-    default: ProductColorStatus.NORMAL,
+    enum: ProductItemStatus,
+    default: ProductItemStatus.NORMAL,
     nullable: false,
     comment: '상품 상태',
   })
-  status: ProductColorStatus;
+  status: ProductItemStatus;
 
   getEffectivePrice(): number {
     return this.discountPrice || this.price;
@@ -87,7 +87,7 @@ export class ProductColorEntity extends CommonEntity {
       : '';
   }
 
-  @ManyToOne(() => ProductEntity, (product) => product.productColors, {
+  @ManyToOne(() => ProductEntity, (product) => product.productItems, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
@@ -105,9 +105,9 @@ export class ProductColorEntity extends CommonEntity {
   @JoinColumn({ name: 'option_value_id' })
   optionValue: OptionValueEntity;
 
-  @OneToMany(() => ProductColorImageEntity, (image) => image.productColor, {
+  @OneToMany(() => ProductItemImageEntity, (image) => image.productItem, {
     cascade: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
-  images: ProductColorImageEntity[];
+  images: ProductItemImageEntity[];
 }

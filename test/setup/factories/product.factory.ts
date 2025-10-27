@@ -3,13 +3,13 @@ import { LanguageEntity } from '@app/repository/entity/language.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
-import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
-import { ProductColorImageEntity } from '@app/repository/entity/product-color-image.entity';
-import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
 import { ProductImageEntity } from '@app/repository/entity/product-image.entity';
+import { ProductItemImageEntity } from '@app/repository/entity/product-item-image.entity';
+import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
+import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
@@ -186,35 +186,35 @@ export class ProductFactory {
   /**
    * 상품-색상 연결 생성
    */
-  async createProductColor(
+  async createProductItem(
     product: ProductEntity,
     optionValue: OptionValueEntity,
-    overrides: Partial<ProductColorEntity> = {},
-  ): Promise<ProductColorEntity> {
-    const productColorRepository =
-      this.dataSource.getRepository(ProductColorEntity);
+    overrides: Partial<ProductItemEntity> = {},
+  ): Promise<ProductItemEntity> {
+    const productItemRepository =
+      this.dataSource.getRepository(ProductItemEntity);
 
-    const productColor = productColorRepository.create({
+    const productItem = productItemRepository.create({
       productId: product.id,
       optionValueId: optionValue.id,
       price: 59000,
       ...overrides,
     });
 
-    return productColorRepository.save(productColor);
+    return productItemRepository.save(productItem);
   }
 
   /**
    * 상품 색상 이미지 생성
    */
-  async createProductColorImage(
-    productColor: ProductColorEntity,
-    overrides: Partial<ProductColorImageEntity> = {},
-  ): Promise<ProductColorImageEntity> {
-    const repository = this.dataSource.getRepository(ProductColorImageEntity);
+  async createProductItemImage(
+    productItem: ProductItemEntity,
+    overrides: Partial<ProductItemImageEntity> = {},
+  ): Promise<ProductItemImageEntity> {
+    const repository = this.dataSource.getRepository(ProductItemImageEntity);
 
     const image = repository.create({
-      productColorId: productColor.id,
+      productItemId: productItem.id,
       imageUrl: 'https://example.com/color-image.jpg',
       sortOrder: 1,
       ...overrides,

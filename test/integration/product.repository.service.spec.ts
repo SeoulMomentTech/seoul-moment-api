@@ -7,7 +7,7 @@ import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   OptionType,
-  ProductColorStatus,
+  ProductItemStatus,
   ProductSortColumn,
   ProductStatus,
 } from '@app/repository/enum/product.enum';
@@ -156,14 +156,14 @@ describe('ProductRepositoryService Integration Tests', () => {
     });
   });
 
-  describe('findProductColor', () => {
+  describe('findProductItem', () => {
     beforeEach(async () => {
       // 각 테스트 전에 완전 정리
       await TestSetup.clearDatabase();
 
       // 추가적으로 직접 테이블 정리
       const dataSource = TestSetup.getDataSource();
-      await dataSource.query('TRUNCATE TABLE product_color CASCADE;');
+      await dataSource.query('TRUNCATE TABLE product_item CASCADE;');
       await dataSource.query('TRUNCATE TABLE product CASCADE;');
       await dataSource.query('TRUNCATE TABLE brand CASCADE;');
       await dataSource.query('TRUNCATE TABLE category CASCADE;');
@@ -172,16 +172,16 @@ describe('ProductRepositoryService Integration Tests', () => {
       await dataSource.query('TRUNCATE TABLE multilingual_text CASCADE;');
     });
 
-    it('빈 상품 색상 목록을 반환해야 함', async () => {
+    it('빈 상품 아이템 목록을 반환해야 함', async () => {
       const pageDto = PagingDto.from(1, 10);
       const [colors, totalCount] =
-        await productRepositoryService.findProductColor(pageDto);
+        await productRepositoryService.findProductItem(pageDto);
 
       expect(colors).toEqual([]);
       expect(totalCount).toBe(0);
     });
 
-    it('정상 상품 색상들만 반환해야 함', async () => {
+    it('정상 상품 아이템들만 반환해야 함', async () => {
       // Given: 정상 브랜드와 정상 상품들 생성
       const brand = await testDataFactory.createBrand({
         status: BrandStatus.NORMAL,
@@ -202,36 +202,36 @@ describe('ProductRepositoryService Integration Tests', () => {
       const optionValue2 = await testDataFactory.createOptionValue(option);
       const optionValue3 = await testDataFactory.createOptionValue(option);
 
-      // 정상 상품 색상들
-      const color1 = await testDataFactory.createProductColor(
+      // 정상 상품 아이템들
+      const color1 = await testDataFactory.createProductItem(
         product1,
         optionValue1,
         {
-          status: ProductColorStatus.NORMAL,
+          status: ProductItemStatus.NORMAL,
           price: 10000,
         },
       );
-      const color2 = await testDataFactory.createProductColor(
+      const color2 = await testDataFactory.createProductItem(
         product2,
         optionValue2,
         {
-          status: ProductColorStatus.NORMAL,
+          status: ProductItemStatus.NORMAL,
           price: 20000,
         },
       );
 
-      // 차단된 상품 색상 (결과에 포함되지 않아야 함)
-      await testDataFactory.createProductColor(product1, optionValue3, {
-        status: ProductColorStatus.BLOCK,
+      // 차단된 상품 아이템 (결과에 포함되지 않아야 함)
+      await testDataFactory.createProductItem(product1, optionValue3, {
+        status: ProductItemStatus.BLOCK,
         price: 30000,
       });
 
-      // When: 상품 색상 목록 조회
+      // When: 상품 아이템 목록 조회
       const pageDto = PagingDto.from(1, 10);
       const [colors, totalCount] =
-        await productRepositoryService.findProductColor(pageDto);
+        await productRepositoryService.findProductItem(pageDto);
 
-      // Then: 정상 상태의 색상들만 반환되어야 함 (차단된 것 제외)
+      // Then: 정상 상태의 아이템들만 반환되어야 함 (차단된 것 제외)
       expect(colors).toHaveLength(2);
       expect(totalCount).toBe(2);
       expect(colors.map((c) => c.id).sort()).toEqual(
@@ -263,19 +263,19 @@ describe('ProductRepositoryService Integration Tests', () => {
       const optionValue1 = await testDataFactory.createOptionValue(option);
       const optionValue2 = await testDataFactory.createOptionValue(option);
 
-      const color1 = await testDataFactory.createProductColor(
+      const item1 = await testDataFactory.createProductItem(
         product1,
         optionValue1,
         {
-          status: ProductColorStatus.NORMAL,
+          status: ProductItemStatus.NORMAL,
           price: 10000,
         },
       );
-      const color2 = await testDataFactory.createProductColor(
+      const item2 = await testDataFactory.createProductItem(
         product2,
         optionValue2,
         {
-          status: ProductColorStatus.NORMAL,
+          status: ProductItemStatus.NORMAL,
           price: 20000,
         },
       );
@@ -283,7 +283,7 @@ describe('ProductRepositoryService Integration Tests', () => {
       // When: brand2로 필터링하여 조회 (더 명확하게 구분하기 위해)
       const pageDto = PagingDto.from(1, 10);
       const [colors, totalCount] =
-        await productRepositoryService.findProductColor(
+        await productRepositoryService.findProductItem(
           pageDto,
           undefined,
           brand2.id, // brand2로 필터링
@@ -292,7 +292,7 @@ describe('ProductRepositoryService Integration Tests', () => {
       // Then: brand2의 상품 색상만 반환되어야 함
       expect(colors).toHaveLength(1);
       expect(totalCount).toBe(1);
-      expect(colors[0].id).toBe(color2.id);
+      expect(colors[0].id).toBe(item2.id);
       expect(colors[0].product.brand.id).toBe(brand2.id);
       expect(colors[0].product.brandId).toBe(brand2.id);
     });
@@ -314,22 +314,22 @@ describe('ProductRepositoryService Integration Tests', () => {
       const optionValue2 = await testDataFactory.createOptionValue(option);
 
       // 할인가가 있는 상품 (할인가 기준으로 정렬)
-      const color1 = await testDataFactory.createProductColor(
+      const color1 = await testDataFactory.createProductItem(
         product,
         optionValue1,
         {
-          status: ProductColorStatus.NORMAL,
+          status: ProductItemStatus.NORMAL,
           price: 30000,
           discountPrice: 15000, // 실제 정렬 기준
         },
       );
 
       // 정가만 있는 상품
-      const color2 = await testDataFactory.createProductColor(
+      const color2 = await testDataFactory.createProductItem(
         product,
         optionValue2,
         {
-          status: ProductColorStatus.NORMAL,
+          status: ProductItemStatus.NORMAL,
           price: 10000, // 할인가 없으므로 정가 기준
         },
       );
@@ -341,7 +341,7 @@ describe('ProductRepositoryService Integration Tests', () => {
         DatabaseSort.ASC,
       );
       const [colors, totalCount] =
-        await productRepositoryService.findProductColor(
+        await productRepositoryService.findProductItem(
           pageDto,
           sortDto,
           brand.id, // 특정 브랜드로 필터링해서 다른 테스트 데이터와 격리
@@ -375,11 +375,11 @@ describe('ProductRepositoryService Integration Tests', () => {
       const colors = [];
       for (let i = 1; i <= 5; i++) {
         const optionValue = await testDataFactory.createOptionValue(option);
-        const color = await testDataFactory.createProductColor(
+        const color = await testDataFactory.createProductItem(
           product,
           optionValue,
           {
-            status: ProductColorStatus.NORMAL,
+            status: ProductItemStatus.NORMAL,
             price: i * 1000,
           },
         );
@@ -388,7 +388,7 @@ describe('ProductRepositoryService Integration Tests', () => {
 
       // When: 첫 번째 페이지 (2개씩) - 브랜드로 필터링
       const [page1, totalCount1] =
-        await productRepositoryService.findProductColor(
+        await productRepositoryService.findProductItem(
           PagingDto.from(1, 2),
           undefined,
           brand.id, // 다른 테스트 데이터와 격리
@@ -400,7 +400,7 @@ describe('ProductRepositoryService Integration Tests', () => {
 
       // When: 두 번째 페이지 (2개씩)
       const [page2, totalCount2] =
-        await productRepositoryService.findProductColor(
+        await productRepositoryService.findProductItem(
           PagingDto.from(2, 2),
           undefined,
           brand.id,
@@ -412,7 +412,7 @@ describe('ProductRepositoryService Integration Tests', () => {
 
       // When: 세 번째 페이지 (2개씩)
       const [page3, totalCount3] =
-        await productRepositoryService.findProductColor(
+        await productRepositoryService.findProductItem(
           PagingDto.from(3, 2),
           undefined,
           brand.id,
@@ -424,13 +424,13 @@ describe('ProductRepositoryService Integration Tests', () => {
     });
   });
 
-  describe('getProductColorDetail', () => {
+  describe('getProductItemDetail', () => {
     beforeEach(async () => {
       await TestSetup.clearDatabase();
     });
 
-    it('존재하는 상품 색상 상세 정보를 반환해야 함', async () => {
-      // Given: 정상 브랜드, 상품, 상품 색상 생성
+    it('존재하는 상품 아이템 상세 정보를 반환해야 함', async () => {
+      // Given: 정상 브랜드, 상품, 상품 아이템 생성
       const brand = await testDataFactory.createBrand({
         status: BrandStatus.NORMAL,
       });
@@ -441,29 +441,29 @@ describe('ProductRepositoryService Integration Tests', () => {
       });
       const option = await testDataFactory.createOption();
       const optionValue = await testDataFactory.createOptionValue(option);
-      const productColor = await testDataFactory.createProductColor(
+      const productItem = await testDataFactory.createProductItem(
         product,
         optionValue,
         {
-          status: ProductColorStatus.NORMAL,
+          status: ProductItemStatus.NORMAL,
           price: 10000,
         },
       );
 
-      // ProductColorImage 생성
-      await testDataFactory.createProductColorImage(productColor, {
+      // ProductItemImage 생성
+      await testDataFactory.createProductItemImage(productItem, {
         imageUrl: 'https://example.com/image1.jpg',
         sortOrder: 1,
       });
 
       // When: 상품 색상 상세 정보 조회
-      const result = await productRepositoryService.getProductColorDetail(
-        productColor.id,
+      const result = await productRepositoryService.getProductItemDetail(
+        productItem.id,
       );
 
       // Then: 정상적으로 상세 정보가 반환되어야 함
       expect(result).toBeDefined();
-      expect(result.id).toBe(productColor.id);
+      expect(result.id).toBe(productItem.id);
       expect(result.product).toBeDefined();
       expect(result.product.brand).toBeDefined();
       expect(result.images).toBeDefined();
@@ -473,7 +473,7 @@ describe('ProductRepositoryService Integration Tests', () => {
     it('존재하지 않는 상품 색상 조회 시 에러가 발생해야 함', async () => {
       // When & Then: 존재하지 않는 ID로 조회 시 에러 발생
       await expect(
-        productRepositoryService.getProductColorDetail(999999),
+        productRepositoryService.getProductItemDetail(999999),
       ).rejects.toThrow(ServiceError);
     });
 
@@ -489,18 +489,18 @@ describe('ProductRepositoryService Integration Tests', () => {
       });
       const option = await testDataFactory.createOption();
       const optionValue = await testDataFactory.createOptionValue(option);
-      const productColor = await testDataFactory.createProductColor(
+      const productItem = await testDataFactory.createProductItem(
         product,
         optionValue,
         {
-          status: ProductColorStatus.BLOCK,
+          status: ProductItemStatus.BLOCK,
           price: 10000,
         },
       );
 
       // When & Then: 차단된 상품 색상 조회 시 에러 발생
       await expect(
-        productRepositoryService.getProductColorDetail(productColor.id),
+        productRepositoryService.getProductItemDetail(productItem.id),
       ).rejects.toThrow(ServiceError);
     });
   });

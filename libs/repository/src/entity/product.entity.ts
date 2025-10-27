@@ -13,8 +13,8 @@ import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { ProductCategoryEntity } from './product-category.entity';
-import { ProductColorEntity } from './product-color.entity';
 import { ProductImageEntity } from './product-image.entity';
+import { ProductItemEntity } from './product-item.entity';
 import { ProductVariantEntity } from './product-variant.entity';
 import { EntityType } from '../enum/entity.enum';
 import { ProductStatus } from '../enum/product.enum';
@@ -110,11 +110,11 @@ export class ProductEntity extends CommonEntity {
   })
   multilingualTexts: MultilingualTextEntity[];
 
-  @OneToMany(() => ProductColorEntity, (productColor) => productColor.product, {
+  @OneToMany(() => ProductItemEntity, (productItem) => productItem.product, {
     cascade: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
-  productColors: ProductColorEntity[];
+  productItems: ProductItemEntity[];
 
   getDetailInfoImage(): string {
     return this.detailInfoImageUrl

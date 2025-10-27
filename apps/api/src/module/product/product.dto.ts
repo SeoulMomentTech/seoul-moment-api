@@ -4,7 +4,7 @@ import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
-import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
+import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductFilterEntity } from '@app/repository/entity/product-filter.entity';
 import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
 import {
@@ -295,7 +295,7 @@ export class GetProductResponse {
   image: string;
 
   static from(
-    entity: ProductColorEntity,
+    entity: ProductItemEntity,
     multilingualText: {
       brand: MultilingualTextEntity[];
       product: MultilingualTextEntity[];
@@ -534,7 +534,7 @@ export class GetProductDetailResponse {
   relate: GetProductResponse[];
 
   static from(
-    entity: ProductColorEntity,
+    entity: ProductItemEntity,
     multilingualText: {
       brand: MultilingualTextEntity[];
       product: MultilingualTextEntity[];

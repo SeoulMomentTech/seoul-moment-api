@@ -19,8 +19,8 @@ import { OptionEntity } from '@app/repository/entity/option.entity';
 import { PartnerCategoryEntity } from '@app/repository/entity/partner-category.entity';
 import { PartnerEntity } from '@app/repository/entity/partner.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
-import { ProductColorImageEntity } from '@app/repository/entity/product-color-image.entity';
-import { ProductColorEntity } from '@app/repository/entity/product-color.entity';
+import { ProductItemImageEntity } from '@app/repository/entity/product-item-image.entity';
+import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductImageEntity } from '@app/repository/entity/product-image.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
@@ -61,8 +61,8 @@ import { TestCacheModule } from './test-cache.module';
         NewsSectionImageEntity,
         OptionEntity,
         OptionValueEntity,
-        ProductColorEntity,
-        ProductColorImageEntity,
+        ProductItemEntity,
+        ProductItemImageEntity,
         ProductCategoryEntity,
         ProductEntity,
         ProductImageEntity,
@@ -95,8 +95,8 @@ import { TestCacheModule } from './test-cache.module';
       NewsSectionImageEntity,
       OptionEntity,
       OptionValueEntity,
-      ProductColorEntity,
-      ProductColorImageEntity,
+      ProductItemEntity,
+      ProductItemImageEntity,
       ProductCategoryEntity,
       ProductEntity,
       ProductImageEntity,
