@@ -37,6 +37,7 @@ export enum OptionType {
   MATERIAL = 'MATERIAL', // 소재 옵션
   FIT = 'FIT', // 핏 옵션 (슬림핏, 레귤러핏 등)
   STYLE = 'STYLE', // 스타일 옵션
+  GENDER = 'GENDER', // 성별 옵션
 }
 
 /**

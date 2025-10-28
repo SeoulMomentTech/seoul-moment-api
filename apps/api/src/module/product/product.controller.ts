@@ -25,13 +25,15 @@ import {
   GetProductCategoryRequest,
   GetProductCategoryResponse,
   GetProductDetailResponse,
-  GetProductFilterResponse,
+  GetProductSortFilterResponse,
   GetProductOptionResponse,
   GetProductOptionValueRequest,
   GetProductOptionValueResponse,
   GetProductRequest,
   GetProductResponse,
   PostProductRequest,
+  GetProductFilterResponse,
+  GetProductFilterRequest,
 } from './product.dto';
 import { ProductService } from './product.service';
 
@@ -175,6 +177,25 @@ export class ProductController {
 
   @Get('sort/filter')
   @ApiOperation({
+    summary: 'Product sort filter list',
+  })
+  @ApiHeader({
+    name: 'Accept-language',
+    required: true,
+    description: 'Alternative way to specify language preference (ko, en, zh)',
+    enum: LanguageCode,
+  })
+  @ResponseList(GetProductSortFilterResponse)
+  async getProductSortFilter(
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
+  ): Promise<ResponseListDto<GetProductSortFilterResponse>> {
+    const result =
+      await this.productService.getProductSortFilter(acceptLanguage);
+    return new ResponseListDto(result);
+  }
+
+  @Get('filter')
+  @ApiOperation({
     summary: 'Product filter list',
   })
   @ApiHeader({
@@ -183,12 +204,16 @@ export class ProductController {
     description: 'Alternative way to specify language preference (ko, en, zh)',
     enum: LanguageCode,
   })
-  @ResponseList(GetProductFilterResponse)
+  @ResponseData(GetProductFilterResponse)
   async getProductFilter(
     @Headers('Accept-language') acceptLanguage: LanguageCode,
-  ): Promise<ResponseListDto<GetProductFilterResponse>> {
-    const result = await this.productService.getProductFilter(acceptLanguage);
-    return new ResponseListDto(result);
+    @Query() query: GetProductFilterRequest,
+  ): Promise<ResponseDataDto<GetProductFilterResponse>> {
+    const result = await this.productService.getProductFilter(
+      query,
+      acceptLanguage,
+    );
+    return new ResponseDataDto(result);
   }
 
   @Get(':id')

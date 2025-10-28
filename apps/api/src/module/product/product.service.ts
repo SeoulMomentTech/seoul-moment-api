@@ -28,7 +28,10 @@ import {
   GetProductResponse,
   PostProductRequest,
   GetProductBannerByBrandResponse,
+  GetProductSortFilterResponse,
   GetProductFilterResponse,
+  ProductFilterDto,
+  GetProductFilterRequest,
 } from './product.dto';
 import {
   GetOptionResponse,
@@ -277,9 +280,9 @@ export class ProductService {
     }
   }
 
-  async getProductFilter(
+  async getProductSortFilter(
     language: LanguageCode,
-  ): Promise<GetProductFilterResponse[]> {
+  ): Promise<GetProductSortFilterResponse[]> {
     const productFilterEntities =
       await this.productFilterRepositoryService.findAllProductFilters();
     const multilingualTexts =
@@ -289,7 +292,31 @@ export class ProductService {
         language,
       );
     return productFilterEntities.map((v) =>
-      GetProductFilterResponse.from(v, multilingualTexts),
+      GetProductSortFilterResponse.from(v, multilingualTexts),
+    );
+  }
+
+  async getProductFilter(
+    dto: GetProductFilterRequest,
+    language: LanguageCode,
+  ): Promise<GetProductFilterResponse> {
+    const variantOptionEntities =
+      await this.productRepositoryService.findVariantOptionsByProduct(
+        dto.categoryId,
+        dto.brandId,
+        dto.productCategoryId,
+      );
+
+    const multilingualTexts =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.OPTION_VALUE,
+        variantOptionEntities.map((v) => v.optionValue.id),
+        language,
+      );
+
+    return GetProductFilterResponse.from(
+      variantOptionEntities,
+      multilingualTexts,
     );
   }
 }

@@ -4,9 +4,10 @@ import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
-import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductFilterEntity } from '@app/repository/entity/product-filter.entity';
+import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
+import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import {
   OptionType,
   ProductSortColumn,
@@ -25,6 +26,53 @@ import {
 } from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
+
+export class ProductFilterDto {
+  @ApiPropertyOptional({
+    description: '성별 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  gender: number;
+
+  @ApiPropertyOptional({
+    description: '사이즈 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  size: number;
+
+  @ApiPropertyOptional({
+    description: '색상 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  color: number;
+
+  @ApiPropertyOptional({
+    description: '최소 가격',
+    example: 10000,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  minPrice: number;
+
+  @ApiPropertyOptional({
+    description: '최대 가격',
+    example: 100000,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  maxPrice: number;
+}
 
 export class GetProductBannerByBrandResponse {
   @ApiProperty({
@@ -190,6 +238,22 @@ export class GetProductRequest {
   @IsString()
   @IsOptional()
   search?: string;
+
+  @ApiPropertyOptional({
+    description: '필터 정보',
+    type: ProductFilterDto,
+    example: {
+      gender: 1,
+      size: 1,
+      color: 1,
+      minPrice: 10000,
+      maxPrice: 100000,
+    },
+  })
+  @ValidateNested({ each: true })
+  @Type(() => ProductFilterDto)
+  @IsOptional()
+  filter?: ProductFilterDto[];
 
   @ApiPropertyOptional({
     description: '브랜드 id',
@@ -793,7 +857,7 @@ export class GetProductBannerRequest {
   brandId: number;
 }
 
-export class GetProductFilterResponse {
+export class GetProductSortFilterResponse {
   @ApiProperty({
     description: '필터 아이디',
     example: 1,
@@ -816,6 +880,235 @@ export class GetProductFilterResponse {
     return plainToInstance(this, {
       id: entity.id,
       name: name.getContent(),
+    });
+  }
+}
+
+export class ProductFilterGender {
+  @ApiProperty({
+    description: '성별 아이디',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '성별 이름',
+    example: '남자',
+  })
+  name: string;
+
+  static from(entity: VariantOptionEntity, value: string) {
+    return plainToInstance(this, {
+      id: entity.variantId,
+      name: value,
+    });
+  }
+}
+
+export class ProductFilterSize {
+  @ApiProperty({
+    description: '사이즈 아이디',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '사이즈 이름',
+    example: 'S(34)',
+  })
+  name: string;
+
+  static from(entity: VariantOptionEntity, value: string) {
+    return plainToInstance(this, {
+      id: entity.variantId,
+      name: value,
+    });
+  }
+}
+
+export class ProductFilterColor {
+  @ApiProperty({
+    description: '색상 아이디',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '색상 이름',
+    example: '빨강',
+  })
+  name: string;
+
+  @ApiProperty({
+    description: '색상 코드',
+    example: '#FF0000',
+  })
+  code: string;
+
+  static from(entity: VariantOptionEntity, value: string) {
+    return plainToInstance(this, {
+      id: entity.variantId,
+      name: value,
+      code: entity.optionValue.colorCode,
+    });
+  }
+}
+
+export class GetProductFilterRequest {
+  @ApiProperty({
+    description: '카테고리 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  categoryId: number;
+
+  @ApiPropertyOptional({
+    description: '브랜드 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  brandId?: number;
+
+  @ApiPropertyOptional({
+    description: '상품 카테고리 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  productCategoryId?: number;
+}
+
+export class GetProductFilterResponse {
+  @ApiProperty({
+    description: '필터 목록',
+    type: [ProductFilterGender],
+    example: [
+      { id: 1, name: '남자' },
+      { id: 2, name: '여자' },
+    ],
+  })
+  gender: ProductFilterGender[];
+
+  @ApiProperty({
+    description: '사이즈 목록',
+    type: [ProductFilterSize],
+    example: [
+      { id: 1, name: 'S(34)' },
+      { id: 2, name: 'M(40)' },
+      { id: 3, name: 'L(46)' },
+    ],
+  })
+  size: ProductFilterSize[];
+
+  @ApiProperty({
+    description: '색상 목록',
+    type: [ProductFilterColor],
+    example: [
+      { id: 1, name: '빨강', code: '#FF0000' },
+      { id: 2, name: '파랑', code: '#0000FF' },
+      { id: 3, name: '노랑', code: '#FFFF00' },
+    ],
+  })
+  color: ProductFilterColor[];
+
+  private static createMultilingualIndex(
+    multilingual: MultilingualTextEntity[],
+  ): Map<number, MultilingualTextEntity[]> {
+    const index = new Map<number, MultilingualTextEntity[]>();
+    for (const text of multilingual) {
+      const existing = index.get(text.entityId);
+      if (existing) {
+        existing.push(text);
+      } else {
+        index.set(text.entityId, [text]);
+      }
+    }
+    return index;
+  }
+
+  static from(
+    entity: VariantOptionEntity[],
+    multilingual: MultilingualTextEntity[],
+  ) {
+    // Create index once for O(1) lookup instead of O(n) filter per iteration
+    const multilingualIndex = this.createMultilingualIndex(multilingual);
+
+    // Use Map for efficient deduplication by name
+    const genderMap = new Map<string, ProductFilterGender>();
+    const sizeMap = new Map<string, ProductFilterSize>();
+    const colorMap = new Map<string, ProductFilterColor>();
+
+    for (const v of entity) {
+      const multilingualTexts = multilingualIndex.get(v.optionValue.id) || [];
+      const value = MultilingualFieldDto.fromByEntity(
+        multilingualTexts,
+        'value',
+      );
+
+      if (v.optionValue.option.type === OptionType.GENDER) {
+        const name = value.getContent();
+        if (!genderMap.has(name)) {
+          const filterGender = ProductFilterGender.from(v, name);
+          genderMap.set(name, filterGender);
+        }
+      } else if (v.optionValue.option.type === OptionType.SIZE) {
+        const name = value.getContent();
+        if (!sizeMap.has(name)) {
+          const filterSize = ProductFilterSize.from(v, name);
+          sizeMap.set(name, filterSize);
+        }
+      } else if (v.optionValue.option.type === OptionType.COLOR) {
+        const name = value.getContent();
+        if (!colorMap.has(name)) {
+          const filterColor = ProductFilterColor.from(v, name);
+          colorMap.set(name, filterColor);
+        }
+      }
+    }
+
+    return plainToInstance(this, {
+      gender: Array.from(genderMap.values()),
+      size: Array.from(sizeMap.values()),
+      color: Array.from(colorMap.values()),
+    });
+  }
+
+  static fromDistinct(data: {
+    genders: Array<{ variantId: number; name: string }>;
+    sizes: Array<{ variantId: number; name: string }>;
+    colors: Array<{ variantId: number; name: string; code: string }>;
+  }) {
+    const genders = data.genders.map((item) =>
+      plainToInstance(ProductFilterGender, {
+        id: item.variantId,
+        name: item.name,
+      }),
+    );
+
+    const sizes = data.sizes.map((item) =>
+      plainToInstance(ProductFilterSize, {
+        id: item.variantId,
+        name: item.name,
+      }),
+    );
+
+    const colors = data.colors.map((item) =>
+      plainToInstance(ProductFilterColor, {
+        id: item.variantId,
+        name: item.name,
+        code: item.code,
+      }),
+    );
+
+    return plainToInstance(this, {
+      gender: genders,
+      size: sizes,
+      color: colors,
     });
   }
 }

@@ -13,7 +13,10 @@ import { ProductCategoryEntity } from '../entity/product-category.entity';
 import { ProductItemEntity } from '../entity/product-item.entity';
 import { ProductEntity } from '../entity/product.entity';
 import { ProductBannerEntity } from '../entity/product_banner.entity';
+import { VariantOptionEntity } from '../entity/variant-option.entity';
 import { BrandStatus } from '../enum/brand.enum';
+import { EntityType } from '../enum/entity.enum';
+import { LanguageCode } from '../enum/language.enum';
 import {
   OptionType,
   ProductItemStatus,
@@ -35,6 +38,9 @@ export class ProductRepositoryService {
 
     @InjectRepository(ProductCategoryEntity)
     private readonly productCategoryRepository: Repository<ProductCategoryEntity>,
+
+    @InjectRepository(VariantOptionEntity)
+    private readonly variantOptionRepository: Repository<VariantOptionEntity>,
   ) {}
 
   async findBanner(): Promise<ProductBannerEntity[]> {
@@ -272,6 +278,7 @@ export class ProductRepositoryService {
       .leftJoin('option_value', 'ov', 'vo.option_value_id = ov.id')
       .leftJoin('option', 'o', 'o.id = ov.option_id')
       .where(`vo.variant_id IN (${subQuery.getQuery()})`)
+      .andWhere('o.is_active = true')
       .groupBy('o.type')
       .setParameters(subQuery.getParameters())
       .getRawMany();
@@ -287,5 +294,133 @@ export class ProductRepositoryService {
     entity: ProductBannerEntity[],
   ): Promise<ProductBannerEntity[]> {
     return this.productBannerRepository.save(entity);
+  }
+
+  async findVariantOptionsByProduct(
+    categoryId: number,
+    brandId?: number,
+    productCategoryId?: number,
+  ): Promise<VariantOptionEntity[]> {
+    const query = this.variantOptionRepository
+      .createQueryBuilder('vo')
+      .leftJoinAndSelect('vo.variant', 'pv')
+      .leftJoinAndSelect('vo.optionValue', 'ov')
+      .leftJoinAndSelect('ov.option', 'o')
+      .leftJoinAndSelect('pv.productItem', 'pi')
+      .leftJoinAndSelect('pi.product', 'p')
+      .leftJoinAndSelect('p.brand', 'brand')
+      .leftJoinAndSelect('p.category', 'category')
+      .leftJoinAndSelect('p.productCategory', 'productCategory')
+      .where('category.id = :categoryId', { categoryId });
+
+    if (brandId) {
+      query.andWhere('p.brand_id = :brandId', { brandId });
+    }
+
+    if (productCategoryId) {
+      query.andWhere('p.product_category_id = :productCategoryId', {
+        productCategoryId,
+      });
+    }
+
+    return query.getMany();
+  }
+
+  async findDistinctFilterOptionsByProduct(
+    categoryId: number,
+    languageCode: LanguageCode,
+    brandId?: number,
+    productCategoryId?: number,
+  ): Promise<{
+    genders: Array<{ variantId: number; name: string }>;
+    sizes: Array<{ variantId: number; name: string }>;
+    colors: Array<{ variantId: number; name: string; code: string }>;
+  }> {
+    // 직접 JOIN으로 간단하게 처리
+    const query = this.variantOptionRepository
+      .createQueryBuilder('vo')
+      .select([
+        'vo.variant_id AS variantId',
+        'ov.id AS optionValueId',
+        'o.type AS optionType',
+        'ov.color_code AS colorCode',
+        'mt.text_content AS textContent',
+      ])
+      .leftJoin('vo.optionValue', 'ov')
+      .leftJoin('ov.option', 'o')
+      .leftJoin('vo.variant', 'pv')
+      .leftJoin('pv.productItem', 'pi')
+      .leftJoin('pi.product', 'p')
+      .leftJoin('p.category', 'category')
+      .leftJoin(
+        'multilingual_text',
+        'mt',
+        'mt.entity_id = ov.id AND mt.entity_type = :entityType AND mt.field_name = :fieldName AND mt.language_id IN (SELECT id FROM language WHERE code = :languageCode AND is_active = true)',
+        {
+          entityType: EntityType.OPTION_VALUE,
+          fieldName: 'value',
+          languageCode,
+        },
+      )
+      .where('category.id = :categoryId', { categoryId })
+      .andWhere('ov.is_active = true')
+      .andWhere('o.is_active = true');
+
+    if (brandId) {
+      query.andWhere('p.brand_id = :brandId', { brandId });
+    }
+
+    if (productCategoryId) {
+      query.andWhere('p.product_category_id = :productCategoryId', {
+        productCategoryId,
+      });
+    }
+
+    const results = await query
+      .groupBy('ov.id')
+      .addGroupBy('vo.variant_id')
+      .addGroupBy('o.type')
+      .addGroupBy('ov.color_code')
+      .addGroupBy('mt.text_content')
+      .setParameter('categoryId', categoryId)
+      .setParameter('languageCode', languageCode)
+      .setParameter('brandId', brandId)
+      .setParameter('productCategoryId', productCategoryId)
+      .getRawMany();
+
+    // 결과를 타입별로 분류 (이름 기준 중복 제거)
+    const genderMap = new Map<string, { variantId: number; name: string }>();
+    const sizeMap = new Map<string, { variantId: number; name: string }>();
+    const colorMap = new Map<
+      string,
+      { variantId: number; name: string; code: string }
+    >();
+
+    for (const row of results) {
+      const name = row.textContent || '';
+      const variantId = row.variantId;
+      const optionType = row.optionType;
+
+      if (optionType === OptionType.GENDER && name) {
+        if (!genderMap.has(name)) {
+          genderMap.set(name, { variantId, name });
+        }
+      } else if (optionType === OptionType.SIZE && name) {
+        if (!sizeMap.has(name)) {
+          sizeMap.set(name, { variantId, name });
+        }
+      } else if (optionType === OptionType.COLOR && name) {
+        const code = row.colorCode || '';
+        if (!colorMap.has(name)) {
+          colorMap.set(name, { variantId, name, code });
+        }
+      }
+    }
+
+    return {
+      genders: Array.from(genderMap.values()),
+      sizes: Array.from(sizeMap.values()),
+      colors: Array.from(colorMap.values()),
+    };
   }
 }

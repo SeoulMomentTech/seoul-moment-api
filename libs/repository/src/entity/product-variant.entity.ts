@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
-import { ProductEntity } from './product.entity';
+import { ProductItemEntity } from './product-item.entity';
 import { VariantOptionEntity } from './variant-option.entity';
 import { ProductVariantStatus } from '../enum/product.enum';
 
@@ -19,19 +19,20 @@ import { ProductVariantStatus } from '../enum/product.enum';
  * - SKU, 가격, 재고 등 판매 관련 정보
  */
 @Entity('product_variant')
-@Index(['productId'])
+@Index(['productItemId'])
 @Index(['sku'], { unique: true })
-@Index(['productId', 'status'])
+@Index(['productItemId', 'status'])
 export class ProductVariantEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
+  // TODO 개발 서버 적용 후 nullable: false 로 변경
   @Column('int', {
-    name: 'product_id',
-    nullable: false,
+    name: 'product_item_id',
+    nullable: true,
     comment: '상품 ID',
   })
-  productId: number;
+  productItemId: number;
 
   @Column('varchar', {
     length: 100,
@@ -64,12 +65,13 @@ export class ProductVariantEntity extends CommonEntity {
   status: ProductVariantStatus;
 
   // Relations
-  @ManyToOne(() => ProductEntity, (product) => product.variants, {
+  @ManyToOne(() => ProductItemEntity, (productItem) => productItem.variants, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+    eager: false,
   })
-  @JoinColumn({ name: 'product_id' })
-  product: ProductEntity;
+  @JoinColumn({ name: 'product_item_id' })
+  productItem: ProductItemEntity;
 
   @OneToMany(
     () => VariantOptionEntity,

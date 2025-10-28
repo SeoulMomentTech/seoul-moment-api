@@ -12,6 +12,7 @@ import {
 import { CommonEntity } from './common.entity';
 import { OptionValueEntity } from './option-value.entity';
 import { ProductItemImageEntity } from './product-item-image.entity';
+import { ProductVariantEntity } from './product-variant.entity';
 import { ProductEntity } from './product.entity';
 import { ProductItemStatus } from '../enum/product.enum';
 
@@ -90,6 +91,7 @@ export class ProductItemEntity extends CommonEntity {
   @ManyToOne(() => ProductEntity, (product) => product.productItems, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+    eager: false,
   })
   @JoinColumn({ name: 'product_id' })
   product: ProductEntity;
@@ -110,4 +112,10 @@ export class ProductItemEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   images: ProductItemImageEntity[];
+
+  @OneToMany(() => ProductVariantEntity, (variant) => variant.productItem, {
+    cascade: true,
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  variants: ProductVariantEntity[];
 }

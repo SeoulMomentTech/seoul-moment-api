@@ -15,7 +15,6 @@ import { MultilingualTextEntity } from './multilingual-text.entity';
 import { ProductCategoryEntity } from './product-category.entity';
 import { ProductImageEntity } from './product-image.entity';
 import { ProductItemEntity } from './product-item.entity';
-import { ProductVariantEntity } from './product-variant.entity';
 import { EntityType } from '../enum/entity.enum';
 import { ProductStatus } from '../enum/product.enum';
 
@@ -91,12 +90,6 @@ export class ProductEntity extends CommonEntity {
   )
   @JoinColumn({ name: 'product_category_id' })
   productCategory: ProductCategoryEntity;
-
-  @OneToMany(() => ProductVariantEntity, (variant) => variant.product, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  variants: ProductVariantEntity[];
 
   @OneToMany(() => ProductImageEntity, (image) => image.product, {
     cascade: true,
