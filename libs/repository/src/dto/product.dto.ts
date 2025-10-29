@@ -1,8 +1,9 @@
 import { DatabaseSort } from '@app/common/enum/global.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
+import { IsOptional } from 'class-validator';
 
-import { ProductSortColumn } from '../enum/product.enum';
+import { OptionType, ProductSortColumn } from '../enum/product.enum';
 
 export class ProductSortDto {
   @ApiProperty({
@@ -25,4 +26,32 @@ export class ProductSortDto {
   ): ProductSortDto {
     return plainToInstance(this, { sortColum, sort });
   }
+}
+
+export class ProductFilterDto {
+  @ApiProperty({
+    description: '옵션 값 ID',
+    example: 1,
+  })
+  optionValueId: number;
+
+  @ApiProperty({
+    description: '옵션 값 이름',
+    example: 'Red',
+  })
+  name: string;
+
+  @ApiPropertyOptional({
+    description: '옵션 값 코드',
+    example: 'RED',
+  })
+  @IsOptional()
+  code?: string | null;
+
+  @ApiProperty({
+    description: '옵션 타입',
+    enum: OptionType,
+    example: OptionType.COLOR,
+  })
+  optionType: OptionType;
 }

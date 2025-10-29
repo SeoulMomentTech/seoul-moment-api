@@ -27,53 +27,6 @@ import {
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
-export class ProductFilterDto {
-  @ApiPropertyOptional({
-    description: '성별 아이디',
-    example: 1,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsOptional()
-  gender: number;
-
-  @ApiPropertyOptional({
-    description: '사이즈 아이디',
-    example: 1,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsOptional()
-  size: number;
-
-  @ApiPropertyOptional({
-    description: '색상 아이디',
-    example: 1,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsOptional()
-  color: number;
-
-  @ApiPropertyOptional({
-    description: '최소 가격',
-    example: 10000,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsOptional()
-  minPrice: number;
-
-  @ApiPropertyOptional({
-    description: '최대 가격',
-    example: 100000,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsOptional()
-  maxPrice: number;
-}
-
 export class GetProductBannerByBrandResponse {
   @ApiProperty({
     description: '브랜드 아이디',
@@ -238,22 +191,6 @@ export class GetProductRequest {
   @IsString()
   @IsOptional()
   search?: string;
-
-  @ApiPropertyOptional({
-    description: '필터 정보',
-    type: ProductFilterDto,
-    example: {
-      gender: 1,
-      size: 1,
-      color: 1,
-      minPrice: 10000,
-      maxPrice: 100000,
-    },
-  })
-  @ValidateNested({ each: true })
-  @Type(() => ProductFilterDto)
-  @IsOptional()
-  filter?: ProductFilterDto[];
 
   @ApiPropertyOptional({
     description: '브랜드 id',
@@ -884,24 +821,28 @@ export class GetProductSortFilterResponse {
   }
 }
 
-export class ProductFilterGender {
+export class ProductFilterOptionValue {
   @ApiProperty({
-    description: '성별 아이디',
+    description: '옵션 ID',
     example: 1,
   })
-  id: number;
+  optionId: number;
 
   @ApiProperty({
-    description: '성별 이름',
+    description: '옵션 값',
     example: '남자',
   })
-  name: string;
+  value: string;
 
-  static from(entity: VariantOptionEntity, value: string) {
-    return plainToInstance(this, {
-      id: entity.variantId,
-      name: value,
-    });
+  @ApiPropertyOptional({
+    description: '색상 코드',
+    example: '#FF0000',
+  })
+  @IsOptional()
+  colorCode: string | null;
+
+  static from(optionId: number, value: string, colorCode?: string | null) {
+    return plainToInstance(this, { optionId, value, colorCode });
   }
 }
 
@@ -985,130 +926,26 @@ export class GetProductFilterRequest {
 
 export class GetProductFilterResponse {
   @ApiProperty({
-    description: '필터 목록',
-    type: [ProductFilterGender],
-    example: [
-      { id: 1, name: '남자' },
-      { id: 2, name: '여자' },
-    ],
+    description: '옵션 제목',
+    example: '색상',
   })
-  gender: ProductFilterGender[];
+  title: string;
 
   @ApiProperty({
-    description: '사이즈 목록',
-    type: [ProductFilterSize],
+    description: '옵션 값 목록',
+    type: [ProductFilterOptionValue],
     example: [
-      { id: 1, name: 'S(34)' },
-      { id: 2, name: 'M(40)' },
-      { id: 3, name: 'L(46)' },
+      { optionId: 1, value: '빨강', colorCode: '#FF0000' },
+      { optionId: 2, value: '파랑', colorCode: '#0000FF' },
+      { optionId: 3, value: '노랑', colorCode: '#FFFF00' },
     ],
   })
-  size: ProductFilterSize[];
+  optionValueList: ProductFilterOptionValue[];
 
-  @ApiProperty({
-    description: '색상 목록',
-    type: [ProductFilterColor],
-    example: [
-      { id: 1, name: '빨강', code: '#FF0000' },
-      { id: 2, name: '파랑', code: '#0000FF' },
-      { id: 3, name: '노랑', code: '#FFFF00' },
-    ],
-  })
-  color: ProductFilterColor[];
-
-  private static createMultilingualIndex(
-    multilingual: MultilingualTextEntity[],
-  ): Map<number, MultilingualTextEntity[]> {
-    const index = new Map<number, MultilingualTextEntity[]>();
-    for (const text of multilingual) {
-      const existing = index.get(text.entityId);
-      if (existing) {
-        existing.push(text);
-      } else {
-        index.set(text.entityId, [text]);
-      }
-    }
-    return index;
-  }
-
-  static from(
-    entity: VariantOptionEntity[],
-    multilingual: MultilingualTextEntity[],
-  ) {
-    // Create index once for O(1) lookup instead of O(n) filter per iteration
-    const multilingualIndex = this.createMultilingualIndex(multilingual);
-
-    // Use Map for efficient deduplication by name
-    const genderMap = new Map<string, ProductFilterGender>();
-    const sizeMap = new Map<string, ProductFilterSize>();
-    const colorMap = new Map<string, ProductFilterColor>();
-
-    for (const v of entity) {
-      const multilingualTexts = multilingualIndex.get(v.optionValue.id) || [];
-      const value = MultilingualFieldDto.fromByEntity(
-        multilingualTexts,
-        'value',
-      );
-
-      if (v.optionValue.option.type === OptionType.GENDER) {
-        const name = value.getContent();
-        if (!genderMap.has(name)) {
-          const filterGender = ProductFilterGender.from(v, name);
-          genderMap.set(name, filterGender);
-        }
-      } else if (v.optionValue.option.type === OptionType.SIZE) {
-        const name = value.getContent();
-        if (!sizeMap.has(name)) {
-          const filterSize = ProductFilterSize.from(v, name);
-          sizeMap.set(name, filterSize);
-        }
-      } else if (v.optionValue.option.type === OptionType.COLOR) {
-        const name = value.getContent();
-        if (!colorMap.has(name)) {
-          const filterColor = ProductFilterColor.from(v, name);
-          colorMap.set(name, filterColor);
-        }
-      }
-    }
-
+  static from(title: string, optionValueList: ProductFilterOptionValue[]) {
     return plainToInstance(this, {
-      gender: Array.from(genderMap.values()),
-      size: Array.from(sizeMap.values()),
-      color: Array.from(colorMap.values()),
-    });
-  }
-
-  static fromDistinct(data: {
-    genders: Array<{ variantId: number; name: string }>;
-    sizes: Array<{ variantId: number; name: string }>;
-    colors: Array<{ variantId: number; name: string; code: string }>;
-  }) {
-    const genders = data.genders.map((item) =>
-      plainToInstance(ProductFilterGender, {
-        id: item.variantId,
-        name: item.name,
-      }),
-    );
-
-    const sizes = data.sizes.map((item) =>
-      plainToInstance(ProductFilterSize, {
-        id: item.variantId,
-        name: item.name,
-      }),
-    );
-
-    const colors = data.colors.map((item) =>
-      plainToInstance(ProductFilterColor, {
-        id: item.variantId,
-        name: item.name,
-        code: item.code,
-      }),
-    );
-
-    return plainToInstance(this, {
-      gender: genders,
-      size: sizes,
-      color: colors,
+      title,
+      optionValueList,
     });
   }
 }

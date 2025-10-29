@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { GetProductDetailOptionValue } from 'apps/api/src/module/product/product.dto';
 import { Repository } from 'typeorm';
 
-import { ProductSortDto } from '../dto/product.dto';
+import { ProductFilterDto, ProductSortDto } from '../dto/product.dto';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
 import { ProductItemEntity } from '../entity/product-item.entity';
 import { ProductEntity } from '../entity/product.entity';
@@ -331,20 +331,14 @@ export class ProductRepositoryService {
     languageCode: LanguageCode,
     brandId?: number,
     productCategoryId?: number,
-  ): Promise<{
-    genders: Array<{ variantId: number; name: string }>;
-    sizes: Array<{ variantId: number; name: string }>;
-    colors: Array<{ variantId: number; name: string; code: string }>;
-  }> {
-    // 직접 JOIN으로 간단하게 처리
+  ): Promise<ProductFilterDto[]> {
     const query = this.variantOptionRepository
       .createQueryBuilder('vo')
       .select([
-        'vo.variant_id AS variantId',
-        'ov.id AS optionValueId',
-        'o.type AS optionType',
-        'ov.color_code AS colorCode',
-        'mt.text_content AS textContent',
+        'ov.id AS "optionValueId"',
+        'mt_option.text_content AS "optionType"',
+        'ov.color_code AS "colorCode"',
+        'mt_option_value.text_content AS "textContent"',
       ])
       .leftJoin('vo.optionValue', 'ov')
       .leftJoin('ov.option', 'o')
@@ -354,17 +348,25 @@ export class ProductRepositoryService {
       .leftJoin('p.category', 'category')
       .leftJoin(
         'multilingual_text',
-        'mt',
-        'mt.entity_id = ov.id AND mt.entity_type = :entityType AND mt.field_name = :fieldName AND mt.language_id IN (SELECT id FROM language WHERE code = :languageCode AND is_active = true)',
+        'mt_option_value',
+        'mt_option_value.entity_id = ov.id AND mt_option_value.entity_type = :entityTypeOV AND mt_option_value.field_name = :fieldNameOV AND mt_option_value.language_id IN (SELECT id FROM language WHERE code = :languageCodeOV AND is_active = true)',
         {
-          entityType: EntityType.OPTION_VALUE,
-          fieldName: 'value',
-          languageCode,
+          entityTypeOV: EntityType.OPTION_VALUE,
+          fieldNameOV: 'value',
+          languageCodeOV: languageCode,
         },
       )
-      .where('category.id = :categoryId', { categoryId })
-      .andWhere('ov.is_active = true')
-      .andWhere('o.is_active = true');
+      .leftJoin(
+        'multilingual_text',
+        'mt_option',
+        'mt_option.entity_id = o.id AND mt_option.entity_type = :entityTypeO AND mt_option.field_name = :fieldNameO AND mt_option.language_id IN (SELECT id FROM language WHERE code = :languageCodeO AND is_active = true)',
+        {
+          entityTypeO: EntityType.OPTION,
+          fieldNameO: 'name',
+          languageCodeO: languageCode,
+        },
+      )
+      .where('category.id = :categoryId', { categoryId });
 
     if (brandId) {
       query.andWhere('p.brand_id = :brandId', { brandId });
@@ -377,50 +379,33 @@ export class ProductRepositoryService {
     }
 
     const results = await query
-      .groupBy('ov.id')
-      .addGroupBy('vo.variant_id')
-      .addGroupBy('o.type')
-      .addGroupBy('ov.color_code')
-      .addGroupBy('mt.text_content')
-      .setParameter('categoryId', categoryId)
-      .setParameter('languageCode', languageCode)
-      .setParameter('brandId', brandId)
-      .setParameter('productCategoryId', productCategoryId)
+      .groupBy(
+        'ov.id, o.type, ov.color_code, mt_option_value.text_content, mt_option.text_content',
+      )
       .getRawMany();
 
-    // 결과를 타입별로 분류 (이름 기준 중복 제거)
-    const genderMap = new Map<string, { variantId: number; name: string }>();
-    const sizeMap = new Map<string, { variantId: number; name: string }>();
-    const colorMap = new Map<
+    const allMap = new Map<
       string,
-      { variantId: number; name: string; code: string }
+      {
+        optionValueId: number;
+        name: string;
+        code: string | null;
+        optionType: OptionType;
+      }
     >();
 
     for (const row of results) {
+      const optionValueId = row.optionValueId;
       const name = row.textContent || '';
-      const variantId = row.variantId;
       const optionType = row.optionType;
 
-      if (optionType === OptionType.GENDER && name) {
-        if (!genderMap.has(name)) {
-          genderMap.set(name, { variantId, name });
-        }
-      } else if (optionType === OptionType.SIZE && name) {
-        if (!sizeMap.has(name)) {
-          sizeMap.set(name, { variantId, name });
-        }
-      } else if (optionType === OptionType.COLOR && name) {
-        const code = row.colorCode || '';
-        if (!colorMap.has(name)) {
-          colorMap.set(name, { variantId, name, code });
-        }
-      }
+      allMap.set(name, {
+        optionValueId,
+        name,
+        code: row.colorCode || null,
+        optionType,
+      });
     }
-
-    return {
-      genders: Array.from(genderMap.values()),
-      sizes: Array.from(sizeMap.values()),
-      colors: Array.from(colorMap.values()),
-    };
+    return Array.from(allMap.values());
   }
 }

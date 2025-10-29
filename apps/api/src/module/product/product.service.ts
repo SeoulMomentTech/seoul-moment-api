@@ -30,8 +30,8 @@ import {
   GetProductBannerByBrandResponse,
   GetProductSortFilterResponse,
   GetProductFilterResponse,
-  ProductFilterDto,
   GetProductFilterRequest,
+  ProductFilterOptionValue,
 } from './product.dto';
 import {
   GetOptionResponse,
@@ -299,24 +299,43 @@ export class ProductService {
   async getProductFilter(
     dto: GetProductFilterRequest,
     language: LanguageCode,
-  ): Promise<GetProductFilterResponse> {
-    const variantOptionEntities =
-      await this.productRepositoryService.findVariantOptionsByProduct(
+  ): Promise<GetProductFilterResponse[]> {
+    const productFilterDtos =
+      await this.productRepositoryService.findDistinctFilterOptionsByProduct(
         dto.categoryId,
+        language,
         dto.brandId,
         dto.productCategoryId,
       );
 
-    const multilingualTexts =
-      await this.languageRepositoryService.findMultilingualTextsByEntities(
-        EntityType.OPTION_VALUE,
-        variantOptionEntities.map((v) => v.optionValue.id),
-        language,
-      );
+    // Group by optionType and aggregate option values
+    const grouped = new Map<string, ProductFilterOptionValue[]>();
+    const seenByType = new Map<string, Set<number>>();
 
-    return GetProductFilterResponse.from(
-      variantOptionEntities,
-      multilingualTexts,
+    for (const v of productFilterDtos) {
+      const key = String(v.optionType);
+      let list = grouped.get(key);
+      let seenSet = seenByType.get(key);
+
+      if (!list) {
+        list = [];
+        grouped.set(key, list);
+      }
+      if (!seenSet) {
+        seenSet = new Set<number>();
+        seenByType.set(key, seenSet);
+      }
+
+      if (!seenSet.has(v.optionValueId)) {
+        list.push(
+          ProductFilterOptionValue.from(v.optionValueId, v.name, v.code),
+        );
+        seenSet.add(v.optionValueId);
+      }
+    }
+
+    return Array.from(grouped.entries()).map(([optionType, optionValueList]) =>
+      GetProductFilterResponse.from(optionType, optionValueList),
     );
   }
 }

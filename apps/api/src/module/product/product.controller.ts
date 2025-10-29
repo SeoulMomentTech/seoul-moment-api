@@ -204,16 +204,16 @@ export class ProductController {
     description: 'Alternative way to specify language preference (ko, en, zh)',
     enum: LanguageCode,
   })
-  @ResponseData(GetProductFilterResponse)
+  @ResponseList(GetProductFilterResponse)
   async getProductFilter(
     @Headers('Accept-language') acceptLanguage: LanguageCode,
     @Query() query: GetProductFilterRequest,
-  ): Promise<ResponseDataDto<GetProductFilterResponse>> {
+  ): Promise<ResponseListDto<GetProductFilterResponse>> {
     const result = await this.productService.getProductFilter(
       query,
       acceptLanguage,
     );
-    return new ResponseDataDto(result);
+    return new ResponseListDto(result);
   }
 
   @Get(':id')
