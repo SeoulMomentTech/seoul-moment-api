@@ -180,7 +180,7 @@ export class ProductService {
 
     const optionType =
       await this.productRepositoryService.getProductOptionTypes(
-        productDetail.product.id,
+        productDetail.id,
       );
 
     const optionValueList = await Promise.all(
@@ -189,7 +189,7 @@ export class ProductService {
           v,
           await this.productRepositoryService.getProductOption(
             v,
-            productDetail.product.id,
+            productDetail.id,
             languageEntity.id,
           ),
         ),

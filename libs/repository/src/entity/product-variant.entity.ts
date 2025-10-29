@@ -20,16 +20,14 @@ import { ProductVariantStatus } from '../enum/product.enum';
  */
 @Entity('product_variant')
 @Index(['productItemId'])
-@Index(['sku'], { unique: true })
 @Index(['productItemId', 'status'])
 export class ProductVariantEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  // TODO 개발 서버 적용 후 nullable: false 로 변경
   @Column('int', {
     name: 'product_item_id',
-    nullable: true,
+    nullable: false,
     comment: '상품 ID',
   })
   productItemId: number;

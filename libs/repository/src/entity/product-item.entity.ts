@@ -10,14 +10,13 @@ import {
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
-import { OptionValueEntity } from './option-value.entity';
 import { ProductItemImageEntity } from './product-item-image.entity';
 import { ProductVariantEntity } from './product-variant.entity';
 import { ProductEntity } from './product.entity';
 import { ProductItemStatus } from '../enum/product.enum';
 
 @Entity('product_item')
-@Index(['productId', 'optionValueId'], { unique: true })
+@Index(['productId'])
 export class ProductItemEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -27,12 +26,6 @@ export class ProductItemEntity extends CommonEntity {
     comment: '상품 변형 ID',
   })
   productId: number;
-
-  @Column('int', {
-    name: 'option_value_id',
-    comment: '옵션 값 ID',
-  })
-  optionValueId: number;
 
   @Column('varchar', {
     name: 'main_image_url',
@@ -95,17 +88,6 @@ export class ProductItemEntity extends CommonEntity {
   })
   @JoinColumn({ name: 'product_id' })
   product: ProductEntity;
-
-  @ManyToOne(
-    () => OptionValueEntity,
-    (optionValue) => optionValue.variantOptions,
-    {
-      onDelete: 'CASCADE',
-      createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-    },
-  )
-  @JoinColumn({ name: 'option_value_id' })
-  optionValue: OptionValueEntity;
 
   @OneToMany(() => ProductItemImageEntity, (image) => image.productItem, {
     cascade: true,

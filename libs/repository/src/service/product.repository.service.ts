@@ -238,7 +238,7 @@ export class ProductRepositoryService {
       .createQueryBuilder()
       .select('pv.id')
       .from('product_variant', 'pv')
-      .where('pv.product_id = :productId', { productId });
+      .where('pv.product_item_id = :productId', { productId });
 
     const result = await this.productRepository.manager
       .createQueryBuilder()
@@ -269,7 +269,7 @@ export class ProductRepositoryService {
       .createQueryBuilder()
       .select('pv.id')
       .from('product_variant', 'pv')
-      .where('pv.product_id = :productId', { productId });
+      .where('pv.product_item_id = :productId', { productId });
 
     const result = await this.productRepository.manager
       .createQueryBuilder()
