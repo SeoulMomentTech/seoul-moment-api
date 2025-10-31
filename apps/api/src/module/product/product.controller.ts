@@ -160,6 +160,7 @@ export class ProductController {
         query.brandId,
         query.categoryId,
         query.productCategoryId,
+        query.optionIdList,
       ),
       acceptLanguage,
     );

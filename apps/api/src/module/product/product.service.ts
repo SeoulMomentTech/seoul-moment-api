@@ -127,6 +127,7 @@ export class ProductService {
         dto.productCategoryId,
         dto.search,
         withoutId,
+        dto.optionIdList,
       );
 
     const [brandText, productText] = await Promise.all([

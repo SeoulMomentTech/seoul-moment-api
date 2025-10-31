@@ -13,7 +13,7 @@ import {
   ProductSortColumn,
 } from '@app/repository/enum/product.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { plainToInstance, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
@@ -219,6 +219,25 @@ export class GetProductRequest {
   @Type(() => Number)
   productCategoryId: number;
 
+  @ApiPropertyOptional({
+    description: '옵션 id 목록 (숫자 하나 또는 배열)',
+    example: [1, 2, 3],
+    oneOf: [{ type: 'array', items: { type: 'number' } }, { type: 'number' }],
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value.map(Number);
+    }
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+    return [Number(value)];
+  })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  optionIdList: number[];
+
   static from(
     page: number,
     count: number,
@@ -228,6 +247,7 @@ export class GetProductRequest {
     brandId?: number,
     categoryId?: number,
     productCategoryId?: number,
+    optionIdList?: number[],
   ) {
     return plainToInstance(this, {
       page,
@@ -238,6 +258,7 @@ export class GetProductRequest {
       brandId,
       categoryId,
       productCategoryId,
+      optionIdList,
     });
   }
 

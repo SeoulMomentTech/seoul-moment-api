@@ -79,6 +79,7 @@ export class ProductRepositoryService {
     productCategoryId?: number,
     search?: string,
     withoutId?: number,
+    optionIdList?: number[],
   ): Promise<[ProductItemEntity[], number]> {
     // 대용량 최적화: 인덱스 힌트를 위한 조건 순서 최적화
     const buildBaseQuery = () => {
@@ -86,7 +87,9 @@ export class ProductRepositoryService {
         .createQueryBuilder('pc')
         .innerJoin('pc.product', 'p') // LEFT → INNER: 성능 개선
         .innerJoin('p.brand', 'b')
-        .leftJoin('p.category', 'c'); // category는 nullable할 수 있으므로 LEFT 유지
+        .leftJoin('p.category', 'c')
+        .leftJoin('pc.variants', 'pv')
+        .leftJoin('pv.variantOptions', 'vo');
 
       // 인덱스 활용을 위한 조건 순서 최적화 (선택도가 높은 순서)
       if (brandId) {
@@ -101,6 +104,12 @@ export class ProductRepositoryService {
 
       if (categoryId) {
         query.andWhere('c.id = :categoryId', { categoryId });
+      }
+
+      if (optionIdList) {
+        query.andWhere('vo.option_value_id IN (:...optionIdList)', {
+          optionIdList,
+        });
       }
 
       if (withoutId) {
@@ -138,18 +147,12 @@ export class ProductRepositoryService {
 
     // Count 쿼리 최적화: 불필요한 JOIN 제거
     const getOptimizedCount = async (): Promise<number> => {
-      if (!search && !categoryId && !productCategoryId && !brandId) {
-        // 간단한 조건만 있을 때는 단일 테이블 COUNT
-        return this.productItemRepository
-          .createQueryBuilder('pc')
-          .where('pc.status = :status', { status: ProductItemStatus.NORMAL })
-          .getCount();
-      }
-
+      // 항상 buildBaseQuery를 사용한다. (이 조건들이 똑같이 들어가야 함)
       const countQuery = buildBaseQuery().select(
         'COUNT(DISTINCT pc.id)',
         'count',
       );
+
       applySearchCondition(countQuery);
 
       const result = await countQuery.getRawOne();
@@ -164,6 +167,7 @@ export class ProductRepositoryService {
 
     // ID 조회 쿼리 (대용량 최적화: 필요한 컬럼만 SELECT)
     const idQuery = buildBaseQuery().select('pc.id');
+
     applySearchCondition(idQuery);
 
     // 정렬 최적화: 계산된 가격 vs 단일 컬럼
@@ -176,9 +180,6 @@ export class ProductRepositoryService {
     } else {
       idQuery.orderBy(`pc.${sortDto.sortColum}`, sortDto.sort);
     }
-
-    // 페이징 적용
-    idQuery.limit(pageDto.count).offset((pageDto.page - 1) * pageDto.count);
 
     if (search) {
       idQuery.groupBy('pc.id'); // 검색시에만 GROUP BY 적용
@@ -206,6 +207,8 @@ export class ProductRepositoryService {
           : `pc.${sortDto.sortColum}`,
         sortDto.sort,
       )
+      .limit(pageDto.count)
+      .offset((pageDto.page - 1) * pageDto.count)
       .getMany();
 
     return [results, totalCount];
