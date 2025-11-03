@@ -132,7 +132,7 @@ describe('LanguageController (E2E)', () => {
 
       await testDataFactory.createLanguage({
         name: '두 번째 언어',
-        code: LanguageCode.CHINESE,
+        code: LanguageCode.TAIWAN,
         sortOrder: 2,
       });
 

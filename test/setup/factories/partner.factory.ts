@@ -62,7 +62,7 @@ export class PartnerFactory {
       name: {
         [LanguageCode.KOREAN]: '테스트 협력사 카테고리',
         [LanguageCode.ENGLISH]: 'Test Partner Category',
-        [LanguageCode.CHINESE]: '测试合作伙伴类别',
+        [LanguageCode.TAIWAN]: '测试合作伙伴类别',
       },
       ...multilingualData,
     };
@@ -76,7 +76,10 @@ export class PartnerFactory {
     // 4. 다국어 텍스트 생성
     const texts = [];
     for (const language of languages) {
-      if (defaultMultilingualData.name && defaultMultilingualData.name[language.code]) {
+      if (
+        defaultMultilingualData.name &&
+        defaultMultilingualData.name[language.code]
+      ) {
         const nameText = await languageFactory.createMultilingualText(
           EntityType.PARTNER_CATEGORY,
           partnerCategory.id,
@@ -114,12 +117,12 @@ export class PartnerFactory {
       title: {
         [LanguageCode.KOREAN]: '테스트 협력사',
         [LanguageCode.ENGLISH]: 'Test Partner',
-        [LanguageCode.CHINESE]: '测试合作伙伴',
+        [LanguageCode.TAIWAN]: '测试合作伙伴',
       },
       description: {
         [LanguageCode.KOREAN]: '테스트 협력사 설명',
         [LanguageCode.ENGLISH]: 'Test Partner Description',
-        [LanguageCode.CHINESE]: '测试合作伙伴描述',
+        [LanguageCode.TAIWAN]: '测试合作伙伴描述',
       },
       ...multilingualData,
     };
@@ -134,7 +137,7 @@ export class PartnerFactory {
         .getRepository(PartnerCategoryEntity)
         .findOne({ where: { id: overrides.partnerCategoryId } });
     }
-    
+
     if (!partnerCategory) {
       partnerCategory = await this.createPartnerCategory();
       overrides.partnerCategoryId = partnerCategory.id;
@@ -146,7 +149,10 @@ export class PartnerFactory {
     // 5. 다국어 텍스트 생성
     const texts = [];
     for (const language of languages) {
-      if (defaultMultilingualData.title && defaultMultilingualData.title[language.code]) {
+      if (
+        defaultMultilingualData.title &&
+        defaultMultilingualData.title[language.code]
+      ) {
         const titleText = await languageFactory.createMultilingualText(
           EntityType.PARTNER,
           partner.id,
@@ -157,7 +163,10 @@ export class PartnerFactory {
         texts.push(titleText);
       }
 
-      if (defaultMultilingualData.description && defaultMultilingualData.description[language.code]) {
+      if (
+        defaultMultilingualData.description &&
+        defaultMultilingualData.description[language.code]
+      ) {
         const descriptionText = await languageFactory.createMultilingualText(
           EntityType.PARTNER,
           partner.id,

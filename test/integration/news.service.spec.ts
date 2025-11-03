@@ -294,7 +294,7 @@ describe('NewsService Integration Tests', () => {
       );
 
       // When: 중국어로 뉴스 조회
-      const result = await newsService.getNews(news.id, LanguageCode.CHINESE);
+      const result = await newsService.getNews(news.id, LanguageCode.TAIWAN);
 
       // Then: 중국어 콘텐츠 반환
       expect(result.title).toBe('中文新闻标题');

@@ -372,12 +372,12 @@ describe('HomeService Integration Tests', () => {
             title: {
               [LanguageCode.KOREAN]: '한국어 제목',
               [LanguageCode.ENGLISH]: 'English Title',
-              [LanguageCode.CHINESE]: '中文标题',
+              [LanguageCode.TAIWAN]: '中文标题',
             },
             description: {
               [LanguageCode.KOREAN]: '한국어 설명',
               [LanguageCode.ENGLISH]: 'English Description',
-              [LanguageCode.CHINESE]: '中文描述',
+              [LanguageCode.TAIWAN]: '中文描述',
             },
           },
         );
@@ -393,7 +393,7 @@ describe('HomeService Integration Tests', () => {
       expect(englishResult.section[0].description).toBe('English Description');
 
       // Chinese
-      const chineseResult = await homeService.getHome(LanguageCode.CHINESE);
+      const chineseResult = await homeService.getHome(LanguageCode.TAIWAN);
       expect(chineseResult.section[0].title).toBe('中文标题');
       expect(chineseResult.section[0].description).toBe('中文描述');
     });

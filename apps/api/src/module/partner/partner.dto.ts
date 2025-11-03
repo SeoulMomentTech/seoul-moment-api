@@ -20,7 +20,7 @@ export class GetPartnerRequest {
 
   @ApiProperty({
     description: '협력사 국가',
-    example: LanguageCode.CHINESE,
+    example: LanguageCode.TAIWAN,
     enum: LanguageCode,
   })
   @IsDefined()

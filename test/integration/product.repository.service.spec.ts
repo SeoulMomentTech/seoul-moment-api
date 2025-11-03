@@ -648,7 +648,7 @@ describe('ProductRepositoryService Integration Tests', () => {
     it('해당 타입의 옵션이 없는 경우 빈 배열을 반환해야 함', async () => {
       // Given: 사이즈 옵션만 있는 상품
       const language = await testDataFactory.createLanguage({
-        code: LanguageCode.CHINESE,
+        code: LanguageCode.TAIWAN,
         name: 'Test Language Empty',
       });
       const brand = await testDataFactory.createBrand({

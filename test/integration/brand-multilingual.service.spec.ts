@@ -47,12 +47,12 @@ describe('BrandService Multilingual Integration Tests', () => {
             name: {
               [LanguageCode.KOREAN]: '서울모먼트',
               [LanguageCode.ENGLISH]: 'Seoul Moment',
-              [LanguageCode.CHINESE]: '首尔时刻',
+              [LanguageCode.TAIWAN]: '首尔时刻',
             },
             description: {
               [LanguageCode.KOREAN]: '서울의 특별한 순간들',
               [LanguageCode.ENGLISH]: 'Special moments of Seoul',
-              [LanguageCode.CHINESE]: '首尔的特殊时刻',
+              [LanguageCode.TAIWAN]: '首尔的特殊时刻',
             },
           },
         );
@@ -73,12 +73,12 @@ describe('BrandService Multilingual Integration Tests', () => {
           name: {
             [LanguageCode.KOREAN]: '서울모먼트',
             [LanguageCode.ENGLISH]: 'Seoul Moment',
-            [LanguageCode.CHINESE]: '首尔时刻',
+            [LanguageCode.TAIWAN]: '首尔时刻',
           },
           description: {
             [LanguageCode.KOREAN]: '서울의 특별한 순간들',
             [LanguageCode.ENGLISH]: 'Special moments of Seoul',
-            [LanguageCode.CHINESE]: '首尔的特殊时刻',
+            [LanguageCode.TAIWAN]: '首尔的特殊时刻',
           },
         },
       );
@@ -96,7 +96,7 @@ describe('BrandService Multilingual Integration Tests', () => {
       // When: Get brand introduce in Chinese
       const chineseResult = await brandService.getBrandIntroduce(
         brand.id,
-        LanguageCode.CHINESE,
+        LanguageCode.TAIWAN,
       );
 
       // Then: Should return Chinese content

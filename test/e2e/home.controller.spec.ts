@@ -278,7 +278,7 @@ describe('HomeController (E2E)', () => {
           title: {
             [LanguageCode.KOREAN]: '한국어 제목',
             [LanguageCode.ENGLISH]: 'English Title',
-            [LanguageCode.CHINESE]: '中文标题',
+            [LanguageCode.TAIWAN]: '中文标题',
           },
         },
       );
@@ -287,7 +287,7 @@ describe('HomeController (E2E)', () => {
       const languages = [
         { code: LanguageCode.KOREAN, expectedTitle: '한국어 제목' },
         { code: LanguageCode.ENGLISH, expectedTitle: 'English Title' },
-        { code: LanguageCode.CHINESE, expectedTitle: '中文标题' },
+        { code: LanguageCode.TAIWAN, expectedTitle: '中文标题' },
       ];
 
       for (const { code, expectedTitle } of languages) {

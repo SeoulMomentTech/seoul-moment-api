@@ -77,12 +77,12 @@ describe('PartnerController (E2E)', () => {
             title: {
               [LanguageCode.KOREAN]: '한국 협력사',
               [LanguageCode.ENGLISH]: 'Korean Partner',
-              [LanguageCode.CHINESE]: '韩国合作伙伴',
+              [LanguageCode.TAIWAN]: '韩国合作伙伴',
             },
             description: {
               [LanguageCode.KOREAN]: '한국 협력사 설명',
               [LanguageCode.ENGLISH]: 'Korean Partner Description',
-              [LanguageCode.CHINESE]: '韩国合作伙伴描述',
+              [LanguageCode.TAIWAN]: '韩国合作伙伴描述',
             },
           },
         );
@@ -122,12 +122,12 @@ describe('PartnerController (E2E)', () => {
             title: {
               [LanguageCode.KOREAN]: '한국 협력사',
               [LanguageCode.ENGLISH]: 'Korean Partner',
-              [LanguageCode.CHINESE]: '韩国合作伙伴',
+              [LanguageCode.TAIWAN]: '韩国合作伙伴',
             },
             description: {
               [LanguageCode.KOREAN]: '한국 협력사 설명',
               [LanguageCode.ENGLISH]: 'Korean Partner Description',
-              [LanguageCode.CHINESE]: '韩国合作伙伴描述',
+              [LanguageCode.TAIWAN]: '韩国合作伙伴描述',
             },
           },
         );
@@ -167,12 +167,12 @@ describe('PartnerController (E2E)', () => {
             title: {
               [LanguageCode.KOREAN]: '한국 협력사',
               [LanguageCode.ENGLISH]: 'Korean Partner',
-              [LanguageCode.CHINESE]: '韩国合作伙伴',
+              [LanguageCode.TAIWAN]: '韩国合作伙伴',
             },
             description: {
               [LanguageCode.KOREAN]: '한국 협력사 설명',
               [LanguageCode.ENGLISH]: 'Korean Partner Description',
-              [LanguageCode.CHINESE]: '韩国合作伙伴描述',
+              [LanguageCode.TAIWAN]: '韩国合作伙伴描述',
             },
           },
         );
@@ -320,6 +320,5 @@ describe('PartnerController (E2E)', () => {
         })
         .expect(400);
     });
-
   });
 });

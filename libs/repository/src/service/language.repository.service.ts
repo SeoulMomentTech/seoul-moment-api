@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -8,13 +8,42 @@ import { EntityType } from '../enum/entity.enum';
 import { LanguageCode } from '../enum/language.enum';
 
 @Injectable()
-export class LanguageRepositoryService {
+export class LanguageRepositoryService implements OnModuleInit {
   constructor(
     @InjectRepository(LanguageEntity)
     private readonly languageRepository: Repository<LanguageEntity>,
     @InjectRepository(MultilingualTextEntity)
     private readonly multilingualTextRepository: Repository<MultilingualTextEntity>,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    const count = await this.languageRepository.count();
+    if (count === 0) {
+      await this.languageRepository.save([
+        {
+          code: LanguageCode.KOREAN,
+          name: '한국어',
+          englishName: 'Korean',
+          isActive: true,
+          sortOrder: 1,
+        },
+        {
+          code: LanguageCode.ENGLISH,
+          name: 'English',
+          englishName: 'English',
+          isActive: true,
+          sortOrder: 2,
+        },
+        {
+          code: LanguageCode.TAIWAN,
+          name: '中文',
+          englishName: 'Taiwan',
+          isActive: true,
+          sortOrder: 3,
+        },
+      ]);
+    }
+  }
 
   async findAllActiveLanguages(): Promise<LanguageEntity[]> {
     return this.languageRepository.find({

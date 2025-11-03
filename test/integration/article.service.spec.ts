@@ -299,7 +299,7 @@ describe('ArticleService Integration Tests', () => {
       // When: 중국어로 아티클 조회
       const result = await articleService.getArticle(
         article.id,
-        LanguageCode.CHINESE,
+        LanguageCode.TAIWAN,
       );
 
       // Then: 중국어 콘텐츠 반환

@@ -55,7 +55,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
           sortOrder: 2,
         }),
         testDataFactory.createLanguage({
-          code: LanguageCode.CHINESE,
+          code: LanguageCode.TAIWAN,
           name: '中文',
           englishName: 'Chinese',
           isActive: false, // Inactive
@@ -94,14 +94,14 @@ describe('LanguageRepositoryService Integration Tests', () => {
     it('should return null for inactive language', async () => {
       // Given: Create inactive language
       await testDataFactory.createLanguage({
-        code: LanguageCode.CHINESE,
+        code: LanguageCode.TAIWAN,
         name: '中文',
         isActive: false,
       });
 
       // When
       const result = await languageRepositoryService.findLanguageByCode(
-        LanguageCode.CHINESE,
+        LanguageCode.TAIWAN,
       );
 
       // Then

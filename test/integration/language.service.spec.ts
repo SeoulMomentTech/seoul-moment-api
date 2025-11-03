@@ -80,7 +80,7 @@ describe('LanguageService Integration Tests', () => {
 
       await testDataFactory.createLanguage({
         name: '두 번째 언어',
-        code: LanguageCode.CHINESE,
+        code: LanguageCode.TAIWAN,
         sortOrder: 2,
         isActive: true,
       });
@@ -181,7 +181,7 @@ describe('LanguageService Integration Tests', () => {
       const codes = [
         LanguageCode.KOREAN,
         LanguageCode.ENGLISH,
-        LanguageCode.CHINESE,
+        LanguageCode.TAIWAN,
       ];
       for (let i = 1; i <= languageCount; i++) {
         await testDataFactory.createLanguage({

@@ -73,7 +73,7 @@ export class LanguageFactory {
     });
 
     const chinese = await this.createLanguage({
-      code: LanguageCode.CHINESE,
+      code: LanguageCode.TAIWAN,
       name: '中文',
       englishName: 'Chinese',
       sortOrder: 3,

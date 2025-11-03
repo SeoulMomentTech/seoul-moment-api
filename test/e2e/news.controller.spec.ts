@@ -351,7 +351,7 @@ describe('NewsController (E2E)', () => {
       // When: API 호출 (중국어)
       const response = await request(app.getHttpServer())
         .get(`/news/${news.id}`)
-        .set('Accept-language', LanguageCode.CHINESE)
+        .set('Accept-language', LanguageCode.TAIWAN)
         .expect(200);
 
       // Then: 응답 검증

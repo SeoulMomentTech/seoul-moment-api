@@ -60,7 +60,7 @@ describe('CategoryService Integration Tests', () => {
       // When
       const koResult = await categoryService.getCategory(LanguageCode.KOREAN);
       const enResult = await categoryService.getCategory(LanguageCode.ENGLISH);
-      const zhResult = await categoryService.getCategory(LanguageCode.CHINESE);
+      const zhResult = await categoryService.getCategory(LanguageCode.TAIWAN);
 
       // Then
       expect(koResult).toHaveLength(1);
@@ -148,7 +148,7 @@ describe('CategoryService Integration Tests', () => {
       expect(enCategories[0].name).toBe('Test Category');
 
       const zhCategories = await categoryService.getCategory(
-        LanguageCode.CHINESE,
+        LanguageCode.TAIWAN,
       );
       expect(zhCategories[0].name).toBe('测试类别');
     });

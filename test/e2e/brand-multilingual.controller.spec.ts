@@ -98,7 +98,7 @@ describe('BrandController Multilingual (E2E)', () => {
           name: {
             [LanguageCode.KOREAN]: '서울모먼트',
             [LanguageCode.ENGLISH]: 'Seoul Moment',
-            [LanguageCode.CHINESE]: '首尔时刻',
+            [LanguageCode.TAIWAN]: '首尔时刻',
           },
         },
       );
