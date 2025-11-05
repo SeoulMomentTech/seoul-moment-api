@@ -156,16 +156,41 @@ export class GetHomeArticle {
   }
 }
 
+export class GetHomeBanner {
+  @ApiProperty({
+    description: '배너 이미지 URL',
+    example: 'https://example.com/banner.jpg',
+  })
+  image: string;
+
+  @ApiProperty({
+    description: '모바일 배너 이미지 URL',
+    example: 'https://example.com/mobile-banner.jpg',
+  })
+  mobileImage: string;
+
+  static from(entity: HomeBannerImageEntity) {
+    return plainToInstance(this, {
+      image: entity.getImage(),
+      mobileImage: entity.getMobileImage(),
+    });
+  }
+}
+
 export class GetHomeResponse {
   @ApiProperty({
     description: '홈 배너 이미지 URL 리스트',
     example: [
-      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01.jpg',
-      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-02.jpg',
+      {
+        image:
+          'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01.jpg',
+        mobileImage:
+          'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01-mobile.jpg',
+      },
     ],
-    type: [String],
+    type: [GetHomeBanner],
   })
-  banner: string[];
+  banner: GetHomeBanner[];
 
   @ApiProperty({
     description: '홈 섹션 리스트',
@@ -179,7 +204,7 @@ export class GetHomeResponse {
     sectionMultilingualTextEntity: MultilingualTextEntity[],
   ) {
     return plainToInstance(this, {
-      banner: banner.map((v) => v.getImage()),
+      banner: banner.map((v) => GetHomeBanner.from(v)),
       section: section.map((v) =>
         GetHomeSection.from(v, sectionMultilingualTextEntity),
       ),
