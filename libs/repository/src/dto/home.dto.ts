@@ -1,3 +1,4 @@
+import { RequireKey } from '@app/common/type/require-key.type';
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 
@@ -21,3 +22,5 @@ export class HomeDto {
     });
   }
 }
+
+export type UpdateHomeBannerDto = RequireKey<HomeBannerImageEntity, 'id'>;

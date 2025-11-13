@@ -5,6 +5,8 @@ import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ArticleRepositoryService } from '@app/repository/service/article.repository.service';
+import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -20,6 +22,8 @@ export class ArticleService {
   constructor(
     private readonly articleRepositoryService: ArticleRepositoryService,
     private readonly languageRepositoryService: LanguageRepositoryService,
+    private readonly categoryRepositoryService: CategoryRepositoryService,
+    private readonly brandRepositoryService: BrandRepositoryService,
   ) {}
 
   async getArticle(
@@ -50,7 +54,7 @@ export class ArticleService {
         ),
         this.languageRepositoryService.findMultilingualTexts(
           EntityType.CATEGORY,
-          articleEntity.brand.category.id,
+          articleEntity.category.id,
           languageCode,
         ),
       ]);
@@ -88,9 +92,16 @@ export class ArticleService {
   }
 
   async postArticle(dto: PostArticleRequest) {
+    await this.categoryRepositoryService.getCategoryById(dto.categoryId);
+
+    if (dto.brandId) {
+      await this.brandRepositoryService.getBrandById(dto.brandId);
+    }
+
     const articleEntity = await this.articleRepositoryService.insert(
       plainToInstance(ArticleEntity, {
         brandId: dto.brandId,
+        categoryId: dto.categoryId,
         writer: dto.writer,
         banner: dto.banner,
         profileImage: dto.profile,
@@ -141,7 +152,7 @@ export class ArticleService {
             v.subTitle,
           ),
           this.languageRepositoryService.saveMultilingualText(
-            EntityType.NEWS_SECTION,
+            EntityType.ARTICLE_SECTION,
             articleSectionEntity.id,
             'content',
             v.languageId,

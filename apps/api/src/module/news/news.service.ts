@@ -4,6 +4,8 @@ import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
+import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { NewsRepositoryService } from '@app/repository/service/news.repository.service';
 import { Injectable } from '@nestjs/common';
@@ -20,6 +22,8 @@ export class NewsService {
   constructor(
     private readonly newsRepositoryService: NewsRepositoryService,
     private readonly languageRepositoryService: LanguageRepositoryService,
+    private readonly categoryRepositoryService: CategoryRepositoryService,
+    private readonly brandRepositoryService: BrandRepositoryService,
   ) {}
 
   async getNews(
@@ -50,7 +54,7 @@ export class NewsService {
         ),
         this.languageRepositoryService.findMultilingualTexts(
           EntityType.CATEGORY,
-          newsEntity.brand.category.id,
+          newsEntity.category.id,
           languageCode,
         ),
       ]);
@@ -86,9 +90,16 @@ export class NewsService {
   }
 
   async postNews(dto: PostNewsRequest) {
+    await this.categoryRepositoryService.getCategoryById(dto.categoryId);
+
+    if (dto.brandId) {
+      await this.brandRepositoryService.getBrandById(dto.brandId);
+    }
+
     const newsEntity = await this.newsRepositoryService.insert(
       plainToInstance(NewsEntity, {
         brandId: dto.brandId,
+        categoryId: dto.categoryId,
         writer: dto.writer,
         banner: dto.banner,
         profileImage: dto.profile,

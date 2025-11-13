@@ -20,54 +20,22 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "paths": {
-      "@app/database": [
-        "libs/database/src"
-      ],
-      "@app/database/*": [
-        "libs/database/src/*"
-      ],
-      "@app/config": [
-        "libs/config/src"
-      ],
-      "@app/config/*": [
-        "libs/config/src/*"
-      ],
-      "@app/repository": [
-        "libs/repository/src"
-      ],
-      "@app/repository/*": [
-        "libs/repository/src/*"
-      ],
-      "@app/common": [
-        "libs/common/src"
-      ],
-      "@app/common/*": [
-        "libs/common/src/*"
-      ],
-      "@app/external": [
-        "libs/external/src"
-      ],
-      "@app/external/*": [
-        "libs/external/src/*"
-      ],
-      "@app/http": [
-        "libs/http/src"
-      ],
-      "@app/http/*": [
-        "libs/http/src/*"
-      ],
-      "@app/cache": [
-        "libs/cache/src"
-      ],
-      "@app/cache/*": [
-        "libs/cache/src/*"
-      ],
-      "@app/auth": [
-        "libs/auth/src"
-      ],
-      "@app/auth/*": [
-        "libs/auth/src/*"
-      ]
+      "@app/database": ["libs/database/src"],
+      "@app/database/*": ["libs/database/src/*"],
+      "@app/config": ["libs/config/src"],
+      "@app/config/*": ["libs/config/src/*"],
+      "@app/repository": ["libs/repository/src"],
+      "@app/repository/*": ["libs/repository/src/*"],
+      "@app/common": ["libs/common/src"],
+      "@app/common/*": ["libs/common/src/*"],
+      "@app/external": ["libs/external/src"],
+      "@app/external/*": ["libs/external/src/*"],
+      "@app/http": ["libs/http/src"],
+      "@app/http/*": ["libs/http/src/*"],
+      "@app/cache": ["libs/cache/src"],
+      "@app/cache/*": ["libs/cache/src/*"],
+      "@app/auth": ["libs/auth/src"],
+      "@app/auth/*": ["libs/auth/src/*"]
     }
   }
 }

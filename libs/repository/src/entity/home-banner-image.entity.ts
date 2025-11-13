@@ -1,7 +1,8 @@
 import { Configuration } from '@app/config/configuration';
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
+import { HomeBannerStatus } from '../enum/home-banner-image.enum';
 
 @Entity('home_banner_image')
 export class HomeBannerImageEntity extends CommonEntity {
@@ -16,6 +17,14 @@ export class HomeBannerImageEntity extends CommonEntity {
 
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
+
+  @Column('enum', {
+    enum: HomeBannerStatus,
+    default: HomeBannerStatus.NORMAL,
+    nullable: false,
+  })
+  @Index('idx_home_banner_image_status')
+  status: HomeBannerStatus;
 
   getImage(): string {
     return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imageUrl}`;

@@ -13,6 +13,7 @@ import { DataSource } from 'typeorm';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 
 import { HealthController } from '../health.controller';
+import { AdminModule } from './admin/admin.module';
 import { ArticleModule } from './article/article.module';
 import { AuthModule } from './auth/auth.module';
 import { BrandModule } from './brand/brand.module';
@@ -45,6 +46,7 @@ import { ProductModule } from './product/product.module';
     LoggerModule,
     RepositoryModule,
     BrandModule,
+    AdminModule,
     GoogleModule,
     NewsModule,
     ArticleModule,

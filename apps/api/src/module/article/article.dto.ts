@@ -3,13 +3,14 @@ import { ArticleSectionEntity } from '@app/repository/entity/article-section.ent
 import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
   IsInt,
   IsNumber,
+  IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
@@ -201,7 +202,7 @@ export class GetArticleResponse {
 
     return plainToInstance(this, {
       id: entity.id,
-      brandId: entity.brand.id,
+      brandId: entity.brand?.id,
       writer: entity.writer,
       createDate: entity.createDate,
       category: categoryName.getContent(),
@@ -416,12 +417,21 @@ export class PostArticleSection {
 
 export class PostArticleRequest {
   @ApiProperty({
-    description: '브랜드 id',
+    description: '카테고리 id',
     example: 1,
   })
   @IsNumber()
   @Type(() => Number)
   @IsDefined()
+  categoryId: number;
+
+  @ApiPropertyOptional({
+    description: '브랜드 id',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
   brandId: number;
 
   @ApiProperty({

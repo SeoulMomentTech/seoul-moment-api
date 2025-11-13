@@ -1,3 +1,5 @@
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -17,6 +19,19 @@ export class CategoryRepositoryService {
 
     private readonly sortOrderHelper: SortOrderHelper,
   ) {}
+
+  async getCategoryById(id: number): Promise<CategoryEntity> {
+    const result = await this.categoryRepository.findOneBy({ id });
+
+    if (!result) {
+      throw new ServiceError(
+        `Category not found id: ${id}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
 
   async findCategory(): Promise<CategoryEntity[]> {
     return this.categoryRepository.find({

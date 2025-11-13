@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 
 import { BrandEntity } from './brand.entity';
+import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
 import { NewsSectionEntity } from './news-section.entity';
 import { EntityType } from '../enum/entity.enum';
@@ -22,8 +23,11 @@ export class NewsEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column('int', { name: 'brand_id', nullable: false })
-  brandId: number;
+  @Column('int', { name: 'category_id', nullable: true })
+  categoryId: number;
+
+  @Column('int', { name: 'brand_id', nullable: true })
+  brandId?: number;
 
   @Column('varchar', { length: 255, nullable: false })
   writer: string;
@@ -40,6 +44,12 @@ export class NewsEntity extends CommonEntity {
     nullable: true,
   })
   status: NewsStatus;
+
+  @ManyToOne(() => CategoryEntity, (category) => category.news, {
+    eager: true,
+  })
+  @JoinColumn({ name: 'category_id' })
+  category: CategoryEntity;
 
   @ManyToOne(() => BrandEntity, (brand) => brand.news, {
     eager: true,

@@ -3,13 +3,14 @@ import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text
 import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
   IsInt,
   IsNumber,
+  IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
@@ -126,8 +127,11 @@ export class GetNewsResponse {
   @ApiProperty({ description: '뉴스 ID', example: 1 })
   id: number;
 
-  @ApiProperty({ description: '브랜드 ID', example: 1 })
-  brandId: number;
+  @ApiProperty({ description: '카테고리 ID', example: 1 })
+  categoryId: number;
+
+  @ApiPropertyOptional({ description: '브랜드 ID', example: 1 })
+  brandId?: number;
 
   @ApiProperty({ description: '작성자 이름', example: '김서울' })
   writer: string;
@@ -204,7 +208,7 @@ export class GetNewsResponse {
 
     return plainToInstance(this, {
       id: entity.id,
-      brandId: entity.brand.id,
+      brandId: entity.brand?.id,
       writer: entity.writer,
       createDate: entity.createDate,
       category: categoryName.getContent(),
@@ -416,12 +420,21 @@ export class PostNewsSection {
 
 export class PostNewsRequest {
   @ApiProperty({
-    description: '브랜드 id',
+    description: '카테고리 id',
     example: 1,
   })
   @IsNumber()
   @Type(() => Number)
   @IsDefined()
+  categoryId: number;
+
+  @ApiPropertyOptional({
+    description: '브랜드 id',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
   brandId: number;
 
   @ApiProperty({

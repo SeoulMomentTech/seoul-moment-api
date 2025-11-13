@@ -51,9 +51,12 @@ export class ArticleRepositoryService {
   }
 
   async getArticleById(id: number): Promise<ArticleEntity> {
-    const result = await this.articleRepository.findOneBy({
-      id,
-      status: ArticleStatus.NORMAL,
+    const result = await this.articleRepository.findOne({
+      where: {
+        id,
+        status: ArticleStatus.NORMAL,
+      },
+      relations: ['category', 'brand', 'section', 'section.sectionImage'],
     });
 
     if (!result) {

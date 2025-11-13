@@ -1,8 +1,10 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
+import { ArticleEntity } from './article.entity';
 import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
+import { NewsEntity } from './news.entity';
 import { ProductCategoryEntity } from './product-category.entity';
 import { ProductEntity } from './product.entity';
 import { EntityType } from '../enum/entity.enum';
@@ -17,6 +19,16 @@ export class CategoryEntity extends CommonEntity {
 
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
+
+  @OneToMany(() => ArticleEntity, (article) => article.category, {
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  article: ArticleEntity[];
+
+  @OneToMany(() => NewsEntity, (news) => news.category, {
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  news: NewsEntity[];
 
   @OneToMany(() => ProductEntity, (product) => product.category, {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
