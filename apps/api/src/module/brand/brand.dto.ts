@@ -418,4 +418,20 @@ export class PostBrandRequest {
   @IsArray()
   @IsDefined()
   bannerImageUrlList: string[];
+
+  @ApiProperty({
+    description: 'S3 업로드 후 배너 이미지 경로',
+    example: '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  bannerImageUrl: string;
+
+  @ApiProperty({
+    description: '영어 브랜드 이름',
+    example: 'Seoul Moment',
+  })
+  @IsString()
+  @IsDefined()
+  englishName: string;
 }

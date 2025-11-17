@@ -108,6 +108,8 @@ export class BrandService {
       plainToInstance(BrandEntity, {
         categoryId: dto.categoryId,
         profileImage: dto.profileImageUrl ?? undefined,
+        bannerImageUrl: dto.bannerImageUrl,
+        englishName: dto.englishName,
       }),
     );
 
