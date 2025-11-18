@@ -10,7 +10,9 @@ import { Repository } from 'typeorm';
 
 import { ProductFilterDto, ProductSortDto } from '../dto/product.dto';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
+import { ProductItemImageEntity } from '../entity/product-item-image.entity';
 import { ProductItemEntity } from '../entity/product-item.entity';
+import { ProductVariantEntity } from '../entity/product-variant.entity';
 import { ProductEntity } from '../entity/product.entity';
 import { ProductBannerEntity } from '../entity/product_banner.entity';
 import { VariantOptionEntity } from '../entity/variant-option.entity';
@@ -22,7 +24,9 @@ import {
   ProductItemStatus,
   ProductSortColumn,
   ProductStatus,
+  ProductVariantStatus,
 } from '../enum/product.enum';
+import { SortOrderHelper } from '../helper/sort-order.helper';
 
 @Injectable()
 export class ProductRepositoryService {
@@ -39,8 +43,16 @@ export class ProductRepositoryService {
     @InjectRepository(ProductCategoryEntity)
     private readonly productCategoryRepository: Repository<ProductCategoryEntity>,
 
+    @InjectRepository(ProductItemImageEntity)
+    private readonly productItemImageRepository: Repository<ProductItemImageEntity>,
+
     @InjectRepository(VariantOptionEntity)
     private readonly variantOptionRepository: Repository<VariantOptionEntity>,
+
+    @InjectRepository(ProductVariantEntity)
+    private readonly productVariantRepository: Repository<ProductVariantEntity>,
+
+    private readonly sortOrderHelper: SortOrderHelper,
   ) {}
 
   async findBanner(): Promise<ProductBannerEntity[]> {
@@ -126,6 +138,9 @@ export class ProductRepositoryService {
         })
         .andWhere('b.status = :brandStatus', {
           brandStatus: BrandStatus.NORMAL,
+        })
+        .andWhere('pv.status = :productVariantStatus', {
+          productVariantStatus: ProductVariantStatus.ACTIVE,
         });
 
       return query;
@@ -212,6 +227,38 @@ export class ProductRepositoryService {
       .getMany();
 
     return [results, totalCount];
+  }
+
+  async getProductByProductId(productId: number): Promise<ProductEntity> {
+    const result = await this.productRepository.findOne({
+      where: {
+        id: productId,
+      },
+    });
+
+    if (!result)
+      throw new ServiceError(
+        `No exist product ID: ${productId}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+
+    return result;
+  }
+
+  async getProductItemByProductItemId(
+    productItemId: number,
+  ): Promise<ProductItemEntity> {
+    const result = await this.productItemRepository.findOneBy({
+      id: productItemId,
+    });
+
+    if (!result)
+      throw new ServiceError(
+        `No exist product item ID: ${productItemId}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+
+    return result;
   }
 
   async getProductItemDetail(id: number): Promise<ProductItemEntity> {
@@ -410,5 +457,28 @@ export class ProductRepositoryService {
       });
     }
     return Array.from(allMap.values());
+  }
+
+  async insertProductItem(
+    entity: ProductItemEntity,
+  ): Promise<ProductItemEntity> {
+    return this.productItemRepository.save(entity);
+  }
+
+  async insertProductItemImage(
+    entity: ProductItemImageEntity,
+  ): Promise<ProductItemImageEntity> {
+    await this.sortOrderHelper.setNextSortOrder(
+      entity,
+      this.productItemImageRepository,
+    );
+
+    return this.productItemImageRepository.save(entity);
+  }
+
+  async insertProductVariant(
+    entity: ProductVariantEntity,
+  ): Promise<ProductVariantEntity> {
+    return this.productVariantRepository.save(entity);
   }
 }

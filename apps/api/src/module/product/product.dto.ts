@@ -644,6 +644,23 @@ export class PostProductCategoryRequest {
   @Type(() => PostProductCategoryInfo)
   @IsDefined()
   list: PostProductCategoryInfo[];
+
+  @ApiProperty({
+    description: '카테고리 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  categoryId: number;
+
+  @ApiProperty({
+    description: '카테고리 이미지 URL',
+    example: 'https://example.com/image1.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  imageUrl: string;
 }
 
 export class GetProductCategoryRequest {
@@ -723,7 +740,7 @@ export class PostProductLanguage {
   @IsNumber()
   @Type(() => Number)
   @IsDefined()
-  lenguageId: number;
+  languageId: number;
 
   @ApiProperty({
     description: '상품 이름',
@@ -783,17 +800,17 @@ export class PostProductRequest {
     type: [PostProductLanguage],
     example: [
       {
-        lenguageId: 1,
+        languageId: 1,
         name: '나이키 드라이핏 티셔츠',
         origin: '일본',
       },
       {
-        lenguageId: 2,
+        languageId: 2,
         name: 'Nike Dri-FIT T-shirt',
         origin: 'USA',
       },
       {
-        lenguageId: 3,
+        languageId: 3,
         name: '耐克 Dri-FIT T恤',
         origin: '中国',
       },
@@ -969,4 +986,221 @@ export class GetProductFilterResponse {
       optionValueList,
     });
   }
+}
+
+export class PostOptionText {
+  @ApiProperty({
+    description: '언어 ID',
+    example: 1,
+  })
+  @IsInt()
+  @IsDefined()
+  languageId: number;
+
+  @ApiProperty({
+    description: '카테고리 이름',
+    example: '상의',
+  })
+  @IsString()
+  @IsDefined()
+  name: string;
+}
+
+export class PostOptionRequest {
+  @ApiProperty({
+    description: '국가별 글자',
+    type: [PostOptionText],
+    example: [
+      {
+        languageId: 1,
+        name: '색상',
+      },
+      {
+        languageId: 2,
+        name: 'Color',
+      },
+      {
+        languageId: 3,
+        name: '颜色',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PostOptionText)
+  text: PostOptionText[];
+
+  @ApiProperty({
+    description: '옵션 타입',
+    example: OptionType.COLOR,
+    enum: OptionType,
+  })
+  @IsEnum(OptionType)
+  @IsDefined()
+  type: OptionType;
+}
+
+export class PostOptionValueText {
+  @ApiProperty({
+    description: '언어 ID',
+    example: 1,
+  })
+  @IsInt()
+  @IsDefined()
+  languageId: number;
+
+  @ApiProperty({
+    description: '옵션 값',
+    example: '빨강',
+  })
+  @IsString()
+  @IsDefined()
+  value: string;
+}
+
+export class PostOptionValueRequest {
+  @ApiProperty({
+    description: '국가별 글자',
+    type: [PostOptionValueText],
+    example: [
+      {
+        languageId: 1,
+        value: '빨강',
+      },
+      {
+        languageId: 2,
+        value: 'Red',
+      },
+      {
+        languageId: 3,
+        value: '红色',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PostOptionValueText)
+  @IsDefined()
+  text: PostOptionValueText[];
+
+  @ApiProperty({
+    description: '옵션 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  optionId: number;
+
+  @ApiPropertyOptional({
+    description: '색상 코드',
+    example: '#FF0000',
+  })
+  @IsString()
+  @IsOptional()
+  colorCode?: string;
+}
+
+export class PostProductItemRequest {
+  @ApiProperty({
+    description: '상품 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  productId: number;
+
+  @ApiProperty({
+    description: '목록 페이지용 대표 이미지 URL',
+    example: 'https://example.com/image1.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  mainImageUrl: string;
+
+  @ApiProperty({
+    description: '가격',
+    example: 10000,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  price: number;
+
+  @ApiPropertyOptional({
+    description: '할인 가격',
+    example: 10000,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  discountPrice?: number;
+
+  @ApiProperty({
+    description: '배송비용',
+    example: 10000,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  shippingCost: number;
+
+  @ApiProperty({
+    description: '배송출고 일자',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  shippingInfo: number;
+
+  @ApiProperty({
+    description: '이미지 URL 목록',
+    example: [
+      'https://example.com/image1.jpg',
+      'https://example.com/image2.jpg',
+    ],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsDefined()
+  imageUrlList: string[];
+}
+
+export class PostProductVariantRequest {
+  @ApiProperty({
+    description: '상품 아이템 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  productItemId: number;
+
+  @ApiProperty({
+    description: 'SKU',
+    example: '1234567890',
+  })
+  @IsString()
+  @IsDefined()
+  sku: string;
+
+  @ApiProperty({
+    description: '재고 수량',
+    example: 10,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  stockQuantity: number;
+
+  @ApiProperty({
+    description: '옵션 값 ID 목록',
+    example: [1, 2, 3],
+  })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @IsDefined()
+  optionValueIdList: number[];
 }

@@ -61,4 +61,10 @@ export class CategoryRepositoryService {
   async bulkInsert(entity: CategoryEntity[]): Promise<CategoryEntity[]> {
     return this.categoryRepository.save(entity);
   }
+
+  async insertProductCategory(
+    entity: ProductCategoryEntity,
+  ): Promise<ProductCategoryEntity> {
+    return this.productCategoryRepository.save(entity);
+  }
 }

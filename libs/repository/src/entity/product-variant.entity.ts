@@ -47,13 +47,6 @@ export class ProductVariantEntity extends CommonEntity {
   })
   stockQuantity: number;
 
-  @Column('boolean', {
-    name: 'is_active',
-    default: true,
-    comment: '활성화 여부',
-  })
-  isActive: boolean;
-
   @Column('enum', {
     enum: ProductVariantStatus,
     default: ProductVariantStatus.ACTIVE,
@@ -83,9 +76,7 @@ export class ProductVariantEntity extends CommonEntity {
 
   isInStock(): boolean {
     return (
-      this.stockQuantity > 0 &&
-      this.isActive &&
-      this.status === ProductVariantStatus.ACTIVE
+      this.stockQuantity > 0 && this.status === ProductVariantStatus.ACTIVE
     );
   }
 }

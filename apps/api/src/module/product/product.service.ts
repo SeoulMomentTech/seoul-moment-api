@@ -6,11 +6,18 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { ProductSortDto } from '@app/repository/dto/product.dto';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
+import { OptionEntity } from '@app/repository/entity/option.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
+import { ProductItemImageEntity } from '@app/repository/entity/product-item-image.entity';
+import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
+import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
+import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { OptionRepositoryService } from '@app/repository/service/option.repository.service';
 import { ProductFilterRepositoryService } from '@app/repository/service/product-filter.repository.service';
@@ -32,6 +39,11 @@ import {
   GetProductFilterResponse,
   GetProductFilterRequest,
   ProductFilterOptionValue,
+  PostProductCategoryRequest,
+  PostOptionRequest,
+  PostOptionValueRequest,
+  PostProductItemRequest,
+  PostProductVariantRequest,
 } from './product.dto';
 import {
   GetOptionResponse,
@@ -46,6 +58,7 @@ export class ProductService {
     private readonly languageRepositoryService: LanguageRepositoryService,
     private readonly brandRepositoryService: BrandRepositoryService,
     private readonly productFilterRepositoryService: ProductFilterRepositoryService,
+    private readonly categoryRepositoryService: CategoryRepositoryService,
   ) {}
 
   async getProductBanner(): Promise<GetProductBannerResponse[]> {
@@ -268,14 +281,14 @@ export class ProductService {
         EntityType.PRODUCT,
         productEntity.id,
         'name',
-        text.lenguageId,
+        text.languageId,
         text.name,
       );
       await this.languageRepositoryService.saveMultilingualText(
         EntityType.PRODUCT,
         productEntity.id,
         'origin',
-        text.lenguageId,
+        text.languageId,
         text.origin,
       );
     }
@@ -337,6 +350,126 @@ export class ProductService {
 
     return Array.from(grouped.entries()).map(([optionType, optionValueList]) =>
       GetProductFilterResponse.from(optionType, optionValueList),
+    );
+  }
+
+  @Transactional()
+  async postProductCategory(dto: PostProductCategoryRequest) {
+    const productCategoryEntity =
+      await this.categoryRepositoryService.insertProductCategory(
+        plainToInstance(ProductCategoryEntity, {
+          categoryId: dto.categoryId,
+          imageUrl: dto.imageUrl,
+        }),
+      );
+
+    for (const text of dto.list) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.PRODUCT_CATEGORY,
+        productCategoryEntity.id,
+        'name',
+        text.languageId,
+        text.name,
+      );
+    }
+  }
+
+  @Transactional()
+  async postOption(dto: PostOptionRequest) {
+    const optionEntity = await this.optionRepositoryService.insertOption(
+      plainToInstance(OptionEntity, {
+        type: dto.type,
+      }),
+    );
+
+    for (const text of dto.text) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.OPTION,
+        optionEntity.id,
+        'name',
+        text.languageId,
+        text.name,
+      );
+    }
+  }
+
+  @Transactional()
+  async postOptionValue(dto: PostOptionValueRequest) {
+    const optionValueEntity =
+      await this.optionRepositoryService.insertOptionValue(
+        plainToInstance(OptionValueEntity, {
+          optionId: dto.optionId,
+          colorCode: dto.colorCode,
+        }),
+      );
+
+    for (const text of dto.text) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.OPTION_VALUE,
+        optionValueEntity.id,
+        'value',
+        text.languageId,
+        text.value,
+      );
+    }
+  }
+
+  @Transactional()
+  async postProductItem(dto: PostProductItemRequest) {
+    await this.productRepositoryService.getProductByProductId(dto.productId);
+
+    const productItemEntity =
+      await this.productRepositoryService.insertProductItem(
+        plainToInstance(ProductItemEntity, {
+          productId: dto.productId,
+          mainImageUrl: dto.mainImageUrl,
+          price: dto.price,
+          discountPrice: dto.discountPrice,
+          shippingCost: dto.shippingCost,
+          shippingInfo: dto.shippingInfo,
+        }),
+      );
+
+    if (dto.imageUrlList.length > 0) {
+      for (const imageUrl of dto.imageUrlList) {
+        await this.productRepositoryService.insertProductItemImage(
+          plainToInstance(ProductItemImageEntity, {
+            productItemId: productItemEntity.id,
+            imageUrl,
+          }),
+        );
+      }
+    }
+  }
+
+  @Transactional()
+  async postProductVariant(dto: PostProductVariantRequest) {
+    await this.productRepositoryService.getProductItemByProductItemId(
+      dto.productItemId,
+    );
+
+    const productVariantEntity =
+      await this.productRepositoryService.insertProductVariant(
+        plainToInstance(ProductVariantEntity, {
+          productItemId: dto.productItemId,
+          sku: dto.sku,
+          stockQuantity: dto.stockQuantity,
+        }),
+      );
+
+    await Promise.all(
+      dto.optionValueIdList.map(async (v) =>
+        this.optionRepositoryService.getOptionValueByOptionValueId(v),
+      ),
+    );
+
+    await this.optionRepositoryService.bulkInsertVariantOption(
+      dto.optionValueIdList.map((v) =>
+        plainToInstance(VariantOptionEntity, {
+          variantId: productVariantEntity.id,
+          optionValueId: v,
+        }),
+      ),
     );
   }
 }

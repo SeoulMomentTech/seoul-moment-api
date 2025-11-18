@@ -34,6 +34,11 @@ import {
   PostProductRequest,
   GetProductFilterResponse,
   GetProductFilterRequest,
+  PostProductCategoryRequest,
+  PostOptionRequest,
+  PostProductItemRequest,
+  PostOptionValueRequest,
+  PostProductVariantRequest,
 } from './product.dto';
 import { ProductService } from './product.service';
 
@@ -241,5 +246,51 @@ export class ProductController {
     );
 
     return new ResponseDataDto(result);
+  }
+
+  @Post('category')
+  @ApiOperation({
+    summary: 'Product category register',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async postProductCategory(@Body() body: PostProductCategoryRequest) {
+    await this.productService.postProductCategory(body);
+  }
+
+  @Post('option')
+  @ApiOperation({
+    summary: 'Option register',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async postOption(@Body() body: PostOptionRequest) {
+    await this.productService.postOption(body);
+  }
+
+  @Post('option/value')
+  @ApiOperation({
+    summary: 'Option value register',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async postOptionValue(@Body() body: PostOptionValueRequest) {
+    await this.productService.postOptionValue(body);
+  }
+
+  @Post('item')
+  @ApiOperation({
+    summary: 'Product item register',
+  })
+  @ResponseException(HttpStatus.NOT_FOUND, '상품이 존재하지 않습니다.')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async postProductItem(@Body() body: PostProductItemRequest) {
+    await this.productService.postProductItem(body);
+  }
+
+  @Post('variant')
+  @ApiOperation({
+    summary: 'Product variant register',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async postProductVariant(@Body() body: PostProductVariantRequest) {
+    await this.productService.postProductVariant(body);
   }
 }
