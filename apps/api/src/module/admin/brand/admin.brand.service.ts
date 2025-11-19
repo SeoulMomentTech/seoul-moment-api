@@ -3,6 +3,7 @@ import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-imag
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
+import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
@@ -10,7 +11,10 @@ import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
-import { PostAdminBrandRequest } from './admin.brand.dto';
+import {
+  GetAdminBrandInfoResponse,
+  PostAdminBrandRequest,
+} from './admin.brand.dto';
 
 @Injectable()
 export class AdminBrandService {
@@ -99,5 +103,41 @@ export class AdminBrandService {
         brandSectionImages,
       );
     }
+  }
+
+  async getAdminBrandInfo(id: number): Promise<GetAdminBrandInfoResponse> {
+    const brandEntity = await this.brandRepositoryService.getBrandById(id);
+
+    const languageArray =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const brandMultilingualList: {
+      languageId: number;
+      brandText: MultilingualTextEntity[];
+      sectionText: MultilingualTextEntity[];
+    }[] = [];
+
+    for (const languageEntity of languageArray) {
+      const [brandTexts, sectionTexts] = await Promise.all([
+        this.languageRepositoryService.findMultilingualTexts(
+          EntityType.BRAND,
+          brandEntity.id,
+          languageEntity.code,
+        ),
+        this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.BRAND_SECTION,
+          brandEntity.section.map((section) => section.id),
+          languageEntity.code,
+        ),
+      ]);
+
+      brandMultilingualList.push({
+        languageId: languageEntity.id,
+        brandText: brandTexts,
+        sectionText: sectionTexts,
+      });
+    }
+
+    return GetAdminBrandInfoResponse.from(brandEntity, brandMultilingualList);
   }
 }
