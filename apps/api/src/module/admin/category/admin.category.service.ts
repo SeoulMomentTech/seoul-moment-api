@@ -1,12 +1,16 @@
+import { CategoryEntity } from '@app/repository/entity/category.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { Transactional } from 'typeorm-transactional';
 
 import {
   AdminCategoryListRequest,
   GetAdminCategoryListResponse,
   GetAdminCategoryNameDto,
+  PostAdminCategoryRequest,
 } from './admin.category.dto';
 
 @Injectable()
@@ -22,8 +26,8 @@ export class AdminCategoryService {
     const [categoryEntityList, total] =
       await this.categoryRepositoryService.findCategoryByFilter(
         request.page,
-        request.pageSize,
-        request.searchName,
+        request.count,
+        request.search,
         request.searchColumn,
         request.sort,
       );
@@ -56,5 +60,24 @@ export class AdminCategoryService {
     );
 
     return [categoryList, total];
+  }
+
+  @Transactional()
+  async postAdminCategory(dto: PostAdminCategoryRequest) {
+    const categoryEntity = await this.categoryRepositoryService.insert(
+      plainToInstance(CategoryEntity, {}),
+    );
+
+    await Promise.all(
+      dto.list.flatMap((v) => [
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.CATEGORY,
+          categoryEntity.id,
+          'name',
+          v.languageId,
+          v.name,
+        ),
+      ]),
+    );
   }
 }

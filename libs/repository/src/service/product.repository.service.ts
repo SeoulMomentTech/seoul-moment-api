@@ -3,13 +3,15 @@ import { PagingDto } from '@app/common/dto/global.dto';
 import { DatabaseSort } from '@app/common/enum/global.enum';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GetProductDetailOptionValue } from 'apps/api/src/module/product/product.dto';
 import { Repository } from 'typeorm';
 
+import { LanguageRepositoryService } from './language.repository.service';
 import { ProductFilterDto, ProductSortDto } from '../dto/product.dto';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
+import { ProductFilterEntity } from '../entity/product-filter.entity';
 import { ProductItemImageEntity } from '../entity/product-item-image.entity';
 import { ProductItemEntity } from '../entity/product-item.entity';
 import { ProductVariantEntity } from '../entity/product-variant.entity';
@@ -29,7 +31,7 @@ import {
 import { SortOrderHelper } from '../helper/sort-order.helper';
 
 @Injectable()
-export class ProductRepositoryService {
+export class ProductRepositoryService implements OnModuleInit {
   constructor(
     @InjectRepository(ProductEntity)
     private readonly productRepository: Repository<ProductEntity>,
@@ -52,8 +54,74 @@ export class ProductRepositoryService {
     @InjectRepository(ProductVariantEntity)
     private readonly productVariantRepository: Repository<ProductVariantEntity>,
 
+    @InjectRepository(ProductFilterEntity)
+    private readonly productFilterRepository: Repository<ProductFilterEntity>,
+
     private readonly sortOrderHelper: SortOrderHelper,
+
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    const count = await this.productFilterRepository.count();
+    if (count === 0) {
+      await this.productFilterRepository.save([
+        {
+          sortColumn: 'createDate',
+          sort: DatabaseSort.DESC,
+          sortOrder: 1,
+        },
+        {
+          sortColumn: 'createDate',
+          sort: DatabaseSort.ASC,
+          sortOrder: 2,
+        },
+      ]);
+
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.PRODUCT_FILTER,
+        1,
+        'name',
+        1,
+        '최신순',
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.PRODUCT_FILTER,
+        1,
+        'name',
+        2,
+        'Latest',
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.PRODUCT_FILTER,
+        1,
+        'name',
+        3,
+        '最新順序',
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.PRODUCT_FILTER,
+        2,
+        'name',
+        1,
+        '등록순',
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.PRODUCT_FILTER,
+        2,
+        'name',
+        2,
+        'Oldest',
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.PRODUCT_FILTER,
+        2,
+        'name',
+        3,
+        '註冊順序',
+      );
+    }
+  }
 
   async findBanner(): Promise<ProductBannerEntity[]> {
     return this.productBannerRepository.find({

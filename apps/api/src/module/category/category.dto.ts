@@ -1,14 +1,7 @@
 import { CategoryEntity } from '@app/repository/entity/category.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { plainToInstance, Type } from 'class-transformer';
-import {
-  IsArray,
-  IsDefined,
-  IsInt,
-  IsString,
-  ValidateNested,
-} from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
@@ -38,48 +31,4 @@ export class GetCategoryResponse {
       name: name.getContent(),
     });
   }
-}
-
-export class PostCategoryInfo {
-  @ApiProperty({
-    description: '언어 ID',
-    example: 1,
-  })
-  @IsInt()
-  @IsDefined()
-  languageId: number;
-
-  @ApiProperty({
-    description: '카테고리 이름',
-    example: '패션',
-  })
-  @IsString()
-  @IsDefined()
-  name: string;
-}
-
-export class PostCategoryRequest {
-  @ApiProperty({
-    description: '카테고리 국가별 object list',
-    type: [PostCategoryInfo],
-    example: [
-      {
-        languageId: 1,
-        name: '패션',
-      },
-      {
-        languageId: 2,
-        name: 'Fashion',
-      },
-      {
-        languageId: 3,
-        name: '时尚',
-      },
-    ],
-  })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PostCategoryInfo)
-  @IsDefined()
-  list: PostCategoryInfo[];
 }

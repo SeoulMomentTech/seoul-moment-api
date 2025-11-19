@@ -4,7 +4,16 @@ import { CategorySearchEnum } from '@app/repository/enum/category.repository.enu
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsDefined,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 export class ListFilterDto {
   @ApiPropertyOptional({
@@ -25,7 +34,7 @@ export class ListFilterDto {
   @IsOptional()
   @IsNumber()
   @Type(() => Number)
-  pageSize?: number = 10;
+  count?: number = 10;
 
   @ApiPropertyOptional({
     description: '검색',
@@ -33,7 +42,7 @@ export class ListFilterDto {
   })
   @IsOptional()
   @IsString()
-  searchName?: string;
+  search?: string;
 
   @ApiPropertyOptional({
     description: '정렬 방식',
@@ -110,4 +119,48 @@ export class GetAdminCategoryListResponse {
       nameDto,
     });
   }
+}
+
+export class PostAdminCategoryInfo {
+  @ApiProperty({
+    description: '언어 ID',
+    example: 1,
+  })
+  @IsInt()
+  @IsDefined()
+  languageId: number;
+
+  @ApiProperty({
+    description: '카테고리 이름',
+    example: '패션',
+  })
+  @IsString()
+  @IsDefined()
+  name: string;
+}
+
+export class PostAdminCategoryRequest {
+  @ApiProperty({
+    description: '카테고리 국가별 object list',
+    type: [PostAdminCategoryInfo],
+    example: [
+      {
+        languageId: 1,
+        name: '패션',
+      },
+      {
+        languageId: 2,
+        name: 'Fashion',
+      },
+      {
+        languageId: 3,
+        name: '时尚',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PostAdminCategoryInfo)
+  @IsDefined()
+  list: PostAdminCategoryInfo[];
 }

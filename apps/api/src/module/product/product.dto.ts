@@ -845,6 +845,19 @@ export class GetProductSortFilterResponse {
   })
   name: string;
 
+  @ApiProperty({
+    description: '정렬 컬럼',
+    example: 'createDate',
+  })
+  sortColumn: string;
+
+  @ApiProperty({
+    description: '정렬 방식',
+    example: DatabaseSort.ASC,
+    enum: DatabaseSort,
+  })
+  sort: DatabaseSort;
+
   static from(
     entity: ProductFilterEntity,
     multilingual: MultilingualTextEntity[],
@@ -855,6 +868,8 @@ export class GetProductSortFilterResponse {
     return plainToInstance(this, {
       id: entity.id,
       name: name.getContent(),
+      sortColumn: entity.sortColumn,
+      sort: entity.sort,
     });
   }
 }
