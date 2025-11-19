@@ -9,7 +9,7 @@ import { Transactional } from 'typeorm-transactional';
 
 import {
   AdminCategoryListRequest,
-  GetAdminCategoryListResponse,
+  GetAdminCategoryResponse,
   GetAdminCategoryNameDto,
   PostAdminCategoryRequest,
   UpdateAdminCategoryRequest,
@@ -24,7 +24,7 @@ export class AdminCategoryService {
 
   async getAdminCategoryList(
     request: AdminCategoryListRequest,
-  ): Promise<[GetAdminCategoryListResponse[], number]> {
+  ): Promise<[GetAdminCategoryResponse[], number]> {
     const [categoryEntityList, total] =
       await this.categoryRepositoryService.findCategoryByFilter(
         request.page,
@@ -57,7 +57,7 @@ export class AdminCategoryService {
             return null;
           }),
         );
-        return GetAdminCategoryListResponse.from(categoryEntity, nameDto);
+        return GetAdminCategoryResponse.from(categoryEntity, nameDto);
       }),
     );
 
@@ -112,5 +112,33 @@ export class AdminCategoryService {
         ]),
       );
     }
+  }
+
+  async getAdminCategoryInfo(id: number): Promise<GetAdminCategoryResponse> {
+    const categoryEntity =
+      await this.categoryRepositoryService.getCategoryById(id);
+
+    const languageArray =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const nameDto = await Promise.all(
+      languageArray.map(async (languageEntity) => {
+        const multilingualText =
+          await this.languageRepositoryService.findMultilingualTexts(
+            EntityType.CATEGORY,
+            categoryEntity.id,
+            languageEntity.code,
+            'name',
+          );
+        if (multilingualText.length > 0) {
+          return GetAdminCategoryNameDto.from(
+            languageEntity.code,
+            multilingualText[0].textContent,
+          );
+        }
+        return null;
+      }),
+    );
+    return GetAdminCategoryResponse.from(categoryEntity, nameDto);
   }
 }

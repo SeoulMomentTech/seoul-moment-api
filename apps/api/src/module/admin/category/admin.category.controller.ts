@@ -1,5 +1,7 @@
+import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseException } from '@app/common/decorator/response-exception.decorator';
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
+import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
@@ -17,7 +19,7 @@ import { ApiOperation } from '@nestjs/swagger';
 
 import {
   AdminCategoryListRequest,
-  GetAdminCategoryListResponse,
+  GetAdminCategoryResponse,
   PostAdminCategoryRequest,
   UpdateAdminCategoryRequest,
 } from './admin.category.dto';
@@ -31,13 +33,26 @@ export class AdminCategoryController {
   @ApiOperation({
     summary: '카테고리 목록 조회',
   })
-  @ResponseList(GetAdminCategoryListResponse)
+  @ResponseList(GetAdminCategoryResponse)
   async getAdminCategoryList(
     @Query() query: AdminCategoryListRequest,
-  ): Promise<ResponseListDto<GetAdminCategoryListResponse>> {
+  ): Promise<ResponseListDto<GetAdminCategoryResponse>> {
     const [result, total] =
       await this.adminCategoryService.getAdminCategoryList(query);
     return new ResponseListDto(result, total);
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: '카테고리 정보 조회',
+  })
+  @ResponseData(GetAdminCategoryResponse)
+  async getAdminCategoryInfo(
+    @Param('id') id: number,
+  ): Promise<ResponseDataDto<GetAdminCategoryResponse>> {
+    const result = await this.adminCategoryService.getAdminCategoryInfo(id);
+
+    return new ResponseDataDto(result);
   }
 
   @Post()

@@ -86,7 +86,7 @@ export class GetAdminCategoryNameDto {
   }
 }
 
-export class GetAdminCategoryListResponse {
+export class GetAdminCategoryResponse {
   @ApiProperty({
     description: '카테고리 ID',
     example: 1,
