@@ -47,6 +47,8 @@ export class NewsEntity extends CommonEntity {
 
   @ManyToOne(() => CategoryEntity, (category) => category.news, {
     eager: true,
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
   })
   @JoinColumn({ name: 'category_id' })
   category: CategoryEntity;

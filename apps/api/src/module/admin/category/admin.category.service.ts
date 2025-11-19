@@ -1,3 +1,4 @@
+import { UpdateCategoryDto } from '@app/repository/dto/category.dto';
 import { CategoryEntity } from '@app/repository/entity/category.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
@@ -11,6 +12,7 @@ import {
   GetAdminCategoryListResponse,
   GetAdminCategoryNameDto,
   PostAdminCategoryRequest,
+  UpdateAdminCategoryRequest,
 } from './admin.category.dto';
 
 @Injectable()
@@ -79,5 +81,36 @@ export class AdminCategoryService {
         ),
       ]),
     );
+  }
+
+  async deleteAdminCategory(id: number) {
+    await this.categoryRepositoryService.getCategoryById(id);
+    await this.categoryRepositoryService.deleteCategoryById(id);
+  }
+
+  @Transactional()
+  async updateAdminCategory(id: number, dto: UpdateAdminCategoryRequest) {
+    await this.categoryRepositoryService.getCategoryById(id);
+
+    const updateDto: UpdateCategoryDto = {
+      id,
+      sortOrder: dto.sortOrder,
+    };
+
+    await this.categoryRepositoryService.updateCategory(updateDto);
+
+    if (dto.list && dto.list.length > 0) {
+      await Promise.all(
+        dto.list.flatMap((v) => [
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.CATEGORY,
+            id,
+            'name',
+            v.languageId,
+            v.name,
+          ),
+        ]),
+      );
+    }
   }
 }

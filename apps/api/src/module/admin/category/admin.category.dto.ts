@@ -121,7 +121,7 @@ export class GetAdminCategoryListResponse {
   }
 }
 
-export class PostAdminCategoryInfo {
+export class AdminCategoryTextInfo {
   @ApiProperty({
     description: '언어 ID',
     example: 1,
@@ -142,7 +142,7 @@ export class PostAdminCategoryInfo {
 export class PostAdminCategoryRequest {
   @ApiProperty({
     description: '카테고리 국가별 object list',
-    type: [PostAdminCategoryInfo],
+    type: [AdminCategoryTextInfo],
     example: [
       {
         languageId: 1,
@@ -160,7 +160,34 @@ export class PostAdminCategoryRequest {
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => PostAdminCategoryInfo)
+  @Type(() => AdminCategoryTextInfo)
   @IsDefined()
-  list: PostAdminCategoryInfo[];
+  list: AdminCategoryTextInfo[];
+}
+
+export class UpdateAdminCategoryRequest {
+  @ApiPropertyOptional({
+    description: '카테고리 국가별 object list',
+    type: [AdminCategoryTextInfo],
+    example: [
+      {
+        languageId: 1,
+        name: '패션',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AdminCategoryTextInfo)
+  @IsOptional()
+  list: AdminCategoryTextInfo[];
+
+  @ApiPropertyOptional({
+    description: '정렬 순서',
+    example: 1,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  sortOrder: number;
 }

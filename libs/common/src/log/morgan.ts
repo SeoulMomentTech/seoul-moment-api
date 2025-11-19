@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Application } from 'express';
 import type { IncomingMessage } from 'http';
+import morgan from 'morgan';
 import morganBody from 'morgan-body';
 
 import { LoggerService } from './logger.service';
@@ -28,20 +29,47 @@ function convertBodyMessage(message: string) {
     .replace(`${HttpDataType.RESPONSE_BODY}:`, '')
     .trim();
 
+  // ANSI 색상 코드 제거
+  const ansiRegex = /\u001b\[[0-9;]*m/g;
+  const cleanMessage = cleanedMessage.replace(ansiRegex, '');
+
   try {
-    return JSON.parse(cleanedMessage);
+    return JSON.parse(cleanMessage);
   } catch {
     // JSON이 아닌 경우 원본 문자열 반환
-    return cleanedMessage;
+    return cleanMessage;
   }
 }
 
-const morganSetting = (app: INestApplication<any>) => {
+/* eslint-disable max-lines-per-function */
+function morganSetting(app: INestApplication<any>) {
   const logger = app.get(LoggerService);
 
+  // Request line 로깅 (morgan 사용)
+  app.use(
+    morgan(
+      ':method :url at :date[web] IP: :remote-addr User Agent: :user-agent',
+      {
+        stream: {
+          write: (message: string) => {
+            // ANSI 코드 제거 후 로깅
+            const ansiRegex = /\u001b\[[0-9;]*m/g;
+            const cleanMessage = message.replace(ansiRegex, '');
+            logger.info(`Request: ${cleanMessage.trim()}`);
+            return true;
+          },
+        },
+        skip: isSkipUrl,
+      },
+    ),
+  );
+
+  // Request/Response body 로깅 (morgan-body 사용)
   morganBody(app.getHttpAdapter().getInstance() as Application, {
-    noColors: false, // 컬러 없이 출력
+    noColors: false, // 컬러 유지
     prettify: false,
+    logReqDateTime: false, // request line은 이미 morgan으로 처리
+    logReqUserAgent: false,
 
     skip(_req: IncomingMessage) {
       return isSkipUrl(_req);
@@ -57,20 +85,21 @@ const morganSetting = (app: INestApplication<any>) => {
             convertMessage = convertBodyMessage(message);
             bodyType = HttpDataType.REQUEST_BODY;
 
-            logger.info(`${bodyType}:`, { body: convertMessage });
+            logger.info(
+              `${bodyType}:\n${JSON.stringify(convertMessage, null, 2)}`,
+            );
           } else if (message.includes(HttpDataType.RESPONSE_BODY)) {
             convertMessage = convertBodyMessage(message);
             bodyType = HttpDataType.RESPONSE_BODY;
 
-            logger.info(`${bodyType}:`, { body: convertMessage });
-          } else if (message.includes(HttpDataType.REQUEST)) {
-            bodyType = HttpDataType.REQUEST;
-
             logger.info(
-              `${message.match(/Request:\s*(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS|CONNECT|TRACE)\s+([^\s]+)/)[0]}`,
+              `${bodyType}:\n${JSON.stringify(convertMessage, null, 2)}`,
             );
           } else {
-            logger.info(message);
+            // Response status 등의 기타 메시지
+            const ansiRegex = /\u001b\[[0-9;]*m/g;
+            const cleanMessage = message.replace(ansiRegex, '');
+            logger.info(cleanMessage.trim());
           }
         } catch {
           logger.info(message);
@@ -80,6 +109,7 @@ const morganSetting = (app: INestApplication<any>) => {
       },
     },
   });
-};
+}
 
 export default morganSetting;
+/* eslint-enable max-lines-per-function */

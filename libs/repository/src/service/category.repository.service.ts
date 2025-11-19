@@ -4,7 +4,9 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Like, Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 
+import { UpdateCategoryDto } from '../dto/category.dto';
 import { CategoryEntity } from '../entity/category.entity';
 import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
@@ -109,5 +111,19 @@ export class CategoryRepositoryService {
     entity: ProductCategoryEntity,
   ): Promise<ProductCategoryEntity> {
     return this.productCategoryRepository.save(entity);
+  }
+
+  @Transactional()
+  async deleteCategoryById(id: number): Promise<void> {
+    await this.categoryRepository.delete({ id });
+
+    await this.multilingualTextRepository.delete({
+      entityType: EntityType.CATEGORY,
+      entityId: id,
+    });
+  }
+
+  async updateCategory(entity: UpdateCategoryDto): Promise<CategoryEntity> {
+    return this.categoryRepository.save(entity);
   }
 }

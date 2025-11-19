@@ -68,6 +68,7 @@ export class ProductEntity extends CommonEntity {
   // Relations
   @ManyToOne(() => BrandEntity, (brand) => brand.products, {
     onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'brand_id' })
@@ -75,6 +76,7 @@ export class ProductEntity extends CommonEntity {
 
   @ManyToOne(() => CategoryEntity, (category) => category.products, {
     onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'category_id' })
@@ -85,6 +87,7 @@ export class ProductEntity extends CommonEntity {
     (productCategory) => productCategory.products,
     {
       onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
       createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
     },
   )

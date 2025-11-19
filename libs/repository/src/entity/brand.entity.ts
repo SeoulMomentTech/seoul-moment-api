@@ -85,6 +85,7 @@ export class BrandEntity extends CommonEntity {
 
   @ManyToOne(() => CategoryEntity, (category) => category.brand, {
     eager: true,
+    onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'category_id' })

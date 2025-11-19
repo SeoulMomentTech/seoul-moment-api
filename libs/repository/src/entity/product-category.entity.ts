@@ -36,7 +36,10 @@ export class ProductCategoryEntity extends CommonEntity {
   })
   products: ProductEntity[];
 
-  @ManyToOne(() => CategoryEntity, (category) => category.productCategory)
+  @ManyToOne(() => CategoryEntity, (category) => category.productCategory, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'category_id' })
   category: CategoryEntity;
 

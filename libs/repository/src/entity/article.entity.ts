@@ -47,12 +47,15 @@ export class ArticleEntity extends CommonEntity {
 
   @ManyToOne(() => CategoryEntity, (category) => category.article, {
     eager: true,
+    onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'category_id' })
   category: CategoryEntity;
 
   @ManyToOne(() => BrandEntity, (brand) => brand.article, {
     eager: true,
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
   })
   @JoinColumn({ name: 'brand_id' })
   brand: BrandEntity;
