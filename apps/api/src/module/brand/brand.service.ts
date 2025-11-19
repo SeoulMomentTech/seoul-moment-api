@@ -117,6 +117,7 @@ export class BrandService {
       plainToInstance(BrandBannerImageEntity, {
         brandId: brandEntity.id,
         imageUrl: bannerUrl,
+        mobileImageUrl: dto.mobileBannerImageUrlList[index],
         sortOrder: index + 1,
       }),
     );

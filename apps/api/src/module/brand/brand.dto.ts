@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
@@ -99,6 +100,16 @@ export class GetBrandIntroduceResponse {
   bannerList: string[];
 
   @ApiProperty({
+    description: '모바일 배너 이미지 URL 리스트',
+    example: [
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-mobile-banner-01.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-mobile-banner-02.jpg',
+    ],
+    type: [String],
+  })
+  mobileBannerList: string[];
+
+  @ApiProperty({
     description: '브랜드 이름',
     example: '서울모먼트',
   })
@@ -151,6 +162,9 @@ export class GetBrandIntroduceResponse {
       bannerList: entity.bannerImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),
+      mobileBannerList: entity.bannerImage
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((v) => v.getMobileImage()),
       name: nameField.getContentByLanguageWithFallback(language) || '',
       description:
         descriptionField.getContentByLanguageWithFallback(language) || '',
@@ -410,14 +424,26 @@ export class PostBrandRequest {
   @ApiProperty({
     description: 'S3 업로드 후 배너 이미지 경로',
     example: [
-      '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
-      '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
-      '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
+      '/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
+      '/brand-banners/2025-09-16/seoul-moment-banner-02.jpg',
+      '/brand-banners/2025-09-16/seoul-moment-banner-03.jpg',
     ],
   })
   @IsArray()
   @IsDefined()
   bannerImageUrlList: string[];
+
+  @ApiProperty({
+    description: 'S3 업로드 후 모바일 배너 이미지 경로',
+    example: [
+      '/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-01.jpg',
+      '/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-02.jpg',
+      '/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-03.jpg',
+    ],
+  })
+  @IsArray()
+  @IsDefined()
+  mobileBannerImageUrlList: string[];
 
   @ApiProperty({
     description: 'S3 업로드 후 배너 이미지 경로',
