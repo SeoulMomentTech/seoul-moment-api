@@ -5,10 +5,10 @@ import { HomeRepositoryService } from '@app/repository/service/home.repository.s
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
-import { GetHomeBannerResponse } from './admin.dto';
+import { GetHomeBannerResponse } from './admin.home.dto';
 
 @Injectable()
-export class AdminService {
+export class AdminHomeService {
   constructor(private readonly homeRepositoryService: HomeRepositoryService) {}
 
   async getHomeBanner(): Promise<GetHomeBannerResponse[]> {

@@ -40,7 +40,7 @@ const morganSetting = (app: INestApplication<any>) => {
   const logger = app.get(LoggerService);
 
   morganBody(app.getHttpAdapter().getInstance() as Application, {
-    noColors: true, // 컬러 없이 출력
+    noColors: false, // 컬러 없이 출력
     prettify: false,
 
     skip(_req: IncomingMessage) {

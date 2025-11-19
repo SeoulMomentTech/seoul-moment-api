@@ -18,32 +18,32 @@ import {
   GetHomeBannerResponse,
   PatchHomeBannerRequest,
   PostHomeBannerRequest,
-} from './admin.dto';
-import { AdminService } from './admin.service';
+} from './admin.home.dto';
+import { AdminHomeService } from './admin.home.service';
 
-@Controller('admin')
-export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+@Controller('admin/home')
+export class AdminHomeController {
+  constructor(private readonly adminHomeService: AdminHomeService) {}
 
-  @Get('home/banner')
+  @Get('banner')
   @ApiOperation({ summary: '홈 배너 이미지 리스트 조회' })
   @ResponseList(GetHomeBannerResponse)
   @ResponseException(HttpStatus.INTERNAL_SERVER_ERROR, '서버 에러')
   async getHomeBanner(): Promise<ResponseListDto<GetHomeBannerResponse>> {
-    const result = await this.adminService.getHomeBanner();
+    const result = await this.adminHomeService.getHomeBanner();
 
     return new ResponseListDto(result);
   }
 
-  @Post('home/banner')
+  @Post('banner')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '홈 배너 이미지 추가' })
   @ResponseException(HttpStatus.INTERNAL_SERVER_ERROR, '서버 에러')
   async postHomeBanner(@Body() body: PostHomeBannerRequest) {
-    await this.adminService.postHomeBanner(body.image, body.mobileImage);
+    await this.adminHomeService.postHomeBanner(body.image, body.mobileImage);
   }
 
-  @Patch('home/banner/:id')
+  @Patch('banner/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '홈 배너 이미지 수정' })
   @ResponseException(HttpStatus.NOT_FOUND, '존재하는 홈 배너 이미지가 없음')
@@ -52,15 +52,19 @@ export class AdminController {
     @Param('id') id: number,
     @Body() body: PatchHomeBannerRequest,
   ) {
-    await this.adminService.patchHomeBanner(id, body.image, body.mobileImage);
+    await this.adminHomeService.patchHomeBanner(
+      id,
+      body.image,
+      body.mobileImage,
+    );
   }
 
-  @Delete('home/banner/:id')
+  @Delete('banner/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '홈 배너 이미지 삭제' })
   @ResponseException(HttpStatus.NOT_FOUND, '존재하는 홈 배너 이미지가 없음')
   @ResponseException(HttpStatus.INTERNAL_SERVER_ERROR, '서버 에러')
   async deleteHomeBanner(@Param('id') id: number) {
-    await this.adminService.deleteHomeBanner(id);
+    await this.adminHomeService.deleteHomeBanner(id);
   }
 }

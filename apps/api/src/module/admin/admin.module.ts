@@ -1,12 +1,9 @@
-import { RepositoryModule } from '@app/repository/repository.module';
 import { Module } from '@nestjs/common';
 
-import { AdminController } from './admin.controller';
-import { AdminService } from './admin.service';
+import { AdminCategoryModule } from './category/admin.category.module';
+import { AdminHomeModule } from './home/admin.home.module';
 
 @Module({
-  imports: [RepositoryModule],
-  controllers: [AdminController],
-  providers: [AdminService],
+  imports: [AdminHomeModule, AdminCategoryModule],
 })
 export class AdminModule {}

@@ -68,6 +68,7 @@ export class LanguageRepositoryService implements OnModuleInit {
     entityType: string,
     entityId: number,
     languageCode?: LanguageCode,
+    fieldName?: string,
   ): Promise<MultilingualTextEntity[]> {
     const queryBuilder = this.multilingualTextRepository
       .createQueryBuilder('mt')
@@ -78,6 +79,10 @@ export class LanguageRepositoryService implements OnModuleInit {
 
     if (languageCode) {
       queryBuilder.andWhere('lang.code = :languageCode', { languageCode });
+    }
+
+    if (fieldName) {
+      queryBuilder.andWhere('mt.fieldName = :fieldName', { fieldName });
     }
 
     return queryBuilder
