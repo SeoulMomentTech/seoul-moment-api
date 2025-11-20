@@ -63,16 +63,19 @@ export class BrandEntity extends CommonEntity {
   section: BrandSectionEntity[];
 
   @OneToMany(() => NewsEntity, (news) => news.brand, {
+    cascade: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   news: NewsEntity[];
 
   @OneToMany(() => ArticleEntity, (article) => article.brand, {
+    cascade: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   article: ArticleEntity[];
 
   @OneToMany(() => ProductEntity, (product) => product.brand, {
+    cascade: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   products: ProductEntity[];

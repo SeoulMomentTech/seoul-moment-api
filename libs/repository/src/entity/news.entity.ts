@@ -55,12 +55,15 @@ export class NewsEntity extends CommonEntity {
 
   @ManyToOne(() => BrandEntity, (brand) => brand.news, {
     eager: true,
+    onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'brand_id' })
   brand: BrandEntity;
 
   @OneToMany(() => NewsSectionEntity, (section) => section.news, {
     eager: true,
+    cascade: true,
   })
   section: NewsSectionEntity[];
 
