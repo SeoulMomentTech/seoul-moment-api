@@ -94,6 +94,22 @@ export class CategoryRepositoryService {
     });
   }
 
+  async getProductCategoryById(id: number): Promise<ProductCategoryEntity> {
+    const result = await this.productCategoryRepository.findOneBy({ id });
+
+    if (!result) {
+      throw new ServiceError(
+        `Product category not found id: ${id}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+    return result;
+  }
+
+  async findProductCategoryById(id: number): Promise<ProductCategoryEntity> {
+    return this.productCategoryRepository.findOneBy({ id });
+  }
+
   async insert(entity: CategoryEntity): Promise<CategoryEntity> {
     await this.sortOrderHelper.setNextSortOrder(
       entity,

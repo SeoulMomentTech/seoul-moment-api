@@ -267,6 +267,14 @@ export class ProductService {
 
   @Transactional()
   async postProduct(dto: PostProductRequest) {
+    await Promise.all([
+      this.brandRepositoryService.getBrandById(dto.brandId),
+      this.categoryRepositoryService.getCategoryById(dto.categoryId),
+      this.categoryRepositoryService.getProductCategoryById(
+        dto.productCategoryId,
+      ),
+    ]);
+
     const productEntity = await this.productRepositoryService.insert(
       plainToInstance(ProductEntity, {
         brandId: dto.brandId,

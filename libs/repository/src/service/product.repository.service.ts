@@ -549,4 +549,18 @@ export class ProductRepositoryService implements OnModuleInit {
   ): Promise<ProductVariantEntity> {
     return this.productVariantRepository.save(entity);
   }
+
+  async getProductVariantBySku(sku: string): Promise<ProductVariantEntity> {
+    const result = await this.productVariantRepository.findOneBy({
+      sku,
+      status: ProductVariantStatus.ACTIVE,
+    });
+
+    if (!result)
+      throw new ServiceError(
+        `No exist product variant SKU: ${sku}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    return result;
+  }
 }
