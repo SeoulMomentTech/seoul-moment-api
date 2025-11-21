@@ -12,7 +12,10 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
+  AdminBrandListRequest,
   GetAdminBrandInfoResponse,
+  GetAdminBrandNameDto,
+  GetAdminBrandResponse,
   PostAdminBrandRequest,
 } from './admin.brand.dto';
 
@@ -139,5 +142,47 @@ export class AdminBrandService {
     }
 
     return GetAdminBrandInfoResponse.from(brandEntity, brandMultilingualList);
+  }
+
+  async getAdminBrandList(
+    request: AdminBrandListRequest,
+  ): Promise<[GetAdminBrandResponse[], number]> {
+    const [brandEntityList, total] =
+      await this.brandRepositoryService.findBrandByFilter(
+        request.page,
+        request.count,
+        request.search,
+        request.searchColumn,
+        request.sort,
+      );
+
+    const languageArray =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const categoryList = await Promise.all(
+      brandEntityList.map(async (brandEntity) => {
+        const nameDto = await Promise.all(
+          languageArray.map(async (languageEntity) => {
+            const multilingualText =
+              await this.languageRepositoryService.findMultilingualTexts(
+                EntityType.BRAND,
+                brandEntity.id,
+                languageEntity.code,
+                'name',
+              );
+            if (multilingualText.length > 0) {
+              return GetAdminBrandNameDto.from(
+                languageEntity.code,
+                multilingualText[0].textContent,
+              );
+            }
+            return null;
+          }),
+        );
+        return GetAdminBrandResponse.from(brandEntity, nameDto);
+      }),
+    );
+
+    return [categoryList, total];
   }
 }

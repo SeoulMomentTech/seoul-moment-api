@@ -1,4 +1,3 @@
-import { DatabaseSort } from '@app/common/enum/global.enum';
 import { CategoryEntity } from '@app/repository/entity/category.entity';
 import { CategorySearchEnum } from '@app/repository/enum/category.repository.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
@@ -15,44 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-export class ListFilterDto {
-  @ApiPropertyOptional({
-    description: '페이지 번호',
-    example: 1,
-    default: 1,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  page?: number = 1;
-
-  @ApiPropertyOptional({
-    description: '페이지 크기',
-    example: 10,
-    default: 10,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  count?: number = 10;
-
-  @ApiPropertyOptional({
-    description: '검색',
-    example: '검색',
-  })
-  @IsOptional()
-  @IsString()
-  search?: string;
-
-  @ApiPropertyOptional({
-    description: '정렬 방식',
-    example: DatabaseSort.DESC,
-    enum: DatabaseSort,
-  })
-  @IsOptional()
-  @IsEnum(DatabaseSort)
-  sort: DatabaseSort = DatabaseSort.DESC;
-}
+import { ListFilterDto } from '../admin.dto';
 
 export class AdminCategoryListRequest extends ListFilterDto {
   @ApiPropertyOptional({

@@ -1,5 +1,7 @@
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
+import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { ResponseDataDto } from '@app/common/type/response-data';
+import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
   Controller,
@@ -9,11 +11,14 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiOperation } from '@nestjs/swagger';
 
 import {
+  AdminBrandListRequest,
   GetAdminBrandInfoResponse,
+  GetAdminBrandResponse,
   PostAdminBrandRequest,
 } from './admin.brand.dto';
 import { AdminBrandService } from './admin.brand.service';
@@ -41,5 +46,18 @@ export class AdminBrandController {
   ): Promise<ResponseDataDto<GetAdminBrandInfoResponse>> {
     const result = await this.adminBrandService.getAdminBrandInfo(id);
     return new ResponseDataDto(result);
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: '브랜드 리스트 조회',
+  })
+  @ResponseList(GetAdminBrandResponse)
+  async getAdminBrandList(
+    @Query() query: AdminBrandListRequest,
+  ): Promise<ResponseListDto<GetAdminBrandResponse>> {
+    const [result, total] =
+      await this.adminBrandService.getAdminBrandList(query);
+    return new ResponseListDto(result, total);
   }
 }

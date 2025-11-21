@@ -1,14 +1,17 @@
+import { DatabaseSort } from '@app/common/enum/global.enum';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Like, Repository } from 'typeorm';
 
 import { BrandBannerImageEntity } from '../entity/brand-banner-image.entity';
 import { BrandSectionImageEntity } from '../entity/brand-section-image.entity';
 import { BrandSectionEntity } from '../entity/brand-section.entity';
 import { BrandEntity } from '../entity/brand.entity';
+import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
 import { BrandStatus, BrandNameFilter } from '../enum/brand.enum';
+import { BrandSearchEnum } from '../enum/brand.repository.enum';
 import { EntityType } from '../enum/entity.enum';
 import { SortOrderHelper } from '../helper/sort-order.helper';
 
@@ -26,6 +29,9 @@ export class BrandRepositoryService {
 
     @InjectRepository(BrandSectionImageEntity)
     private readonly brandSectionImageRepository: Repository<BrandSectionImageEntity>,
+
+    @InjectRepository(MultilingualTextEntity)
+    private readonly multilingualTextRepository: Repository<MultilingualTextEntity>,
 
     private readonly sortOrderHelper: SortOrderHelper,
   ) {}
@@ -141,5 +147,40 @@ export class BrandRepositoryService {
     const endLetter = parts[2]; // parts[1]은 'TO'
 
     return `UPPER(SUBSTRING(mt.text_content, 1, 1)) BETWEEN '${startLetter}' AND '${endLetter}'`;
+  }
+
+  async findBrandByFilter(
+    page: number,
+    count: number,
+    searchName?: string,
+    searchColumn?: BrandSearchEnum,
+    sort: DatabaseSort = DatabaseSort.DESC,
+  ): Promise<[BrandEntity[], number]> {
+    let brandIds: number[] = [];
+
+    if (searchName) {
+      const multilingualTexts = await this.multilingualTextRepository.find({
+        where: {
+          entityType: EntityType.BRAND,
+          fieldName: searchColumn,
+          textContent: Like(`%${searchName}%`),
+        },
+      });
+
+      brandIds = multilingualTexts.map((text) => text.entityId);
+    }
+
+    const [brandEntities, total] = await this.brandRepository.findAndCount({
+      where: {
+        id: searchName ? In(brandIds) : undefined,
+      },
+      order: {
+        createDate: sort,
+      },
+      skip: (page - 1) * count,
+      take: count,
+    });
+
+    return [brandEntities, total];
   }
 }

@@ -77,7 +77,7 @@ export class CategoryRepositoryService {
           id: searchName ? In(categoryIds) : undefined,
         },
         order: {
-          sortOrder: sort,
+          createDate: sort,
         },
         skip: (page - 1) * count,
         take: count,

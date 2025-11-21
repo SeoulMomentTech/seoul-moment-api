@@ -2,11 +2,14 @@
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { BrandSearchEnum } from '@app/repository/enum/brand.repository.enum';
+import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
+  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,
@@ -15,6 +18,7 @@ import {
 } from 'class-validator';
 
 import { MultilingualFieldDto } from '../../dto/multilingual.dto';
+import { ListFilterDto } from '../admin.dto';
 
 export class PostAdminBrandInfo {
   @ApiProperty({
@@ -470,6 +474,73 @@ export class GetAdminBrandInfoResponse {
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getMobileImage()),
       multilingualTextList,
+    });
+  }
+}
+
+export class AdminBrandListRequest extends ListFilterDto {
+  @ApiPropertyOptional({
+    description: '검색 칼럼',
+    example: BrandSearchEnum.NAME,
+    enum: BrandSearchEnum,
+  })
+  @IsOptional()
+  @IsEnum(BrandSearchEnum)
+  searchColumn: BrandSearchEnum;
+}
+
+export class GetAdminBrandNameDto {
+  @ApiProperty({
+    description: '언어 코드',
+    example: LanguageCode.KOREAN,
+  })
+  languageCode: LanguageCode;
+
+  @ApiProperty({
+    description: '브랜드 이름',
+    example: '서울모먼트',
+  })
+  name: string;
+
+  static from(languageCode: LanguageCode, name: string) {
+    return plainToInstance(this, {
+      languageCode,
+      name,
+    });
+  }
+}
+
+export class GetAdminBrandResponse {
+  @ApiProperty({
+    description: '브랜드 ID',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '브랜드 이름 리스트',
+    example: [
+      {
+        languageCode: LanguageCode.KOREAN,
+        name: '서울모먼트',
+      },
+      {
+        languageCode: LanguageCode.ENGLISH,
+        name: 'Seoul Moment',
+      },
+      {
+        languageCode: LanguageCode.TAIWAN,
+        name: '首爾時刻',
+      },
+    ],
+    type: [GetAdminBrandNameDto],
+  })
+  nameDto: GetAdminBrandNameDto[];
+
+  static from(entity: BrandEntity, nameDto: GetAdminBrandNameDto[]) {
+    return plainToInstance(this, {
+      id: entity.id,
+      nameDto,
     });
   }
 }
