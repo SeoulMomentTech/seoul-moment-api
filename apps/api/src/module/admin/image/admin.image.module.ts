@@ -8,5 +8,6 @@ import { AdminImageService } from './admin.image.service';
   imports: [S3Module],
   controllers: [AdminImageController],
   providers: [AdminImageService],
+  exports: [AdminImageService],
 })
 export class AdminImageModule {}

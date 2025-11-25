@@ -1,6 +1,7 @@
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseException } from '@app/common/decorator/response-exception.decorator';
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
+import { SwaggerAuthName } from '@app/common/docs/swagger.dto';
 import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import {
@@ -14,8 +15,10 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { OneTimeTokenGuard } from 'apps/api/src/guard/one-time-token.guard';
 
 import {
   AdminCategoryListRequest,
@@ -25,6 +28,7 @@ import {
 } from './admin.category.dto';
 import { AdminCategoryService } from './admin.category.service';
 
+@ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
 @Controller('admin/category')
 export class AdminCategoryController {
   constructor(private readonly adminCategoryService: AdminCategoryService) {}
@@ -34,6 +38,8 @@ export class AdminCategoryController {
     summary: '카테고리 목록 조회',
   })
   @ResponseList(GetAdminCategoryResponse)
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
   async getAdminCategoryList(
     @Query() query: AdminCategoryListRequest,
   ): Promise<ResponseListDto<GetAdminCategoryResponse>> {
@@ -47,6 +53,8 @@ export class AdminCategoryController {
     summary: '카테고리 정보 조회',
   })
   @ResponseData(GetAdminCategoryResponse)
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
   async getAdminCategoryInfo(
     @Param('id') id: number,
   ): Promise<ResponseDataDto<GetAdminCategoryResponse>> {
@@ -60,6 +68,8 @@ export class AdminCategoryController {
     summary: '카테고리 다국어 등록',
   })
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
   async postCategory(@Body() body: PostAdminCategoryRequest) {
     await this.adminCategoryService.postAdminCategory(body);
   }
@@ -74,6 +84,8 @@ export class AdminCategoryController {
     HttpStatus.INTERNAL_SERVER_ERROR,
     '서버 오류가 발생했습니다.',
   )
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
   async deleteAdminCategory(@Param('id') id: number) {
     await this.adminCategoryService.deleteAdminCategory(id);
   }
@@ -88,6 +100,8 @@ export class AdminCategoryController {
     HttpStatus.INTERNAL_SERVER_ERROR,
     '서버 오류가 발생했습니다.',
   )
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
   async updateAdminCategory(
     @Param('id') id: number,
     @Body() body: UpdateAdminCategoryRequest,

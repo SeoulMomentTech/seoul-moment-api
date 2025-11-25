@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { AdminEntity } from './entity/admin.entity';
 import { ArticleSectionImageEntity } from './entity/article-section-image.entity';
 import { ArticleSectionEntity } from './entity/article-section.entity';
 import { ArticleEntity } from './entity/article.entity';
@@ -31,6 +32,7 @@ import { ProductEntity } from './entity/product.entity';
 import { ProductBannerEntity } from './entity/product_banner.entity';
 import { VariantOptionEntity } from './entity/variant-option.entity';
 import { SortOrderHelper } from './helper/sort-order.helper';
+import { AdminRepositoryService } from './service/admin.repository.service';
 import { ArticleRepositoryService } from './service/article.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
 import { CategoryRepositoryService } from './service/category.repository.service';
@@ -74,6 +76,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
       PartnerEntity,
       PartnerCategoryEntity,
       ProductFilterEntity,
+      AdminEntity,
     ]),
   ],
   providers: [
@@ -88,6 +91,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PartnerRepositoryService,
     OptionRepositoryService,
     ProductFilterRepositoryService,
+    AdminRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -101,6 +105,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PartnerRepositoryService,
     OptionRepositoryService,
     ProductFilterRepositoryService,
+    AdminRepositoryService,
   ],
 })
 export class RepositoryModule {}
