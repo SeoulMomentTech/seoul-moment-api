@@ -3,8 +3,14 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import {
+  UpdateAdminBrandImage,
+  UpdateAdminBrandSectionImageSortOrder,
+  UpdateAdminBrandSectionSortOrder,
+} from 'apps/api/src/module/admin/brand/admin.brand.dto';
 import { In, Like, Repository } from 'typeorm';
 
+import { UpdateBrandDto } from '../dto/brand.dto';
 import { BrandBannerImageEntity } from '../entity/brand-banner-image.entity';
 import { BrandSectionImageEntity } from '../entity/brand-section-image.entity';
 import { BrandSectionEntity } from '../entity/brand-section.entity';
@@ -182,5 +188,46 @@ export class BrandRepositoryService {
     });
 
     return [brandEntities, total];
+  }
+
+  async update(entity: UpdateBrandDto): Promise<BrandEntity> {
+    return this.brandRepository.save(entity);
+  }
+
+  async updateBannerImage(dto: UpdateAdminBrandImage) {
+    await this.brandBannerImageRepository.update(
+      { imageUrl: dto.oldImageUrl },
+      { imageUrl: dto.newImageUrl },
+    );
+  }
+
+  async updateMobileBannerImage(dto: UpdateAdminBrandImage) {
+    await this.brandBannerImageRepository.update(
+      { mobileImageUrl: dto.oldImageUrl },
+      { mobileImageUrl: dto.newImageUrl },
+    );
+  }
+
+  async updateSectionSortOrder(dto: UpdateAdminBrandSectionSortOrder) {
+    await this.brandSectionRepository.update(
+      { id: dto.sectionId },
+      { sortOrder: dto.sortOrder },
+    );
+  }
+
+  async updateSectionImage(dto: UpdateAdminBrandImage) {
+    await this.brandSectionImageRepository.update(
+      { imageUrl: dto.oldImageUrl },
+      { imageUrl: dto.newImageUrl },
+    );
+  }
+
+  async updateSectionImageSortOrder(
+    dto: UpdateAdminBrandSectionImageSortOrder,
+  ) {
+    await this.brandSectionImageRepository.update(
+      { imageUrl: dto.imageUrl },
+      { sortOrder: dto.sortOrder },
+    );
   }
 }

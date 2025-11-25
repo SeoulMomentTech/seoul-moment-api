@@ -241,6 +241,12 @@ export class PostAdminBrandRequest {
 
 export class GetAdminBrandInfoSection {
   @ApiProperty({
+    description: '섹션 ID',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
     description: '섹션 제목',
     example: '브랜드 스토리',
   })
@@ -293,6 +299,7 @@ export class GetAdminBrandInfoSection {
     );
 
     return plainToInstance(this, {
+      id: entity.id,
       title: titleField.getContent(),
       content: contentField.getContent(),
       imageList: entity.sectionImage
@@ -543,4 +550,270 @@ export class GetAdminBrandResponse {
       nameDto,
     });
   }
+}
+
+export class UpdateAdminBrandImage {
+  @ApiProperty({
+    description: '기존 배너 이미지 URL',
+    example: '/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  oldImageUrl: string;
+
+  @ApiProperty({
+    description: '바뀔 배너 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-banner-01-new.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  newImageUrl: string;
+}
+
+export class UpdateAdminBrandSectionImageSortOrder {
+  @ApiProperty({
+    description: '기존 섹션 이미지 URL',
+    example: '/brand-sections/2025-09-16/section-story-01.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  imageUrl: string;
+
+  @ApiProperty({
+    description: '섹션 정렬 순서',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  sortOrder: number;
+}
+
+export class UpdateAdminBrandInfoSection {
+  @ApiProperty({
+    description: '섹션 ID',
+    example: 1,
+  })
+  @IsInt()
+  @IsDefined()
+  id: number;
+
+  @ApiPropertyOptional({
+    description: '섹션 제목',
+    example: '브랜드 스토리',
+  })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({
+    description: '섹션 내용',
+    example:
+      '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
+  })
+  @IsOptional()
+  @IsString()
+  content?: string;
+
+  @ApiPropertyOptional({
+    description: '섹션 이미지 리스트',
+    type: [UpdateAdminBrandImage],
+    example: [
+      {
+        oldImageUrl: '/brand-sections/2025-09-16/section-story-01.jpg',
+        newImageUrl:
+          'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01-new.jpg',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminBrandImage)
+  @IsOptional()
+  sectionImageList: UpdateAdminBrandImage[];
+
+  @ApiPropertyOptional({
+    description: '섹션 이미지 정렬 순서 리스트',
+    type: [UpdateAdminBrandSectionImageSortOrder],
+    example: [
+      {
+        imageUrl: '/brand-sections/2025-09-16/section-story-01.jpg',
+        sortOrder: 1,
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminBrandSectionImageSortOrder)
+  @IsOptional()
+  sortOrderList?: UpdateAdminBrandSectionImageSortOrder[];
+}
+
+export class UpdateAdminBrandInfoText {
+  @ApiProperty({
+    description: '언어 ID',
+    example: 1,
+  })
+  @IsInt()
+  @IsDefined()
+  languageId: number;
+
+  @ApiPropertyOptional({
+    description: '브랜드 이름',
+    example: '서울모먼트',
+  })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({
+    description: '브랜드 설명',
+    example:
+      '서울의 특별한 순간들을 담은 라이프스타일 브랜드입니다. 한국의 전통미와 현대적 감각을 조화롭게 표현합니다.',
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: '브랜드 정보 섹션 리스트',
+    type: [UpdateAdminBrandInfoSection],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminBrandInfoSection)
+  section?: UpdateAdminBrandInfoSection[];
+}
+
+export class UpdateAdminBrandSectionSortOrder {
+  @ApiProperty({
+    description: '섹션 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  sectionId: number;
+
+  @ApiProperty({
+    description: '섹션 정렬 순서',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  sortOrder: number;
+}
+
+export class UpdateAdminBrandRequest {
+  @ApiPropertyOptional({
+    description: '상품 배너 이미지',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-products/2025-09-16/product-banner-01.jpg',
+  })
+  @IsOptional()
+  @IsString()
+  productBannerImage?: string;
+
+  @ApiPropertyOptional({
+    description: '프로필 이미지',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
+  })
+  @IsOptional()
+  @IsString()
+  profileImage?: string;
+
+  @ApiPropertyOptional({
+    description: '영어 브랜드 이름',
+    example: 'Seoul Moment',
+  })
+  @IsOptional()
+  @IsString()
+  englishName?: string;
+
+  @ApiPropertyOptional({
+    description: '배너 리스트',
+    type: [UpdateAdminBrandImage],
+    example: [
+      {
+        oldImageUrl: '/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
+        newImageUrl:
+          'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-banner-01-new.jpg',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminBrandImage)
+  @IsOptional()
+  bannerList?: UpdateAdminBrandImage[];
+
+  @ApiPropertyOptional({
+    description: '모바일 배너 리스트',
+    type: [UpdateAdminBrandImage],
+    example: [
+      {
+        oldImageUrl:
+          '/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-01.jpg',
+        newImageUrl:
+          'https://image-dev.seoulmoment.com.tw/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-01-new.jpg',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminBrandImage)
+  @IsOptional()
+  mobileBannerList?: UpdateAdminBrandImage[];
+
+  @ApiPropertyOptional({
+    description: '브랜드 정보 텍스트 리스트',
+    type: [UpdateAdminBrandInfoText],
+    example: [
+      {
+        languageId: 1,
+        name: '서울모먼트',
+        description: '서울의 특별한 순간들을 담은 라이프스타일 브랜드입니다.',
+        section: [
+          {
+            id: 1,
+            title: '브랜드 스토리',
+            content:
+              '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
+            sectionImageList: [
+              {
+                oldImageUrl: '/brand-sections/2025-09-16/section-story-01.jpg',
+                newImageUrl:
+                  'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01-new.jpg',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminBrandInfoText)
+  @IsOptional()
+  textList?: UpdateAdminBrandInfoText[];
+
+  @ApiPropertyOptional({
+    description: '섹션 정렬 순서 리스트',
+    type: [UpdateAdminBrandSectionSortOrder],
+    example: [
+      {
+        sectionId: 1,
+        sortOrder: 1,
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminBrandSectionSortOrder)
+  @IsOptional()
+  sectionSortOrderList?: UpdateAdminBrandSectionSortOrder[];
 }

@@ -1,4 +1,5 @@
 /* eslint-disable max-lines-per-function */
+import { UpdateBrandDto } from '@app/repository/dto/brand.dto';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
@@ -17,6 +18,7 @@ import {
   GetAdminBrandNameDto,
   GetAdminBrandResponse,
   PostAdminBrandRequest,
+  UpdateAdminBrandRequest,
 } from './admin.brand.dto';
 
 @Injectable()
@@ -184,5 +186,120 @@ export class AdminBrandService {
     );
 
     return [categoryList, total];
+  }
+
+  @Transactional()
+  async updateAdminBrand(brandId: number, dto: UpdateAdminBrandRequest) {
+    const updateBrandDto: UpdateBrandDto = {
+      id: brandId,
+      englishName: dto.englishName,
+      profileImage: dto.profileImage,
+      bannerImageUrl: dto.productBannerImage,
+    };
+
+    await this.brandRepositoryService.update(updateBrandDto);
+
+    if (dto.bannerList && dto.bannerList.length > 0) {
+      await Promise.all(
+        dto.bannerList.map((banner) =>
+          this.brandRepositoryService.updateBannerImage(banner),
+        ),
+      );
+    }
+
+    if (dto.mobileBannerList && dto.mobileBannerList.length > 0) {
+      await Promise.all(
+        dto.mobileBannerList.map((banner) =>
+          this.brandRepositoryService.updateMobileBannerImage(banner),
+        ),
+      );
+    }
+
+    if (dto.sectionSortOrderList && dto.sectionSortOrderList.length > 0) {
+      await Promise.all(
+        dto.sectionSortOrderList.map((sortOrder) =>
+          this.brandRepositoryService.updateSectionSortOrder(sortOrder),
+        ),
+      );
+    }
+
+    const promises = [];
+
+    if (dto.textList && dto.textList.length > 0) {
+      for (const text of dto.textList) {
+        if (text.name) {
+          promises.push(
+            this.languageRepositoryService.saveMultilingualText(
+              EntityType.BRAND,
+              brandId,
+              'name',
+              text.languageId,
+              text.name,
+            ),
+          );
+        }
+        if (text.description) {
+          promises.push(
+            this.languageRepositoryService.saveMultilingualText(
+              EntityType.BRAND,
+              brandId,
+              'description',
+              text.languageId,
+              text.description,
+            ),
+          );
+        }
+
+        if (text.section && text.section.length > 0) {
+          for (const section of text.section) {
+            if (section.title) {
+              promises.push(
+                this.languageRepositoryService.saveMultilingualText(
+                  EntityType.BRAND_SECTION,
+                  section.id,
+                  'title',
+                  text.languageId,
+                  section.title,
+                ),
+              );
+            }
+            if (section.content) {
+              promises.push(
+                this.languageRepositoryService.saveMultilingualText(
+                  EntityType.BRAND_SECTION,
+                  section.id,
+                  'content',
+                  text.languageId,
+                  section.content,
+                ),
+              );
+            }
+
+            if (
+              section.sectionImageList &&
+              section.sectionImageList.length > 0
+            ) {
+              for (const sectionImage of section.sectionImageList) {
+                promises.push(
+                  this.brandRepositoryService.updateSectionImage(sectionImage),
+                );
+              }
+            }
+
+            if (section.sortOrderList && section.sortOrderList.length > 0) {
+              for (const sortOrder of section.sortOrderList) {
+                promises.push(
+                  this.brandRepositoryService.updateSectionImageSortOrder(
+                    sortOrder,
+                  ),
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    await Promise.all(promises);
   }
 }

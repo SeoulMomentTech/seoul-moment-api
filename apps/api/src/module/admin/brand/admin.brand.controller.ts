@@ -10,6 +10,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -20,6 +21,7 @@ import {
   GetAdminBrandInfoResponse,
   GetAdminBrandResponse,
   PostAdminBrandRequest,
+  UpdateAdminBrandRequest,
 } from './admin.brand.dto';
 import { AdminBrandService } from './admin.brand.service';
 
@@ -59,5 +61,17 @@ export class AdminBrandController {
     const [result, total] =
       await this.adminBrandService.getAdminBrandList(query);
     return new ResponseListDto(result, total);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: '브랜드 수정',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  async updateAdminBrand(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateAdminBrandRequest,
+  ) {
+    await this.adminBrandService.updateAdminBrand(id, body);
   }
 }
