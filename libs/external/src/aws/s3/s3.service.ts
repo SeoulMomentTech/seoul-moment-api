@@ -7,6 +7,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { Injectable } from '@nestjs/common';
+import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface UploadResult {
@@ -111,30 +112,53 @@ export class S3Service {
   }
 
   /**
-   * 이미지 파일을 S3에 업로드 (이미지 전용 최적화)
-   * @param imageBuffer 이미지 버퍼
+   * 이미지 파일을 S3에 업로드 (항상 webp로 변환)
+   * @param imageBufferOrBase64 이미지 버퍼 또는 base64 문자열
    * @param options 업로드 옵션
    * @returns 업로드 결과
    */
   async uploadImage(
-    imageBuffer: Buffer,
+    imageBufferOrBase64: Buffer | string,
     options: Omit<S3UploadOptions, 'contentType'> & {
-      imageFormat?: 'jpeg' | 'png' | 'webp' | 'gif';
       quality?: number;
     } = {},
   ): Promise<UploadResult> {
-    const { imageFormat = 'jpeg', folder = 'images', ...restOptions } = options;
+    const { folder = 'images', quality = 100, ...restOptions } = options;
 
-    const contentType = this.getImageContentType(imageFormat);
-    const fileExtension = this.getImageExtension(imageFormat);
-    const fileName = restOptions.fileName || `${uuidv4()}.${fileExtension}`;
+    try {
+      // base64 문자열인 경우 Buffer로 변환
+      let imageBuffer: Buffer;
+      if (typeof imageBufferOrBase64 === 'string') {
+        // data:image/png;base64, 등의 prefix 제거
+        const base64Data = imageBufferOrBase64.replace(
+          /^data:image\/[a-z]+;base64,/,
+          '',
+        );
+        imageBuffer = Buffer.from(base64Data, 'base64');
+      } else {
+        imageBuffer = imageBufferOrBase64;
+      }
 
-    return this.uploadFile(imageBuffer, {
-      ...restOptions,
-      folder,
-      fileName,
-      contentType,
-    });
+      // 이미지를 webp로 변환
+      const convertedBuffer = await sharp(imageBuffer)
+        .webp({ quality })
+        .toBuffer();
+
+      const fileName = restOptions.fileName || `${uuidv4()}.webp`;
+
+      return this.uploadFile(convertedBuffer, {
+        ...restOptions,
+        folder,
+        fileName,
+        contentType: 'image/webp',
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to convert image to webp: ${error.message}`,
+        error.stack,
+      );
+      throw new Error(`이미지 변환 실패: ${error.message}`);
+    }
   }
 
   /**
