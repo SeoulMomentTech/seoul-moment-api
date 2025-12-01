@@ -12,6 +12,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -24,6 +25,7 @@ import {
   GetAdminNewsInfoResponse,
   GetAdminNewsResponse,
   PostAdminNewsRequest,
+  UpdateAdminNewsRequest,
 } from './admin.news.dto';
 import { AdminNewsService } from './admin.news.service';
 
@@ -68,5 +70,19 @@ export class AdminNewsController {
   @HttpCode(HttpStatus.CREATED)
   async postNews(@Body() body: PostAdminNewsRequest) {
     await this.adminNewsService.postAdminNews(body);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: '뉴스 수정',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
+  async updateAdminNews(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateAdminNewsRequest,
+  ) {
+    await this.adminNewsService.updateAdminNews(id, body);
   }
 }

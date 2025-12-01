@@ -631,7 +631,7 @@ export class UpdateAdminBrandInfoSection {
   @ValidateNested({ each: true })
   @Type(() => UpdateAdminBrandImage)
   @IsOptional()
-  sectionImageList: UpdateAdminBrandImage[];
+  sectionImageList?: UpdateAdminBrandImage[];
 
   @ApiPropertyOptional({
     description: '섹션 이미지 정렬 순서 리스트',

@@ -19,6 +19,25 @@ import {
 import { MultilingualFieldDto } from '../../dto/multilingual.dto';
 import { ListFilterDto } from '../admin.dto';
 
+export class UpdateAdminNewsImage {
+  @ApiProperty({
+    description: '기존 배너 이미지 URL',
+    example: '/news/2025-09-16/seoul-moment-banner-01.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  oldImageUrl: string;
+
+  @ApiProperty({
+    description: '바뀔 뉴스 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/news/2025-09-16/seoul-moment-banner-01-new.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  newImageUrl: string;
+}
+
 export class AdminNewsListRequest extends ListFilterDto {
   @ApiPropertyOptional({
     description: '검색 칼럼',
@@ -357,7 +376,56 @@ export class PostAdminNewsRequest {
   profile: string;
 }
 
+export class UpdateAdminNewsSection {
+  @ApiProperty({ description: '섹션 ID', example: 1 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  id: number;
+
+  @ApiPropertyOptional({ description: '섹션 제목', example: '새로운 소식' })
+  @IsString()
+  @IsOptional()
+  title?: string;
+
+  @ApiPropertyOptional({
+    description: '섹션 부제목',
+    example: '서울모먼트의 최신 뉴스',
+  })
+  @IsString()
+  @IsOptional()
+  subTitle?: string;
+
+  @ApiPropertyOptional({
+    description: '섹션 내용',
+    example: '서울모먼트의 새로운 소식을 전해드립니다...',
+  })
+  @IsString()
+  @IsOptional()
+  content?: string;
+
+  @ApiPropertyOptional({
+    description: '섹션 이미지 리스트',
+    type: [UpdateAdminNewsImage],
+    example: [
+      {
+        oldImageUrl: '/news-sections/2025-09-16/section-story-01.jpg',
+        newImageUrl:
+          'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-01-new.jpg',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminNewsImage)
+  @IsOptional()
+  sectionImageList?: UpdateAdminNewsImage[];
+}
+
 export class GetAdminNewsSection {
+  @ApiProperty({ description: '섹션 ID', example: 1 })
+  id: number;
+
   @ApiProperty({ description: '섹션 제목', example: '새로운 소식' })
   title: string;
 
@@ -415,6 +483,7 @@ export class GetAdminNewsSection {
     );
 
     return plainToInstance(this, {
+      id: entity.id,
       title: title.getContent(),
       subTitle: subTitle.getContent(),
       content: content.getContent(),
@@ -423,6 +492,43 @@ export class GetAdminNewsSection {
         .map((v) => v.getImage()),
     });
   }
+}
+
+export class UpdateAdminNewsInfoText {
+  @ApiProperty({
+    description: '언어 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  languageId: number;
+
+  @ApiPropertyOptional({
+    description: '뉴스 제목',
+    example: '서울모먼트 신제품 출시',
+  })
+  @IsString()
+  @IsOptional()
+  title?: string;
+
+  @ApiPropertyOptional({
+    description: '뉴스 내용',
+    example: '서울모먼트의 새로운 제품이 출시되었습니다...',
+  })
+  @IsString()
+  @IsOptional()
+  content?: string;
+
+  @ApiPropertyOptional({
+    description: '브랜드 정보 섹션 리스트',
+    type: [UpdateAdminNewsSection],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminNewsSection)
+  @IsOptional()
+  section?: UpdateAdminNewsSection[];
 }
 
 export class GetAdminNewsInfoText {
@@ -512,6 +618,12 @@ export class GetAdminNewsInfoResponse {
   banner: string;
 
   @ApiProperty({
+    description: '작성자 프로필 이미지 URL',
+    example: 'https://example.com/profile.jpg',
+  })
+  profile: string;
+
+  @ApiProperty({
     description: '다국어 브랜드 정보 리스트 (한국어, 영어, 중국어)',
     example: [
       {
@@ -520,6 +632,7 @@ export class GetAdminNewsInfoResponse {
         description: '서울의 특별한 순간들을 담은 라이프스타일 브랜드입니다.',
         section: [
           {
+            id: 1,
             title: '브랜드 스토리',
             content:
               '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
@@ -537,6 +650,7 @@ export class GetAdminNewsInfoResponse {
           'A lifestyle brand that captures special moments in Seoul.',
         section: [
           {
+            id: 1,
             title: 'Brand Story',
             content:
               'Seoul Moment is a lifestyle brand established in 2020, capturing special moments in Seoul through our products.',
@@ -553,6 +667,7 @@ export class GetAdminNewsInfoResponse {
         description: '捕捉首爾特殊時刻的生活方式品牌。',
         section: [
           {
+            id: 1,
             title: '品牌故事',
             content:
               '首爾時刻是2020年成立的生活方式品牌，透過產品捕捉首爾的特殊時刻。',
@@ -584,10 +699,101 @@ export class GetAdminNewsInfoResponse {
     return plainToInstance(this, {
       id: entity.id,
       banner: entity.getBannerImage(),
+      profile: entity.getProfileImage(),
       writer: entity.writer,
       categoryId: entity.categoryId,
       brandId: entity.brandId,
       multilingualTextList,
     });
   }
+}
+
+export class UpdateAdminNewsRequest {
+  @ApiPropertyOptional({ description: '카테고리 ID', example: 1 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  categoryId?: number;
+
+  @ApiPropertyOptional({ description: '브랜드 ID', example: 1 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  brandId?: number;
+
+  @ApiPropertyOptional({ description: '작성자 이름', example: '김서울' })
+  @IsString()
+  @IsOptional()
+  writer?: string;
+
+  @ApiPropertyOptional({
+    description: '배너 이미지 URL',
+    example: 'https://example.com/banner.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  banner?: string;
+
+  @ApiPropertyOptional({
+    description: '작성자 프로필 이미지 URL',
+    example: 'https://example.com/profile.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  profile?: string;
+
+  @ApiPropertyOptional({
+    description: '다국어 브랜드 정보 리스트 (한국어, 영어, 중국어)',
+    type: [UpdateAdminNewsInfoText],
+    example: [
+      {
+        languageId: 2,
+        title: 'Seoul Moment News',
+        content:
+          'Seoul Moment is a news that captures special moments in Seoul.',
+        section: [
+          {
+            id: 1,
+            title: 'News Story',
+            subTitle:
+              'Seoul Moment is a news that captures special moments in Seoul.',
+            content:
+              'Seoul Moment is a news that captures special moments in Seoul.',
+            sectionImageList: [
+              {
+                oldImageUrl: '/news-sections/2025-09-16/section-story-01.jpg',
+                newImageUrl:
+                  'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-01-new.jpg',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        languageId: 3,
+        title: '首爾時刻新聞',
+        content: '捕捉首爾特殊時刻的新聞。',
+        section: [
+          {
+            id: 1,
+            title: '品牌故事',
+            subTitle: '首爾時刻新聞',
+            content: '捕捉首爾特殊時刻的新聞。',
+            sectionImageList: [
+              {
+                oldImageUrl: '/news-sections/2025-09-16/section-story-01.jpg',
+                newImageUrl:
+                  'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-01-new.jpg',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminNewsInfoText)
+  @IsOptional()
+  multilingualTextList?: UpdateAdminNewsInfoText[];
 }

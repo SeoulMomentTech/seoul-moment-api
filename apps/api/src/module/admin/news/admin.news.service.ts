@@ -1,4 +1,5 @@
 /* eslint-disable max-lines-per-function */
+import { UpdateNewsDto } from '@app/repository/dto/news.dto';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { NewsSectionImageEntity } from '@app/repository/entity/news-section-image.entity';
 import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
@@ -10,6 +11,7 @@ import { LanguageRepositoryService } from '@app/repository/service/language.repo
 import { NewsRepositoryService } from '@app/repository/service/news.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { Transactional } from 'typeorm-transactional';
 
 import {
   AdminNewsListRequest,
@@ -17,6 +19,7 @@ import {
   GetAdminNewsResponse,
   GetAdminNewsTextDto,
   PostAdminNewsRequest,
+  UpdateAdminNewsRequest,
 } from './admin.news.dto';
 
 @Injectable()
@@ -184,5 +187,102 @@ export class AdminNewsService {
         );
       }
     }
+  }
+
+  @Transactional()
+  async updateAdminNews(newsId: number, dto: UpdateAdminNewsRequest) {
+    const updateNewsDto: UpdateNewsDto = {
+      id: newsId,
+      categoryId: dto.categoryId,
+      brandId: dto.brandId,
+      writer: dto.writer,
+      banner: dto.banner,
+      profileImage: dto.profile,
+    };
+
+    await this.newsRepositoryService.update(updateNewsDto);
+
+    const promises = [];
+
+    if (dto.multilingualTextList && dto.multilingualTextList.length > 0) {
+      for (const text of dto.multilingualTextList) {
+        if (text.title) {
+          promises.push(
+            this.languageRepositoryService.saveMultilingualText(
+              EntityType.NEWS,
+              newsId,
+              'title',
+              text.languageId,
+              text.title,
+            ),
+          );
+        }
+
+        if (text.content) {
+          promises.push(
+            this.languageRepositoryService.saveMultilingualText(
+              EntityType.NEWS,
+              newsId,
+              'content',
+              text.languageId,
+              text.content,
+            ),
+          );
+        }
+
+        if (text.section && text.section.length > 0) {
+          for (const section of text.section) {
+            if (section.title) {
+              promises.push(
+                this.languageRepositoryService.saveMultilingualText(
+                  EntityType.NEWS_SECTION,
+                  section.id,
+                  'title',
+                  text.languageId,
+                  section.title,
+                ),
+              );
+            }
+
+            if (section.subTitle) {
+              promises.push(
+                this.languageRepositoryService.saveMultilingualText(
+                  EntityType.NEWS_SECTION,
+                  section.id,
+                  'subTitle',
+                  text.languageId,
+                  section.subTitle,
+                ),
+              );
+            }
+
+            if (section.content) {
+              promises.push(
+                this.languageRepositoryService.saveMultilingualText(
+                  EntityType.NEWS_SECTION,
+                  section.id,
+                  'content',
+                  text.languageId,
+                  section.content,
+                ),
+              );
+            }
+
+            if (
+              section.sectionImageList &&
+              section.sectionImageList.length > 0
+            ) {
+              for (const sectionImage of section.sectionImageList) {
+                promises.push(
+                  this.newsRepositoryService.updateSectionImage(sectionImage),
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    await Promise.all(promises);
   }
 }
