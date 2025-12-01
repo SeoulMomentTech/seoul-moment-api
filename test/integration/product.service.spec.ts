@@ -171,7 +171,7 @@ describe('ProductService Integration Tests', () => {
       const request = GetProductRequest.from(
         1, // page
         10, // count
-        undefined, // sortColum
+        undefined, // sortColumn
         undefined, // sort
         undefined, // search
         undefined, // brandId

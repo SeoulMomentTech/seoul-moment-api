@@ -11,7 +11,7 @@ export class ProductSortDto {
     enum: ProductSortColumn,
     example: ProductSortColumn.CREATE,
   })
-  sortColum: ProductSortColumn;
+  sortColumn: ProductSortColumn;
 
   @ApiProperty({
     description: '정렬 방향',
@@ -21,10 +21,10 @@ export class ProductSortDto {
   sort: DatabaseSort;
 
   static from(
-    sortColum: ProductSortColumn,
+    sortColumn: ProductSortColumn,
     sort: DatabaseSort,
   ): ProductSortDto {
-    return plainToInstance(this, { sortColum, sort });
+    return plainToInstance(this, { sortColumn, sort });
   }
 }
 

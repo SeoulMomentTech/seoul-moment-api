@@ -8,6 +8,7 @@ import { AdminBrandModule } from './brand/admin.brand.module';
 import { AdminCategoryModule } from './category/admin.category.module';
 import { AdminHomeModule } from './home/admin.home.module';
 import { AdminImageModule } from './image/admin.image.module';
+import { AdminNewsModule } from './news/admin.news.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AdminImageModule } from './image/admin.image.module';
     AdminBrandModule,
     AdminImageModule,
     AdminAuthModule,
+    AdminNewsModule,
   ],
   providers: [OneTimeTokenStrategy, RefreshTokenStrategy],
 })

@@ -1,13 +1,17 @@
+import { DatabaseSort } from '@app/common/enum/global.enum';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Like, Repository } from 'typeorm';
 
+import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
 import { NewsSectionImageEntity } from '../entity/news-section-image.entity';
 import { NewsSectionEntity } from '../entity/news-section.entity';
 import { NewsEntity } from '../entity/news.entity';
+import { EntityType } from '../enum/entity.enum';
 import { NewsStatus } from '../enum/news.enum';
+import { NewsSearchEnum } from '../enum/news.repository.enum';
 import { SortOrderHelper } from '../helper/sort-order.helper';
 
 @Injectable()
@@ -21,6 +25,9 @@ export class NewsRepositoryService {
 
     @InjectRepository(NewsSectionImageEntity)
     private readonly newsSectionImageRepository: Repository<NewsSectionImageEntity>,
+
+    @InjectRepository(MultilingualTextEntity)
+    private readonly multilingualTextRepository: Repository<MultilingualTextEntity>,
 
     private readonly sortOrderHelper: SortOrderHelper,
   ) {}
@@ -88,5 +95,40 @@ export class NewsRepositoryService {
     );
 
     return this.newsSectionImageRepository.save(entity);
+  }
+
+  async findNewsByFilter(
+    page: number,
+    count: number,
+    searchName?: string,
+    searchColumn?: NewsSearchEnum,
+    sort: DatabaseSort = DatabaseSort.DESC,
+  ): Promise<[NewsEntity[], number]> {
+    let newsIds: number[] = [];
+
+    if (searchName) {
+      const multilingualTexts = await this.multilingualTextRepository.find({
+        where: {
+          entityType: EntityType.NEWS,
+          fieldName: searchColumn,
+          textContent: Like(`%${searchName}%`),
+        },
+      });
+
+      newsIds = multilingualTexts.map((text) => text.entityId);
+    }
+
+    const [newsEntities, total] = await this.newsRepository.findAndCount({
+      where: {
+        id: searchName ? In(newsIds) : undefined,
+      },
+      order: {
+        createDate: sort,
+      },
+      skip: (page - 1) * count,
+      take: count,
+    });
+
+    return [newsEntities, total];
   }
 }

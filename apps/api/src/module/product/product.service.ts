@@ -134,7 +134,7 @@ export class ProductService {
         PagingDto.from(dto.page, dto.count),
         dto.isNotExistSort()
           ? undefined
-          : ProductSortDto.from(dto.sortColum, dto.sort),
+          : ProductSortDto.from(dto.sortColumn, dto.sort),
         dto.brandId,
         dto.categoryId,
         dto.productCategoryId,

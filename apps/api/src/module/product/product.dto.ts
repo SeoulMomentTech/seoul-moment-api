@@ -172,7 +172,7 @@ export class GetProductRequest {
   })
   @IsEnum(ProductSortColumn)
   @IsOptional()
-  sortColum?: ProductSortColumn;
+  sortColumn?: ProductSortColumn;
 
   @ApiPropertyOptional({
     description: '오름 차순(asc) 내림 차순(desc)',
@@ -241,7 +241,7 @@ export class GetProductRequest {
   static from(
     page: number,
     count: number,
-    sortColum?: ProductSortColumn,
+    sortColumn?: ProductSortColumn,
     sort?: DatabaseSort,
     search?: string,
     brandId?: number,
@@ -252,7 +252,7 @@ export class GetProductRequest {
     return plainToInstance(this, {
       page,
       count,
-      sortColum,
+      sortColumn,
       sort,
       search,
       brandId,
@@ -263,7 +263,7 @@ export class GetProductRequest {
   }
 
   isNotExistSort(): boolean {
-    return !this.sortColum || !this.sort;
+    return !this.sortColumn || !this.sort;
   }
 }
 

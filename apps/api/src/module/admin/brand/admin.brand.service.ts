@@ -161,7 +161,7 @@ export class AdminBrandService {
     const languageArray =
       await this.languageRepositoryService.findAllActiveLanguages();
 
-    const categoryList = await Promise.all(
+    const brandList = await Promise.all(
       brandEntityList.map(async (brandEntity) => {
         const nameDto = await Promise.all(
           languageArray.map(async (languageEntity) => {
@@ -185,7 +185,7 @@ export class AdminBrandService {
       }),
     );
 
-    return [categoryList, total];
+    return [brandList, total];
   }
 
   @Transactional()

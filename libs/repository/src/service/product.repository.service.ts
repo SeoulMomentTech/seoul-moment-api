@@ -254,14 +254,14 @@ export class ProductRepositoryService implements OnModuleInit {
     applySearchCondition(idQuery);
 
     // 정렬 최적화: 계산된 가격 vs 단일 컬럼
-    if (sortDto.sortColum === ProductSortColumn.PRICE) {
+    if (sortDto.sortColumn === ProductSortColumn.PRICE) {
       // 0보다 큰 할인가가 있으면 할인가, 없으면 원가
       idQuery.orderBy(
         'CASE WHEN pc.discountPrice > 0 THEN pc.discountPrice ELSE pc.price END',
         sortDto.sort,
       );
     } else {
-      idQuery.orderBy(`pc.${sortDto.sortColum}`, sortDto.sort);
+      idQuery.orderBy(`pc.${sortDto.sortColumn}`, sortDto.sort);
     }
 
     if (search) {
@@ -285,9 +285,9 @@ export class ProductRepositoryService implements OnModuleInit {
       .where('pc.id = ANY(:ids)', { ids }) // IN 대신 ANY 사용 (PostgreSQL 최적화)
       .orderBy(
         // 동일한 정렬 조건 적용
-        sortDto.sortColum === ProductSortColumn.PRICE
+        sortDto.sortColumn === ProductSortColumn.PRICE
           ? 'CASE WHEN pc.discountPrice > 0 THEN pc.discountPrice ELSE pc.price END'
-          : `pc.${sortDto.sortColum}`,
+          : `pc.${sortDto.sortColumn}`,
         sortDto.sort,
       )
       .limit(pageDto.count)

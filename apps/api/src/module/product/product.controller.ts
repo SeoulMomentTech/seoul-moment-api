@@ -159,7 +159,7 @@ export class ProductController {
       GetProductRequest.from(
         query.page,
         query.count,
-        query.sortColum,
+        query.sortColumn,
         query.sort,
         query.search,
         query.brandId,
