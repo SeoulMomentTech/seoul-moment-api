@@ -45,12 +45,9 @@ async function bootstrap() {
   morganSetting(app);
   swaggerSettring(app);
 
-  app.use('body-parser', bodyParser.json({ limit: '100mb' }));
-  app.use(
-    'body-parser',
-    bodyParser.urlencoded({ limit: '100mb', extended: true }),
-  );
-  app.use('body-parser', bodyParser.text({ limit: '100mb' }));
+  app.use(bodyParser.json({ limit: '100mb' }));
+  app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
+  app.use(bodyParser.text({ limit: '100mb' }));
 
   app.useGlobalPipes(
     new ValidationPipe({
