@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { OneTimeTokenStrategy } from 'apps/api/src/strategy/one-time-token.strategy';
 import { RefreshTokenStrategy } from 'apps/api/src/strategy/refresh-token.strategy';
 
+import { AdminArticleModule } from './article/admin.article.module';
 import { AdminAuthModule } from './auth/admin.auth.module';
 import { AdminBrandModule } from './brand/admin.brand.module';
 import { AdminCategoryModule } from './category/admin.category.module';
@@ -19,6 +20,7 @@ import { AdminNewsModule } from './news/admin.news.module';
     AdminImageModule,
     AdminAuthModule,
     AdminNewsModule,
+    AdminArticleModule,
   ],
   providers: [OneTimeTokenStrategy, RefreshTokenStrategy],
 })

@@ -3,7 +3,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UpdateAdminBrandImage } from 'apps/api/src/module/admin/brand/admin.brand.dto';
+import { UpdateAdminNewsImage } from 'apps/api/src/module/admin/news/admin.news.dto';
 import { In, Like, Repository } from 'typeorm';
 
 import { UpdateNewsDto } from '../dto/news.dto';
@@ -138,7 +138,7 @@ export class NewsRepositoryService {
     return this.newsRepository.save(entity);
   }
 
-  async updateSectionImage(dto: UpdateAdminBrandImage) {
+  async updateSectionImage(dto: UpdateAdminNewsImage) {
     await this.newsSectionImageRepository.update(
       { imageUrl: dto.oldImageUrl },
       { imageUrl: dto.newImageUrl },

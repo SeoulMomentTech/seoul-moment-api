@@ -1,13 +1,19 @@
+import { DatabaseSort } from '@app/common/enum/global.enum';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { UpdateAdminArticleImage } from 'apps/api/src/module/admin/article/admin.article.dto';
+import { In, Like, Repository } from 'typeorm';
 
+import { UpdateArticleDto } from '../dto/article.dto';
 import { ArticleSectionImageEntity } from '../entity/article-section-image.entity';
 import { ArticleSectionEntity } from '../entity/article-section.entity';
 import { ArticleEntity } from '../entity/article.entity';
+import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
 import { ArticleStatus } from '../enum/article.enum';
+import { ArticleSearchEnum } from '../enum/article.repository.enum';
+import { EntityType } from '../enum/entity.enum';
 import { SortOrderHelper } from '../helper/sort-order.helper';
 
 @Injectable()
@@ -21,6 +27,9 @@ export class ArticleRepositoryService {
 
     @InjectRepository(ArticleSectionImageEntity)
     private readonly articleSectionImageRepository: Repository<ArticleSectionImageEntity>,
+
+    @InjectRepository(MultilingualTextEntity)
+    private readonly multilingualTextRepository: Repository<MultilingualTextEntity>,
 
     private readonly sortOrderHelper: SortOrderHelper,
   ) {}
@@ -93,5 +102,51 @@ export class ArticleRepositoryService {
     );
 
     return this.articleSectionImageRepository.save(entity);
+  }
+
+  async findArticleByFilter(
+    page: number,
+    count: number,
+    searchName?: string,
+    searchColumn?: ArticleSearchEnum,
+    sort: DatabaseSort = DatabaseSort.DESC,
+  ): Promise<[ArticleEntity[], number]> {
+    let articleIds: number[] = [];
+
+    if (searchName) {
+      const multilingualTexts = await this.multilingualTextRepository.find({
+        where: {
+          entityType: EntityType.ARTICLE,
+          fieldName: searchColumn,
+          textContent: Like(`%${searchName}%`),
+        },
+      });
+
+      articleIds = multilingualTexts.map((text) => text.entityId);
+    }
+
+    const [articleEntities, total] = await this.articleRepository.findAndCount({
+      where: {
+        id: searchName ? In(articleIds) : undefined,
+      },
+      order: {
+        createDate: sort,
+      },
+      skip: (page - 1) * count,
+      take: count,
+    });
+
+    return [articleEntities, total];
+  }
+
+  async update(entity: UpdateArticleDto): Promise<ArticleEntity> {
+    return this.articleRepository.save(entity);
+  }
+
+  async updateSectionImage(dto: UpdateAdminArticleImage) {
+    await this.articleSectionImageRepository.update(
+      { imageUrl: dto.oldImageUrl },
+      { imageUrl: dto.newImageUrl },
+    );
   }
 }
