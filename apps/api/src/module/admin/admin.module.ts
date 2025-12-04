@@ -10,6 +10,7 @@ import { AdminCategoryModule } from './category/admin.category.module';
 import { AdminHomeModule } from './home/admin.home.module';
 import { AdminImageModule } from './image/admin.image.module';
 import { AdminNewsModule } from './news/admin.news.module';
+import { AdminProductModule } from './product/admin.product.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AdminNewsModule } from './news/admin.news.module';
     AdminAuthModule,
     AdminNewsModule,
     AdminArticleModule,
+    AdminProductModule,
   ],
   providers: [OneTimeTokenStrategy, RefreshTokenStrategy],
 })

@@ -563,4 +563,20 @@ export class ProductRepositoryService implements OnModuleInit {
       );
     return result;
   }
+
+  async findBannerByFilter(
+    page: number,
+    count: number,
+    sort: DatabaseSort = DatabaseSort.DESC,
+  ): Promise<[ProductBannerEntity[], number]> {
+    const [productBannerEntities, total] =
+      await this.productBannerRepository.findAndCount({
+        order: {
+          sortOrder: sort,
+        },
+        skip: (page - 1) * count,
+        take: count,
+      });
+    return [productBannerEntities, total];
+  }
 }
