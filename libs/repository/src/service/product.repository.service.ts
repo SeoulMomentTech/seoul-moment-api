@@ -564,6 +564,14 @@ export class ProductRepositoryService implements OnModuleInit {
     return result;
   }
 
+  async existProductVariantBySku(sku: string): Promise<boolean> {
+    const result = await this.productVariantRepository.findOneBy({
+      sku,
+      status: ProductVariantStatus.ACTIVE,
+    });
+    return !!result;
+  }
+
   async findBannerByFilter(
     page: number,
     count: number,

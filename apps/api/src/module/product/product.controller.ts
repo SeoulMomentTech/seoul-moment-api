@@ -174,7 +174,14 @@ export class ProductController {
 
   @Post()
   @ApiOperation({
-    summary: '상품 대분류 등록',
+    summary: `
+      상품 대주제 등록 
+      ex) 나이키 아이다스 저지, 나이키 에어포스 등등
+    `,
+    description: `
+      이 등록은 실제 상품 LIST 에 나오는 것이 아닌 상품 대주제를 등록하는 것입니다.
+      ex) 나이키 아이다스 저지, 나이키 에어포스 등등
+    `,
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   async postProduct(@Body() body: PostProductRequest) {
@@ -277,7 +284,12 @@ export class ProductController {
 
   @Post('item')
   @ApiOperation({
-    summary: 'Product item register',
+    summary: '색상별 상품 등록',
+    description: `
+      상품 리스트에 표시되는 상품을 등록하는 곳
+      색깔별로 상품을 등록하지만 색상을 등록하기전에 상품 중 주제를 등록해야 합니다.
+      색상은 /product/variant 에서 등록합니다.
+    `,
   })
   @ResponseException(HttpStatus.NOT_FOUND, '상품이 존재하지 않습니다.')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -287,7 +299,22 @@ export class ProductController {
 
   @Post('variant')
   @ApiOperation({
-    summary: 'Product variant register',
+    summary: '실제 상품 등록',
+    description: `
+      실제 상품을 등록하는 곳입니다.
+      만약 /product/item 에서 상품을 등록후 이 api 에서 sku, 재고 등을 등록합니다.
+      색상은 /option/value 에서 값을 가져와 한번에 등록합니다 예를들여
+      /product/item 에서 상품을 등록후 나온 id 값을 1 번이라고 했을때 이것을 빨강색 아디다스 저지이고 총 사이즈는 S, M, L 이라고 했을때
+      request body 는 다음과 같습니다.
+      {
+        "productItemId": 1,
+        "sku": "1234567890",
+        "stock": 10,
+        "optionValueIdList": [1, 2, 3, 4]
+      }
+      
+      option value 1 = 빨강, 2 = S , 3 = M , 4 = L 이라고 가정한다면 다음과 같은 request body 가 됩니다.
+    `,
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   async postProductVariant(@Body() body: PostProductVariantRequest) {

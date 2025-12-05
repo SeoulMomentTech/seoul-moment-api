@@ -456,6 +456,15 @@ export class ProductService {
       dto.productItemId,
     );
 
+    const skuExists =
+      await this.productRepositoryService.existProductVariantBySku(dto.sku);
+    if (skuExists) {
+      throw new ServiceError(
+        `SKU가 이미 존재합니다.: ${dto.sku}`,
+        ServiceErrorCode.CONFLICT,
+      );
+    }
+
     const productVariantEntity =
       await this.productRepositoryService.insertProductVariant(
         plainToInstance(ProductVariantEntity, {
