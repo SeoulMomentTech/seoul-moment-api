@@ -24,7 +24,7 @@ import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductImageEntity } from '@app/repository/entity/product-image.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
-import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
+import { ProductBannerEntity } from '@app/repository/entity/product-banner.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { SortOrderHelper } from '@app/repository/helper/sort-order.helper';
 import { Module } from '@nestjs/common';

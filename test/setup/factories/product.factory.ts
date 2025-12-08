@@ -9,7 +9,7 @@ import { ProductItemImageEntity } from '@app/repository/entity/product-item-imag
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ProductEntity } from '@app/repository/entity/product.entity';
-import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
+import { ProductBannerEntity } from '@app/repository/entity/product-banner.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';

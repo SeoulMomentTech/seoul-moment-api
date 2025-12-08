@@ -29,7 +29,7 @@ import { ProductItemImageEntity } from './entity/product-item-image.entity';
 import { ProductItemEntity } from './entity/product-item.entity';
 import { ProductVariantEntity } from './entity/product-variant.entity';
 import { ProductEntity } from './entity/product.entity';
-import { ProductBannerEntity } from './entity/product_banner.entity';
+import { ProductBannerEntity } from './entity/product-banner.entity';
 import { VariantOptionEntity } from './entity/variant-option.entity';
 import { SortOrderHelper } from './helper/sort-order.helper';
 import { AdminRepositoryService } from './service/admin.repository.service';

@@ -1,9 +1,13 @@
+import { UpdateProductBannerDto } from '@app/repository/dto/product.dto';
+import { ProductBannerEntity } from '@app/repository/entity/product-banner.entity';
 import { ProductRepositoryService } from '@app/repository/service/product.repository.service';
 import { Injectable } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
 
 import {
   AdminProductBannerListRequest,
   AdminProductBannerListResponse,
+  PatchAdminProductBannerSortOrderRequest,
 } from './admin.product.banner.dto';
 
 @Injectable()
@@ -28,5 +32,39 @@ export class AdminProductBannerService {
       ),
       total,
     ];
+  }
+
+  async postProductBanner(imageUrl: string) {
+    await this.productRepositoryService.insertBanner(
+      plainToInstance(ProductBannerEntity, {
+        image: imageUrl,
+      }),
+    );
+  }
+
+  async patchProductBanner(id: number, imageUrl: string) {
+    const updateDto: UpdateProductBannerDto = {
+      id,
+      image: imageUrl,
+    };
+
+    await this.productRepositoryService.updateBanner(updateDto);
+  }
+
+  async deleteProductBanner(id: number) {
+    await this.productRepositoryService.deleteBanner(id);
+  }
+
+  async patchProductBannerSortOrder(
+    request: PatchAdminProductBannerSortOrderRequest,
+  ) {
+    await this.productRepositoryService.bulkUpdateBannerSortOrder(
+      request.list.map((item) =>
+        plainToInstance(ProductBannerEntity, {
+          id: item.id,
+          sortOrder: item.sortOrder,
+        }),
+      ),
+    );
   }
 }

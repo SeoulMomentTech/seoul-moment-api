@@ -9,14 +9,18 @@ import { GetProductDetailOptionValue } from 'apps/api/src/module/product/product
 import { Repository } from 'typeorm';
 
 import { LanguageRepositoryService } from './language.repository.service';
-import { ProductFilterDto, ProductSortDto } from '../dto/product.dto';
+import {
+  ProductFilterDto,
+  ProductSortDto,
+  UpdateProductBannerDto,
+} from '../dto/product.dto';
+import { ProductBannerEntity } from '../entity/product-banner.entity';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
 import { ProductFilterEntity } from '../entity/product-filter.entity';
 import { ProductItemImageEntity } from '../entity/product-item-image.entity';
 import { ProductItemEntity } from '../entity/product-item.entity';
 import { ProductVariantEntity } from '../entity/product-variant.entity';
 import { ProductEntity } from '../entity/product.entity';
-import { ProductBannerEntity } from '../entity/product_banner.entity';
 import { VariantOptionEntity } from '../entity/variant-option.entity';
 import { BrandStatus } from '../enum/brand.enum';
 import { EntityType } from '../enum/entity.enum';
@@ -411,6 +415,27 @@ export class ProductRepositoryService implements OnModuleInit {
   async bulkInsertBanner(
     entity: ProductBannerEntity[],
   ): Promise<ProductBannerEntity[]> {
+    return this.productBannerRepository.save(entity);
+  }
+
+  async insertBanner(entity: ProductBannerEntity) {
+    await this.sortOrderHelper.setNextSortOrder(
+      entity,
+      this.productBannerRepository,
+    );
+
+    return this.productBannerRepository.save(entity);
+  }
+
+  async updateBanner(entity: UpdateProductBannerDto) {
+    return this.productBannerRepository.save(entity);
+  }
+
+  async deleteBanner(id: number) {
+    return this.productBannerRepository.delete(id);
+  }
+
+  async bulkUpdateBannerSortOrder(entity: ProductBannerEntity[]) {
     return this.productBannerRepository.save(entity);
   }
 

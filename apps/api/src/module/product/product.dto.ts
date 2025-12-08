@@ -6,7 +6,7 @@ import { OptionEntity } from '@app/repository/entity/option.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { ProductFilterEntity } from '@app/repository/entity/product-filter.entity';
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
-import { ProductBannerEntity } from '@app/repository/entity/product_banner.entity';
+import { ProductBannerEntity } from '@app/repository/entity/product-banner.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import {
   OptionType,

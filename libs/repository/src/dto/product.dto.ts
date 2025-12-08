@@ -1,9 +1,13 @@
 import { DatabaseSort } from '@app/common/enum/global.enum';
+import { RequireKey } from '@app/common/type/require-key.type';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 import { IsOptional } from 'class-validator';
 
+import { ProductBannerEntity } from '../entity/product-banner.entity';
 import { OptionType, ProductSortColumn } from '../enum/product.enum';
+
+export type UpdateProductBannerDto = RequireKey<ProductBannerEntity, 'id'>;
 
 export class ProductSortDto {
   @ApiProperty({
