@@ -127,6 +127,23 @@ export class ProductRepositoryService implements OnModuleInit {
     }
   }
 
+  async findProduct(
+    pageDto: PagingDto,
+    sortDto: ProductSortDto = ProductSortDto.from(
+      ProductSortColumn.CREATE,
+      DatabaseSort.DESC,
+    ),
+  ): Promise<[ProductEntity[], number]> {
+    const query = this.productRepository.createQueryBuilder('p');
+
+    query.orderBy(`p.${sortDto.sortColumn}`, sortDto.sort);
+
+    return query
+      .limit(pageDto.count)
+      .offset((pageDto.page - 1) * pageDto.count)
+      .getManyAndCount();
+  }
+
   async findBanner(): Promise<ProductBannerEntity[]> {
     return this.productBannerRepository.find({
       order: { sortOrder: 'ASC' },
