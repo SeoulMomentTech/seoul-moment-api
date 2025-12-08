@@ -13,6 +13,7 @@ import {
   ProductFilterDto,
   ProductSortDto,
   UpdateProductBannerDto,
+  UpdateProductDto,
 } from '../dto/product.dto';
 import { ProductBannerEntity } from '../entity/product-banner.entity';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
@@ -628,5 +629,13 @@ export class ProductRepositoryService implements OnModuleInit {
         take: count,
       });
     return [productBannerEntities, total];
+  }
+
+  async delete(id: number) {
+    return this.productRepository.delete(id);
+  }
+
+  async update(entity: UpdateProductDto) {
+    return this.productRepository.save(entity);
   }
 }
