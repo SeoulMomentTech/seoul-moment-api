@@ -655,4 +655,17 @@ export class ProductRepositoryService implements OnModuleInit {
       .offset((pageDto.page - 1) * pageDto.count)
       .getManyAndCount();
   }
+
+  async getBannerById(id: number): Promise<ProductBannerEntity> {
+    const result = await this.productBannerRepository.findOneBy({
+      id,
+    });
+
+    if (!result)
+      throw new ServiceError(
+        `No exist product banner ID: ${id}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    return result;
+  }
 }

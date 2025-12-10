@@ -7,6 +7,7 @@ import { plainToInstance } from 'class-transformer';
 import {
   AdminProductBannerListRequest,
   AdminProductBannerListResponse,
+  GetAdminProductBannerDetailResponse,
   PatchAdminProductBannerSortOrderRequest,
 } from './admin.product.banner.dto';
 
@@ -66,5 +67,14 @@ export class AdminProductBannerService {
         }),
       ),
     );
+  }
+
+  async getProductBannerDetail(
+    id: number,
+  ): Promise<GetAdminProductBannerDetailResponse> {
+    const productBannerEntity =
+      await this.productRepositoryService.getBannerById(id);
+
+    return GetAdminProductBannerDetailResponse.from(productBannerEntity);
   }
 }

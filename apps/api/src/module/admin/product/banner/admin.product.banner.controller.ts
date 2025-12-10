@@ -1,4 +1,6 @@
+import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
+import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
@@ -15,6 +17,7 @@ import { ApiOperation } from '@nestjs/swagger';
 import {
   AdminProductBannerListRequest,
   AdminProductBannerListResponse,
+  GetAdminProductBannerDetailResponse,
   PatchAdminProductBannerRequest,
   PatchAdminProductBannerSortOrderRequest,
   PostAdminProductBannerRequest,
@@ -65,5 +68,15 @@ export class AdminProductBannerController {
   @ApiOperation({ summary: '상품 배너 삭제' })
   async deleteProductBanner(@Param('id') id: number) {
     await this.adminProductBannerService.deleteProductBanner(id);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: '상품 배너 상세 조회' })
+  @ResponseData(GetAdminProductBannerDetailResponse)
+  async getProductBannerDetail(@Param('id') id: number) {
+    const result =
+      await this.adminProductBannerService.getProductBannerDetail(id);
+
+    return new ResponseDataDto(result);
   }
 }

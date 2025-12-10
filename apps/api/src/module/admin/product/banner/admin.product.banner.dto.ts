@@ -96,3 +96,32 @@ export class PatchAdminProductBannerSortOrderRequest {
   @Type(() => PatchAdminProductBannerSortOrder)
   list: PatchAdminProductBannerSortOrder[];
 }
+
+export class GetAdminProductBannerDetailResponse {
+  @ApiProperty({
+    description: '배너 ID',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '배너 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/product-banners/2025-09-16/product-banner-01.jpg',
+  })
+  imageUrl: string;
+
+  @ApiProperty({
+    description: '배너 정렬 순서',
+    example: 1,
+  })
+  sortOrder: number;
+
+  static from(entity: ProductBannerEntity) {
+    return plainToInstance(this, {
+      id: entity.id,
+      imageUrl: entity.getImage(),
+      sortOrder: entity.sortOrder,
+    });
+  }
+}
