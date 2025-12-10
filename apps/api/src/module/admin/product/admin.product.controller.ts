@@ -1,5 +1,7 @@
+import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { PagingDto } from '@app/common/dto/global.dto';
+import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import { ProductSortDto } from '@app/repository/dto/product.dto';
 import {
@@ -21,6 +23,7 @@ import {
   GetAdminProductResponse,
   PatchAdminProductRequest,
   PostAdminProductRequest,
+  GetAdminProductDetailResponse,
 } from './admin.product.dto';
 import { AdminProductService } from './admin.product.service';
 
@@ -78,5 +81,15 @@ export class AdminProductController {
     @Body() body: PatchAdminProductRequest,
   ) {
     await this.adminProductService.patchAdminProduct(id, body);
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: '상품 대주제 상세 조회',
+  })
+  @ResponseData(GetAdminProductDetailResponse)
+  async getAdminProductDetail(@Param('id') id: number) {
+    const result = await this.adminProductService.getAdminProductDetail(id);
+    return new ResponseDataDto(result);
   }
 }

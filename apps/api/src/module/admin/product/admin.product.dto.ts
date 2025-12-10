@@ -273,3 +273,90 @@ export class PatchAdminProductRequest {
   @IsOptional()
   detailInfoImageUrl?: string;
 }
+
+export class GetAdminProductDetailResponse {
+  @ApiProperty({
+    description: '상품 ID',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '브랜드 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandId: number;
+
+  @ApiProperty({
+    description: '카테고리 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  categoryId: number;
+
+  @ApiProperty({
+    description: '상품 카테고리 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  productCategoryId: number;
+
+  @ApiProperty({
+    description: '상품 상세 페이지 (원 이미지 상세 페이지)',
+    example: '/product/product_detail_1.png',
+  })
+  @IsString()
+  @IsDefined()
+  detailInfoImageUrl: string;
+
+  @ApiProperty({
+    description: '상품 상태',
+    enum: ProductStatus,
+    example: ProductStatus.NORMAL,
+  })
+  @IsEnum(ProductStatus)
+  @IsDefined()
+  status: ProductStatus;
+
+  @ApiProperty({
+    description: '상품 이름 리스트',
+    example: [
+      {
+        languageCode: LanguageCode.KOREAN,
+        name: '나이키 드라이핏 티셔츠',
+      },
+      {
+        languageCode: LanguageCode.ENGLISH,
+        name: 'Nike Dry-Fit T-Shirt',
+      },
+      {
+        languageCode: LanguageCode.TAIWAN,
+        name: '耐吉乾爽T恤',
+      },
+    ],
+    type: [GetAdminProductNameDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminProductNameDto)
+  nameDto: GetAdminProductNameDto[];
+
+  static from(entity: ProductEntity, nameDto: GetAdminProductNameDto[]) {
+    return plainToInstance(this, {
+      id: entity.id,
+      brandId: entity.brandId,
+      categoryId: entity.categoryId,
+      productCategoryId: entity.productCategoryId,
+      detailInfoImageUrl: entity.detailInfoImageUrl,
+      status: entity.status,
+      nameDto,
+    });
+  }
+}

@@ -15,6 +15,7 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
+  GetAdminProductDetailResponse,
   GetAdminProductNameDto,
   GetAdminProductResponse,
   PatchAdminProductRequest,
@@ -164,5 +165,36 @@ export class AdminProductService {
         );
       }
     }
+  }
+
+  async getAdminProductDetail(
+    id: number,
+  ): Promise<GetAdminProductDetailResponse> {
+    const productEntity =
+      await this.productRepositoryService.getProductByProductId(id);
+
+    const languages =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const nameDto = await Promise.all(
+      languages.map(async (language) => {
+        const multilingualText =
+          await this.languageRepositoryService.findMultilingualTexts(
+            EntityType.PRODUCT,
+            productEntity.id,
+            language.code,
+            'name',
+          );
+        if (multilingualText.length > 0) {
+          return GetAdminProductNameDto.from(
+            language.code,
+            multilingualText[0].textContent,
+          );
+        }
+        return null;
+      }),
+    );
+
+    return GetAdminProductDetailResponse.from(productEntity, nameDto);
   }
 }
