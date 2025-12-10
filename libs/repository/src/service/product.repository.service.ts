@@ -638,4 +638,21 @@ export class ProductRepositoryService implements OnModuleInit {
   async update(entity: UpdateProductDto) {
     return this.productRepository.save(entity);
   }
+
+  async findCategoryWithFilter(
+    pageDto: PagingDto,
+    sortDto: ProductSortDto = ProductSortDto.from(
+      ProductSortColumn.CREATE,
+      DatabaseSort.DESC,
+    ),
+  ): Promise<[ProductCategoryEntity[], number]> {
+    const query = this.productCategoryRepository.createQueryBuilder('pc');
+
+    query.orderBy(`pc.${sortDto.sortColumn}`, sortDto.sort);
+
+    return query
+      .limit(pageDto.count)
+      .offset((pageDto.page - 1) * pageDto.count)
+      .getManyAndCount();
+  }
 }
