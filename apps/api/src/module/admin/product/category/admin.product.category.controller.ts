@@ -1,11 +1,20 @@
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { ResponseListDto } from '@app/common/type/response-list';
-import { Controller, Get, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation } from '@nestjs/swagger';
 
 import {
   GetAdminProductCategoryRequest,
   GetAdminProductCategoryResponse,
+  PostAdminProductCategoryRequest,
 } from './admin.product.category.dto';
 import { AdminProductCategoryService } from './admin.product.category.service';
 
@@ -25,5 +34,14 @@ export class AdminProductCategoryController {
       await this.adminProductCategoryService.getAdminProductCategoryList(query);
 
     return new ResponseListDto(result, total);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: 'Product category register',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async postProductCategory(@Body() body: PostAdminProductCategoryRequest) {
+    await this.adminProductCategoryService.postAdminProductCategory(body);
   }
 }
