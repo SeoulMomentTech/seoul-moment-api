@@ -1092,6 +1092,15 @@ export class PostOptionRequest {
   @IsEnum(OptionType)
   @IsDefined()
   type: OptionType;
+
+  @ApiProperty({
+    description: '옵션 타입',
+    example: OptionUiType.GRID,
+    enum: OptionUiType,
+  })
+  @IsEnum(OptionUiType)
+  @IsDefined()
+  uiType: OptionUiType;
 }
 
 export class PostOptionValueText {

@@ -400,6 +400,7 @@ export class ProductService {
     const optionEntity = await this.optionRepositoryService.insertOption(
       plainToInstance(OptionEntity, {
         type: dto.type,
+        uiType: dto.uiType,
       }),
     );
 
