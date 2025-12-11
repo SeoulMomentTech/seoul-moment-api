@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { DatabaseSort } from '@app/common/enum/global.enum';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
@@ -8,6 +9,7 @@ import { ProductCategoryEntity } from '@app/repository/entity/product-category.e
 import { ProductFilterEntity } from '@app/repository/entity/product-filter.entity';
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
+import { OptionUiType } from '@app/repository/enum/option.enum';
 import {
   OptionType,
   ProductSortColumn,
@@ -287,6 +289,18 @@ export class GetProductResponse {
   productName: string;
 
   @ApiProperty({
+    description: '옵션값',
+    example: '빨강',
+  })
+  colorName: string;
+
+  @ApiProperty({
+    description: '옵션값 코드',
+    example: '#FF0000',
+  })
+  colorCode: string;
+
+  @ApiProperty({
     description: '가격 (할인 가격이 있으면 할인가격 보여줌)',
     example: 189000,
   })
@@ -321,6 +335,7 @@ export class GetProductResponse {
     multilingualText: {
       brand: MultilingualTextEntity[];
       product: MultilingualTextEntity[];
+      optionValue: MultilingualTextEntity[];
     },
   ) {
     multilingualText.brand = multilingualText.brand.filter(
@@ -331,6 +346,12 @@ export class GetProductResponse {
       (v) => v.entityId === entity.product.id,
     );
 
+    multilingualText.optionValue = multilingualText.optionValue.filter((text) =>
+      entity.variants
+        .flatMap((v) => v.variantOptions.map((v) => v.optionValueId))
+        .includes(text.entityId),
+    );
+
     const brandName = MultilingualFieldDto.fromByEntity(
       multilingualText.brand,
       'name',
@@ -339,11 +360,22 @@ export class GetProductResponse {
       multilingualText.product,
       'name',
     );
+    const optionValue = MultilingualFieldDto.fromByEntity(
+      multilingualText.optionValue,
+      'value',
+    );
 
     return plainToInstance(this, {
       id: entity.id,
       brandName: brandName.getContent(),
       productName: productName.getContent(),
+      colorName: optionValue.getContent(),
+      colorCode:
+        entity.variants.flatMap((v) =>
+          v.variantOptions
+            .filter((v) => v.optionValue.option.type === OptionType.COLOR)
+            .map((v) => v.optionValue.colorCode),
+        )[0] || null,
       price: entity.getEffectivePrice(),
       like: Math.floor(Math.random() * 50001),
       review: Math.floor(Math.random() * 10001),
@@ -983,6 +1015,13 @@ export class GetProductFilterResponse {
     example: '색상',
   })
   title: string;
+
+  @ApiProperty({
+    description: '옵션 타입',
+    example: OptionUiType.GRID,
+    enum: OptionUiType,
+  })
+  type: OptionUiType;
 
   @ApiProperty({
     description: '옵션 값 목록',

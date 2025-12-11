@@ -17,6 +17,9 @@ import { ProductItemStatus } from '../enum/product.enum';
 
 @Entity('product_item')
 @Index(['productId'])
+@Index(['status'])
+@Index(['productId', 'status'])
+@Index(['status', 'createDate'])
 export class ProductItemEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;

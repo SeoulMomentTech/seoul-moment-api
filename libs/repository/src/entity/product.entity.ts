@@ -2,6 +2,7 @@ import { Configuration } from '@app/config/configuration';
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -25,6 +26,11 @@ import { ProductStatus } from '../enum/product.enum';
  * - 다국어 지원: name, origin(원산지), gender
  */
 @Entity(EntityType.PRODUCT)
+@Index(['status'])
+@Index(['brandId', 'status'])
+@Index(['categoryId', 'status'])
+@Index(['productCategoryId', 'status'])
+@Index(['status', 'createDate'])
 export class ProductEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;

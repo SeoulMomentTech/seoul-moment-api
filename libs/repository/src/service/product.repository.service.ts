@@ -183,19 +183,70 @@ export class ProductRepositoryService implements OnModuleInit {
     withoutId?: number,
     optionIdList?: number[],
   ): Promise<[ProductItemEntity[], number]> {
-    // 대용량 최적화: 인덱스 힌트를 위한 조건 순서 최적화
-    const buildBaseQuery = () => {
+    // 대용량 최적화: 옵션 필터링을 위한 서브쿼리 생성
+    const buildOptionFilterSubquery = () => {
+      if (!optionIdList || optionIdList.length === 0) {
+        return null;
+      }
+
+      // 옵션 필터링: EXISTS 서브쿼리로 최적화 (JOIN 대신)
+      return this.productItemRepository.manager
+        .createQueryBuilder()
+        .select('DISTINCT pv_sub.product_item_id')
+        .from('product_variant', 'pv_sub')
+        .innerJoin('variant_option', 'vo_sub', 'pv_sub.id = vo_sub.variant_id')
+        .where('pv_sub.status = :productVariantStatus', {
+          productVariantStatus: ProductVariantStatus.ACTIVE,
+        })
+        .andWhere('vo_sub.option_value_id IN (:...optionIdList)', {
+          optionIdList,
+        })
+        .groupBy('pv_sub.product_item_id')
+        .having('COUNT(DISTINCT vo_sub.option_value_id) = :optionCount', {
+          optionCount: optionIdList.length,
+        });
+    };
+
+    // 대용량 최적화: 검색 조건을 위한 서브쿼리 생성
+    const buildSearchSubquery = () => {
+      if (!search) {
+        return null;
+      }
+
+      // 검색: 인덱스를 활용할 수 있도록 서브쿼리 사용
+      return this.productItemRepository.manager
+        .createQueryBuilder()
+        .select('DISTINCT mt.entity_id')
+        .from('multilingual_text', 'mt')
+        .where("mt.entityType = 'product'")
+        .andWhere("mt.field_name = 'name'")
+        .andWhere('mt.text_content ILIKE :search', { search: `%${search}%` });
+    };
+
+    // 메인 쿼리 빌더 (최적화된 구조)
+    const buildMainQuery = (selectFields: string = 'pc.id') => {
       const query = this.productItemRepository
         .createQueryBuilder('pc')
-        .innerJoin('pc.product', 'p') // LEFT → INNER: 성능 개선
+        .innerJoin('pc.product', 'p')
         .innerJoin('p.brand', 'b')
-        .leftJoin('p.category', 'c')
-        .leftJoin('pc.variants', 'pv')
-        .leftJoin('pv.variantOptions', 'vo');
+        .leftJoin('p.category', 'c');
 
       // 인덱스 활용을 위한 조건 순서 최적화 (선택도가 높은 순서)
+      // status 조건을 먼저 적용 (인덱스 활용)
+      query
+        .where('pc.status = :productItemStatus', {
+          productItemStatus: ProductItemStatus.NORMAL,
+        })
+        .andWhere('p.status = :productStatus', {
+          productStatus: ProductStatus.NORMAL,
+        })
+        .andWhere('b.status = :brandStatus', {
+          brandStatus: BrandStatus.NORMAL,
+        });
+
+      // 필터 조건들
       if (brandId) {
-        query.where('b.id = :brandId', { brandId });
+        query.andWhere('p.brand_id = :brandId', { brandId });
       }
 
       if (productCategoryId) {
@@ -208,60 +259,40 @@ export class ProductRepositoryService implements OnModuleInit {
         query.andWhere('c.id = :categoryId', { categoryId });
       }
 
-      if (optionIdList) {
-        query.andWhere('vo.option_value_id IN (:...optionIdList)', {
-          optionIdList,
-        });
-      }
-
       if (withoutId) {
         query.andWhere('p.id != :withoutId', { withoutId });
       }
 
-      // status 조건들 (인덱스된 컬럼들)
-      query
-        .andWhere('pc.status = :productItemStatus', {
-          productItemStatus: ProductItemStatus.NORMAL,
-        })
-        .andWhere('p.status = :productStatus', {
-          productStatus: ProductStatus.NORMAL,
-        })
-        .andWhere('b.status = :brandStatus', {
-          brandStatus: BrandStatus.NORMAL,
-        })
-        .andWhere('pv.status = :productVariantStatus', {
-          productVariantStatus: ProductVariantStatus.ACTIVE,
-        });
+      // 옵션 필터링: EXISTS 서브쿼리 사용 (JOIN 대신)
+      const optionSubquery = buildOptionFilterSubquery();
+      if (optionSubquery) {
+        query.andWhere(
+          `pc.id IN (${optionSubquery.getQuery()})`,
+          optionSubquery.getParameters(),
+        );
+      }
+
+      // 검색 조건: 서브쿼리 사용
+      const searchSubquery = buildSearchSubquery();
+      if (searchSubquery) {
+        query.andWhere(
+          `p.id IN (${searchSubquery.getQuery()})`,
+          searchSubquery.getParameters(),
+        );
+      }
+
+      if (selectFields !== 'pc.id') {
+        query.select(selectFields);
+      }
 
       return query;
     };
 
-    // 검색 조건 추가 (가장 비용이 큰 조건을 마지막에)
-    const applySearchCondition = (query: any) => {
-      if (search) {
-        query
-          .innerJoin(
-            // 검색시에만 INNER JOIN으로 성능 최적화
-            'multilingual_text',
-            'mt',
-            `mt.entityType = 'product' AND mt.entity_id = p.id AND mt.field_name = 'name'`,
-          )
-          .andWhere('mt.text_content ILIKE :search', { search: `%${search}%` });
-      }
-    };
-
-    // Count 쿼리 최적화: 불필요한 JOIN 제거
+    // Count 쿼리 최적화: 서브쿼리 활용
     const getOptimizedCount = async (): Promise<number> => {
-      // 항상 buildBaseQuery를 사용한다. (이 조건들이 똑같이 들어가야 함)
-      const countQuery = buildBaseQuery().select(
-        'COUNT(DISTINCT pc.id)',
-        'count',
-      );
-
-      applySearchCondition(countQuery);
-
+      const countQuery = buildMainQuery('COUNT(DISTINCT pc.id) as count');
       const result = await countQuery.getRawOne();
-      return parseInt(result.count, 10);
+      return parseInt(result?.count || '0', 10);
     };
 
     const totalCount = await getOptimizedCount();
@@ -271,13 +302,10 @@ export class ProductRepositoryService implements OnModuleInit {
     }
 
     // ID 조회 쿼리 (대용량 최적화: 필요한 컬럼만 SELECT)
-    const idQuery = buildBaseQuery().select('pc.id');
-
-    applySearchCondition(idQuery);
+    const idQuery = buildMainQuery('pc.id');
 
     // 정렬 최적화: 계산된 가격 vs 단일 컬럼
     if (sortDto.sortColumn === ProductSortColumn.PRICE) {
-      // 0보다 큰 할인가가 있으면 할인가, 없으면 원가
       idQuery.orderBy(
         'CASE WHEN pc.discountPrice > 0 THEN pc.discountPrice ELSE pc.price END',
         sortDto.sort,
@@ -286,9 +314,8 @@ export class ProductRepositoryService implements OnModuleInit {
       idQuery.orderBy(`pc.${sortDto.sortColumn}`, sortDto.sort);
     }
 
-    if (search) {
-      idQuery.groupBy('pc.id'); // 검색시에만 GROUP BY 적용
-    }
+    // 페이징 적용
+    idQuery.limit(pageDto.count).offset((pageDto.page - 1) * pageDto.count);
 
     const productItemIds = await idQuery.getRawMany();
 
@@ -298,12 +325,23 @@ export class ProductRepositoryService implements OnModuleInit {
 
     const ids = productItemIds.map((item) => item.pc_id);
 
-    // 메인 데이터 조회: IN 절 최적화
+    // 메인 데이터 조회: IN 절 최적화 (필요한 관계만 로드)
     const results = await this.productItemRepository
       .createQueryBuilder('pc')
       .leftJoinAndSelect('pc.product', 'p')
       .leftJoinAndSelect('p.brand', 'b')
       .leftJoinAndSelect('p.category', 'c')
+      .leftJoinAndSelect(
+        'pc.variants',
+        'pv',
+        'pv.status = :productVariantStatus',
+        {
+          productVariantStatus: ProductVariantStatus.ACTIVE,
+        },
+      )
+      .leftJoinAndSelect('pv.variantOptions', 'vo')
+      .leftJoinAndSelect('vo.optionValue', 'ov')
+      .leftJoinAndSelect('ov.option', 'o')
       .where('pc.id = ANY(:ids)', { ids }) // IN 대신 ANY 사용 (PostgreSQL 최적화)
       .orderBy(
         // 동일한 정렬 조건 적용
@@ -312,8 +350,6 @@ export class ProductRepositoryService implements OnModuleInit {
           : `pc.${sortDto.sortColumn}`,
         sortDto.sort,
       )
-      .limit(pageDto.count)
-      .offset((pageDto.page - 1) * pageDto.count)
       .getMany();
 
     return [results, totalCount];

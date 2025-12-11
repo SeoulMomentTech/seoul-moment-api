@@ -16,6 +16,7 @@ import { ProductEntity } from '@app/repository/entity/product.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
+import { OptionType } from '@app/repository/enum/product.enum';
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
@@ -143,7 +144,7 @@ export class ProductService {
         dto.optionIdList,
       );
 
-    const [brandText, productText] = await Promise.all([
+    const [brandText, productText, optionValueText] = await Promise.all([
       this.languageRepositoryService.findMultilingualTextsByEntities(
         EntityType.BRAND,
         productItemList.map((v) => v.product.brand.id),
@@ -154,6 +155,17 @@ export class ProductService {
         productItemList.map((v) => v.product.id),
         language,
       ),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.OPTION_VALUE,
+        productItemList.flatMap((v) =>
+          v.variants.flatMap((v) =>
+            v.variantOptions
+              .filter((vo) => vo.optionValue?.option?.type === OptionType.COLOR)
+              .map((vo) => vo.optionValueId),
+          ),
+        ),
+        language,
+      ),
     ]);
 
     return [
@@ -161,6 +173,7 @@ export class ProductService {
         GetProductResponse.from(v, {
           brand: brandText,
           product: productText,
+          optionValue: optionValueText,
         }),
       ),
       count,

@@ -10,6 +10,7 @@ import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { OptionValueEntity } from './option-value.entity';
 import { EntityType } from '../enum/entity.enum';
+import { OptionUiType } from '../enum/option.enum';
 import { OptionType } from '../enum/product.enum';
 
 /**
@@ -29,6 +30,13 @@ export class OptionEntity extends CommonEntity {
     comment: '옵션 타입 (COLOR/SIZE/MATERIAL/FIT/STYLE)',
   })
   type: OptionType;
+
+  @Column('enum', {
+    enum: OptionUiType,
+    nullable: false,
+    default: OptionUiType.RADIO,
+  })
+  uiType: OptionUiType;
 
   @Column('int', {
     name: 'sort_order',
