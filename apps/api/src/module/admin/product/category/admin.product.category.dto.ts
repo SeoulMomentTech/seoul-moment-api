@@ -1,11 +1,12 @@
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
   IsNumber,
+  IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
@@ -139,4 +140,93 @@ export class PostAdminProductCategoryRequest {
   @IsString()
   @IsDefined()
   imageUrl: string;
+}
+
+export class GetAdminProductCategoryInfoResponse {
+  @ApiProperty({
+    description: '카테고리 국가별 object list',
+    type: [PostAdminProductCategoryNameDto],
+    example: [
+      {
+        languageId: 1,
+        name: '귀걸이',
+      },
+      {
+        languageId: 2,
+        name: 'Earrings',
+      },
+      {
+        languageId: 3,
+        name: '耳環',
+      },
+    ],
+  })
+  list: GetAdminProductCategoryNameDto[];
+
+  @ApiProperty({
+    description: '카테고리 아이디',
+    example: 1,
+  })
+  categoryId: number;
+
+  @ApiProperty({
+    description: '카테고리 이미지 URL',
+    example: 'https://example.com/image1.jpg',
+  })
+  imageUrl: string;
+
+  static from(
+    nameDto: GetAdminProductCategoryNameDto[],
+    categoryId: number,
+    imageUrl: string,
+  ) {
+    return plainToInstance(this, {
+      list: nameDto,
+      categoryId,
+      imageUrl,
+    });
+  }
+}
+
+export class PatchAdminProductCategoryRequest {
+  @ApiPropertyOptional({
+    description: '카테고리 국가별 object list',
+    type: [PostAdminProductCategoryNameDto],
+    example: [
+      {
+        languageId: 1,
+        name: '귀걸이',
+      },
+      {
+        languageId: 2,
+        name: 'Earrings',
+      },
+      {
+        languageId: 3,
+        name: '耳環',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PostAdminProductCategoryNameDto)
+  @IsOptional()
+  list?: PostAdminProductCategoryNameDto[];
+
+  @ApiPropertyOptional({
+    description: '카테고리 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  categoryId?: number;
+
+  @ApiPropertyOptional({
+    description: '카테고리 이미지 URL',
+    example: 'https://example.com/image1.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
 }

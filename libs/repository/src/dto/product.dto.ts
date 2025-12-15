@@ -5,11 +5,13 @@ import { plainToInstance } from 'class-transformer';
 import { IsOptional } from 'class-validator';
 
 import { ProductBannerEntity } from '../entity/product-banner.entity';
+import { ProductCategoryEntity } from '../entity/product-category.entity';
 import { ProductEntity } from '../entity/product.entity';
 import { OptionType, ProductSortColumn } from '../enum/product.enum';
 
 export type UpdateProductBannerDto = RequireKey<ProductBannerEntity, 'id'>;
 export type UpdateProductDto = RequireKey<ProductEntity, 'id'>;
+export type UpdateProductCategoryDto = RequireKey<ProductCategoryEntity, 'id'>;
 
 export class ProductSortDto {
   @ApiProperty({

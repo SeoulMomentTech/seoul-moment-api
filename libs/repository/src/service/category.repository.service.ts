@@ -7,6 +7,7 @@ import { In, Like, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 
 import { UpdateCategoryDto } from '../dto/category.dto';
+import { UpdateProductCategoryDto } from '../dto/product.dto';
 import { CategoryEntity } from '../entity/category.entity';
 import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
@@ -141,5 +142,15 @@ export class CategoryRepositoryService {
 
   async updateCategory(entity: UpdateCategoryDto): Promise<CategoryEntity> {
     return this.categoryRepository.save(entity);
+  }
+
+  async deleteProductCategory(id: number): Promise<void> {
+    await this.productCategoryRepository.delete({ id });
+  }
+
+  async updateProductCategory(
+    entity: UpdateProductCategoryDto,
+  ): Promise<ProductCategoryEntity> {
+    return this.productCategoryRepository.save(entity);
   }
 }
