@@ -1037,6 +1037,7 @@ export class GetProductFilterResponse {
   static from(title: string, optionValueList: ProductFilterOptionValue[]) {
     return plainToInstance(this, {
       title,
+      type: OptionUiType.RADIO,
       optionValueList,
     });
   }
