@@ -8,6 +8,5 @@ import { AdminProductCategoryService } from './admin.product.category.service';
   imports: [RepositoryModule],
   controllers: [AdminProductCategoryController],
   providers: [AdminProductCategoryService],
-  exports: [AdminProductCategoryService],
 })
 export class AdminProductCategoryModule {}

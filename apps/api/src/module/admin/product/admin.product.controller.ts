@@ -12,6 +12,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -62,33 +63,33 @@ export class AdminProductController {
     await this.adminProductService.postAdminProduct(body);
   }
 
-  @Delete(':id')
+  @Delete(':id(\\d+)')
   @ApiOperation({
     summary: '상품 대주제 삭제',
   })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteAdminProduct(@Param('id') id: number) {
+  async deleteAdminProduct(@Param('id', ParseIntPipe) id: number) {
     await this.adminProductService.deleteAdminProduct(id);
   }
 
-  @Patch(':id')
+  @Patch(':id(\\d+)')
   @ApiOperation({
     summary: '상품 대주제 수정',
   })
   @HttpCode(HttpStatus.OK)
   async patchAdminProduct(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() body: PatchAdminProductRequest,
   ) {
     await this.adminProductService.patchAdminProduct(id, body);
   }
 
-  @Get(':id')
+  @Get(':id(\\d+)')
   @ApiOperation({
     summary: '상품 대주제 상세 조회',
   })
   @ResponseData(GetAdminProductDetailResponse)
-  async getAdminProductDetail(@Param('id') id: number) {
+  async getAdminProductDetail(@Param('id', ParseIntPipe) id: number) {
     const result = await this.adminProductService.getAdminProductDetail(id);
     return new ResponseDataDto(result);
   }
