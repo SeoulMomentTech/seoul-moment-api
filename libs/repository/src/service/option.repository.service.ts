@@ -6,7 +6,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Like, Repository } from 'typeorm';
 
-import { OptionSortDto, UpdateOptionDto } from '../dto/option.dto';
+import {
+  OptionSortDto,
+  UpdateOptionDto,
+  UpdateOptionValueDto,
+} from '../dto/option.dto';
 import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
 import { OptionValueEntity } from '../entity/option-value.entity';
 import { OptionEntity } from '../entity/option.entity';
@@ -41,7 +45,7 @@ export class OptionRepositoryService {
     });
   }
 
-  async getOptionValueByOptionId(
+  async findOptionValueByOptionId(
     optionId: number,
   ): Promise<OptionValueEntity[]> {
     return this.optionValueRepository.find({
@@ -135,8 +139,16 @@ export class OptionRepositoryService {
     return this.optionRepository.delete(id);
   }
 
+  async deleteOptionValue(id: number) {
+    return this.optionValueRepository.delete(id);
+  }
+
   async updateOption(dto: UpdateOptionDto) {
     return this.optionRepository.save(dto);
+  }
+
+  async updateOptionValue(dto: UpdateOptionValueDto) {
+    return this.optionValueRepository.save(dto);
   }
 
   async getOptionById(id: number): Promise<OptionEntity> {

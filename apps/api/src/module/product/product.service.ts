@@ -264,7 +264,7 @@ export class ProductService {
     language: LanguageCode,
   ): Promise<GetOptionValueResponse[]> {
     const optionValueEntites =
-      await this.optionRepositoryService.getOptionValueByOptionId(optionId);
+      await this.optionRepositoryService.findOptionValueByOptionId(optionId);
 
     const optionValueText =
       await this.languageRepositoryService.findMultilingualTextsByEntities(

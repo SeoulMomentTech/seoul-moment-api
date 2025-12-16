@@ -1,5 +1,11 @@
+/* eslint-disable max-lines-per-function */
 import { PagingDto } from '@app/common/dto/global.dto';
-import { OptionSortDto, UpdateOptionDto } from '@app/repository/dto/option.dto';
+import {
+  OptionSortDto,
+  UpdateOptionDto,
+  UpdateOptionValueDto,
+} from '@app/repository/dto/option.dto';
+import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { OptionSortColumn } from '@app/repository/enum/option.repository.enum';
@@ -14,8 +20,12 @@ import {
   GetAdminProductOptionNameDto,
   GetAdminProductOptionRequest,
   GetAdminProductOptionResponse,
+  GetAdminProductOptionValueNameDto,
+  GetAdminProductOptionValueResponse,
   PatchAdminProductOptionRequest,
+  PatchAdminProductOptionValueRequest,
   PostAdminProductOptionRequest,
+  PostAdminProductOptionValueRequest,
 } from './admin.product.option.dto';
 
 @Injectable()
@@ -84,6 +94,27 @@ export class AdminProductOptionService {
       );
     }
   }
+  @Transactional()
+  async postAdminProductOptionValue(dto: PostAdminProductOptionValueRequest) {
+    await this.optionRepositoryService.getOptionById(dto.optionId);
+
+    const optionValueEntity =
+      await this.optionRepositoryService.insertOptionValue(
+        plainToInstance(OptionValueEntity, {
+          optionId: dto.optionId,
+        }),
+      );
+
+    for (const text of dto.text) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.OPTION_VALUE,
+        optionValueEntity.id,
+        'value',
+        text.languageId,
+        text.value,
+      );
+    }
+  }
 
   @Transactional()
   async deleteAdminProductOption(id: number) {
@@ -91,6 +122,16 @@ export class AdminProductOptionService {
 
     await this.languageRepositoryService.deleteMultilingualTexts(
       EntityType.OPTION,
+      id,
+    );
+  }
+
+  @Transactional()
+  async deleteAdminProductOptionValue(id: number) {
+    await this.optionRepositoryService.deleteOptionValue(id);
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.OPTION_VALUE,
       id,
     );
   }
@@ -122,13 +163,64 @@ export class AdminProductOptionService {
     }
   }
 
+  @Transactional()
+  async patchAdminProductOptionValue(
+    id: number,
+    dto: PatchAdminProductOptionValueRequest,
+  ) {
+    const updateOptionValueDto: UpdateOptionValueDto = {
+      id,
+      optionId: dto.optionId,
+    };
+
+    await this.optionRepositoryService.updateOptionValue(updateOptionValueDto);
+
+    if (dto.text && dto.text.length > 0) {
+      for (const text of dto.text) {
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.OPTION_VALUE,
+          id,
+          'value',
+          text.languageId,
+          text.value,
+        );
+      }
+    }
+  }
+
   async getAdminProductOptionInfo(
     id: number,
   ): Promise<GetAdminProductOptionInfoResponse> {
     const optionEntity = await this.optionRepositoryService.getOptionById(id);
+    const optionValueList =
+      await this.optionRepositoryService.findOptionValueByOptionId(id);
 
     const languages =
       await this.languageRepositoryService.findAllActiveLanguages();
+
+    const optionValueNameDto = await Promise.all(
+      optionValueList.map(async (v) => {
+        const nameDto = await Promise.all(
+          languages.map(async (language) => {
+            const multilingualText =
+              await this.languageRepositoryService.findMultilingualTexts(
+                EntityType.OPTION_VALUE,
+                v.id,
+                language.code,
+                'value',
+              );
+            if (multilingualText.length > 0) {
+              return GetAdminProductOptionValueNameDto.from(
+                language.code,
+                multilingualText[0].textContent,
+              );
+            }
+            return null;
+          }),
+        );
+        return GetAdminProductOptionValueResponse.from(v, nameDto);
+      }),
+    );
 
     const nameDto = await Promise.all(
       languages.map(async (language) => {
@@ -151,6 +243,10 @@ export class AdminProductOptionService {
       }),
     );
 
-    return GetAdminProductOptionInfoResponse.from(optionEntity, nameDto);
+    return GetAdminProductOptionInfoResponse.from(
+      optionEntity,
+      nameDto,
+      optionValueNameDto,
+    );
   }
 }

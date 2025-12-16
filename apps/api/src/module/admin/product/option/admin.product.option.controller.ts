@@ -22,7 +22,9 @@ import {
   GetAdminProductOptionRequest,
   GetAdminProductOptionResponse,
   PatchAdminProductOptionRequest,
+  PatchAdminProductOptionValueRequest,
   PostAdminProductOptionRequest,
+  PostAdminProductOptionValueRequest,
 } from './admin.product.option.dto';
 import { AdminProductOptionService } from './admin.product.option.service';
 
@@ -49,6 +51,32 @@ export class AdminProductOptionController {
   @HttpCode(HttpStatus.CREATED)
   async postAdminProductOption(@Body() body: PostAdminProductOptionRequest) {
     await this.adminProductOptionService.postAdminProductOption(body);
+  }
+
+  @Post('value')
+  @ApiOperation({ summary: '상품 옵션 값 등록' })
+  @HttpCode(HttpStatus.CREATED)
+  async postAdminProductOptionValue(
+    @Body() body: PostAdminProductOptionValueRequest,
+  ) {
+    await this.adminProductOptionService.postAdminProductOptionValue(body);
+  }
+
+  @Patch('value/:id(\\d+)')
+  @ApiOperation({ summary: '상품 옵션 값 수정' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async patchAdminProductOptionValue(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: PatchAdminProductOptionValueRequest,
+  ) {
+    await this.adminProductOptionService.patchAdminProductOptionValue(id, body);
+  }
+
+  @Delete('value/:id(\\d+)')
+  @ApiOperation({ summary: '상품 옵션 값 삭제' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteAdminProductOptionValue(@Param('id', ParseIntPipe) id: number) {
+    await this.adminProductOptionService.deleteAdminProductOptionValue(id);
   }
 
   @Delete(':id(\\d+)')

@@ -3,11 +3,12 @@ import { RequireKey } from '@app/common/type/require-key.type';
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 
+import { OptionValueEntity } from '../entity/option-value.entity';
 import { OptionEntity } from '../entity/option.entity';
 import { OptionSortColumn } from '../enum/option.repository.enum';
 
 export type UpdateOptionDto = RequireKey<OptionEntity, 'id'>;
-
+export type UpdateOptionValueDto = RequireKey<OptionValueEntity, 'id'>;
 export class OptionSortDto {
   @ApiProperty({
     description: '정렬할 컬럼',

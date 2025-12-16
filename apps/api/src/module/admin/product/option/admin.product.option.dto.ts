@@ -1,3 +1,4 @@
+import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { OptionUiType } from '@app/repository/enum/option.enum';
@@ -161,6 +162,84 @@ export class PostAdminProductOptionRequest {
   uiType: OptionUiType;
 }
 
+export class PostAdminProductOptionValueText {
+  @ApiProperty({
+    description: '언어 ID',
+    example: 1,
+  })
+  @IsInt()
+  @IsDefined()
+  languageId: number;
+
+  @ApiProperty({
+    description: '옵션 값 이름',
+    example: '빨강',
+  })
+  @IsString()
+  @IsDefined()
+  value: string;
+}
+
+export class PostAdminProductOptionValueRequest {
+  @ApiProperty({
+    description: '옵션 ID',
+    example: 1,
+  })
+  @IsInt()
+  @IsDefined()
+  optionId: number;
+
+  @ApiProperty({
+    description: '옵션 값 이름 리스트',
+    type: [PostAdminProductOptionValueText],
+    example: [
+      {
+        languageId: 1,
+        value: '빨강',
+      },
+      {
+        languageId: 2,
+        value: 'Red',
+      },
+      {
+        languageId: 3,
+        value: '红色',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PostAdminProductOptionValueText)
+  @IsDefined()
+  text: PostAdminProductOptionValueText[];
+}
+
+export class PatchAdminProductOptionValueRequest {
+  @ApiPropertyOptional({
+    description: '옵션 ID',
+    example: 1,
+  })
+  @IsInt()
+  @IsOptional()
+  optionId?: number;
+
+  @ApiPropertyOptional({
+    description: '옵션 값 이름 리스트',
+    type: [PostAdminProductOptionValueText],
+    example: [
+      {
+        languageId: 1,
+        value: '빨강',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PostAdminProductOptionValueText)
+  @IsOptional()
+  text?: PostAdminProductOptionValueText[];
+}
+
 export class PatchAdminProductOptionRequest {
   @ApiPropertyOptional({
     description: '국가별 글자',
@@ -180,6 +259,7 @@ export class PatchAdminProductOptionRequest {
       },
     ],
   })
+  @IsArray()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PostAdminProductOptionText)
@@ -211,6 +291,66 @@ export class PatchAdminProductOptionRequest {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+}
+
+export class GetAdminProductOptionValueNameDto {
+  @ApiProperty({
+    description: '언어 코드',
+    example: LanguageCode.KOREAN,
+    enum: LanguageCode,
+  })
+  languageCode: LanguageCode;
+
+  @ApiProperty({
+    description: '옵션 값',
+    example: '빨강',
+  })
+  value: string;
+
+  static from(languageCode: LanguageCode, value: string) {
+    return plainToInstance(this, {
+      languageCode,
+      value,
+    });
+  }
+}
+
+export class GetAdminProductOptionValueResponse {
+  @ApiProperty({
+    description: '옵션 값 ID',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '옵션 값 이름 리스트',
+    type: [GetAdminProductOptionValueNameDto],
+    example: [
+      {
+        languageCode: LanguageCode.KOREAN,
+        name: '빨강',
+      },
+      {
+        languageCode: LanguageCode.ENGLISH,
+        name: 'Red',
+      },
+      {
+        languageCode: LanguageCode.TAIWAN,
+        name: '紅色',
+      },
+    ],
+  })
+  nameDto: GetAdminProductOptionValueNameDto[];
+
+  static from(
+    entity: OptionValueEntity,
+    nameDto: GetAdminProductOptionValueNameDto[],
+  ) {
+    return plainToInstance(this, {
+      id: entity.id,
+      nameDto,
+    });
+  }
 }
 
 export class GetAdminProductOptionInfoResponse {
@@ -260,13 +400,60 @@ export class GetAdminProductOptionInfoResponse {
   })
   uiType: OptionUiType;
 
-  static from(entity: OptionEntity, nameDto: GetAdminProductOptionNameDto[]) {
+  @ApiProperty({
+    description: '옵션 값 리스트',
+    type: [GetAdminProductOptionValueResponse],
+    example: [
+      {
+        id: 1,
+        nameDto: [
+          {
+            languageCode: LanguageCode.KOREAN,
+            name: '빨강',
+          },
+          {
+            languageCode: LanguageCode.ENGLISH,
+            name: 'Red',
+          },
+          {
+            languageCode: LanguageCode.TAIWAN,
+            name: '紅色',
+          },
+        ],
+      },
+      {
+        id: 2,
+        nameDto: [
+          {
+            languageCode: LanguageCode.KOREAN,
+            name: '파랑',
+          },
+          {
+            languageCode: LanguageCode.ENGLISH,
+            name: 'Blue',
+          },
+          {
+            languageCode: LanguageCode.TAIWAN,
+            name: '藍色',
+          },
+        ],
+      },
+    ],
+  })
+  optionValueList: GetAdminProductOptionValueResponse[];
+
+  static from(
+    entity: OptionEntity,
+    nameDto: GetAdminProductOptionNameDto[],
+    optionValueList: GetAdminProductOptionValueResponse[],
+  ) {
     return plainToInstance(this, {
       id: entity.id,
       type: entity.type,
       nameDto,
       isActive: entity.isActive,
       uiType: entity.uiType,
+      optionValueList,
     });
   }
 }
