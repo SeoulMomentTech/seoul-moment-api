@@ -5,6 +5,7 @@ import { AdminProductController } from './admin.product.controller';
 import { AdminProductService } from './admin.product.service';
 import { AdminProductBannerModule } from './banner/admin.product.banner.module';
 import { AdminProductCategoryModule } from './category/admin.product.category.module';
+import { AdminProductItemModule } from './item/admin.product.item.module';
 import { AdminProductOptionModule } from './option/admin.product.option.module';
 
 @Module({
@@ -13,6 +14,7 @@ import { AdminProductOptionModule } from './option/admin.product.option.module';
     AdminProductBannerModule,
     AdminProductCategoryModule,
     AdminProductOptionModule,
+    AdminProductItemModule,
   ],
   controllers: [AdminProductController],
   providers: [AdminProductService],

@@ -434,18 +434,15 @@ export class GetProductDetailOption {
     required: false,
   })
   [OptionType.STYLE]?: GetProductDetailOptionValue[];
-
-  static from(
-    optionType: OptionType,
-    valueList: GetProductDetailOptionValue[],
-  ) {
-    return plainToInstance(this, {
-      [optionType]: valueList,
-    });
-  }
 }
 
 export class GetProductDetailBrand {
+  @ApiProperty({
+    description: '브랜드 아이디',
+    example: 1,
+  })
+  id: number;
+
   @ApiProperty({
     description: '브랜드 프로필 이미지 URL',
     example:
@@ -459,8 +456,9 @@ export class GetProductDetailBrand {
   })
   name: string;
 
-  static from(profileImg: string, name: string) {
+  static from(id: number, profileImg: string, name: string) {
     return plainToInstance(this, {
+      id,
       profileImg,
       name,
     });
@@ -518,9 +516,23 @@ export class GetProductDetailResponse {
 
   @ApiProperty({
     description: '상품 옵션 목록',
-    type: [GetProductDetailOption],
+    type: GetProductDetailOption,
+    example: {
+      color: [
+        {
+          id: 1,
+          value: '빨강',
+        },
+      ],
+      size: [
+        {
+          id: 1,
+          value: 'S',
+        },
+      ],
+    },
   })
-  option: GetProductDetailOption[];
+  option: GetProductDetailOption;
 
   @ApiProperty({
     description: '좋아요 수',
@@ -593,7 +605,7 @@ export class GetProductDetailResponse {
       brand: MultilingualTextEntity[];
       product: MultilingualTextEntity[];
     },
-    option: GetProductDetailOption[],
+    option: Record<string, any>,
     relate: GetProductResponse[],
   ) {
     const name = MultilingualFieldDto.fromByEntity(
@@ -615,6 +627,7 @@ export class GetProductDetailResponse {
       id: entity.id,
       name: name.getContent(),
       brand: GetProductDetailBrand.from(
+        entity.product.brand.id,
         entity.product.brand.getProfileImage(),
         brandName.getContent(),
       ),

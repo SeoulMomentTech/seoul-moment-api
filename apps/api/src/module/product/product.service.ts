@@ -45,6 +45,7 @@ import {
   PostOptionValueRequest,
   PostProductItemRequest,
   PostProductVariantRequest,
+  GetProductDetailOptionValue,
 } from './product.dto';
 import {
   GetOptionResponse,
@@ -210,18 +211,14 @@ export class ProductService {
         productDetail.id,
       );
 
-    const optionValueList = await Promise.all(
-      optionType.map(async (v) =>
-        GetProductDetailOption.from(
-          v,
-          await this.productRepositoryService.getProductOption(
-            v,
-            productDetail.id,
-            languageEntity.id,
-          ),
-        ),
-      ),
-    );
+    const optionValueMap: Record<string, any> = {};
+    for (const v of optionType) {
+      optionValueMap[v] = await this.productRepositoryService.getProductOption(
+        v,
+        productDetail.id,
+        languageEntity.id,
+      );
+    }
 
     const [brandtext, productText] = await Promise.all([
       this.languageRepositoryService.findMultilingualTexts(
@@ -248,7 +245,7 @@ export class ProductService {
         brand: brandtext,
         product: productText,
       },
-      optionValueList,
+      optionValueMap,
       relate,
     );
   }

@@ -27,4 +27,10 @@ export class AdminUploadImageResponse {
     example: 'https://example.com/image.jpg',
   })
   imageUrl: string;
+
+  @ApiProperty({
+    description: '이미지 경로',
+    example: '/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
+  })
+  imagePath: string;
 }

@@ -32,6 +32,7 @@ export class AdminImageService {
 
     return {
       imageUrl: image.url,
+      imagePath: `/${image.key}`,
     };
   }
 }
