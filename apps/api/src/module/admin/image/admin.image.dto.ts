@@ -24,7 +24,8 @@ export class AdminUploadImageRequest {
 export class AdminUploadImageResponse {
   @ApiProperty({
     description: '이미지 URL',
-    example: 'https://example.com/image.jpg',
+    example:
+      'https://example.com/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
   })
   imageUrl: string;
 

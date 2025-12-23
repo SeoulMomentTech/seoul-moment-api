@@ -77,6 +77,18 @@ export class GetAdminProductOptionResponse {
   nameDto: GetAdminProductOptionNameDto[];
 
   @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  updateDate: Date;
+
+  @ApiProperty({
     description: '옵션 활성 여부',
     example: true,
   })
@@ -96,6 +108,8 @@ export class GetAdminProductOptionResponse {
       nameDto,
       isActive: entity.isActive,
       uiType: entity.uiType,
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }
@@ -342,6 +356,18 @@ export class GetAdminProductOptionValueResponse {
   })
   nameDto: GetAdminProductOptionValueNameDto[];
 
+  @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  updateDate: Date;
+
   static from(
     entity: OptionValueEntity,
     nameDto: GetAdminProductOptionValueNameDto[],
@@ -349,6 +375,8 @@ export class GetAdminProductOptionValueResponse {
     return plainToInstance(this, {
       id: entity.id,
       nameDto,
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }
@@ -442,6 +470,18 @@ export class GetAdminProductOptionInfoResponse {
   })
   optionValueList: GetAdminProductOptionValueResponse[];
 
+  @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  updateDate: Date;
+
   static from(
     entity: OptionEntity,
     nameDto: GetAdminProductOptionNameDto[],
@@ -454,6 +494,8 @@ export class GetAdminProductOptionInfoResponse {
       isActive: entity.isActive,
       uiType: entity.uiType,
       optionValueList,
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }

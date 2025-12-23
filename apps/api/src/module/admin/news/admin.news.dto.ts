@@ -97,10 +97,24 @@ export class GetAdminNewsResponse {
   })
   textDto: GetAdminNewsTextDto[];
 
+  @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  updateDate: Date;
+
   static from(entity: NewsEntity, textDto: GetAdminNewsTextDto[]) {
     return plainToInstance(this, {
       id: entity.id,
       textDto,
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }

@@ -144,4 +144,7 @@ export class NewsRepositoryService {
       { imageUrl: dto.newImageUrl },
     );
   }
+  async delete(id: number) {
+    await this.newsRepository.delete(id);
+  }
 }

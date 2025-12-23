@@ -383,6 +383,32 @@ export class GetAdminBrandInfoResponse {
   id: number;
 
   @ApiProperty({
+    description: '카테고리 ID',
+    example: 1,
+  })
+  categoryId: number;
+
+  @ApiProperty({
+    description: '영어 이름',
+    example: 'Seoul Moment',
+  })
+  englishName: string;
+
+  @ApiProperty({
+    description: '프로필 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
+  })
+  profileImage: string;
+
+  @ApiProperty({
+    description: '상품 배너 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-product-banner.jpg',
+  })
+  productBannerImage: string;
+
+  @ApiProperty({
     description: '배너 이미지 URL 리스트',
     example: [
       'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
@@ -474,6 +500,10 @@ export class GetAdminBrandInfoResponse {
 
     return plainToInstance(this, {
       id: entity.id,
+      categoryId: entity.categoryId,
+      englishName: entity.englishName,
+      profileImage: entity.profileImage,
+      productBannerImage: entity.bannerImageUrl,
       bannerList: entity.bannerImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),
@@ -544,10 +574,24 @@ export class GetAdminBrandResponse {
   })
   nameDto: GetAdminBrandNameDto[];
 
+  @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  updateDate: Date;
+
   static from(entity: BrandEntity, nameDto: GetAdminBrandNameDto[]) {
     return plainToInstance(this, {
       id: entity.id,
       nameDto,
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }

@@ -159,10 +159,10 @@ export class AdminProductCategoryService {
         return null;
       }),
     );
+
     return GetAdminProductCategoryInfoResponse.from(
       nameDto,
-      productCategoryEntity.id,
-      productCategoryEntity.imageUrl,
+      productCategoryEntity,
     );
   }
 }

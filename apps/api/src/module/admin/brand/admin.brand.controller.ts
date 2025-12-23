@@ -7,6 +7,7 @@ import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -45,7 +46,7 @@ export class AdminBrandController {
     await this.adminBrandService.postAdminBrand(body);
   }
 
-  @Get(':id')
+  @Get(':id(\\d+)')
   @ApiOperation({
     summary: '브랜드 다국어 조회',
   })
@@ -74,7 +75,7 @@ export class AdminBrandController {
     return new ResponseListDto(result, total);
   }
 
-  @Patch(':id')
+  @Patch(':id(\\d+)')
   @ApiOperation({
     summary: '브랜드 수정',
   })
@@ -86,5 +87,16 @@ export class AdminBrandController {
     @Body() body: UpdateAdminBrandRequest,
   ) {
     await this.adminBrandService.updateAdminBrand(id, body);
+  }
+
+  @Delete(':id(\\d+)')
+  @ApiOperation({
+    summary: '브랜드 삭제',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
+  async deleteAdminBrand(@Param('id', ParseIntPipe) id: number) {
+    await this.adminBrandService.deleteAdminBrand(id);
   }
 }

@@ -88,6 +88,18 @@ export class GetAdminProductCategoryResponse {
   })
   nameDto: GetAdminProductCategoryNameDto[];
 
+  @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  updateDate: Date;
+
   static from(
     entity: ProductCategoryEntity,
     nameDto: GetAdminProductCategoryNameDto[],
@@ -95,6 +107,8 @@ export class GetAdminProductCategoryResponse {
     return plainToInstance(this, {
       id: entity.id,
       nameDto,
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }
@@ -175,15 +189,28 @@ export class GetAdminProductCategoryInfoResponse {
   })
   imageUrl: string;
 
+  @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  updateDate: Date;
+
   static from(
     nameDto: GetAdminProductCategoryNameDto[],
-    categoryId: number,
-    imageUrl: string,
+    entity: ProductCategoryEntity,
   ) {
     return plainToInstance(this, {
       list: nameDto,
-      categoryId,
-      imageUrl,
+      categoryId: entity.id,
+      imageUrl: entity.getImage(),
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }

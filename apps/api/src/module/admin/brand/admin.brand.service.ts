@@ -302,4 +302,25 @@ export class AdminBrandService {
 
     await Promise.all(promises);
   }
+
+  @Transactional()
+  async deleteAdminBrand(brandId: number) {
+    const brandEntity = await this.brandRepositoryService.getBrandById(brandId);
+
+    await this.brandRepositoryService.delete(brandId);
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND,
+      brandId,
+    );
+
+    await Promise.all(
+      brandEntity.section.map((section) =>
+        this.languageRepositoryService.deleteMultilingualTexts(
+          EntityType.BRAND_SECTION,
+          section.id,
+        ),
+      ),
+    );
+  }
 }

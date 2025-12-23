@@ -8,6 +8,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -55,25 +56,27 @@ export class AdminProductBannerController {
     await this.adminProductBannerService.patchProductBannerSortOrder(body);
   }
 
-  @Patch(':id')
+  @Patch(':id(\\d+)')
   @ApiOperation({ summary: '상품 배너 수정' })
   async patchProductBanner(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() body: PatchAdminProductBannerRequest,
   ) {
     await this.adminProductBannerService.patchProductBanner(id, body.imageUrl);
   }
 
-  @Delete(':id')
+  @Delete(':id(\\d+)')
   @ApiOperation({ summary: '상품 배너 삭제' })
-  async deleteProductBanner(@Param('id') id: number) {
+  async deleteProductBanner(@Param('id', ParseIntPipe) id: number) {
     await this.adminProductBannerService.deleteProductBanner(id);
   }
 
-  @Get(':id')
+  @Get(':id(\\d+)')
   @ApiOperation({ summary: '상품 배너 상세 조회' })
   @ResponseData(GetAdminProductBannerDetailResponse)
-  async getProductBannerDetail(@Param('id') id: number) {
+  async getProductBannerDetail(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ResponseDataDto<GetAdminProductBannerDetailResponse>> {
     const result =
       await this.adminProductBannerService.getProductBannerDetail(id);
 

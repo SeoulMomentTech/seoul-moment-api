@@ -230,4 +230,8 @@ export class BrandRepositoryService {
       { sortOrder: dto.sortOrder },
     );
   }
+
+  async delete(id: number) {
+    await this.brandRepository.delete(id);
+  }
 }

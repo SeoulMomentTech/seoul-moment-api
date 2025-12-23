@@ -7,6 +7,7 @@ import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -49,7 +50,7 @@ export class AdminNewsController {
     return new ResponseListDto(result, total);
   }
 
-  @Get(':id')
+  @Get(':id(\\d+)')
   @ApiOperation({
     summary: '뉴스 다국어 조회',
   })
@@ -72,7 +73,7 @@ export class AdminNewsController {
     await this.adminNewsService.postAdminNews(body);
   }
 
-  @Patch(':id')
+  @Patch(':id(\\d+)')
   @ApiOperation({
     summary: '뉴스 수정',
   })
@@ -84,5 +85,16 @@ export class AdminNewsController {
     @Body() body: UpdateAdminNewsRequest,
   ) {
     await this.adminNewsService.updateAdminNews(id, body);
+  }
+
+  @Delete(':id(\\d+)')
+  @ApiOperation({
+    summary: '뉴스 삭제',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
+  async deleteAdminNews(@Param('id', ParseIntPipe) id: number) {
+    await this.adminNewsService.deleteAdminNews(id);
   }
 }

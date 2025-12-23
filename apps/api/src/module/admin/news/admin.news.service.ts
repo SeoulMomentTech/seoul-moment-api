@@ -285,4 +285,20 @@ export class AdminNewsService {
 
     await Promise.all(promises);
   }
+
+  @Transactional()
+  async deleteAdminNews(newsId: number) {
+    const newsEntity = await this.newsRepositoryService.getNewsById(newsId);
+
+    await this.newsRepositoryService.delete(newsId);
+
+    await Promise.all(
+      newsEntity.section.map((section) =>
+        this.languageRepositoryService.deleteMultilingualTexts(
+          EntityType.NEWS_SECTION,
+          section.id,
+        ),
+      ),
+    );
+  }
 }

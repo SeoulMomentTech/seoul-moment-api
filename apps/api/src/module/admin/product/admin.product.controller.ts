@@ -89,7 +89,9 @@ export class AdminProductController {
     summary: '상품 대주제 상세 조회',
   })
   @ResponseData(GetAdminProductDetailResponse)
-  async getAdminProductDetail(@Param('id', ParseIntPipe) id: number) {
+  async getAdminProductDetail(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ResponseDataDto<GetAdminProductDetailResponse>> {
     const result = await this.adminProductService.getAdminProductDetail(id);
     return new ResponseDataDto(result);
   }

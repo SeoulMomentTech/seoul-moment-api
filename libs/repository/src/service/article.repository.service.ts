@@ -149,4 +149,8 @@ export class ArticleRepositoryService {
       { imageUrl: dto.newImageUrl },
     );
   }
+
+  async delete(id: number) {
+    await this.articleRepository.delete(id);
+  }
 }

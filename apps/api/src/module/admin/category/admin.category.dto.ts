@@ -75,10 +75,24 @@ export class GetAdminCategoryResponse {
   })
   nameDto: GetAdminCategoryNameDto[];
 
+  @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  updateDate: Date;
+
   static from(entity: CategoryEntity, nameDto: GetAdminCategoryNameDto[]) {
     return plainToInstance(this, {
       id: entity.id,
       nameDto,
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }

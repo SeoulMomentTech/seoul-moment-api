@@ -33,11 +33,25 @@ export class AdminProductBannerListResponse {
   })
   sort: number;
 
+  @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  updateDate: Date;
+
   static from(entity: ProductBannerEntity) {
     return plainToInstance(this, {
       id: entity.id,
       imageUrl: entity.getImage(),
       sort: entity.sortOrder,
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }
@@ -117,11 +131,25 @@ export class GetAdminProductBannerDetailResponse {
   })
   sortOrder: number;
 
+  @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  updateDate: Date;
+
   static from(entity: ProductBannerEntity) {
     return plainToInstance(this, {
       id: entity.id,
       imageUrl: entity.getImage(),
       sortOrder: entity.sortOrder,
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }
