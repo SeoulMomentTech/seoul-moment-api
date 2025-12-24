@@ -502,8 +502,8 @@ export class GetAdminBrandInfoResponse {
       id: entity.id,
       categoryId: entity.categoryId,
       englishName: entity.englishName,
-      profileImage: entity.profileImage,
-      productBannerImage: entity.bannerImageUrl,
+      profileImage: entity.getProfileImage(),
+      productBannerImage: entity.getBannerImage(),
       bannerList: entity.bannerImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),

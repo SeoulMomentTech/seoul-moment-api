@@ -127,6 +127,11 @@ export class CategoryRepositoryService {
   async insertProductCategory(
     entity: ProductCategoryEntity,
   ): Promise<ProductCategoryEntity> {
+    await this.sortOrderHelper.setNextSortOrder(
+      entity,
+      this.productCategoryRepository,
+    );
+
     return this.productCategoryRepository.save(entity);
   }
 
