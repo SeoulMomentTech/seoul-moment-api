@@ -207,7 +207,7 @@ export class GetAdminProductCategoryInfoResponse {
   ) {
     return plainToInstance(this, {
       list: nameDto,
-      categoryId: entity.id,
+      categoryId: entity.category.id,
       imageUrl: entity.getImage(),
       createDate: entity.createDate,
       updateDate: entity.updateDate,
