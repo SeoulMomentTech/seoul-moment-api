@@ -96,7 +96,10 @@ export class CategoryRepositoryService {
   }
 
   async getProductCategoryById(id: number): Promise<ProductCategoryEntity> {
-    const result = await this.productCategoryRepository.findOneBy({ id });
+    const result = await this.productCategoryRepository.findOne({
+      where: { id },
+      relations: ['category'],
+    });
 
     if (!result) {
       throw new ServiceError(
