@@ -34,7 +34,7 @@ export class AdminBrandService {
       plainToInstance(BrandEntity, {
         categoryId: dto.categoryId,
         profileImage: dto.profileImageUrl ?? undefined,
-        bannerImageUrl: dto.bannerImageUrl,
+        bannerImageUrl: dto.productBannerImageUrl,
         englishName: dto.englishName,
       }),
     );
@@ -193,23 +193,26 @@ export class AdminBrandService {
     const updateBrandDto: UpdateBrandDto = {
       id: brandId,
       englishName: dto.englishName,
-      profileImage: dto.profileImage,
+      profileImage: dto.profileImageUrl,
       bannerImageUrl: dto.productBannerImage,
     };
 
     await this.brandRepositoryService.update(updateBrandDto);
 
-    if (dto.bannerList && dto.bannerList.length > 0) {
+    if (dto.bannerImageUrlList && dto.bannerImageUrlList.length > 0) {
       await Promise.all(
-        dto.bannerList.map((banner) =>
+        dto.bannerImageUrlList.map((banner) =>
           this.brandRepositoryService.updateBannerImage(banner),
         ),
       );
     }
 
-    if (dto.mobileBannerList && dto.mobileBannerList.length > 0) {
+    if (
+      dto.mobileBannerImageUrlList &&
+      dto.mobileBannerImageUrlList.length > 0
+    ) {
       await Promise.all(
-        dto.mobileBannerList.map((banner) =>
+        dto.mobileBannerImageUrlList.map((banner) =>
           this.brandRepositoryService.updateMobileBannerImage(banner),
         ),
       );
@@ -249,51 +252,53 @@ export class AdminBrandService {
             ),
           );
         }
+      }
 
-        if (text.section && text.section.length > 0) {
-          for (const section of text.section) {
-            if (section.title) {
+      if (dto.sectionList && dto.sectionList.length > 0) {
+        for (const section of dto.sectionList) {
+          for (const text of section.textList) {
+            if (text.title) {
               promises.push(
                 this.languageRepositoryService.saveMultilingualText(
                   EntityType.BRAND_SECTION,
                   section.id,
                   'title',
                   text.languageId,
-                  section.title,
+                  text.title,
                 ),
               );
             }
-            if (section.content) {
+            if (text.content) {
               promises.push(
                 this.languageRepositoryService.saveMultilingualText(
                   EntityType.BRAND_SECTION,
                   section.id,
                   'content',
                   text.languageId,
-                  section.content,
+                  text.content,
                 ),
               );
             }
+          }
 
-            if (
-              section.sectionImageList &&
-              section.sectionImageList.length > 0
-            ) {
-              for (const sectionImage of section.sectionImageList) {
-                promises.push(
-                  this.brandRepositoryService.updateSectionImage(sectionImage),
-                );
-              }
+          if (section.imageUrlList && section.imageUrlList.length > 0) {
+            for (const imageUrl of section.imageUrlList) {
+              promises.push(
+                this.brandRepositoryService.updateSectionImage(imageUrl),
+              );
             }
+          }
 
-            if (section.sortOrderList && section.sortOrderList.length > 0) {
-              for (const sortOrder of section.sortOrderList) {
-                promises.push(
-                  this.brandRepositoryService.updateSectionImageSortOrder(
-                    sortOrder,
-                  ),
-                );
-              }
+          if (
+            section.imageSortOrderList &&
+            section.imageSortOrderList.length > 0
+          ) {
+            for (const sortOrder of section.imageSortOrderList) {
+              promises.push(
+                this.brandRepositoryService.updateSectionImageSortOrder(
+                  sortOrder,
+                ),
+              );
             }
           }
         }

@@ -72,12 +72,13 @@ export class AdminBrandController {
   ): Promise<ResponseListDto<GetAdminBrandResponse>> {
     const [result, total] =
       await this.adminBrandService.getAdminBrandList(query);
+
     return new ResponseListDto(result, total);
   }
 
   @Patch(':id(\\d+)')
   @ApiOperation({
-    summary: '브랜드 수정',
+    summary: '브랜드 수정 브랜드 수정값',
   })
   @HttpCode(HttpStatus.ACCEPTED)
   @UseGuards(OneTimeTokenGuard)
