@@ -65,7 +65,8 @@ export class AdminCategoryController {
 
   @Post()
   @ApiOperation({
-    summary: '카테고리 다국어 등록',
+    summary: '카테고리 등록',
+    description: '카테고리 등록 시 자동으로 영어, 중국어 번역이 됩니다.',
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(OneTimeTokenGuard)

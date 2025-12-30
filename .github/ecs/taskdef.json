@@ -108,6 +108,10 @@
         {
           "name": "GOOGLE_APP_PASS",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:GOOGLE_APP_PASS::"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:OPENAI_API_KEY::"
         }
       ],
       "logConfiguration": {

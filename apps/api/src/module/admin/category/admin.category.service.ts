@@ -1,6 +1,8 @@
+import { OpenaiService } from '@app/external/openai/openai.service';
 import { UpdateCategoryDto } from '@app/repository/dto/category.dto';
 import { CategoryEntity } from '@app/repository/entity/category.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
+import { LanguageName } from '@app/repository/enum/language.enum';
 import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
@@ -20,6 +22,7 @@ export class AdminCategoryService {
   constructor(
     private readonly categoryRepositoryService: CategoryRepositoryService,
     private readonly languageRepositoryService: LanguageRepositoryService,
+    private readonly openaiService: OpenaiService,
   ) {}
 
   async getAdminCategoryList(
@@ -66,12 +69,28 @@ export class AdminCategoryService {
 
   @Transactional()
   async postAdminCategory(dto: PostAdminCategoryRequest) {
+    const languageArray =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const translatedNames = await Promise.all(
+      languageArray.map(async (languageEntity) => {
+        const translatedName = await this.openaiService.translate(
+          dto.name,
+          languageEntity.name as LanguageName,
+        );
+        return {
+          languageId: languageEntity.id,
+          name: translatedName,
+        };
+      }),
+    );
+
     const categoryEntity = await this.categoryRepositoryService.insert(
       plainToInstance(CategoryEntity, {}),
     );
 
     await Promise.all(
-      dto.list.flatMap((v) => [
+      translatedNames.map((v) => [
         this.languageRepositoryService.saveMultilingualText(
           EntityType.CATEGORY,
           categoryEntity.id,

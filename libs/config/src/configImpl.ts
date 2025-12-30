@@ -38,4 +38,6 @@ export interface ConfigImpl {
   RECAPTCHA_SECRET_KEY: string;
 
   GOOGLE_APP_PASS: string;
+
+  OPENAI_API_KEY: string;
 }

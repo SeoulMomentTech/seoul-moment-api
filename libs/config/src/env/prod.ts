@@ -35,6 +35,8 @@ const getConfig = (): ConfigImpl => ({
   RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY || '',
 
   GOOGLE_APP_PASS: process.env.GOOGLE_APP_PASS || '',
+
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
 });
 
 export default getConfig;

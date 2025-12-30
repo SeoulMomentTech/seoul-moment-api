@@ -61,6 +61,7 @@
     "moment-timezone": "^0.6.0",
     "morgan": "^1.10.1",
     "morgan-body": "^2.6.9",
+    "openai": "^6.15.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.0",

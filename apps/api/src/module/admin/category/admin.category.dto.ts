@@ -117,28 +117,12 @@ export class AdminCategoryTextInfo {
 
 export class PostAdminCategoryRequest {
   @ApiProperty({
-    description: '카테고리 국가별 object list',
-    type: [AdminCategoryTextInfo],
-    example: [
-      {
-        languageId: 1,
-        name: '패션',
-      },
-      {
-        languageId: 2,
-        name: 'Fashion',
-      },
-      {
-        languageId: 3,
-        name: '时尚',
-      },
-    ],
+    description: '카테고리 이름',
+    example: '패션',
   })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => AdminCategoryTextInfo)
+  @IsString()
   @IsDefined()
-  list: AdminCategoryTextInfo[];
+  name: string;
 }
 
 export class UpdateAdminCategoryRequest {
