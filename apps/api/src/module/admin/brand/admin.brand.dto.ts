@@ -800,8 +800,7 @@ export class UpdateAdminBrandRequest {
 
   @ApiPropertyOptional({
     description: '프로필 이미지',
-    example:
-      'https://image-dev.seoulmoment.com.tw/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
+    example: '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
   })
   @IsOptional()
   @IsString()
@@ -833,8 +832,7 @@ export class UpdateAdminBrandRequest {
         imageUrlList: [
           {
             oldImageUrl: '/brand-sections/2025-09-16/section-story-01.jpg',
-            newImageUrl:
-              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01-new.jpg',
+            newImageUrl: '/brand-sections/2025-09-16/section-story-01-new.jpg',
           },
         ],
         imageSortOrderList: [
@@ -859,8 +857,7 @@ export class UpdateAdminBrandRequest {
     example: [
       {
         oldImageUrl: '/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
-        newImageUrl:
-          'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-banner-01-new.jpg',
+        newImageUrl: '/brand-banners/2025-09-16/seoul-moment-banner-01-new.jpg',
       },
     ],
   })
@@ -878,7 +875,7 @@ export class UpdateAdminBrandRequest {
         oldImageUrl:
           '/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-01.jpg',
         newImageUrl:
-          'https://image-dev.seoulmoment.com.tw/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-01-new.jpg',
+          '/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-01-new.jpg',
       },
     ],
   })
@@ -890,8 +887,7 @@ export class UpdateAdminBrandRequest {
 
   @ApiPropertyOptional({
     description: '상품 배너 이미지',
-    example:
-      'https://image-dev.seoulmoment.com.tw/brand-products/2025-09-16/product-banner-01.jpg',
+    example: '/brand-products/2025-09-16/product-banner-01.jpg',
   })
   @IsOptional()
   @IsString()

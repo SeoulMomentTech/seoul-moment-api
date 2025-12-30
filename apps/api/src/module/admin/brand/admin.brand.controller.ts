@@ -79,6 +79,8 @@ export class AdminBrandController {
   @Patch(':id(\\d+)')
   @ApiOperation({
     summary: '브랜드 수정 브랜드 수정값',
+    description:
+      '이미지 수정시 이미지 URL 은 도메인을 제외한 경로만 입력해주세요. ex) /brand-profiles/2025-09-16/seoul-moment-profile.jpg',
   })
   @HttpCode(HttpStatus.ACCEPTED)
   @UseGuards(OneTimeTokenGuard)

@@ -7,6 +7,7 @@ import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -25,6 +26,7 @@ import {
 export class AdminBrandService {
   constructor(
     private readonly brandRepositoryService: BrandRepositoryService,
+    private readonly categoryRepositoryService: CategoryRepositoryService,
     private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
@@ -190,6 +192,8 @@ export class AdminBrandService {
 
   @Transactional()
   async updateAdminBrand(brandId: number, dto: UpdateAdminBrandRequest) {
+    await this.categoryRepositoryService.getCategoryById(dto.categoryId);
+
     const updateBrandDto: UpdateBrandDto = {
       id: brandId,
       englishName: dto.englishName,
@@ -253,9 +257,11 @@ export class AdminBrandService {
           );
         }
       }
+    }
 
-      if (dto.sectionList && dto.sectionList.length > 0) {
-        for (const section of dto.sectionList) {
+    if (dto.sectionList && dto.sectionList.length > 0) {
+      for (const section of dto.sectionList) {
+        if (section.textList && section.textList.length > 0) {
           for (const text of section.textList) {
             if (text.title) {
               promises.push(
@@ -280,26 +286,26 @@ export class AdminBrandService {
               );
             }
           }
+        }
 
-          if (section.imageUrlList && section.imageUrlList.length > 0) {
-            for (const imageUrl of section.imageUrlList) {
-              promises.push(
-                this.brandRepositoryService.updateSectionImage(imageUrl),
-              );
-            }
+        if (section.imageUrlList && section.imageUrlList.length > 0) {
+          for (const imageUrl of section.imageUrlList) {
+            promises.push(
+              this.brandRepositoryService.updateSectionImage(imageUrl),
+            );
           }
+        }
 
-          if (
-            section.imageSortOrderList &&
-            section.imageSortOrderList.length > 0
-          ) {
-            for (const sortOrder of section.imageSortOrderList) {
-              promises.push(
-                this.brandRepositoryService.updateSectionImageSortOrder(
-                  sortOrder,
-                ),
-              );
-            }
+        if (
+          section.imageSortOrderList &&
+          section.imageSortOrderList.length > 0
+        ) {
+          for (const sortOrder of section.imageSortOrderList) {
+            promises.push(
+              this.brandRepositoryService.updateSectionImageSortOrder(
+                sortOrder,
+              ),
+            );
           }
         }
       }
