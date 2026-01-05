@@ -1,10 +1,9 @@
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { PartnerCategoryEntity } from '@app/repository/entity/partner-category.entity';
 import { PartnerEntity } from '@app/repository/entity/partner.entity';
-import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
-import { IsDefined, IsEnum, IsNumber } from 'class-validator';
+import { IsDefined, IsNumber } from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
@@ -17,15 +16,6 @@ export class GetPartnerRequest {
   @IsNumber()
   @Type(() => Number)
   partnerCategoryId: number;
-
-  @ApiProperty({
-    description: '협력사 국가',
-    example: LanguageCode.TAIWAN,
-    enum: LanguageCode,
-  })
-  @IsDefined()
-  @IsEnum(LanguageCode)
-  country: LanguageCode;
 }
 
 export class GetPartnerResponse {
@@ -60,13 +50,6 @@ export class GetPartnerResponse {
   })
   link: string;
 
-  @ApiProperty({
-    description: '협력사 국가 코드',
-    example: LanguageCode.KOREAN,
-    enum: LanguageCode,
-  })
-  country: LanguageCode;
-
   static from(entity: PartnerEntity, multilingual: MultilingualTextEntity[]) {
     multilingual = multilingual.filter((v) => v.entityId === entity.id);
 
@@ -82,7 +65,6 @@ export class GetPartnerResponse {
       title: title.getContent(),
       description: description.getContent(),
       link: entity.link,
-      country: entity.country,
     });
   }
 }

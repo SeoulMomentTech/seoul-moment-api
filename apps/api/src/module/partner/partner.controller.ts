@@ -34,7 +34,6 @@ export class PartnerController {
   ): Promise<ResponseListDto<GetPartnerResponse>> {
     const result = await this.partnerService.getPartner(
       query.partnerCategoryId,
-      query.country,
       acceptLanguage,
     );
 

@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 
 import { PartnerCategoryEntity } from '../entity/partner-category.entity';
 import { PartnerEntity } from '../entity/partner.entity';
-import { LanguageCode } from '../enum/language.enum';
 
 @Injectable()
 export class PartnerRepositoryService {
@@ -20,14 +19,8 @@ export class PartnerRepositoryService {
     return this.partnerRepository.find();
   }
 
-  async findByCategoryIdAndCountry(
-    partnerCategoryId: number,
-    country: LanguageCode,
-  ): Promise<PartnerEntity[]> {
-    return this.partnerRepository.findBy({
-      partnerCategoryId,
-      country,
-    });
+  async findByCategoryId(partnerCategoryId: number): Promise<PartnerEntity[]> {
+    return this.partnerRepository.findBy({ partnerCategoryId });
   }
 
   async findCategoryAll(): Promise<PartnerCategoryEntity[]> {

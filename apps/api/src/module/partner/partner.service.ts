@@ -15,14 +15,10 @@ export class PartnerService {
 
   async getPartner(
     partnerCategoryId: number,
-    country: LanguageCode,
     language: LanguageCode,
   ): Promise<GetPartnerResponse[]> {
     const partnerEntitis =
-      await this.partnerRepositoryService.findByCategoryIdAndCountry(
-        partnerCategoryId,
-        country,
-      );
+      await this.partnerRepositoryService.findByCategoryId(partnerCategoryId);
 
     const partnerText =
       await this.languageRepositoryService.findMultilingualTextsByEntities(
