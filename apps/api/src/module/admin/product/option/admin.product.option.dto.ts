@@ -342,15 +342,15 @@ export class GetAdminProductOptionValueResponse {
     example: [
       {
         languageCode: LanguageCode.KOREAN,
-        name: '빨강',
+        value: '빨강',
       },
       {
         languageCode: LanguageCode.ENGLISH,
-        name: 'Red',
+        value: 'Red',
       },
       {
         languageCode: LanguageCode.TAIWAN,
-        name: '紅色',
+        value: '紅色',
       },
     ],
   })
