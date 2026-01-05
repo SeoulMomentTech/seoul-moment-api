@@ -69,6 +69,7 @@ export class S3Service {
   async uploadFile(
     file: Buffer | Uint8Array,
     options: S3UploadOptions = {},
+    extension?: string,
   ): Promise<UploadResult> {
     const {
       folder = 'uploads',
@@ -77,7 +78,7 @@ export class S3Service {
       metadata = {},
     } = options;
 
-    const fileKey = this.generateFileKey(folder, fileName);
+    const fileKey = this.generateFileKey(folder, fileName, extension);
 
     try {
       const command = new PutObjectCommand({
@@ -215,12 +216,16 @@ export class S3Service {
    * @param fileName 파일명 (선택사항)
    * @returns 생성된 파일 키
    */
-  private generateFileKey(folder: string, fileName?: string): string {
+  private generateFileKey(
+    folder: string,
+    fileName?: string,
+    extension?: string,
+  ): string {
     const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const uuid = uuidv4();
     const finalFileName = fileName || uuid;
 
-    return `${folder}/${timestamp}/${uuid}-${finalFileName}`;
+    return `${folder}/${timestamp}/${uuid}-${finalFileName}${extension ? `.${extension}` : ''}`;
   }
 
   /**

@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsArray, IsDefined, IsOptional, IsString } from 'class-validator';
 
 import { AdminS3ImageFolder } from './admin.image.enum';
 
@@ -11,6 +11,28 @@ export class AdminUploadImageRequest {
   @IsString()
   @IsDefined()
   base64: string;
+
+  @ApiProperty({
+    description: '폴더',
+    example: AdminS3ImageFolder.ARTICLE,
+  })
+  @IsString()
+  @IsDefined()
+  folder: AdminS3ImageFolder;
+}
+
+export class AdminUploadFileRequest {
+  @ApiPropertyOptional({
+    description: '파일 업로드 필드 (다중 파일 지원)',
+    type: 'array',
+    items: {
+      type: 'string',
+      format: 'binary',
+    },
+  })
+  @IsArray()
+  @IsOptional()
+  file: Express.Multer.File[]; // 파일 업로드를 위한 필드
 
   @ApiProperty({
     description: '폴더',

@@ -6,6 +6,7 @@ import {
   AdminUploadImageRequest,
   AdminUploadImageResponse,
 } from './admin.image.dto';
+import { AdminS3ImageFolder } from './admin.image.enum';
 
 @Injectable()
 export class AdminImageService {
@@ -29,6 +30,27 @@ export class AdminImageService {
     const image = await this.s3Service.uploadImage(imageBuffer, {
       folder: request.folder,
     });
+
+    return {
+      imageUrl: image.url,
+      imagePath: `/${image.key}`,
+    };
+  }
+
+  async uploadFile(
+    file: Express.Multer.File,
+    folder: AdminS3ImageFolder,
+  ): Promise<AdminUploadImageResponse> {
+    this.logger.info('uploadFile', { file, folder });
+
+    const image = await this.s3Service.uploadFile(
+      file.buffer,
+      {
+        folder,
+        contentType: file.mimetype,
+      },
+      file.mimetype.split('/')[1],
+    );
 
     return {
       imageUrl: image.url,
