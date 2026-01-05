@@ -50,17 +50,27 @@ export class AdminArticleService {
       articleEntityList.map(async (articleEntity) => {
         const nameDto = await Promise.all(
           languageArray.map(async (languageEntity) => {
-            const multilingualText =
+            const titleMultilingualText =
               await this.languageRepositoryService.findMultilingualTexts(
                 EntityType.ARTICLE,
                 articleEntity.id,
                 languageEntity.code,
                 'title',
               );
-            if (multilingualText.length > 0) {
+
+            const contentMultilingualTexts =
+              await this.languageRepositoryService.findMultilingualTexts(
+                EntityType.ARTICLE,
+                articleEntity.id,
+                languageEntity.code,
+                'content',
+              );
+
+            if (titleMultilingualText.length > 0) {
               return GetAdminArticleTextDto.from(
                 languageEntity.code,
-                multilingualText[0].textContent,
+                titleMultilingualText[0].textContent,
+                contentMultilingualTexts[0].textContent,
               );
             }
             return null;

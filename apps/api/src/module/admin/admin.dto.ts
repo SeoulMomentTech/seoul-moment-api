@@ -26,7 +26,6 @@ export class ListFilterDto {
 
   @ApiPropertyOptional({
     description: '검색',
-    example: '검색',
   })
   @IsOptional()
   @IsString()

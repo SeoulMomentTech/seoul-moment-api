@@ -62,10 +62,17 @@ export class GetAdminNewsTextDto {
   })
   title: string;
 
-  static from(languageCode: LanguageCode, title: string) {
+  @ApiProperty({
+    description: '뉴스 내용',
+    example: 'Seoul Moment Brand Launch',
+  })
+  content: string;
+
+  static from(languageCode: LanguageCode, title: string, content: string) {
     return plainToInstance(this, {
       languageCode,
       title,
+      content,
     });
   }
 }
@@ -83,14 +90,17 @@ export class GetAdminNewsResponse {
       {
         languageCode: LanguageCode.KOREAN,
         title: '서울모먼트',
+        content: '서울모먼트 뉴스 내용',
       },
       {
         languageCode: LanguageCode.ENGLISH,
         title: 'Seoul Moment',
+        content: 'Seoul Moment news content',
       },
       {
         languageCode: LanguageCode.TAIWAN,
         title: '首爾時刻',
+        content: '首爾時刻 뉴스 내용',
       },
     ],
     type: [GetAdminNewsTextDto],

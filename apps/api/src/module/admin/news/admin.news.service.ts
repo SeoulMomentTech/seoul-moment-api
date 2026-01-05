@@ -57,10 +57,18 @@ export class AdminNewsService {
                 languageEntity.code,
                 'title',
               );
+            const contentMultilingualText =
+              await this.languageRepositoryService.findMultilingualTexts(
+                EntityType.NEWS,
+                newsEntity.id,
+                languageEntity.code,
+                'content',
+              );
             if (multilingualText.length > 0) {
               return GetAdminNewsTextDto.from(
                 languageEntity.code,
                 multilingualText[0].textContent,
+                contentMultilingualText[0].textContent,
               );
             }
             return null;
