@@ -35,7 +35,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       ...error,
       code: HttpStatus[status],
-      tracdId: this.logger.getTraceId(),
+      traceId: this.logger.getTraceId(),
     });
   }
 }

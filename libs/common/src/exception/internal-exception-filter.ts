@@ -30,7 +30,7 @@ export class InternalExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       message,
       code: HttpStatus[status],
-      tracdId: this.logger.getTraceId(),
+      traceId: this.logger.getTraceId(),
     });
   }
 }
