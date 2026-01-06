@@ -4,7 +4,7 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateAdminNewsImage } from 'apps/api/src/module/admin/news/admin.news.dto';
-import { In, Like, Repository } from 'typeorm';
+import { In, Like, Not, Repository } from 'typeorm';
 
 import { UpdateNewsDto } from '../dto/news.dto';
 import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
@@ -51,6 +51,22 @@ export class NewsRepositoryService {
     return this.newsRepository.find({
       where: {
         status: NewsStatus.NORMAL,
+      },
+      order: {
+        createDate: 'DESC',
+      },
+      take: count,
+    });
+  }
+
+  async findLastNewsByCountWithId(
+    count: number,
+    id: number,
+  ): Promise<NewsEntity[]> {
+    return this.newsRepository.find({
+      where: {
+        status: NewsStatus.NORMAL,
+        id: Not(id),
       },
       order: {
         createDate: 'DESC',

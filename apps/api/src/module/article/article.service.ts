@@ -32,7 +32,7 @@ export class ArticleService {
   ): Promise<GetArticleResponse> {
     const [articleEntity, lastArticleEntityList] = await Promise.all([
       this.articleRepositoryService.getArticleById(id),
-      this.articleRepositoryService.findLastArticleByCount(3),
+      this.articleRepositoryService.findLastArticleByCountWithId(3, id),
     ]);
 
     const [articleText, sectionText, lastArticleText, categoryText] =

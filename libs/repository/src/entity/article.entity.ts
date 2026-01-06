@@ -23,7 +23,7 @@ export class ArticleEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column('int', { name: 'category_id', nullable: true })
+  @Column('int', { name: 'category_id', nullable: false })
   categoryId: number;
 
   @Column('int', { name: 'brand_id', nullable: true })

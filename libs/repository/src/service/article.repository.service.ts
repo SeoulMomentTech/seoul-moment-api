@@ -4,7 +4,7 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateAdminArticleImage } from 'apps/api/src/module/admin/article/admin.article.dto';
-import { In, Like, Repository } from 'typeorm';
+import { In, Like, Not, Repository } from 'typeorm';
 
 import { UpdateArticleDto } from '../dto/article.dto';
 import { ArticleSectionImageEntity } from '../entity/article-section-image.entity';
@@ -51,6 +51,21 @@ export class ArticleRepositoryService {
     return this.articleRepository.find({
       where: {
         status: ArticleStatus.NORMAL,
+      },
+      order: {
+        createDate: 'DESC',
+      },
+      take: count,
+    });
+  }
+  async findLastArticleByCountWithId(
+    count: number,
+    id: number,
+  ): Promise<ArticleEntity[]> {
+    return this.articleRepository.find({
+      where: {
+        status: ArticleStatus.NORMAL,
+        id: Not(id),
       },
       order: {
         createDate: 'DESC',

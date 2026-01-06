@@ -20,7 +20,7 @@ export class NewsService {
   ): Promise<GetNewsResponse> {
     const [newsEntity, lastNewsEntityList] = await Promise.all([
       this.newsRepositoryService.getNewsById(id),
-      this.newsRepositoryService.findLastNewsByCount(3),
+      this.newsRepositoryService.findLastNewsByCountWithId(3, id),
     ]);
 
     const [newsText, sectionText, lastNewsText, categoryText] =
