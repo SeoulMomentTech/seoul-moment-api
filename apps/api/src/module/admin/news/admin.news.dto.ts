@@ -398,6 +398,14 @@ export class PostAdminNewsRequest {
   @IsString()
   @IsDefined()
   profile: string;
+
+  @ApiProperty({
+    description: '홈 이미지 URL',
+    example: '/news/2025-09-16/seoul-moment-home.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  homeImage: string;
 }
 
 export class UpdateAdminNewsSection {
@@ -648,6 +656,12 @@ export class GetAdminNewsInfoResponse {
   profile: string;
 
   @ApiProperty({
+    description: '홈 이미지 URL',
+    example: 'https://example.com/home.jpg',
+  })
+  homeImage: string;
+
+  @ApiProperty({
     description: '다국어 브랜드 정보 리스트 (한국어, 영어, 중국어)',
     example: [
       {
@@ -724,6 +738,7 @@ export class GetAdminNewsInfoResponse {
       id: entity.id,
       banner: entity.getBannerImage(),
       profile: entity.getProfileImage(),
+      homeImage: entity.getHomeImage(),
       writer: entity.writer,
       categoryId: entity.categoryId,
       brandId: entity.brandId,
@@ -765,6 +780,14 @@ export class UpdateAdminNewsRequest {
   @IsString()
   @IsOptional()
   profile?: string;
+
+  @ApiPropertyOptional({
+    description: '홈 이미지 URL',
+    example: 'https://example.com/home.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  homeImage?: string;
 
   @ApiPropertyOptional({
     description: '다국어 브랜드 정보 리스트 (한국어, 영어, 중국어)',

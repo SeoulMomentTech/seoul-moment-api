@@ -131,6 +131,7 @@ export class AdminNewsService {
         writer: dto.writer,
         banner: dto.banner,
         profileImage: dto.profile,
+        homeImage: dto.homeImage,
       }),
     );
 
@@ -206,6 +207,7 @@ export class AdminNewsService {
       writer: dto.writer,
       banner: dto.banner,
       profileImage: dto.profile,
+      homeImage: dto.homeImage,
     };
 
     await this.newsRepositoryService.update(updateNewsDto);

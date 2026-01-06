@@ -38,6 +38,9 @@ export class NewsEntity extends CommonEntity {
   @Column('text', { nullable: true })
   profileImage: string;
 
+  @Column('text', { nullable: true })
+  homeImage: string;
+
   @Column('enum', {
     enum: NewsStatus,
     default: NewsStatus.NORMAL,
@@ -68,9 +71,20 @@ export class NewsEntity extends CommonEntity {
   section: NewsSectionEntity[];
 
   getProfileImage(): string {
-    return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.profileImage}`;
+    return this.profileImage
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.profileImage}`
+      : null;
   }
+
+  getHomeImage(): string {
+    return this.homeImage
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.homeImage}`
+      : null;
+  }
+
   getBannerImage(): string {
-    return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.banner}`;
+    return this.banner
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.banner}`
+      : null;
   }
 }

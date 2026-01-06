@@ -259,6 +259,12 @@ export class GetArticleListResponse {
   })
   image: string;
 
+  @ApiProperty({
+    description: '홈 이미지 URL',
+    example: 'https://example.com/home.jpg',
+  })
+  homeImage: string;
+
   static from(
     entity: ArticleEntity,
     multilingualText: MultilingualTextEntity[],
@@ -278,6 +284,7 @@ export class GetArticleListResponse {
       writer: entity.writer,
       createDate: entity.createDate,
       image: entity.getBannerImage(),
+      homeImage: entity.getHomeImage(),
     });
   }
 }
@@ -551,4 +558,12 @@ export class PostArticleRequest {
   @IsString()
   @IsDefined()
   profile: string;
+
+  @ApiProperty({
+    description: '홈 이미지 URL',
+    example: '/article/2025-09-16/seoul-moment-home.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  homeImage: string;
 }

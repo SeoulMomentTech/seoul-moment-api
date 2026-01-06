@@ -137,6 +137,7 @@ export class AdminArticleService {
         writer: dto.writer,
         banner: dto.banner,
         profileImage: dto.profile,
+        homeImage: dto.homeImage,
       }),
     );
 
@@ -213,6 +214,7 @@ export class AdminArticleService {
       writer: dto.writer,
       banner: dto.banner,
       profileImage: dto.profile,
+      homeImage: dto.homeImage,
     };
 
     await this.articleRepositoryService.update(updateArticleDto);

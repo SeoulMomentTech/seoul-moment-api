@@ -105,6 +105,7 @@ export class ArticleService {
         writer: dto.writer,
         banner: dto.banner,
         profileImage: dto.profile,
+        homeImage: dto.homeImage,
       }),
     );
 

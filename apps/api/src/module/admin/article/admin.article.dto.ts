@@ -396,6 +396,14 @@ export class PostAdminArticleRequest {
   @IsString()
   @IsDefined()
   profile: string;
+
+  @ApiProperty({
+    description: '홈 이미지 URL',
+    example: '/article/2025-09-16/seoul-moment-home.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  homeImage: string;
 }
 
 export class UpdateAdminArticleSection {
@@ -643,6 +651,12 @@ export class GetAdminArticleInfoResponse {
   banner: string;
 
   @ApiProperty({
+    description: '홈 이미지 URL',
+    example: 'https://example.com/home.jpg',
+  })
+  homeImage: string;
+
+  @ApiProperty({
     description: '작성자 프로필 이미지 URL',
     example: 'https://example.com/profile.jpg',
   })
@@ -727,6 +741,7 @@ export class GetAdminArticleInfoResponse {
       id: entity.id,
       banner: entity.getBannerImage(),
       profile: entity.getProfileImage(),
+      homeImage: entity.getHomeImage(),
       writer: entity.writer,
       categoryId: entity.categoryId,
       brandId: entity.brandId,
@@ -768,6 +783,14 @@ export class UpdateAdminArticleRequest {
   @IsString()
   @IsOptional()
   profile?: string;
+
+  @ApiPropertyOptional({
+    description: '홈 이미지 URL',
+    example: 'https://example.com/home.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  homeImage?: string;
 
   @ApiPropertyOptional({
     description: '다국어 아티클 정보 리스트 (한국어, 영어, 중국어)',

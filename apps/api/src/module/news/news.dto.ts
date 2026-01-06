@@ -246,6 +246,12 @@ export class GetNewsListResponse {
   })
   image: string;
 
+  @ApiProperty({
+    description: '홈 이미지 URL',
+    example: 'https://example.com/home.jpg',
+  })
+  homeImage: string;
+
   static from(entity: NewsEntity, multilingualText: MultilingualTextEntity[]) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
@@ -262,6 +268,7 @@ export class GetNewsListResponse {
       writer: entity.writer,
       createDate: entity.createDate,
       image: entity.getBannerImage(),
+      homeImage: entity.getHomeImage(),
     });
   }
 }
