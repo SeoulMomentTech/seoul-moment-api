@@ -40,4 +40,8 @@ export interface ConfigImpl {
   GOOGLE_APP_PASS: string;
 
   OPENAI_API_KEY: string;
+
+  OPENSEARCH_HOST: string;
+  OPENSEARCH_NAME: string;
+  OPENSEARCH_PASS: string;
 }

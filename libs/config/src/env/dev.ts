@@ -37,6 +37,10 @@ const getConfig = (): ConfigImpl => ({
   GOOGLE_APP_PASS: process.env.GOOGLE_APP_PASS || '',
 
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+
+  OPENSEARCH_HOST: process.env.OPENSEARCH_HOST || '',
+  OPENSEARCH_NAME: process.env.OPENSEARCH_NAME || '',
+  OPENSEARCH_PASS: process.env.OPENSEARCH_PASS || '',
 });
 
 export default getConfig;

@@ -331,18 +331,15 @@ export class ProductRepositoryService implements OnModuleInit {
       .leftJoinAndSelect('pc.product', 'p')
       .leftJoinAndSelect('p.brand', 'b')
       .leftJoinAndSelect('p.category', 'c')
-      .leftJoinAndSelect(
-        'pc.variants',
-        'pv',
-        'pv.status = :productVariantStatus',
-        {
-          productVariantStatus: ProductVariantStatus.ACTIVE,
-        },
-      )
+      .leftJoinAndSelect('p.productCategory', 'pcg')
+      .leftJoinAndSelect('pc.variants', 'pv')
       .leftJoinAndSelect('pv.variantOptions', 'vo')
       .leftJoinAndSelect('vo.optionValue', 'ov')
       .leftJoinAndSelect('ov.option', 'o')
       .where('pc.id = ANY(:ids)', { ids }) // IN 대신 ANY 사용 (PostgreSQL 최적화)
+      .andWhere('(pv.status = :productVariantStatus OR pv.status IS NULL)', {
+        productVariantStatus: ProductVariantStatus.ACTIVE,
+      })
       .orderBy(
         // 동일한 정렬 조건 적용
         sortDto.sortColumn === ProductSortColumn.PRICE
@@ -374,8 +371,19 @@ export class ProductRepositoryService implements OnModuleInit {
   async getProductItemByProductItemId(
     productItemId: number,
   ): Promise<ProductItemEntity> {
-    const result = await this.productItemRepository.findOneBy({
-      id: productItemId,
+    const result = await this.productItemRepository.findOne({
+      where: {
+        id: productItemId,
+      },
+      relations: [
+        'product',
+        'product.brand',
+        'images',
+        'variants',
+        'variants.variantOptions',
+        'variants.variantOptions.optionValue',
+        'variants.variantOptions.optionValue.option',
+      ],
     });
 
     if (!result)
@@ -703,5 +711,15 @@ export class ProductRepositoryService implements OnModuleInit {
         ServiceErrorCode.NOT_FOUND_DATA,
       );
     return result;
+  }
+
+  async getProductItemCount(status?: ProductItemStatus): Promise<number> {
+    const query = this.productItemRepository.createQueryBuilder('pi');
+
+    if (status) {
+      query.where('pi.status = :status', { status });
+    }
+
+    return query.getCount();
   }
 }
