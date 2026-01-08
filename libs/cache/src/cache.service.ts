@@ -6,14 +6,14 @@ import Redis from 'ioredis';
 
 @Injectable()
 export class CacheService {
-  private readonly clinet: Redis;
+  private readonly client: Redis;
 
   constructor(private readonly redisService: RedisService) {
-    this.clinet = redisService.getOrThrow();
+    this.client = redisService.getOrThrow();
   }
 
   async get(key: string): Promise<string> {
-    const result = await this.clinet.get(key);
+    const result = await this.client.get(key);
 
     if (!result)
       throw new ServiceError(
@@ -25,71 +25,71 @@ export class CacheService {
   }
 
   async find(key: string): Promise<string | null> {
-    const result = await this.clinet.get(key);
+    const result = await this.client.get(key);
 
     return result;
   }
 
   async set(key: string, value: string | Buffer | number, expireTime?: number) {
     if (expireTime) {
-      const result = await this.clinet.set(key, value, 'EX', expireTime);
+      const result = await this.client.set(key, value, 'EX', expireTime);
 
       return result;
     }
 
-    const result = await this.clinet.set(key, value);
+    const result = await this.client.set(key, value);
 
     return result;
   }
 
   async incr(key: string) {
-    await this.clinet.incr(key);
+    await this.client.incr(key);
   }
 
   async decr(key: string) {
-    await this.clinet.decr(key);
+    await this.client.decr(key);
   }
 
   async del(key: string) {
-    await this.clinet.del(key);
+    await this.client.del(key);
   }
 
   async scan(key: string): Promise<string[]> {
-    const [, keyList] = await this.clinet.scan(0, 'MATCH', `${key}:*`);
+    const [, keyList] = await this.client.scan(0, 'MATCH', `${key}:*`);
 
     return keyList;
   }
 
   async expire(key: string) {
-    await this.clinet.expire(key, 0);
+    await this.client.expire(key, 0);
   }
 
   async lpush(key: string, value: string | number) {
-    return await this.clinet.lpush(key, value.toString());
+    return await this.client.lpush(key, value.toString());
   }
 
   async rpush(key: string, value: string | number) {
-    return await this.clinet.rpush(key, value.toString());
+    return await this.client.rpush(key, value.toString());
   }
 
   async lrange(key: string, start: number, stop: number): Promise<string[]> {
-    return await this.clinet.lrange(key, start, stop);
+    return await this.client.lrange(key, start, stop);
   }
 
   async llen(key: string): Promise<number> {
-    return await this.clinet.llen(key);
+    return await this.client.llen(key);
   }
 
   async lrem(key: string, count: number, value: string): Promise<number> {
-    return await this.clinet.lrem(key, count, value);
+    return await this.client.lrem(key, count, value);
   }
 
   async ltrim(key: string, start: number, stop: number): Promise<'OK'> {
-    return await this.clinet.ltrim(key, start, stop);
+    return await this.client.ltrim(key, start, stop);
   }
 
   async deleteAll() {
-    return await this.clinet.flushdb();
+    return await this.client.flushdb();
   }
 
   async getList(key: string): Promise<string[]> {

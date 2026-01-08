@@ -1,0 +1,4 @@
+export enum JwtType {
+  ONE_TIME_TOKEN = 'ONE_TIME_TIME',
+  REFRESH_TOKEN = 'REFRESH_TOKEN',
+}

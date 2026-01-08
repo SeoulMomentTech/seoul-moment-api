@@ -79,6 +79,34 @@
         {
           "name": "SERPER_API_KEY",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:SERPER_API_KEY::"
+        },
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:AWS_ACCESS_KEY_ID::"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:AWS_SECRET_ACCESS_KEY::"
+        },
+        {
+          "name": "AWS_REGION",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:AWS_REGION::"
+        },
+        {
+          "name": "AWS_S3_BUCKET_NAME",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:AWS_S3_BUCKET_NAME::"
+        },
+        {
+          "name": "OPENSEARCH_HOST",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:OPENSEARCH_HOST::"
+        },
+        {
+          "name": "OPENSEARCH_NAME",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:OPENSEARCH_NAME::"
+        },
+        {
+          "name": "OPENSEARCH_PASS",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:OPENSEARCH_PASS::"
         }
       ],
       "logConfiguration": {

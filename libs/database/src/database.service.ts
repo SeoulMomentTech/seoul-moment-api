@@ -15,7 +15,7 @@ export class DatabaseService implements TypeOrmOptionsFactory {
       autoLoadEntities: true,
       synchronize: false,
       namingStrategy: new SnakeNamingStrategy(),
-      logging: true,
+      logging: false,
       parseInt8: true,
     };
   }

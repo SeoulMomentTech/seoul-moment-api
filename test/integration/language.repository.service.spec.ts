@@ -1,5 +1,5 @@
 import { BrandStatus } from '@app/repository/enum/brand.enum';
-import { EntityEnum } from '@app/repository/enum/entity.enum';
+import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -55,7 +55,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
           sortOrder: 2,
         }),
         testDataFactory.createLanguage({
-          code: LanguageCode.CHINESE,
+          code: LanguageCode.TAIWAN,
           name: '中文',
           englishName: 'Chinese',
           isActive: false, // Inactive
@@ -94,14 +94,14 @@ describe('LanguageRepositoryService Integration Tests', () => {
     it('should return null for inactive language', async () => {
       // Given: Create inactive language
       await testDataFactory.createLanguage({
-        code: LanguageCode.CHINESE,
+        code: LanguageCode.TAIWAN,
         name: '中文',
         isActive: false,
       });
 
       // When
       const result = await languageRepositoryService.findLanguageByCode(
-        LanguageCode.CHINESE,
+        LanguageCode.TAIWAN,
       );
 
       // Then
@@ -124,7 +124,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
 
       // When: Save multilingual text
       await languageRepositoryService.saveMultilingualText(
-        EntityEnum.BRAND,
+        EntityType.BRAND,
         brand.id,
         'name',
         korean.id,
@@ -133,7 +133,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
 
       // Then: Find multilingual text
       const result = await languageRepositoryService.findMultilingualTexts(
-        EntityEnum.BRAND,
+        EntityType.BRAND,
         brand.id,
         LanguageCode.KOREAN,
       );
@@ -141,7 +141,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
       expect(result).toHaveLength(1);
       expect(result[0].textContent).toBe('서울모먼트');
       expect(result[0].fieldName).toBe('name');
-      expect(result[0].entityType).toBe(EntityEnum.BRAND);
+      expect(result[0].entityType).toBe(EntityType.BRAND);
     });
 
     it('should update existing multilingual text', async () => {
@@ -157,7 +157,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
       });
 
       await languageRepositoryService.saveMultilingualText(
-        EntityEnum.BRAND,
+        EntityType.BRAND,
         brand.id,
         'name',
         korean.id,
@@ -166,7 +166,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
 
       // When: Update text
       await languageRepositoryService.saveMultilingualText(
-        EntityEnum.BRAND,
+        EntityType.BRAND,
         brand.id,
         'name',
         korean.id,
@@ -175,7 +175,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
 
       // Then: Should have updated content
       const result = await languageRepositoryService.findMultilingualTexts(
-        EntityEnum.BRAND,
+        EntityType.BRAND,
         brand.id,
         LanguageCode.KOREAN,
       );
@@ -203,26 +203,26 @@ describe('LanguageRepositoryService Integration Tests', () => {
         sections: [{ sortOrder: 1 }, { sortOrder: 2 }],
       });
 
-      const sectionIds = brand.brandSectionList.map((section) => section.id);
+      const sectionIds = brand.section.map((section) => section.id);
 
       // When: Save multilingual texts for sections
       await Promise.all([
         languageRepositoryService.saveMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[0],
           'title',
           korean.id,
           '첫 번째 섹션',
         ),
         languageRepositoryService.saveMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[1],
           'title',
           korean.id,
           '두 번째 섹션',
         ),
         languageRepositoryService.saveMultilingualText(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds[0],
           'title',
           english.id,
@@ -233,7 +233,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
       // Then: Find texts for all sections in Korean
       const koreanTexts =
         await languageRepositoryService.findMultilingualTextsByEntities(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds,
           LanguageCode.KOREAN,
         );
@@ -247,7 +247,7 @@ describe('LanguageRepositoryService Integration Tests', () => {
       // And: Find texts for all sections in English
       const englishTexts =
         await languageRepositoryService.findMultilingualTextsByEntities(
-          EntityEnum.BRAND_SECTION,
+          EntityType.BRAND_SECTION,
           sectionIds,
           LanguageCode.ENGLISH,
         );
@@ -270,14 +270,14 @@ describe('LanguageRepositoryService Integration Tests', () => {
 
       await Promise.all([
         languageRepositoryService.saveMultilingualText(
-          EntityEnum.BRAND,
+          EntityType.BRAND,
           brand.id,
           'name',
           korean.id,
           '서울모먼트',
         ),
         languageRepositoryService.saveMultilingualText(
-          EntityEnum.BRAND,
+          EntityType.BRAND,
           brand.id,
           'description',
           korean.id,
@@ -287,13 +287,13 @@ describe('LanguageRepositoryService Integration Tests', () => {
 
       // When: Delete multilingual texts
       await languageRepositoryService.deleteMultilingualTexts(
-        EntityEnum.BRAND,
+        EntityType.BRAND,
         brand.id,
       );
 
       // Then: Should have no texts
       const result = await languageRepositoryService.findMultilingualTexts(
-        EntityEnum.BRAND,
+        EntityType.BRAND,
         brand.id,
         LanguageCode.KOREAN,
       );

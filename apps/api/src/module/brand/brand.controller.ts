@@ -1,6 +1,8 @@
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseException } from '@app/common/decorator/response-exception.decorator';
+import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { ResponseDataDto } from '@app/common/type/response-data';
+import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   Controller,
@@ -9,17 +11,36 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiHeader } from '@nestjs/swagger';
 
-import { GetBrandIntroduceResponse } from './brand.dto';
+import {
+  GetBrandIntroduceResponse,
+  GetBrandListByNameFilterTypeRequest,
+  GetBrandListByNameResponse,
+} from './brand.dto';
 import { BrandService } from './brand.service';
 
 @Controller('brand')
 export class BrandController {
   constructor(private readonly brandService: BrandService) {}
 
-  @Get('introduce/:id')
+  @Get('/list/filter')
+  @ApiOperation({
+    summary: 'Get Brand List',
+    description:
+      'Returns brand list of brand names in English. Available filters: A_TO_D, E_TO_H, I_TO_L, M_TO_P, Q_TO_T, U_TO_Z, NUMBER_SYMBOL.',
+  })
+  @ResponseList(GetBrandListByNameResponse)
+  async getBrandListByName(
+    @Query() query: GetBrandListByNameFilterTypeRequest,
+  ): Promise<ResponseListDto<GetBrandListByNameResponse>> {
+    const result = await this.brandService.getBrandListByName(query.categoryId);
+    return new ResponseListDto(result);
+  }
+
+  @Get(':id')
   @ApiOperation({
     summary: 'Get Brand Introduce with Multilingual Support',
     description:

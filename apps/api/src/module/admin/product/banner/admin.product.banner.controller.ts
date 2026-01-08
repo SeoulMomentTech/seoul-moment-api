@@ -1,0 +1,85 @@
+import { ResponseData } from '@app/common/decorator/response-data.decorator';
+import { ResponseList } from '@app/common/decorator/response-list.decorator';
+import { ResponseDataDto } from '@app/common/type/response-data';
+import { ResponseListDto } from '@app/common/type/response-list';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { ApiOperation } from '@nestjs/swagger';
+
+import {
+  AdminProductBannerListRequest,
+  AdminProductBannerListResponse,
+  GetAdminProductBannerDetailResponse,
+  PatchAdminProductBannerRequest,
+  PatchAdminProductBannerSortOrderRequest,
+  PostAdminProductBannerRequest,
+} from './admin.product.banner.dto';
+import { AdminProductBannerService } from './admin.product.banner.service';
+
+@Controller('admin/product/banner')
+export class AdminProductBannerController {
+  constructor(
+    private readonly adminProductBannerService: AdminProductBannerService,
+  ) {}
+
+  @Get('list')
+  @ApiOperation({ summary: '상품 배너 리스트 조회' })
+  @ResponseList(AdminProductBannerListResponse)
+  async getProductBannerList(
+    @Query() query: AdminProductBannerListRequest,
+  ): Promise<ResponseListDto<AdminProductBannerListResponse>> {
+    const [result, total] =
+      await this.adminProductBannerService.getProductBannerList(query);
+    return new ResponseListDto(result, total);
+  }
+
+  @Post()
+  @ApiOperation({ summary: '상품 배너 등록' })
+  async postProductBanner(@Body() body: PostAdminProductBannerRequest) {
+    await this.adminProductBannerService.postProductBanner(body.imageUrl);
+  }
+
+  @Patch('sort')
+  @ApiOperation({ summary: '상품 배너 정렬 순서 수정' })
+  async patchProductBannerSortOrder(
+    @Body() body: PatchAdminProductBannerSortOrderRequest,
+  ) {
+    await this.adminProductBannerService.patchProductBannerSortOrder(body);
+  }
+
+  @Patch(':id(\\d+)')
+  @ApiOperation({ summary: '상품 배너 수정' })
+  async patchProductBanner(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: PatchAdminProductBannerRequest,
+  ) {
+    await this.adminProductBannerService.patchProductBanner(id, body.imageUrl);
+  }
+
+  @Delete(':id(\\d+)')
+  @ApiOperation({ summary: '상품 배너 삭제' })
+  async deleteProductBanner(@Param('id', ParseIntPipe) id: number) {
+    await this.adminProductBannerService.deleteProductBanner(id);
+  }
+
+  @Get(':id(\\d+)')
+  @ApiOperation({ summary: '상품 배너 상세 조회' })
+  @ResponseData(GetAdminProductBannerDetailResponse)
+  async getProductBannerDetail(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ResponseDataDto<GetAdminProductBannerDetailResponse>> {
+    const result =
+      await this.adminProductBannerService.getProductBannerDetail(id);
+
+    return new ResponseDataDto(result);
+  }
+}

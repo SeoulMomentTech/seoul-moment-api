@@ -20,6 +20,7 @@ export class InternalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const status = HttpStatus.INTERNAL_SERVER_ERROR;
     const message = exception.message || 'internal service error';
+
     this.logger.error('http exception', exception, {
       status,
       code: HttpStatus[status],
@@ -29,7 +30,7 @@ export class InternalExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       message,
       code: HttpStatus[status],
-      tracdId: this.logger.getTraceId(),
+      traceId: this.logger.getTraceId(),
     });
   }
 }

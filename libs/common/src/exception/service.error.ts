@@ -15,7 +15,7 @@ export class ServiceError extends Error {
     return this.code;
   }
 
-  getStstus(): HttpStatus {
+  getStatus(): HttpStatus {
     return ServiceErrorStatus[this.code];
   }
 }

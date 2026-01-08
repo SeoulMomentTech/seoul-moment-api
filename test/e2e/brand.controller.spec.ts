@@ -72,7 +72,7 @@ describe('BrandController (E2E)', () => {
     await TestSetup.clearDatabase();
   });
 
-  describe('GET /brand/introduce/:id', () => {
+  describe('GET /brand/:id', () => {
     it('should return brand introduce data with empty content for no multilingual data', async () => {
       // Given: 다국어 콘텐츠가 없는 브랜드 생성
       const brand = await testDataFactory.createFullBrand({
@@ -103,7 +103,7 @@ describe('BrandController (E2E)', () => {
 
       // When: HTTP GET 요청
       const response = await request(app.getHttpServer())
-        .get(`/brand/introduce/${brand.id}`)
+        .get(`/brand/${brand.id}`)
         .set('accept-language', 'ko')
         .expect(200);
 
@@ -117,7 +117,7 @@ describe('BrandController (E2E)', () => {
       expect(data.description).toBe(''); // 다국어 콘텐츠 없음
       expect(data.bannerList).toHaveLength(2);
       expect(data.section).toHaveLength(2);
-      
+
       // 섹션 데이터도 빈 문자열
       expect(data.section[0].title).toBe('');
       expect(data.section[0].content).toBe('');
@@ -144,7 +144,7 @@ describe('BrandController (E2E)', () => {
     it('should return 404 when brand does not exist', async () => {
       // When: 존재하지 않는 브랜드 ID로 요청
       const response = await request(app.getHttpServer())
-        .get('/brand/introduce/999')
+        .get('/brand/999')
         .expect(404);
 
       // Then: 에러 응답 검증 (ServiceError 직접 응답)
@@ -166,7 +166,7 @@ describe('BrandController (E2E)', () => {
 
       // When: BLOCK 상태 브랜드 조회 요청
       const response = await request(app.getHttpServer())
-        .get(`/brand/introduce/${blockedBrand.id}`)
+        .get(`/brand/${blockedBrand.id}`)
         .expect(404);
 
       // Then: 에러 응답 검증 (ServiceError 직접 응답)
@@ -184,7 +184,7 @@ describe('BrandController (E2E)', () => {
 
       // When: HTTP GET 요청
       const response = await request(app.getHttpServer())
-        .get(`/brand/introduce/${minimalBrand.id}`)
+        .get(`/brand/${minimalBrand.id}`)
         .expect(200);
 
       // Then: 빈 배열들이 정상적으로 반환됨
@@ -207,17 +207,14 @@ describe('BrandController (E2E)', () => {
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 3,
         imageUrl: '/banner3.jpg',
-        altText: 'Banner 3',
       });
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 1,
         imageUrl: '/banner1.jpg',
-        altText: 'Banner 1',
       });
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 2,
         imageUrl: '/banner2.jpg',
-        altText: 'Banner 2',
       });
 
       // 섹션을 역순으로 생성
@@ -232,17 +229,15 @@ describe('BrandController (E2E)', () => {
       await testDataFactory.createSectionImage(section1, {
         sortOrder: 2,
         imageUrl: '/section1-2.jpg',
-        altText: 'Section 1 Image 2',
       });
       await testDataFactory.createSectionImage(section1, {
         sortOrder: 1,
         imageUrl: '/section1-1.jpg',
-        altText: 'Section 1 Image 1',
       });
 
       // When: HTTP GET 요청
       const response = await request(app.getHttpServer())
-        .get(`/brand/introduce/${brand.id}`)
+        .get(`/brand/${brand.id}`)
         .expect(200);
 
       // Then: 정렬된 순서로 반환됨
@@ -268,7 +263,7 @@ describe('BrandController (E2E)', () => {
       // When: 잘못된 형식의 ID로 요청
       // Note: 현재는 500 에러가 발생하고 있으므로 실제 동작에 맞춤
       const response = await request(app.getHttpServer())
-        .get('/brand/introduce/invalid-id')
+        .get('/brand/invalid-id')
         .expect(400);
 
       // Then: Internal Server Error 응답
@@ -290,9 +285,7 @@ describe('BrandController (E2E)', () => {
       const requests = Array(5)
         .fill(null)
         .map(() =>
-          request(app.getHttpServer())
-            .get(`/brand/introduce/${brand.id}`)
-            .expect(200),
+          request(app.getHttpServer()).get(`/brand/${brand.id}`).expect(200),
         );
 
       const responses = await Promise.all(requests);
@@ -324,7 +317,6 @@ describe('BrandController (E2E)', () => {
         await testDataFactory.createBannerImage(largeBrand, {
           sortOrder: i,
           imageUrl: `/banner${i}.jpg`,
-          altText: `Banner ${i}`,
         });
       }
 
@@ -338,14 +330,13 @@ describe('BrandController (E2E)', () => {
           await testDataFactory.createSectionImage(section, {
             sortOrder: imgIndex,
             imageUrl: `/section${sectionIndex}-${imgIndex}.jpg`,
-            altText: `Section ${sectionIndex} Image ${imgIndex}`,
           });
         }
       }
 
       // When: HTTP GET 요청
       const response = await request(app.getHttpServer())
-        .get(`/brand/introduce/${largeBrand.id}`)
+        .get(`/brand/${largeBrand.id}`)
         .expect(200);
 
       // Then: 모든 데이터가 정확히 반환됨
@@ -372,19 +363,18 @@ describe('BrandController (E2E)', () => {
 
       // When: 첫 번째 요청
       const firstResponse = await request(app.getHttpServer())
-        .get(`/brand/introduce/${brand.id}`)
+        .get(`/brand/${brand.id}`)
         .expect(200);
 
       // 추가 데이터 생성
       await testDataFactory.createBannerImage(brand, {
         sortOrder: 2,
         imageUrl: '/new-banner.jpg',
-        altText: 'New Banner',
       });
 
       // When: 두 번째 요청 (데이터 추가 후)
       const secondResponse = await request(app.getHttpServer())
-        .get(`/brand/introduce/${brand.id}`)
+        .get(`/brand/${brand.id}`)
         .expect(200);
 
       // Then: 데이터가 일관되게 업데이트됨

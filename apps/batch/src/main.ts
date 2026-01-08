@@ -10,6 +10,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { NextFunction } from 'express';
 import helmet from 'helmet';
 import moment from 'moment-timezone';
+import { initializeTransactionalContext } from 'typeorm-transactional';
 import { v4 as uuidV4 } from 'uuid';
 
 import { BatchModule } from './module/batch.module';
@@ -45,6 +46,8 @@ function scheduleShutdown(
 
 async function bootstrap() {
   const config = Configuration.getConfig();
+
+  initializeTransactionalContext();
 
   moment.tz.setDefault('Asia/Seoul');
   const app = await NestFactory.create<NestExpressApplication>(BatchModule, {

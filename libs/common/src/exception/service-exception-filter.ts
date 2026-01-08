@@ -18,7 +18,7 @@ export class ServiceErrorFilter implements ExceptionFilter {
   catch(exception: ServiceError, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const status = exception.getStstus();
+    const status = exception.getStatus();
 
     this.logger.error('service exception', exception, {
       message: exception.message,
@@ -29,7 +29,7 @@ export class ServiceErrorFilter implements ExceptionFilter {
     response.status(status).json({
       message: exception.message,
       code: exception.getCode(),
-      tracdId: this.logger.getTraceId(),
+      traceId: this.logger.getTraceId(),
     });
   }
 }

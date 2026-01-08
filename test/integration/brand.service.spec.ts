@@ -1,6 +1,7 @@
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
-import { BrandStatus } from '@app/repository/enum/brand.enum';
+import { BrandNameFilter, BrandStatus } from '@app/repository/enum/brand.enum';
+import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { Test, TestingModule } from '@nestjs/testing';
 
@@ -155,6 +156,143 @@ describe('BrandService Integration Tests', () => {
       // Then: 영어 콘텐츠 반환
       expect(englishResult.name).toBe('Seoul Moment');
       expect(englishResult.description).toBe('Special moments of Seoul');
+    });
+
+    it('should return brand name List', async () => {
+      const brand = await testDataFactory.createBrand();
+      await testDataFactory.createLanguage({
+        code: LanguageCode.ENGLISH,
+        englishName: 'english',
+        name: '영어',
+      });
+      const languageENtity = await testDataFactory.createLanguage({
+        code: LanguageCode.ENGLISH,
+        englishName: 'english',
+        name: '영어',
+      });
+
+      await testDataFactory.createMultilingualText(
+        EntityType.BRAND,
+        brand.id,
+        'name',
+        languageENtity,
+        'abc',
+      );
+
+      const response = await brandService.getBrandListByNameFilterType(
+        BrandNameFilter.A_TO_D,
+      );
+
+      expect(response[0].id).toBe(1);
+      expect(response[0].name).toBe('abc');
+    });
+
+    it('if use categoryId, should return brand name List', async () => {
+      const brand = await testDataFactory.createBrand();
+      await testDataFactory.createLanguage({
+        code: LanguageCode.ENGLISH,
+        englishName: 'english',
+        name: '영어',
+      });
+      const languageENtity = await testDataFactory.createLanguage({
+        code: LanguageCode.ENGLISH,
+        englishName: 'english',
+        name: '영어',
+      });
+
+      await testDataFactory.createMultilingualText(
+        EntityType.BRAND,
+        brand.id,
+        'name',
+        languageENtity,
+        'abc',
+      );
+
+      const response = await brandService.getBrandListByNameFilterType(
+        BrandNameFilter.A_TO_D,
+        1,
+      );
+
+      expect(response[0].id).toBe(1);
+      expect(response[0].name).toBe('abc');
+    });
+
+    it('brand 등록시 getBrand 로 data 를 가져와야 한다.', async () => {
+      // Given: 기본 언어들과 카테고리 생성
+      await testDataFactory.languageFactory.createLanguages();
+      const category = await testDataFactory.categoryFactory.createCategory();
+
+      const dto = testDataFactory.brandFactory.getPostBrandDto(3);
+      dto.categoryId = category.id;
+
+      // When: 브랜드 등록
+      await brandService.postBrand(dto);
+
+      // Then: 등록된 브랜드를 getBrandIntroduce로 조회 시 정상 데이터 반환
+      const brand = await brandService.getBrandIntroduce(
+        1,
+        LanguageCode.KOREAN,
+      );
+
+      // 기본 브랜드 정보 검증
+      expect(brand).toBeInstanceOf(GetBrandIntroduceResponse);
+      expect(brand.id).toBe(1);
+      expect(brand.name).toBe('테스트 브랜드');
+      expect(brand.description).toBe('테스트 브랜드 설명입니다.');
+
+      // 배너 이미지 검증
+      expect(brand.bannerList).toHaveLength(2);
+      expect(brand.bannerList).toEqual([
+        'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/test-banner-01.jpg',
+        'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/test-banner-02.jpg',
+      ]);
+
+      // 섹션 데이터 검증 (3개 섹션)
+      expect(brand.section).toHaveLength(3);
+
+      // 첫 번째 섹션 (브랜드 스토리)
+      expect(brand.section[0].title).toBe('브랜드 스토리');
+      expect(brand.section[0].content).toBe('테스트 브랜드의 스토리입니다.');
+      expect(brand.section[0].imageList).toHaveLength(2);
+      expect(brand.section[0].imageList).toEqual([
+        'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/test-section-01.jpg',
+        'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/test-section-02.jpg',
+      ]);
+
+      // 두 번째 섹션 (브랜드 연혁)
+      expect(brand.section[1].title).toBe('브랜드 연혁');
+      expect(brand.section[1].content).toBe('테스트 브랜드의 발전 과정입니다.');
+      expect(brand.section[1].imageList).toHaveLength(2);
+      expect(brand.section[1].imageList).toEqual([
+        'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/test-history-01.jpg',
+        'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/test-history-02.jpg',
+      ]);
+
+      // 세 번째 섹션 (브랜드 철학)
+      expect(brand.section[2].title).toBe('브랜드 철학');
+      expect(brand.section[2].content).toBe(
+        '테스트 브랜드의 핵심 가치와 철학입니다.',
+      );
+      expect(brand.section[2].imageList).toHaveLength(2);
+      expect(brand.section[2].imageList).toEqual([
+        'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/test-philosophy-01.jpg',
+        'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/test-philosophy-02.jpg',
+      ]);
+
+      // 영어 조회도 검증
+      const englishBrand = await brandService.getBrandIntroduce(
+        1,
+        LanguageCode.ENGLISH,
+      );
+
+      expect(englishBrand.name).toBe('Test Brand');
+      expect(englishBrand.description).toBe(
+        'This is a test brand description.',
+      );
+      expect(englishBrand.section[0].title).toBe('Brand Story');
+      expect(englishBrand.section[0].content).toBe(
+        'This is the test brand story.',
+      );
     });
   });
 });

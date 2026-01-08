@@ -12,9 +12,12 @@ import { BrandSectionImageEntity } from './brand-section-image.entity';
 import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
-import { EntityEnum } from '../enum/entity.enum';
+import { EntityType } from '../enum/entity.enum';
 
-@Entity(EntityEnum.BRAND_SECTION)
+/**
+ * Multilgual column [title, content]
+ */
+@Entity(EntityType.BRAND_SECTION)
 @Index(['brandId', 'sortOrder'])
 export class BrandSectionEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
@@ -26,7 +29,7 @@ export class BrandSectionEntity extends CommonEntity {
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
-  @ManyToOne(() => BrandEntity, (brand) => brand.brandSectionList, {
+  @ManyToOne(() => BrandEntity, (brand) => brand.section, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
@@ -41,7 +44,7 @@ export class BrandSectionEntity extends CommonEntity {
       eager: true,
     },
   )
-  brandSectionImageList: BrandSectionImageEntity[];
+  sectionImage: BrandSectionImageEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

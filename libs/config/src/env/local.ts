@@ -8,6 +8,11 @@ const getConfig = (): ConfigImpl => ({
 
   IMAGE_DOMAIN_NAME: process.env.IMAGE_DOMAIN_NAME || '',
 
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || '',
+  AWS_REGION: process.env.AWS_REGION || '',
+  AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME || '',
+
   DATABASE_HOST: process.env.DATABASE_HOST,
   DATABASE_PORT: parseInt(process.env.DATABASE_PORT),
   DATABASE_USERNAME: process.env.DATABASE_USERNAME,
@@ -26,6 +31,16 @@ const getConfig = (): ConfigImpl => ({
 
   SERPER_URL: process.env.SERPER_URL || '',
   SERPER_API_KEY: process.env.SERPER_API_KEY || '',
+
+  RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY || '',
+
+  GOOGLE_APP_PASS: process.env.GOOGLE_APP_PASS || '',
+
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+
+  OPENSEARCH_HOST: process.env.OPENSEARCH_HOST || '',
+  OPENSEARCH_NAME: process.env.OPENSEARCH_NAME || '',
+  OPENSEARCH_PASS: process.env.OPENSEARCH_PASS || '',
 });
 
 export default getConfig;

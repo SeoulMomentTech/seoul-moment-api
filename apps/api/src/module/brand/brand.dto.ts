@@ -1,24 +1,34 @@
+/* eslint-disable max-lines-per-function */
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { BrandNameFilter } from '@app/repository/enum/brand.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { ApiProperty } from '@nestjs/swagger';
-import { plainToInstance } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { plainToInstance, Type } from 'class-transformer';
+import { IsNumber, IsOptional } from 'class-validator';
 
-import { MultilingualFieldDto } from './dto/multilingual.dto';
+import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
 export class GetBrandIntroduceSection {
-  @ApiProperty({ description: '섹션 제목', example: '브랜드 스토리' })
+  @ApiProperty({
+    description: '섹션 제목',
+    example: '브랜드 스토리',
+  })
   title: string;
 
-  @ApiProperty({ description: '섹션 내용', example: '우리 브랜드는...' })
+  @ApiProperty({
+    description: '섹션 내용',
+    example:
+      '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
+  })
   content: string;
 
   @ApiProperty({
     description: '섹션 이미지 URL 리스트',
     example: [
-      'https://example.com/image1.jpg',
-      'https://example.com/image2.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
     ],
     type: [String],
   })
@@ -57,7 +67,7 @@ export class GetBrandIntroduceSection {
     return plainToInstance(this, {
       title: titleField.getContentByLanguageWithFallback(language) || '',
       content: contentField.getContentByLanguageWithFallback(language) || '',
-      imageList: entity.brandSectionImageList
+      imageList: entity.sectionImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),
     });
@@ -65,25 +75,42 @@ export class GetBrandIntroduceSection {
 }
 
 export class GetBrandIntroduceResponse {
-  @ApiProperty({ description: '브랜드 ID', example: 1 })
+  @ApiProperty({
+    description: '브랜드 ID',
+    example: 1,
+  })
   id: number;
 
   @ApiProperty({
     description: '배너 이미지 URL 리스트',
     example: [
-      'https://example.com/banner1.jpg',
-      'https://example.com/banner2.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-banner-02.jpg',
     ],
     type: [String],
   })
   bannerList: string[];
 
-  @ApiProperty({ description: '브랜드 이름', example: '서울모먼트' })
+  @ApiProperty({
+    description: '모바일 배너 이미지 URL 리스트',
+    example: [
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-mobile-banner-01.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-mobile-banner-02.jpg',
+    ],
+    type: [String],
+  })
+  mobileBannerList: string[];
+
+  @ApiProperty({
+    description: '브랜드 이름',
+    example: '서울모먼트',
+  })
   name: string;
 
   @ApiProperty({
     description: '브랜드 설명',
-    example: '서울의 특별한 순간들을 담은 브랜드',
+    example:
+      '서울의 특별한 순간들을 담은 라이프스타일 브랜드입니다. 한국의 전통미와 현대적 감각을 조화롭게 표현합니다.',
   })
   description: string;
 
@@ -124,13 +151,16 @@ export class GetBrandIntroduceResponse {
 
     return plainToInstance(this, {
       id: entity.id,
-      bannerList: entity.brandBannerImageList
+      bannerList: entity.bannerImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),
+      mobileBannerList: entity.bannerImage
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((v) => v.getMobileImage()),
       name: nameField.getContentByLanguageWithFallback(language) || '',
       description:
         descriptionField.getContentByLanguageWithFallback(language) || '',
-      section: entity.brandSectionList
+      section: entity.section
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) =>
           GetBrandIntroduceSection.from(
@@ -139,6 +169,68 @@ export class GetBrandIntroduceResponse {
             language,
           ),
         ),
+    });
+  }
+}
+export class GetBrandListByNameFilterTypeRequest {
+  @ApiPropertyOptional({
+    description: '카테고리 ID (선택사항)',
+    example: 1,
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  categoryId?: number;
+}
+export class GetBrandListByName {
+  @ApiProperty({
+    description: '브랜드 ID',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '브랜드 이름',
+    example: '서울모먼트',
+  })
+  name: string;
+
+  static from(entity: BrandEntity, multilingualText: MultilingualTextEntity[]) {
+    multilingualText = multilingualText.filter((v) => v.entityId === entity.id);
+
+    const name = MultilingualFieldDto.fromByEntity(multilingualText, 'name');
+
+    return plainToInstance(this, {
+      id: entity.id,
+      name: name.getContent(),
+    });
+  }
+}
+
+export class GetBrandListByNameResponse {
+  @ApiProperty({
+    description: '이니셜별 filter enum',
+    example: BrandNameFilter.A_TO_D,
+    enum: BrandNameFilter,
+  })
+  filter: BrandNameFilter;
+
+  @ApiProperty({
+    description: '브랜드 Object 리스트',
+    type: GetBrandListByName,
+    isArray: true,
+    example: [
+      { id: 1, name: '서울모먼트' },
+      { id: 2, name: '부산메모리' },
+    ],
+  })
+  brandNameList: GetBrandListByName[];
+
+  static from(filter: BrandNameFilter, brandNameList: GetBrandListByName[]) {
+    return plainToInstance(this, {
+      filter,
+      brandNameList,
     });
   }
 }

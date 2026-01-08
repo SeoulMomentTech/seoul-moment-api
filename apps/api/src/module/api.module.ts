@@ -13,8 +13,17 @@ import { DataSource } from 'typeorm';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 
 import { HealthController } from '../health.controller';
+import { AdminModule } from './admin/admin.module';
+import { ArticleModule } from './article/article.module';
+import { AuthModule } from './auth/auth.module';
 import { BrandModule } from './brand/brand.module';
+import { CategoryModule } from './category/category.module';
 import { GoogleModule } from './google/google.module';
+import { HomeModule } from './home/home.module';
+import { LanguageModule } from './language/language.module';
+import { NewsModule } from './news/news.module';
+import { PartnerModule } from './partner/partner.module';
+import { ProductModule } from './product/product.module';
 
 @Module({
   imports: [
@@ -36,8 +45,17 @@ import { GoogleModule } from './google/google.module';
     }),
     LoggerModule,
     RepositoryModule,
+    AdminModule,
     BrandModule,
     GoogleModule,
+    NewsModule,
+    ArticleModule,
+    HomeModule,
+    ProductModule,
+    CategoryModule,
+    PartnerModule,
+    LanguageModule,
+    AuthModule,
   ],
   controllers: [HealthController],
   providers: [

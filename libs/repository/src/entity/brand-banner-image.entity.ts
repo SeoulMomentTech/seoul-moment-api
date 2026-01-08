@@ -23,13 +23,13 @@ export class BrandBannerImageEntity extends CommonEntity {
   @Column('varchar', { name: 'image_url', length: 500, nullable: false })
   imageUrl: string;
 
-  @Column('varchar', { name: 'alt_text', length: 200, nullable: true })
-  altText: string;
+  @Column('varchar', { name: 'mobile_image_url', length: 500, nullable: true })
+  mobileImageUrl: string;
 
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
-  @ManyToOne(() => BrandEntity, (brand) => brand.brandBannerImageList, {
+  @ManyToOne(() => BrandEntity, (brand) => brand.bannerImage, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
@@ -38,5 +38,9 @@ export class BrandBannerImageEntity extends CommonEntity {
 
   getImage(): string {
     return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imageUrl}`;
+  }
+
+  getMobileImage(): string {
+    return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.mobileImageUrl}`;
   }
 }

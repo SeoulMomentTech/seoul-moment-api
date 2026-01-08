@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import bodyParser from 'body-parser';
 import { NextFunction } from 'express';
 import helmet from 'helmet';
 import moment from 'moment-timezone';
@@ -43,6 +44,10 @@ async function bootstrap() {
 
   morganSetting(app);
   swaggerSettring(app);
+
+  app.use(bodyParser.json({ limit: '100mb' }));
+  app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
+  app.use(bodyParser.text({ limit: '100mb' }));
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(NODE_ENV=test DATABASE_NAME=seoul_moment_test DATABASE_PORT=5433 npm run test:integration -- test/integration/product-basic.entity.spec.ts)",
+      "Bash(npm run test:integration:*)",
+      "Bash(git diff:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

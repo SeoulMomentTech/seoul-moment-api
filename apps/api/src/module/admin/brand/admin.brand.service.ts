@@ -1,0 +1,337 @@
+/* eslint-disable max-lines-per-function */
+import { UpdateBrandDto } from '@app/repository/dto/brand.dto';
+import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
+import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
+import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
+import { BrandEntity } from '@app/repository/entity/brand.entity';
+import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { EntityType } from '@app/repository/enum/entity.enum';
+import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
+import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
+import { Injectable } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { Transactional } from 'typeorm-transactional';
+
+import {
+  AdminBrandListRequest,
+  GetAdminBrandInfoResponse,
+  GetAdminBrandNameDto,
+  GetAdminBrandResponse,
+  PostAdminBrandRequest,
+  UpdateAdminBrandRequest,
+} from './admin.brand.dto';
+
+@Injectable()
+export class AdminBrandService {
+  constructor(
+    private readonly brandRepositoryService: BrandRepositoryService,
+    private readonly categoryRepositoryService: CategoryRepositoryService,
+    private readonly languageRepositoryService: LanguageRepositoryService,
+  ) {}
+
+  @Transactional()
+  async postAdminBrand(dto: PostAdminBrandRequest) {
+    const brandEntity = await this.brandRepositoryService.insert(
+      plainToInstance(BrandEntity, {
+        categoryId: dto.categoryId,
+        profileImage: dto.profileImageUrl ?? undefined,
+        bannerImageUrl: dto.productBannerImageUrl,
+        englishName: dto.englishName,
+      }),
+    );
+
+    const bannerEntities = dto.bannerImageUrlList.map((bannerUrl, index) =>
+      plainToInstance(BrandBannerImageEntity, {
+        brandId: brandEntity.id,
+        imageUrl: bannerUrl,
+        mobileImageUrl: dto.mobileBannerImageUrlList[index],
+        sortOrder: index + 1,
+      }),
+    );
+
+    await this.brandRepositoryService.bulkInsertInitBannerImage(bannerEntities);
+
+    await Promise.all(
+      dto.textList.flatMap((v) => [
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND,
+          brandEntity.id,
+          'name',
+          v.languageId,
+          v.name,
+        ),
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND,
+          brandEntity.id,
+          'description',
+          v.languageId,
+          v.description,
+        ),
+      ]),
+    );
+
+    for (const v of dto.sectionList) {
+      const brandSectionEntity =
+        await this.brandRepositoryService.insertSection(
+          plainToInstance(BrandSectionEntity, {
+            brandId: brandEntity.id,
+          }),
+        );
+
+      await Promise.all(
+        v.textList.flatMap((text) => [
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.BRAND_SECTION,
+            brandSectionEntity.id,
+            'title',
+            text.languageId,
+            text.title,
+          ),
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.BRAND_SECTION,
+            brandSectionEntity.id,
+            'content',
+            text.languageId,
+            text.content,
+          ),
+        ]),
+      );
+
+      const brandSectionImages = v.imageUrlList.map((image, index) =>
+        plainToInstance(BrandSectionImageEntity, {
+          sectionId: brandSectionEntity.id,
+          imageUrl: image,
+          sortOrder: index + 1,
+        }),
+      );
+
+      await this.brandRepositoryService.bulkInsertInitSectionImage(
+        brandSectionImages,
+      );
+    }
+  }
+
+  async getAdminBrandInfo(id: number): Promise<GetAdminBrandInfoResponse> {
+    const brandEntity = await this.brandRepositoryService.getBrandById(id);
+
+    const languageArray =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const brandMultilingualList: {
+      languageId: number;
+      brandText: MultilingualTextEntity[];
+      sectionText: MultilingualTextEntity[];
+    }[] = [];
+
+    for (const languageEntity of languageArray) {
+      const [brandTexts, sectionTexts] = await Promise.all([
+        this.languageRepositoryService.findMultilingualTexts(
+          EntityType.BRAND,
+          brandEntity.id,
+          languageEntity.code,
+        ),
+        this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.BRAND_SECTION,
+          brandEntity.section.map((section) => section.id),
+          languageEntity.code,
+        ),
+      ]);
+
+      brandMultilingualList.push({
+        languageId: languageEntity.id,
+        brandText: brandTexts,
+        sectionText: sectionTexts,
+      });
+    }
+
+    return GetAdminBrandInfoResponse.from(brandEntity, brandMultilingualList);
+  }
+
+  async getAdminBrandList(
+    request: AdminBrandListRequest,
+  ): Promise<[GetAdminBrandResponse[], number]> {
+    const [brandEntityList, total] =
+      await this.brandRepositoryService.findBrandByFilter(
+        request.page,
+        request.count,
+        request.search,
+        request.searchColumn,
+        request.sort,
+      );
+
+    const languageArray =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const brandList = await Promise.all(
+      brandEntityList.map(async (brandEntity) => {
+        const nameDto = await Promise.all(
+          languageArray.map(async (languageEntity) => {
+            const multilingualText =
+              await this.languageRepositoryService.findMultilingualTexts(
+                EntityType.BRAND,
+                brandEntity.id,
+                languageEntity.code,
+                'name',
+              );
+            if (multilingualText.length > 0) {
+              return GetAdminBrandNameDto.from(
+                languageEntity.code,
+                multilingualText[0].textContent,
+              );
+            }
+            return null;
+          }),
+        );
+        return GetAdminBrandResponse.from(brandEntity, nameDto);
+      }),
+    );
+
+    return [brandList, total];
+  }
+
+  @Transactional()
+  async updateAdminBrand(brandId: number, dto: UpdateAdminBrandRequest) {
+    await this.categoryRepositoryService.getCategoryById(dto.categoryId);
+
+    const updateBrandDto: UpdateBrandDto = {
+      id: brandId,
+      englishName: dto.englishName,
+      profileImage: dto.profileImageUrl,
+      bannerImageUrl: dto.productBannerImage,
+    };
+
+    await this.brandRepositoryService.update(updateBrandDto);
+
+    if (dto.bannerImageUrlList && dto.bannerImageUrlList.length > 0) {
+      await Promise.all(
+        dto.bannerImageUrlList.map((banner) =>
+          this.brandRepositoryService.updateBannerImage(banner),
+        ),
+      );
+    }
+
+    if (
+      dto.mobileBannerImageUrlList &&
+      dto.mobileBannerImageUrlList.length > 0
+    ) {
+      await Promise.all(
+        dto.mobileBannerImageUrlList.map((banner) =>
+          this.brandRepositoryService.updateMobileBannerImage(banner),
+        ),
+      );
+    }
+
+    if (dto.sectionSortOrderList && dto.sectionSortOrderList.length > 0) {
+      await Promise.all(
+        dto.sectionSortOrderList.map((sortOrder) =>
+          this.brandRepositoryService.updateSectionSortOrder(sortOrder),
+        ),
+      );
+    }
+
+    const promises = [];
+
+    if (dto.textList && dto.textList.length > 0) {
+      for (const text of dto.textList) {
+        if (text.name) {
+          promises.push(
+            this.languageRepositoryService.saveMultilingualText(
+              EntityType.BRAND,
+              brandId,
+              'name',
+              text.languageId,
+              text.name,
+            ),
+          );
+        }
+        if (text.description) {
+          promises.push(
+            this.languageRepositoryService.saveMultilingualText(
+              EntityType.BRAND,
+              brandId,
+              'description',
+              text.languageId,
+              text.description,
+            ),
+          );
+        }
+      }
+    }
+
+    if (dto.sectionList && dto.sectionList.length > 0) {
+      for (const section of dto.sectionList) {
+        if (section.textList && section.textList.length > 0) {
+          for (const text of section.textList) {
+            if (text.title) {
+              promises.push(
+                this.languageRepositoryService.saveMultilingualText(
+                  EntityType.BRAND_SECTION,
+                  section.id,
+                  'title',
+                  text.languageId,
+                  text.title,
+                ),
+              );
+            }
+            if (text.content) {
+              promises.push(
+                this.languageRepositoryService.saveMultilingualText(
+                  EntityType.BRAND_SECTION,
+                  section.id,
+                  'content',
+                  text.languageId,
+                  text.content,
+                ),
+              );
+            }
+          }
+        }
+
+        if (section.imageUrlList && section.imageUrlList.length > 0) {
+          for (const imageUrl of section.imageUrlList) {
+            promises.push(
+              this.brandRepositoryService.updateSectionImage(imageUrl),
+            );
+          }
+        }
+
+        if (
+          section.imageSortOrderList &&
+          section.imageSortOrderList.length > 0
+        ) {
+          for (const sortOrder of section.imageSortOrderList) {
+            promises.push(
+              this.brandRepositoryService.updateSectionImageSortOrder(
+                sortOrder,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    await Promise.all(promises);
+  }
+
+  @Transactional()
+  async deleteAdminBrand(brandId: number) {
+    const brandEntity = await this.brandRepositoryService.getBrandById(brandId);
+
+    await this.brandRepositoryService.delete(brandId);
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND,
+      brandId,
+    );
+
+    await Promise.all(
+      brandEntity.section.map((section) =>
+        this.languageRepositoryService.deleteMultilingualTexts(
+          EntityType.BRAND_SECTION,
+          section.id,
+        ),
+      ),
+    );
+  }
+}

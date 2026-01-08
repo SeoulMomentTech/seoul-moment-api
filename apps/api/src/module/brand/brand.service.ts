@@ -1,3 +1,6 @@
+/* eslint-disable max-lines-per-function */
+import { BrandNameFilter } from '@app/repository/enum/brand.enum';
+import { EntityType } from '@app/repository/enum/entity.enum';
 import {
   LanguageCode,
   DEFAULT_LANGUAGE,
@@ -6,7 +9,11 @@ import { BrandRepositoryService } from '@app/repository/service/brand.repository
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
 
-import { GetBrandIntroduceResponse } from './brand.dto';
+import {
+  GetBrandIntroduceResponse,
+  GetBrandListByName,
+  GetBrandListByNameResponse,
+} from './brand.dto';
 
 @Injectable()
 export class BrandService {
@@ -24,13 +31,13 @@ export class BrandService {
     // Fetch multilingual texts for brand and sections
     const [brandTexts, sectionTexts] = await Promise.all([
       this.languageRepositoryService.findMultilingualTexts(
-        'brand',
+        EntityType.BRAND,
         brandEntity.id,
         languageCode,
       ),
       this.languageRepositoryService.findMultilingualTextsByEntities(
-        'brand_section',
-        brandEntity.brandSectionList.map((section) => section.id),
+        EntityType.BRAND_SECTION,
+        brandEntity.section.map((section) => section.id),
         languageCode,
       ),
     ]);
@@ -45,5 +52,46 @@ export class BrandService {
       brandMultilingual,
       languageCode,
     );
+  }
+
+  async getBrandListByNameFilterType(
+    filter: BrandNameFilter,
+    categoryId?: number,
+  ): Promise<GetBrandListByName[]> {
+    const brandEntityList =
+      await this.brandRepositoryService.findAllNormalBrandListByFilter(
+        filter,
+        categoryId,
+      );
+
+    const brandText =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND,
+        brandEntityList.map((v) => v.id),
+        LanguageCode.ENGLISH, // 영어 고정
+      );
+
+    return brandEntityList
+      .map((v) => GetBrandListByName.from(v, brandText))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getBrandListByName(
+    categoryId?: number,
+  ): Promise<GetBrandListByNameResponse[]> {
+    const result: GetBrandListByNameResponse[] = [];
+
+    for (const value of Object.values(BrandNameFilter)) {
+      const brandListByNameFilterType = await this.getBrandListByNameFilterType(
+        value,
+        categoryId,
+      );
+
+      result.push(
+        GetBrandListByNameResponse.from(value, brandListByNameFilterType),
+      );
+    }
+
+    return result;
   }
 }

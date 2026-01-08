@@ -84,6 +84,34 @@
         {
           "name": "SERPER_API_KEY",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:SERPER_API_KEY::"
+        },
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:AWS_ACCESS_KEY_ID::"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:AWS_SECRET_ACCESS_KEY::"
+        },
+        {
+          "name": "AWS_REGION",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:AWS_REGION::"
+        },
+        {
+          "name": "AWS_S3_BUCKET_NAME",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:AWS_S3_BUCKET_NAME::"
+        },
+        {
+          "name": "RECAPTCHA_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:RECAPTCHA_SECRET_KEY::"
+        },
+        {
+          "name": "GOOGLE_APP_PASS",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:GOOGLE_APP_PASS::"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:156321659479:secret:seoul-moment-api-dev-lsglXS:OPENAI_API_KEY::"
         }
       ],
       "logConfiguration": {

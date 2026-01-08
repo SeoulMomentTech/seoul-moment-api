@@ -1,6 +1,10 @@
 import { CacheService } from '@app/cache/cache.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
+import {
+  initializeTransactionalContext,
+  addTransactionalDataSource,
+} from 'typeorm-transactional';
 
 import { TestCacheModule } from './test-cache.module';
 import { TestDatabaseModule } from './test-database.module';
@@ -17,19 +21,25 @@ export class TestSetup {
   private static validateTestEnvironment(): void {
     // NODE_ENV가 test가 아니면 에러
     if (process.env.NODE_ENV !== 'test') {
-      throw new Error(`DANGER: Tests running in non-test environment! NODE_ENV=${process.env.NODE_ENV}`);
+      throw new Error(
+        `DANGER: Tests running in non-test environment! NODE_ENV=${process.env.NODE_ENV}`,
+      );
     }
 
     // 실제 프로덕션/개발 DB를 가리키고 있으면 에러
     const dbName = process.env.DATABASE_NAME;
     if (!dbName || !dbName.includes('test')) {
-      throw new Error(`DANGER: Test database name must contain 'test'. Current: ${dbName}`);
+      throw new Error(
+        `DANGER: Test database name must contain 'test'. Current: ${dbName}`,
+      );
     }
 
     // 테스트용 포트가 아니면 에러
     const dbPort = process.env.DATABASE_PORT;
     if (dbPort !== '5433') {
-      throw new Error(`DANGER: Test database must use port 5433. Current: ${dbPort}`);
+      throw new Error(
+        `DANGER: Test database must use port 5433. Current: ${dbPort}`,
+      );
     }
 
     console.log('✅ Test environment validation passed');
@@ -40,7 +50,7 @@ export class TestSetup {
    */
   static async initializeCache(): Promise<void> {
     this.validateTestEnvironment();
-    
+
     if (this.cacheService && this.cacheModule) {
       return;
     }
@@ -57,10 +67,13 @@ export class TestSetup {
    */
   static async initialize(): Promise<void> {
     this.validateTestEnvironment();
-    
+
     if (this.dataSource && this.cacheService && this.fullModule) {
       return;
     }
+
+    // 트랜잭션 컨텍스트 초기화
+    initializeTransactionalContext();
 
     // Cache-only 모듈이 이미 있다면 정리
     if (this.cacheModule) {
@@ -75,6 +88,9 @@ export class TestSetup {
 
     this.dataSource = this.fullModule.get<DataSource>(DataSource);
     this.cacheService = this.fullModule.get<CacheService>(CacheService);
+
+    // 트랜잭션 데이터 소스 등록
+    addTransactionalDataSource(this.dataSource);
   }
 
   /**
@@ -87,25 +103,28 @@ export class TestSetup {
       } catch (error) {
         // Suppress Redis connection warnings for cache-only tests
         if (error.message !== 'Connection is closed.') {
-          console.warn('Warning: Failed to clear cache during cleanup:', error.message);
+          console.warn(
+            'Warning: Failed to clear cache during cleanup:',
+            error.message,
+          );
         }
       }
     }
-    
+
     if (this.dataSource && this.dataSource.isInitialized) {
       await this.dataSource.destroy();
     }
-    
+
     if (this.cacheModule) {
       await this.cacheModule.close();
       this.cacheModule = null;
     }
-    
+
     if (this.fullModule) {
       await this.fullModule.close();
       this.fullModule = null;
     }
-    
+
     this.dataSource = null;
     this.cacheService = null;
   }
@@ -116,7 +135,7 @@ export class TestSetup {
   static async clearDatabase(): Promise<void> {
     // Clear Redis cache first
     await this.clearCache();
-    
+
     // Skip DB operations if no DataSource (cache-only tests)
     if (!this.dataSource) {
       return;
@@ -125,11 +144,32 @@ export class TestSetup {
     try {
       // 자식 테이블부터 순서대로 정리 (외래키 참조 순서 고려)
       const tables = [
+        'article_section_image',
+        'news_section_image',
+        'home_section_image',
         'brand_section_image',
         'brand_banner_image',
+        'home_banner_image',
+        'product_color_image',
+        'variant_option',
         'multilingual_text',
+        'article_section',
+        'news_section',
+        'home_section',
         'brand_section',
+        'product_image',
+        'product_variant',
+        'product_color',
+        'option_value',
+        'partner',
+        'partner_category',
+        'product',
+        'product_category',
+        'option',
+        'article',
+        'news',
         'brand',
+        'category',
         'language',
       ];
 

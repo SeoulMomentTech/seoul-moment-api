@@ -1,4 +1,17 @@
-export enum EntityEnum {
+export enum EntityType {
+  CATEGORY = 'category',
   BRAND = 'brand',
   BRAND_SECTION = 'brand_section',
+  NEWS = 'news',
+  NEWS_SECTION = 'news_section',
+  ARTICLE = 'article',
+  ARTICLE_SECTION = 'article_section',
+  HOME_SECTION = 'home_section',
+  PRODUCT = 'product',
+  PRODUCT_CATEGORY = 'product_category',
+  OPTION = 'option',
+  OPTION_VALUE = 'option_value',
+  PARTNER = 'partner',
+  PARTNER_CATEGORY = 'partner_category',
+  PRODUCT_FILTER = 'product_filter',
 }
