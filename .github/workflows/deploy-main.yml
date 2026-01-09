@@ -1,0 +1,75 @@
+name: Deploy to ECS (main)
+
+on:
+  push:
+    branches: ['main']
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+  IMAGE_TAG_PREFIX: ${{ vars.IMAGE_TAG_PREFIX || 'main' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Compute image tags
+        id: vars
+        run: |
+          ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG_PREFIX}-${GITHUB_SHA}"
+          IMAGE_URI_LATEST="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG_PREFIX}-latest"
+          echo "ECR_REGISTRY=$ECR_REGISTRY" >> $GITHUB_OUTPUT
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "IMAGE_URI_LATEST=$IMAGE_URI_LATEST" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image
+        run: |
+          docker build -t "${{ steps.vars.outputs.IMAGE_URI }}" -t "${{ steps.vars.outputs.IMAGE_URI_LATEST }}" \
+            --build-arg APP=api \
+            --build-arg PORT=3000 \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push "${{ steps.vars.outputs.IMAGE_URI }}"
+          docker push "${{ steps.vars.outputs.IMAGE_URI_LATEST }}"
+
+      - name: Render task definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: .github/ecs/taskdef.json
+          container-name: seoul-moment-api
+          image: ${{ steps.vars.outputs.IMAGE_URI }}
+
+      - name: Deploy to Amazon ECS
+        id: deploy
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          deployment-configuration: |
+            minimumHealthyPercent: 0
+            maximumPercent: 100
