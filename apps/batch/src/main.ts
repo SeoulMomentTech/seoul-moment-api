@@ -14,6 +14,7 @@ import { initializeTransactionalContext } from 'typeorm-transactional';
 import { v4 as uuidV4 } from 'uuid';
 
 import { BatchModule } from './module/batch.module';
+import { OpensearchService } from './module/opensearch/opensearch.service';
 
 function scheduleShutdown(
   app: NestExpressApplication,
@@ -56,6 +57,7 @@ async function bootstrap() {
 
   const logger = app.get(LoggerService);
   const googleSheetService = app.get(GoogleSheetService);
+  const opensearchService = app.get(OpensearchService);
 
   app.use((req: Request, res: Response, next: NextFunction) =>
     logger.scope(uuidV4(), next),
@@ -66,10 +68,6 @@ async function bootstrap() {
       contentSecurityPolicy: false,
     }),
   );
-
-  logger.info('❗Start Crawling Batch');
-  await googleSheetService.progressGoogleSheet();
-  logger.info('❗Finish Crawling Batch');
 
   // 환경 정보 로깅
   logger.info(`🚀 Starting Seoul Moment Batch Server`);
@@ -84,6 +82,23 @@ async function bootstrap() {
   }
 
   logger.info(`📚 Environment configuration loaded successfully`);
+
+  logger.info('❗Start Crawling Batch');
+  try {
+    logger.info('🔍 Start Google Sheet Service');
+    await googleSheetService.progressGoogleSheet();
+    logger.info('🔍 Finish Google Sheet Service');
+  } catch (error) {
+    logger.error('❌ Failed to Google Sheet Service:', error);
+  }
+  try {
+    logger.info('🔍 Start OpenSearch Service');
+    await opensearchService.syncProductData();
+    logger.info('🔍 Finish OpenSearch Service');
+  } catch (error) {
+    logger.error('❌ Failed to sync product data:', error);
+  }
+  logger.info('❗Finish Crawling Batch');
 
   // 🕐 시작 시점 기준 일정 시간 뒤 종료 (기본 60분)
   scheduleShutdown(app, logger);

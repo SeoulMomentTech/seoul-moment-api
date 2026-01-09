@@ -43,7 +43,7 @@ export class ProductIndexDocument {
     productItemZh: GetProductResponse,
   ) {
     return plainToInstance(this, {
-      id: entity.id,
+      id: productItemKo.id,
       brandId: entity.product.brandId,
       categoryId: entity.product.categoryId,
       productCategoryId: entity.product.productCategoryId,

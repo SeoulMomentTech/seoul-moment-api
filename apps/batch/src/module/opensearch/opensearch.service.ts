@@ -1,4 +1,5 @@
 /* eslint-disable max-lines-per-function */
+import { LoggerService } from '@app/common/log/logger.service';
 import { OpensearchService as ExternalOpensearchService } from '@app/external/opensearch/opensearch.service';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ProductItemStatus } from '@app/repository/enum/product.enum';
@@ -15,6 +16,7 @@ export class OpensearchService {
     private readonly opensearchService: ExternalOpensearchService,
     private readonly productRepository: ProductRepositoryService,
     private readonly productService: ProductService,
+    private readonly logger: LoggerService,
   ) {}
 
   async syncProductData() {
@@ -55,6 +57,10 @@ export class OpensearchService {
         ),
       );
     }
+
+    this.logger.info('🔍 Sync product data', {
+      productIndexDocuments,
+    });
 
     await this.opensearchService.bulk('products', productIndexDocuments);
   }

@@ -5,7 +5,6 @@ import { Injectable } from '@nestjs/common';
 export class GoogleSchedule {
   constructor(private readonly googleSheetService: GoogleSheetService) {}
 
-  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { timeZone: 'Asia/Seoul' })
   async cronNewsCrawling() {
     await this.googleSheetService.progressGoogleSheet();
   }
