@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
+import { ProductExternalEntity } from './product-external.entity';
 import { ProductItemImageEntity } from './product-item-image.entity';
 import { ProductVariantEntity } from './product-variant.entity';
 import { ProductEntity } from './product.entity';
@@ -103,4 +104,14 @@ export class ProductItemEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   variants: ProductVariantEntity[];
+
+  @OneToMany(
+    () => ProductExternalEntity,
+    (productExternal) => productExternal.productItem,
+    {
+      cascade: true,
+      createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+    },
+  )
+  productExternals: ProductExternalEntity[];
 }

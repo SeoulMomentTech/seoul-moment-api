@@ -6,6 +6,7 @@ import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
 import { ProductBannerEntity } from '@app/repository/entity/product-banner.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
+import { ProductExternalEntity } from '@app/repository/entity/product-external.entity';
 import { ProductFilterEntity } from '@app/repository/entity/product-filter.entity';
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
@@ -465,6 +466,41 @@ export class GetProductDetailBrand {
   }
 }
 
+export class GetProductDetailExternal {
+  @ApiProperty({
+    description: '외부 링크 아이디',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '외부 링크 이름',
+    example: '외부 링크 이름',
+  })
+  name: string;
+
+  @ApiProperty({
+    description: '외부 링크 이미지 URL',
+    example: 'https://example.com/image1.jpg',
+  })
+  imageUrl: string;
+
+  @ApiProperty({
+    description: '외부 링크 URL',
+    example: 'https://example.com',
+  })
+  url: string;
+
+  static from(entity: ProductExternalEntity) {
+    return plainToInstance(this, {
+      id: entity.id,
+      name: entity.externalLink.name,
+      imageUrl: entity.externalLink.getImageUrl(),
+      url: entity.externalLink.url,
+    });
+  }
+}
+
 export class GetProductDetailResponse {
   @ApiProperty({
     description: '상품 ID',
@@ -599,8 +635,29 @@ export class GetProductDetailResponse {
   })
   relate: GetProductResponse[];
 
+  @ApiProperty({
+    description: '외부 링크 목록',
+    type: [GetProductDetailExternal],
+    example: [
+      {
+        id: 1,
+        name: '외부 링크 이름',
+        imageUrl: 'https://example.com/image1.jpg',
+        url: 'https://example.com',
+      },
+      {
+        id: 2,
+        name: '외부 링크 이름',
+        imageUrl: 'https://example.com/image2.jpg',
+        url: 'https://example.com',
+      },
+    ],
+  })
+  external: GetProductDetailExternal[];
+
   static from(
     entity: ProductItemEntity,
+    productExternalEntity: ProductExternalEntity[],
     multilingualText: {
       brand: MultilingualTextEntity[];
       product: MultilingualTextEntity[];
@@ -643,6 +700,9 @@ export class GetProductDetailResponse {
       detailImg: entity.product.getDetailInfoImage(),
       subImage: entity.images.map((v) => v.getImage()),
       relate,
+      external: productExternalEntity.map((v) =>
+        GetProductDetailExternal.from(v),
+      ),
     });
   }
 }

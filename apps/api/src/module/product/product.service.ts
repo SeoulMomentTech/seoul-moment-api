@@ -185,11 +185,15 @@ export class ProductService {
     productItemId: number,
     language: LanguageCode,
   ): Promise<GetProductDetailResponse> {
-    const languageEntity =
-      await this.languageRepositoryService.findLanguageByCode(language);
+    const [languageEntity, productDetail] = await Promise.all([
+      this.languageRepositoryService.findLanguageByCode(language),
+      this.productRepositoryService.getProductItemDetail(productItemId),
+    ]);
 
-    const productDetail =
-      await this.productRepositoryService.getProductItemDetail(productItemId);
+    const productExternal =
+      await this.productRepositoryService.getProductExternalByProductItemId(
+        productDetail.id,
+      );
 
     // 필수 관계 데이터 검증
     if (!productDetail.product) {
@@ -241,6 +245,7 @@ export class ProductService {
 
     return GetProductDetailResponse.from(
       productDetail,
+      productExternal,
       {
         brand: brandtext,
         product: productText,
