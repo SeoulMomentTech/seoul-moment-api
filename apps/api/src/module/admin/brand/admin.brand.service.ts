@@ -204,22 +204,36 @@ export class AdminBrandService {
     await this.brandRepositoryService.update(updateBrandDto);
 
     if (dto.bannerImageUrlList && dto.bannerImageUrlList.length > 0) {
-      await Promise.all(
-        dto.bannerImageUrlList.map((banner) =>
-          this.brandRepositoryService.updateBannerImage(banner),
-        ),
-      );
+      for (const banner of dto.bannerImageUrlList) {
+        if (banner.oldImageUrl === '' || banner.oldImageUrl === null) {
+          await this.brandRepositoryService.insertBannerImage(
+            plainToInstance(BrandBannerImageEntity, {
+              brandId,
+              imageUrl: banner.newImageUrl,
+            }),
+          );
+        } else {
+          await this.brandRepositoryService.updateBannerImage(banner);
+        }
+      }
     }
 
     if (
       dto.mobileBannerImageUrlList &&
       dto.mobileBannerImageUrlList.length > 0
     ) {
-      await Promise.all(
-        dto.mobileBannerImageUrlList.map((banner) =>
-          this.brandRepositoryService.updateMobileBannerImage(banner),
-        ),
-      );
+      for (const banner of dto.mobileBannerImageUrlList) {
+        if (banner.oldImageUrl === '' || banner.oldImageUrl === null) {
+          await this.brandRepositoryService.insertBannerImage(
+            plainToInstance(BrandBannerImageEntity, {
+              brandId,
+              mobileImageUrl: banner.newImageUrl,
+            }),
+          );
+        } else {
+          await this.brandRepositoryService.updateMobileBannerImage(banner);
+        }
+      }
     }
 
     if (dto.sectionSortOrderList && dto.sectionSortOrderList.length > 0) {
@@ -290,9 +304,20 @@ export class AdminBrandService {
 
         if (section.imageUrlList && section.imageUrlList.length > 0) {
           for (const imageUrl of section.imageUrlList) {
-            promises.push(
-              this.brandRepositoryService.updateSectionImage(imageUrl),
-            );
+            if (imageUrl.oldImageUrl === '' || imageUrl.oldImageUrl === null) {
+              promises.push(
+                this.brandRepositoryService.insertSectionImage(
+                  plainToInstance(BrandSectionImageEntity, {
+                    sectionId: section.id,
+                    imageUrl: imageUrl.newImageUrl,
+                  }),
+                ),
+              );
+            } else {
+              promises.push(
+                this.brandRepositoryService.updateSectionImage(imageUrl),
+              );
+            }
           }
         }
 

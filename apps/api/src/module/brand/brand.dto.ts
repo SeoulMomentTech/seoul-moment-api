@@ -153,9 +153,11 @@ export class GetBrandIntroduceResponse {
       id: entity.id,
       bannerList: entity.bannerImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
+        .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
         .map((v) => v.getImage()),
       mobileBannerList: entity.bannerImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
+        .filter((v) => v.mobileImageUrl !== null && v.mobileImageUrl !== '')
         .map((v) => v.getMobileImage()),
       name: nameField.getContentByLanguageWithFallback(language) || '',
       description:

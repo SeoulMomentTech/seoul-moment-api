@@ -20,7 +20,7 @@ export class BrandBannerImageEntity extends CommonEntity {
   @Column('int', { name: 'brand_id', nullable: false })
   brandId: number;
 
-  @Column('varchar', { name: 'image_url', length: 500, nullable: false })
+  @Column('varchar', { name: 'image_url', length: 500, nullable: true })
   imageUrl: string;
 
   @Column('varchar', { name: 'mobile_image_url', length: 500, nullable: true })
