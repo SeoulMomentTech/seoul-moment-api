@@ -102,6 +102,7 @@ export class AdminProductOptionService {
       await this.optionRepositoryService.insertOptionValue(
         plainToInstance(OptionValueEntity, {
           optionId: dto.optionId,
+          colorCode: dto.colorCode,
         }),
       );
 
@@ -171,6 +172,7 @@ export class AdminProductOptionService {
     const updateOptionValueDto: UpdateOptionValueDto = {
       id,
       optionId: dto.optionId,
+      colorCode: dto.colorCode,
     };
 
     await this.optionRepositoryService.updateOptionValue(updateOptionValueDto);

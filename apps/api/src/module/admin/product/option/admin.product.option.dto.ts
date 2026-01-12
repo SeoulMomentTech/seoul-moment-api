@@ -226,6 +226,14 @@ export class PostAdminProductOptionValueRequest {
   @Type(() => PostAdminProductOptionValueText)
   @IsDefined()
   text: PostAdminProductOptionValueText[];
+
+  @ApiPropertyOptional({
+    description: '옵션 값 색상 코드',
+    example: '#FF0000',
+  })
+  @IsString()
+  @IsOptional()
+  colorCode?: string;
 }
 
 export class PatchAdminProductOptionValueRequest {
@@ -252,6 +260,14 @@ export class PatchAdminProductOptionValueRequest {
   @Type(() => PostAdminProductOptionValueText)
   @IsOptional()
   text?: PostAdminProductOptionValueText[];
+
+  @ApiPropertyOptional({
+    description: '옵션 값 색상 코드',
+    example: '#FF0000',
+  })
+  @IsString()
+  @IsOptional()
+  colorCode?: string;
 }
 
 export class PatchAdminProductOptionRequest {

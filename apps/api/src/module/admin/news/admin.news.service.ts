@@ -283,9 +283,23 @@ export class AdminNewsService {
               section.sectionImageList.length > 0
             ) {
               for (const sectionImage of section.sectionImageList) {
-                promises.push(
-                  this.newsRepositoryService.updateSectionImage(sectionImage),
-                );
+                if (
+                  sectionImage.oldImageUrl === '' ||
+                  sectionImage.oldImageUrl === null
+                ) {
+                  promises.push(
+                    this.newsRepositoryService.insertSectionImage(
+                      plainToInstance(NewsSectionImageEntity, {
+                        sectionId: section.id,
+                        imageUrl: sectionImage.newImageUrl,
+                      }),
+                    ),
+                  );
+                } else {
+                  promises.push(
+                    this.newsRepositoryService.updateSectionImage(sectionImage),
+                  );
+                }
               }
             }
           }
