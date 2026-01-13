@@ -372,6 +372,14 @@ export class GetAdminProductOptionValueResponse {
   })
   nameDto: GetAdminProductOptionValueNameDto[];
 
+  @ApiPropertyOptional({
+    description: '옵션 값 색상 코드',
+    example: '#FF0000',
+  })
+  @IsString()
+  @IsOptional()
+  colorCode?: string;
+
   @ApiProperty({
     description: '생성일',
     example: '2025-01-01T12:00:00.000Z',
@@ -391,6 +399,7 @@ export class GetAdminProductOptionValueResponse {
     return plainToInstance(this, {
       id: entity.id,
       nameDto,
+      colorCode: entity.colorCode,
       createDate: entity.createDate,
       updateDate: entity.updateDate,
     });
