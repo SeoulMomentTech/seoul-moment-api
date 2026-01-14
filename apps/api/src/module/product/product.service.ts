@@ -347,10 +347,12 @@ export class ProductService {
 
     // Group by optionType and aggregate option values
     const grouped = new Map<string, ProductFilterOptionValue[]>();
+    const optionUiType = new Map<string, string>();
     const seenByType = new Map<string, Set<number>>();
 
     for (const v of productFilterDtos) {
       const key = String(v.optionType);
+      optionUiType.set(key, v.optionUiType);
       let list = grouped.get(key);
       let seenSet = seenByType.get(key);
 
@@ -372,7 +374,11 @@ export class ProductService {
     }
 
     return Array.from(grouped.entries()).map(([optionType, optionValueList]) =>
-      GetProductFilterResponse.from(optionType, optionValueList),
+      GetProductFilterResponse.from(
+        optionType,
+        optionUiType.get(optionType),
+        optionValueList,
+      ),
     );
   }
 

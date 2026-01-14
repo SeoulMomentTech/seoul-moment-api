@@ -62,4 +62,10 @@ export class ProductFilterDto {
     example: OptionType.COLOR,
   })
   optionType: OptionType;
+
+  @ApiProperty({
+    description: '옵션 UI 타입',
+    example: 'color',
+  })
+  optionUiType: string;
 }

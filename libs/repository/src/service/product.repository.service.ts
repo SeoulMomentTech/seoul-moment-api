@@ -548,6 +548,7 @@ export class ProductRepositoryService implements OnModuleInit {
         'mt_option.text_content AS "optionType"',
         'ov.color_code AS "colorCode"',
         'mt_option_value.text_content AS "textContent"',
+        'o.ui_type AS "optionUiType"',
       ])
       .leftJoin('vo.optionValue', 'ov')
       .leftJoin('ov.option', 'o')
@@ -589,7 +590,7 @@ export class ProductRepositoryService implements OnModuleInit {
 
     const results = await query
       .groupBy(
-        'ov.id, o.type, ov.color_code, mt_option_value.text_content, mt_option.text_content',
+        'ov.id, o.type, ov.color_code, mt_option_value.text_content, mt_option.text_content, o.ui_type',
       )
       .getRawMany();
 
@@ -600,6 +601,7 @@ export class ProductRepositoryService implements OnModuleInit {
         name: string;
         code: string | null;
         optionType: OptionType;
+        optionUiType: string;
       }
     >();
 
@@ -613,6 +615,7 @@ export class ProductRepositoryService implements OnModuleInit {
         name,
         code: row.colorCode || null,
         optionType,
+        optionUiType: row.optionUiType,
       });
     }
     return Array.from(allMap.values());
