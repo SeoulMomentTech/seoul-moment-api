@@ -28,7 +28,6 @@ import { BrandStatus } from '../enum/brand.enum';
 import { EntityType } from '../enum/entity.enum';
 import { LanguageCode } from '../enum/language.enum';
 import {
-  OptionType,
   ProductItemStatus,
   ProductSortColumn,
   ProductStatus,
@@ -418,7 +417,7 @@ export class ProductRepositoryService implements OnModuleInit {
   }
 
   async getProductOption(
-    type: OptionType,
+    type: string,
     productId: number,
     languageId: number,
   ): Promise<GetProductDetailOptionValue[]> {
@@ -452,7 +451,7 @@ export class ProductRepositoryService implements OnModuleInit {
     return result;
   }
 
-  async getProductOptionTypes(productId: number): Promise<OptionType[]> {
+  async getProductOptionTypes(productId: number): Promise<string[]> {
     const subQuery = this.productRepository.manager
       .createQueryBuilder()
       .select('pv.id')
@@ -600,7 +599,7 @@ export class ProductRepositoryService implements OnModuleInit {
         optionValueId: number;
         name: string;
         code: string | null;
-        optionType: OptionType;
+        optionType: string;
         optionUiType: string;
       }
     >();

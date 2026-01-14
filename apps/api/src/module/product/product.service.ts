@@ -16,7 +16,6 @@ import { ProductEntity } from '@app/repository/entity/product.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { OptionType } from '@app/repository/enum/product.enum';
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
@@ -31,7 +30,6 @@ import {
   GetProductBannerResponse,
   GetProductCategoryResponse,
   GetProductDetailResponse,
-  GetProductDetailOption,
   GetProductRequest,
   GetProductResponse,
   PostProductRequest,
@@ -161,7 +159,7 @@ export class ProductService {
         productItemList.flatMap((v) =>
           v.variants.flatMap((v) =>
             v.variantOptions
-              .filter((vo) => vo.optionValue?.option?.type === OptionType.COLOR)
+              .filter((vo) => vo.optionValue?.option?.type === 'COLOR')
               .map((vo) => vo.optionValueId),
           ),
         ),

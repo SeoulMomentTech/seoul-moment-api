@@ -1,5 +1,4 @@
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
-import { OptionType } from '@app/repository/enum/product.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 import { IsDefined, IsInt, IsNumber, IsString } from 'class-validator';
@@ -75,7 +74,7 @@ export class GetAdminProductItemResponse {
       colorCode:
         entity.variants.flatMap((v) =>
           v.variantOptions
-            .filter((v) => v.optionValue.option.type === OptionType.COLOR)
+            .filter((v) => v.optionValue.option.type === 'COLOR')
             .map((v) => v.optionValue.colorCode),
         )[0] || null,
       price: entity.price,

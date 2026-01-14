@@ -1,7 +1,6 @@
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
-import { OptionType } from '@app/repository/enum/product.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import { IsDefined, IsNumber } from 'class-validator';
@@ -17,10 +16,9 @@ export class GetOptionResponse {
 
   @ApiProperty({
     description: '상품 옵션 타입',
-    example: OptionType.COLOR,
-    enum: OptionType,
+    example: 'COLOR',
   })
-  type: OptionType;
+  type: string;
 
   static from(entity: OptionEntity) {
     return plainToInstance(this, {

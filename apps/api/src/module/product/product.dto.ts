@@ -11,10 +11,7 @@ import { ProductFilterEntity } from '@app/repository/entity/product-filter.entit
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { OptionUiType } from '@app/repository/enum/option.enum';
-import {
-  OptionType,
-  ProductSortColumn,
-} from '@app/repository/enum/product.enum';
+import { ProductSortColumn } from '@app/repository/enum/product.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
@@ -374,7 +371,7 @@ export class GetProductResponse {
       colorCode:
         entity.variants.flatMap((v) =>
           v.variantOptions
-            .filter((v) => v.optionValue.option.type === OptionType.COLOR)
+            .filter((v) => v.optionValue.option.type === 'COLOR')
             .map((v) => v.optionValue.colorCode),
         )[0] || null,
       price: entity.getEffectivePrice(),
@@ -398,43 +395,6 @@ export class GetProductDetailOptionValue {
     example: 'Red',
   })
   value: string;
-}
-
-export class GetProductDetailOption {
-  @ApiProperty({
-    description: '색상 옵션',
-    type: [GetProductDetailOptionValue],
-    required: false,
-  })
-  [OptionType.COLOR]?: GetProductDetailOptionValue[];
-
-  @ApiProperty({
-    description: '사이즈 옵션',
-    type: [GetProductDetailOptionValue],
-    required: false,
-  })
-  [OptionType.SIZE]?: GetProductDetailOptionValue[];
-
-  @ApiProperty({
-    description: '소재 옵션',
-    type: [GetProductDetailOptionValue],
-    required: false,
-  })
-  [OptionType.MATERIAL]?: GetProductDetailOptionValue[];
-
-  @ApiProperty({
-    description: '핏 옵션',
-    type: [GetProductDetailOptionValue],
-    required: false,
-  })
-  [OptionType.FIT]?: GetProductDetailOptionValue[];
-
-  @ApiProperty({
-    description: '스타일 옵션',
-    type: [GetProductDetailOptionValue],
-    required: false,
-  })
-  [OptionType.STYLE]?: GetProductDetailOptionValue[];
 }
 
 export class GetProductDetailBrand {
@@ -552,7 +512,6 @@ export class GetProductDetailResponse {
 
   @ApiProperty({
     description: '상품 옵션 목록',
-    type: GetProductDetailOption,
     example: {
       color: [
         {
@@ -568,7 +527,7 @@ export class GetProductDetailResponse {
       ],
     },
   })
-  option: GetProductDetailOption;
+  option: Record<string, GetProductDetailOptionValue[]>;
 
   @ApiProperty({
     description: '좋아요 수',
@@ -787,10 +746,9 @@ export class GetProductOptionResponse {
 
   @ApiProperty({
     description: '상품 옵션 타입',
-    example: OptionType.COLOR,
-    enum: OptionType,
+    example: 'COLOR',
   })
-  type: OptionType;
+  type: string;
 
   static from(entity: OptionEntity) {
     return plainToInstance(this, {
@@ -1164,12 +1122,11 @@ export class PostOptionRequest {
 
   @ApiProperty({
     description: '옵션 타입',
-    example: OptionType.COLOR,
-    enum: OptionType,
+    example: 'COLOR',
   })
-  @IsEnum(OptionType)
+  @IsString()
   @IsDefined()
-  type: OptionType;
+  type: string;
 
   @ApiProperty({
     description: '옵션 타입',
