@@ -43,14 +43,9 @@ export class AdminImageService {
   ): Promise<AdminUploadImageResponse> {
     this.logger.info('uploadFile', { file, folder });
 
-    const image = await this.s3Service.uploadFile(
-      file.buffer,
-      {
-        folder,
-        contentType: file.mimetype,
-      },
-      file.mimetype.split('/')[1],
-    );
+    const image = await this.s3Service.uploadImage(file.buffer, {
+      folder,
+    });
 
     return {
       imageUrl: image.url,

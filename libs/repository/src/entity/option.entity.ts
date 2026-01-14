@@ -11,7 +11,6 @@ import { MultilingualTextEntity } from './multilingual-text.entity';
 import { OptionValueEntity } from './option-value.entity';
 import { EntityType } from '../enum/entity.enum';
 import { OptionUiType } from '../enum/option.enum';
-import { OptionType } from '../enum/product.enum';
 
 /**
  * 옵션 종류 Entity
@@ -24,12 +23,10 @@ export class OptionEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column('enum', {
-    enum: OptionType,
-    nullable: false,
-    comment: '옵션 타입 (COLOR/SIZE/MATERIAL/FIT/STYLE)',
+  @Column('varchar', {
+    nullable: true,
   })
-  type: OptionType;
+  type: string;
 
   @Column('enum', {
     enum: OptionUiType,

@@ -6,14 +6,12 @@ import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
 import { ProductBannerEntity } from '@app/repository/entity/product-banner.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
+import { ProductExternalEntity } from '@app/repository/entity/product-external.entity';
 import { ProductFilterEntity } from '@app/repository/entity/product-filter.entity';
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { OptionUiType } from '@app/repository/enum/option.enum';
-import {
-  OptionType,
-  ProductSortColumn,
-} from '@app/repository/enum/product.enum';
+import { ProductSortColumn } from '@app/repository/enum/product.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
@@ -373,7 +371,7 @@ export class GetProductResponse {
       colorCode:
         entity.variants.flatMap((v) =>
           v.variantOptions
-            .filter((v) => v.optionValue.option.type === OptionType.COLOR)
+            .filter((v) => v.optionValue.option.type === 'COLOR')
             .map((v) => v.optionValue.colorCode),
         )[0] || null,
       price: entity.getEffectivePrice(),
@@ -397,43 +395,6 @@ export class GetProductDetailOptionValue {
     example: 'Red',
   })
   value: string;
-}
-
-export class GetProductDetailOption {
-  @ApiProperty({
-    description: '색상 옵션',
-    type: [GetProductDetailOptionValue],
-    required: false,
-  })
-  [OptionType.COLOR]?: GetProductDetailOptionValue[];
-
-  @ApiProperty({
-    description: '사이즈 옵션',
-    type: [GetProductDetailOptionValue],
-    required: false,
-  })
-  [OptionType.SIZE]?: GetProductDetailOptionValue[];
-
-  @ApiProperty({
-    description: '소재 옵션',
-    type: [GetProductDetailOptionValue],
-    required: false,
-  })
-  [OptionType.MATERIAL]?: GetProductDetailOptionValue[];
-
-  @ApiProperty({
-    description: '핏 옵션',
-    type: [GetProductDetailOptionValue],
-    required: false,
-  })
-  [OptionType.FIT]?: GetProductDetailOptionValue[];
-
-  @ApiProperty({
-    description: '스타일 옵션',
-    type: [GetProductDetailOptionValue],
-    required: false,
-  })
-  [OptionType.STYLE]?: GetProductDetailOptionValue[];
 }
 
 export class GetProductDetailBrand {
@@ -461,6 +422,41 @@ export class GetProductDetailBrand {
       id,
       profileImg,
       name,
+    });
+  }
+}
+
+export class GetProductDetailExternal {
+  @ApiProperty({
+    description: '외부 링크 아이디',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '외부 링크 이름',
+    example: '외부 링크 이름',
+  })
+  name: string;
+
+  @ApiProperty({
+    description: '외부 링크 이미지 URL',
+    example: 'https://example.com/image1.jpg',
+  })
+  imageUrl: string;
+
+  @ApiProperty({
+    description: '외부 링크 URL',
+    example: 'https://example.com',
+  })
+  url: string;
+
+  static from(entity: ProductExternalEntity) {
+    return plainToInstance(this, {
+      id: entity.id,
+      name: entity.externalLink.name,
+      imageUrl: entity.externalLink.getImageUrl(),
+      url: entity.externalLink.url,
     });
   }
 }
@@ -516,7 +512,6 @@ export class GetProductDetailResponse {
 
   @ApiProperty({
     description: '상품 옵션 목록',
-    type: GetProductDetailOption,
     example: {
       color: [
         {
@@ -532,7 +527,7 @@ export class GetProductDetailResponse {
       ],
     },
   })
-  option: GetProductDetailOption;
+  option: Record<string, GetProductDetailOptionValue[]>;
 
   @ApiProperty({
     description: '좋아요 수',
@@ -599,8 +594,29 @@ export class GetProductDetailResponse {
   })
   relate: GetProductResponse[];
 
+  @ApiProperty({
+    description: '외부 링크 목록',
+    type: [GetProductDetailExternal],
+    example: [
+      {
+        id: 1,
+        name: '외부 링크 이름',
+        imageUrl: 'https://example.com/image1.jpg',
+        url: 'https://example.com',
+      },
+      {
+        id: 2,
+        name: '외부 링크 이름',
+        imageUrl: 'https://example.com/image2.jpg',
+        url: 'https://example.com',
+      },
+    ],
+  })
+  external: GetProductDetailExternal[];
+
   static from(
     entity: ProductItemEntity,
+    productExternalEntity: ProductExternalEntity[],
     multilingualText: {
       brand: MultilingualTextEntity[];
       product: MultilingualTextEntity[];
@@ -643,6 +659,9 @@ export class GetProductDetailResponse {
       detailImg: entity.product.getDetailInfoImage(),
       subImage: entity.images.map((v) => v.getImage()),
       relate,
+      external: productExternalEntity.map((v) =>
+        GetProductDetailExternal.from(v),
+      ),
     });
   }
 }
@@ -727,10 +746,9 @@ export class GetProductOptionResponse {
 
   @ApiProperty({
     description: '상품 옵션 타입',
-    example: OptionType.COLOR,
-    enum: OptionType,
+    example: 'COLOR',
   })
-  type: OptionType;
+  type: string;
 
   static from(entity: OptionEntity) {
     return plainToInstance(this, {
@@ -1047,10 +1065,14 @@ export class GetProductFilterResponse {
   })
   optionValueList: ProductFilterOptionValue[];
 
-  static from(title: string, optionValueList: ProductFilterOptionValue[]) {
+  static from(
+    title: string,
+    type: string,
+    optionValueList: ProductFilterOptionValue[],
+  ) {
     return plainToInstance(this, {
       title,
-      type: OptionUiType.RADIO,
+      type,
       optionValueList,
     });
   }
@@ -1100,12 +1122,11 @@ export class PostOptionRequest {
 
   @ApiProperty({
     description: '옵션 타입',
-    example: OptionType.COLOR,
-    enum: OptionType,
+    example: 'COLOR',
   })
-  @IsEnum(OptionType)
+  @IsString()
   @IsDefined()
-  type: OptionType;
+  type: string;
 
   @ApiProperty({
     description: '옵션 타입',

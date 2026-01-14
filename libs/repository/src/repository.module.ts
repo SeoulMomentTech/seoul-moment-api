@@ -10,6 +10,7 @@ import { BrandSectionImageEntity } from './entity/brand-section-image.entity';
 import { BrandSectionEntity } from './entity/brand-section.entity';
 import { BrandEntity } from './entity/brand.entity';
 import { CategoryEntity } from './entity/category.entity';
+import { ExternalLinkEntity } from './entity/external-link.entity';
 import { HomeBannerImageEntity } from './entity/home-banner-image.entity';
 import { HomeSectionImageEntity } from './entity/home-section-image.entity';
 import { HomeSectionEntity } from './entity/home-section.entity';
@@ -24,6 +25,7 @@ import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
 import { ProductBannerEntity } from './entity/product-banner.entity';
 import { ProductCategoryEntity } from './entity/product-category.entity';
+import { ProductExternalEntity } from './entity/product-external.entity';
 import { ProductFilterEntity } from './entity/product-filter.entity';
 import { ProductImageEntity } from './entity/product-image.entity';
 import { ProductItemImageEntity } from './entity/product-item-image.entity';
@@ -77,6 +79,8 @@ import { ProductRepositoryService } from './service/product.repository.service';
       PartnerCategoryEntity,
       ProductFilterEntity,
       AdminEntity,
+      ProductExternalEntity,
+      ExternalLinkEntity,
     ]),
   ],
   providers: [

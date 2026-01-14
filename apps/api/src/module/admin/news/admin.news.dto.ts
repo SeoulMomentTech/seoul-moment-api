@@ -455,22 +455,30 @@ export class UpdateAdminNewsSection {
 }
 
 export class GetAdminNewsSection {
-  @ApiProperty({ description: '섹션 ID', example: 1 })
+  @ApiPropertyOptional({ description: '섹션 ID', example: 1 })
+  @IsNumber()
+  @IsOptional()
   id: number;
 
   @ApiProperty({ description: '섹션 제목', example: '새로운 소식' })
+  @IsString()
+  @IsDefined()
   title: string;
 
   @ApiProperty({
     description: '섹션 부제목',
     example: '서울모먼트의 최신 뉴스',
   })
+  @IsString()
+  @IsDefined()
   subTitle: string;
 
   @ApiProperty({
     description: '섹션 내용',
     example: '서울모먼트의 새로운 소식을 전해드립니다...',
   })
+  @IsString()
+  @IsDefined()
   content: string;
 
   @ApiProperty({
@@ -481,6 +489,9 @@ export class GetAdminNewsSection {
     ],
     type: [String],
   })
+  @IsArray()
+  @IsString({ each: true })
+  @IsDefined()
   imageList: string[];
 
   static from(
@@ -573,18 +584,26 @@ export class GetAdminNewsInfoText {
   languageId: number;
 
   @ApiProperty({ description: '뉴스 제목', example: '서울모먼트 신제품 출시' })
+  @IsString()
+  @IsDefined()
   title: string;
 
   @ApiProperty({
     description: '뉴스 내용',
     example: '서울모먼트의 새로운 제품이 출시되었습니다...',
   })
+  @IsString()
+  @IsDefined()
   content: string;
 
   @ApiProperty({
     description: '브랜드 정보 섹션 리스트',
     type: [GetAdminNewsSection],
   })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminNewsSection)
+  @IsDefined()
   section: GetAdminNewsSection[];
 
   static from(
@@ -791,47 +810,57 @@ export class UpdateAdminNewsRequest {
 
   @ApiPropertyOptional({
     description: '다국어 브랜드 정보 리스트 (한국어, 영어, 중국어)',
-    type: [UpdateAdminNewsInfoText],
     example: [
       {
-        languageId: 2,
-        title: 'Seoul Moment News',
-        content:
-          'Seoul Moment is a news that captures special moments in Seoul.',
+        languageId: 1,
+        title: '서울모먼트',
+        content: '서울의 특별한 순간들을 담은 라이프스타일 브랜드입니다.',
         section: [
           {
             id: 1,
-            title: 'News Story',
-            subTitle:
-              'Seoul Moment is a news that captures special moments in Seoul.',
+            title: '브랜드 스토리',
+            subTitle: '서울모먼트의 최신 뉴스',
             content:
-              'Seoul Moment is a news that captures special moments in Seoul.',
-            sectionImageList: [
-              {
-                oldImageUrl: '/news-sections/2025-09-16/section-story-01.jpg',
-                newImageUrl:
-                  'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-01-new.jpg',
-              },
+              '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
+            imageList: [
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
+            ],
+          },
+        ],
+      },
+      {
+        languageId: 2,
+        title: 'Seoul Moment',
+        content: 'A lifestyle brand that captures special moments in Seoul.',
+        section: [
+          {
+            id: 1,
+            title: 'Brand Story',
+            subTitle: 'Seoul Moment Latest News',
+            content:
+              'Seoul Moment is a lifestyle brand established in 2020, capturing special moments in Seoul through our products.',
+            imageList: [
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
             ],
           },
         ],
       },
       {
         languageId: 3,
-        title: '首爾時刻新聞',
-        content: '捕捉首爾特殊時刻的新聞。',
+        title: '首爾時刻',
+        content: '捕捉首爾特殊時刻的生活方式品牌。',
         section: [
           {
             id: 1,
             title: '品牌故事',
-            subTitle: '首爾時刻新聞',
-            content: '捕捉首爾特殊時刻的新聞。',
-            sectionImageList: [
-              {
-                oldImageUrl: '/news-sections/2025-09-16/section-story-01.jpg',
-                newImageUrl:
-                  'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-01-new.jpg',
-              },
+            subTitle: '首爾時刻最新消息',
+            content:
+              '首爾時刻是2020年成立的生活方式品牌，透過產品捕捉首爾的特殊時刻。',
+            imageList: [
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
             ],
           },
         ],
@@ -843,4 +872,110 @@ export class UpdateAdminNewsRequest {
   @Type(() => UpdateAdminNewsInfoText)
   @IsOptional()
   multilingualTextList?: UpdateAdminNewsInfoText[];
+}
+
+export class V2UpdateAdminNewsRequest {
+  @ApiPropertyOptional({ description: '카테고리 ID', example: 1 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  categoryId?: number;
+
+  @ApiPropertyOptional({ description: '브랜드 ID', example: 1 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  brandId?: number;
+
+  @ApiPropertyOptional({ description: '작성자 이름', example: '김서울' })
+  @IsString()
+  @IsOptional()
+  writer?: string;
+
+  @ApiPropertyOptional({
+    description: '배너 이미지 URL',
+    example: 'https://example.com/banner.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  banner?: string;
+
+  @ApiPropertyOptional({
+    description: '작성자 프로필 이미지 URL',
+    example: 'https://example.com/profile.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  profile?: string;
+
+  @ApiPropertyOptional({
+    description: '홈 이미지 URL',
+    example: 'https://example.com/home.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  homeImage?: string;
+
+  @ApiPropertyOptional({
+    description: '다국어 브랜드 정보 리스트 (한국어, 영어, 중국어)',
+    example: [
+      {
+        languageId: 1,
+        name: '서울모먼트',
+        description: '서울의 특별한 순간들을 담은 라이프스타일 브랜드입니다.',
+        section: [
+          {
+            id: 1,
+            title: '브랜드 스토리',
+            content:
+              '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
+            imageList: [
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
+            ],
+          },
+        ],
+      },
+      {
+        languageId: 2,
+        name: 'Seoul Moment',
+        description:
+          'A lifestyle brand that captures special moments in Seoul.',
+        section: [
+          {
+            id: 1,
+            title: 'Brand Story',
+            content:
+              'Seoul Moment is a lifestyle brand established in 2020, capturing special moments in Seoul through our products.',
+            imageList: [
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
+            ],
+          },
+        ],
+      },
+      {
+        languageId: 3,
+        name: '首爾時刻',
+        description: '捕捉首爾特殊時刻的生活方式品牌。',
+        section: [
+          {
+            id: 1,
+            title: '品牌故事',
+            content:
+              '首爾時刻是2020年成立的生活方式品牌，透過產品捕捉首爾的特殊時刻。',
+            imageList: [
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
+            ],
+          },
+        ],
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminNewsInfoText)
+  @IsOptional()
+  multilingualTextList?: GetAdminNewsInfoText[];
 }

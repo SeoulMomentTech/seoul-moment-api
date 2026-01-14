@@ -505,9 +505,11 @@ export class GetAdminBrandInfoResponse {
       profileImage: entity.getProfileImage(),
       productBannerImage: entity.getBannerImage(),
       bannerList: entity.bannerImage
+        .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),
       mobileBannerList: entity.bannerImage
+        .filter((v) => v.mobileImageUrl !== null && v.mobileImageUrl !== '')
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getMobileImage()),
       multilingualTextList,

@@ -7,7 +7,7 @@ import { IsOptional } from 'class-validator';
 import { ProductBannerEntity } from '../entity/product-banner.entity';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
 import { ProductEntity } from '../entity/product.entity';
-import { OptionType, ProductSortColumn } from '../enum/product.enum';
+import { ProductSortColumn } from '../enum/product.enum';
 
 export type UpdateProductBannerDto = RequireKey<ProductBannerEntity, 'id'>;
 export type UpdateProductDto = RequireKey<ProductEntity, 'id'>;
@@ -58,8 +58,13 @@ export class ProductFilterDto {
 
   @ApiProperty({
     description: '옵션 타입',
-    enum: OptionType,
-    example: OptionType.COLOR,
+    example: 'COLOR',
   })
-  optionType: OptionType;
+  optionType: string;
+
+  @ApiProperty({
+    description: '옵션 UI 타입',
+    example: 'color',
+  })
+  optionUiType: string;
 }

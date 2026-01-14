@@ -2,7 +2,6 @@ import { OptionValueEntity } from '@app/repository/entity/option-value.entity';
 import { OptionEntity } from '@app/repository/entity/option.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { OptionUiType } from '@app/repository/enum/option.enum';
-import { OptionType } from '@app/repository/enum/product.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
@@ -51,10 +50,9 @@ export class GetAdminProductOptionResponse {
 
   @ApiProperty({
     description: '옵션 타입',
-    example: OptionType.SIZE,
-    enum: OptionType,
+    example: 'SIZE',
   })
-  type: OptionType;
+  type: string;
 
   @ApiProperty({
     description: '옵션 이름 리스트',
@@ -159,12 +157,11 @@ export class PostAdminProductOptionRequest {
 
   @ApiProperty({
     description: '옵션 타입',
-    example: OptionType.COLOR,
-    enum: OptionType,
+    example: 'COLOR',
   })
-  @IsEnum(OptionType)
+  @IsString()
   @IsDefined()
-  type: OptionType;
+  type: string;
 
   @ApiProperty({
     description: '옵션 타입',
@@ -226,6 +223,14 @@ export class PostAdminProductOptionValueRequest {
   @Type(() => PostAdminProductOptionValueText)
   @IsDefined()
   text: PostAdminProductOptionValueText[];
+
+  @ApiPropertyOptional({
+    description: '옵션 값 색상 코드',
+    example: '#FF0000',
+  })
+  @IsString()
+  @IsOptional()
+  colorCode?: string;
 }
 
 export class PatchAdminProductOptionValueRequest {
@@ -252,6 +257,14 @@ export class PatchAdminProductOptionValueRequest {
   @Type(() => PostAdminProductOptionValueText)
   @IsOptional()
   text?: PostAdminProductOptionValueText[];
+
+  @ApiPropertyOptional({
+    description: '옵션 값 색상 코드',
+    example: '#FF0000',
+  })
+  @IsString()
+  @IsOptional()
+  colorCode?: string;
 }
 
 export class PatchAdminProductOptionRequest {
@@ -282,12 +295,11 @@ export class PatchAdminProductOptionRequest {
 
   @ApiPropertyOptional({
     description: '옵션 타입',
-    example: OptionType.COLOR,
-    enum: OptionType,
+    example: 'COLOR',
   })
-  @IsEnum(OptionType)
+  @IsString()
   @IsOptional()
-  type?: OptionType;
+  type?: string;
 
   @ApiPropertyOptional({
     description: '옵션 타입',
@@ -356,6 +368,14 @@ export class GetAdminProductOptionValueResponse {
   })
   nameDto: GetAdminProductOptionValueNameDto[];
 
+  @ApiPropertyOptional({
+    description: '옵션 값 색상 코드',
+    example: '#FF0000',
+  })
+  @IsString()
+  @IsOptional()
+  colorCode?: string;
+
   @ApiProperty({
     description: '생성일',
     example: '2025-01-01T12:00:00.000Z',
@@ -375,6 +395,7 @@ export class GetAdminProductOptionValueResponse {
     return plainToInstance(this, {
       id: entity.id,
       nameDto,
+      colorCode: entity.colorCode,
       createDate: entity.createDate,
       updateDate: entity.updateDate,
     });
@@ -390,10 +411,9 @@ export class GetAdminProductOptionInfoResponse {
 
   @ApiProperty({
     description: '옵션 타입',
-    example: OptionType.SIZE,
-    enum: OptionType,
+    example: 'SIZE',
   })
-  type: OptionType;
+  type: string;
 
   @ApiProperty({
     description: '옵션 이름 리스트',

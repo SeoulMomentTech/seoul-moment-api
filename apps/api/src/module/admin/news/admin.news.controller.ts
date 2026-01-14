@@ -27,6 +27,7 @@ import {
   GetAdminNewsResponse,
   PostAdminNewsRequest,
   UpdateAdminNewsRequest,
+  V2UpdateAdminNewsRequest,
 } from './admin.news.dto';
 import { AdminNewsService } from './admin.news.service';
 
@@ -85,6 +86,20 @@ export class AdminNewsController {
     @Body() body: UpdateAdminNewsRequest,
   ) {
     await this.adminNewsService.updateAdminNews(id, body);
+  }
+
+  @Patch('v2/:id(\\d+)')
+  @ApiOperation({
+    summary: '뉴스 수정 (V2)',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
+  async V2UpdateAdminNews(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: V2UpdateAdminNewsRequest,
+  ) {
+    await this.adminNewsService.V2UpdateAdminNews(id, body);
   }
 
   @Delete(':id(\\d+)')

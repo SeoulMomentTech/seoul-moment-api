@@ -1,4 +1,5 @@
 /* eslint-disable max-lines-per-function */
+import { Configuration } from '@app/config/configuration';
 import { UpdateNewsDto } from '@app/repository/dto/news.dto';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { NewsSectionImageEntity } from '@app/repository/entity/news-section-image.entity';
@@ -15,11 +16,13 @@ import { Transactional } from 'typeorm-transactional';
 
 import {
   AdminNewsListRequest,
+  GetAdminNewsInfoText,
   GetAdminNewsInfoResponse,
   GetAdminNewsResponse,
   GetAdminNewsTextDto,
   PostAdminNewsRequest,
   UpdateAdminNewsRequest,
+  V2UpdateAdminNewsRequest,
 } from './admin.news.dto';
 
 @Injectable()
@@ -199,6 +202,107 @@ export class AdminNewsService {
   }
 
   @Transactional()
+  async newsMultilingualUpdate(newsId: number, list: GetAdminNewsInfoText[]) {
+    for (const content of list) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.NEWS,
+        newsId,
+        'title',
+        content.languageId,
+        content.title,
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.NEWS,
+        newsId,
+        'content',
+        content.languageId,
+        content.content,
+      );
+
+      for (const section of content.section) {
+        let sectionId = section.id;
+
+        if (!sectionId) {
+          const newsSectionEntity =
+            await this.newsRepositoryService.insertSection(
+              plainToInstance(NewsSectionEntity, {
+                newsId,
+              }),
+            );
+
+          sectionId = newsSectionEntity.id;
+        }
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS_SECTION,
+          sectionId,
+          'title',
+          content.languageId,
+          section.title,
+        );
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS_SECTION,
+          sectionId,
+          'subTitle',
+          content.languageId,
+          section.subTitle,
+        );
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS_SECTION,
+          sectionId,
+          'content',
+          content.languageId,
+          section.content,
+        );
+
+        await this.newsRepositoryService.deleteSectionImageBySectionId(
+          sectionId,
+        );
+
+        for (const image of section.imageList) {
+          await this.newsRepositoryService.insertSectionImage(
+            plainToInstance(NewsSectionImageEntity, {
+              sectionId,
+              imageUrl: image.replace(
+                Configuration.getConfig().IMAGE_DOMAIN_NAME,
+                '',
+              ),
+            }),
+          );
+        }
+      }
+    }
+  }
+
+  @Transactional()
+  async V2UpdateAdminNews(newsId: number, dto: V2UpdateAdminNewsRequest) {
+    const newsEntity = await this.newsRepositoryService.getNewsById(newsId);
+
+    const updateNewsDto: UpdateNewsDto = {
+      id: newsId,
+      categoryId: dto.categoryId,
+      brandId: dto.brandId,
+      writer: dto.writer,
+      banner: dto.banner?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+      profileImage: dto.profile?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+      homeImage: dto.homeImage?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+    };
+
+    await this.newsRepositoryService.update(updateNewsDto);
+
+    await this.newsMultilingualUpdate(newsEntity.id, dto.multilingualTextList);
+  }
+
+  @Transactional()
   async updateAdminNews(newsId: number, dto: UpdateAdminNewsRequest) {
     const updateNewsDto: UpdateNewsDto = {
       id: newsId,
@@ -283,9 +387,23 @@ export class AdminNewsService {
               section.sectionImageList.length > 0
             ) {
               for (const sectionImage of section.sectionImageList) {
-                promises.push(
-                  this.newsRepositoryService.updateSectionImage(sectionImage),
-                );
+                if (
+                  sectionImage.oldImageUrl === '' ||
+                  sectionImage.oldImageUrl === null
+                ) {
+                  promises.push(
+                    this.newsRepositoryService.insertSectionImage(
+                      plainToInstance(NewsSectionImageEntity, {
+                        sectionId: section.id,
+                        imageUrl: sectionImage.newImageUrl,
+                      }),
+                    ),
+                  );
+                } else {
+                  promises.push(
+                    this.newsRepositoryService.updateSectionImage(sectionImage),
+                  );
+                }
               }
             }
           }

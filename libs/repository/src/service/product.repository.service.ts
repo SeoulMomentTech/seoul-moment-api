@@ -17,6 +17,7 @@ import {
 } from '../dto/product.dto';
 import { ProductBannerEntity } from '../entity/product-banner.entity';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
+import { ProductExternalEntity } from '../entity/product-external.entity';
 import { ProductFilterEntity } from '../entity/product-filter.entity';
 import { ProductItemImageEntity } from '../entity/product-item-image.entity';
 import { ProductItemEntity } from '../entity/product-item.entity';
@@ -27,7 +28,6 @@ import { BrandStatus } from '../enum/brand.enum';
 import { EntityType } from '../enum/entity.enum';
 import { LanguageCode } from '../enum/language.enum';
 import {
-  OptionType,
   ProductItemStatus,
   ProductSortColumn,
   ProductStatus,
@@ -61,6 +61,9 @@ export class ProductRepositoryService implements OnModuleInit {
 
     @InjectRepository(ProductFilterEntity)
     private readonly productFilterRepository: Repository<ProductFilterEntity>,
+
+    @InjectRepository(ProductExternalEntity)
+    private readonly productExternalRepository: Repository<ProductExternalEntity>,
 
     private readonly sortOrderHelper: SortOrderHelper,
 
@@ -414,7 +417,7 @@ export class ProductRepositoryService implements OnModuleInit {
   }
 
   async getProductOption(
-    type: OptionType,
+    type: string,
     productId: number,
     languageId: number,
   ): Promise<GetProductDetailOptionValue[]> {
@@ -448,7 +451,7 @@ export class ProductRepositoryService implements OnModuleInit {
     return result;
   }
 
-  async getProductOptionTypes(productId: number): Promise<OptionType[]> {
+  async getProductOptionTypes(productId: number): Promise<string[]> {
     const subQuery = this.productRepository.manager
       .createQueryBuilder()
       .select('pv.id')
@@ -544,6 +547,7 @@ export class ProductRepositoryService implements OnModuleInit {
         'mt_option.text_content AS "optionType"',
         'ov.color_code AS "colorCode"',
         'mt_option_value.text_content AS "textContent"',
+        'o.ui_type AS "optionUiType"',
       ])
       .leftJoin('vo.optionValue', 'ov')
       .leftJoin('ov.option', 'o')
@@ -585,7 +589,7 @@ export class ProductRepositoryService implements OnModuleInit {
 
     const results = await query
       .groupBy(
-        'ov.id, o.type, ov.color_code, mt_option_value.text_content, mt_option.text_content',
+        'ov.id, o.type, ov.color_code, mt_option_value.text_content, mt_option.text_content, o.ui_type',
       )
       .getRawMany();
 
@@ -595,7 +599,8 @@ export class ProductRepositoryService implements OnModuleInit {
         optionValueId: number;
         name: string;
         code: string | null;
-        optionType: OptionType;
+        optionType: string;
+        optionUiType: string;
       }
     >();
 
@@ -609,6 +614,7 @@ export class ProductRepositoryService implements OnModuleInit {
         name,
         code: row.colorCode || null,
         optionType,
+        optionUiType: row.optionUiType,
       });
     }
     return Array.from(allMap.values());
@@ -721,5 +727,14 @@ export class ProductRepositoryService implements OnModuleInit {
     }
 
     return query.getCount();
+  }
+
+  async getProductExternalByProductItemId(
+    productItemId: number,
+  ): Promise<ProductExternalEntity[]> {
+    return this.productExternalRepository.find({
+      where: { productItemId },
+      relations: ['externalLink'],
+    });
   }
 }

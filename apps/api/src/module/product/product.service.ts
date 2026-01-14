@@ -16,7 +16,6 @@ import { ProductEntity } from '@app/repository/entity/product.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { OptionType } from '@app/repository/enum/product.enum';
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
@@ -31,7 +30,6 @@ import {
   GetProductBannerResponse,
   GetProductCategoryResponse,
   GetProductDetailResponse,
-  GetProductDetailOption,
   GetProductRequest,
   GetProductResponse,
   PostProductRequest,
@@ -161,7 +159,7 @@ export class ProductService {
         productItemList.flatMap((v) =>
           v.variants.flatMap((v) =>
             v.variantOptions
-              .filter((vo) => vo.optionValue?.option?.type === OptionType.COLOR)
+              .filter((vo) => vo.optionValue?.option?.type === 'COLOR')
               .map((vo) => vo.optionValueId),
           ),
         ),
@@ -185,11 +183,15 @@ export class ProductService {
     productItemId: number,
     language: LanguageCode,
   ): Promise<GetProductDetailResponse> {
-    const languageEntity =
-      await this.languageRepositoryService.findLanguageByCode(language);
+    const [languageEntity, productDetail] = await Promise.all([
+      this.languageRepositoryService.findLanguageByCode(language),
+      this.productRepositoryService.getProductItemDetail(productItemId),
+    ]);
 
-    const productDetail =
-      await this.productRepositoryService.getProductItemDetail(productItemId);
+    const productExternal =
+      await this.productRepositoryService.getProductExternalByProductItemId(
+        productDetail.id,
+      );
 
     // 필수 관계 데이터 검증
     if (!productDetail.product) {
@@ -241,6 +243,7 @@ export class ProductService {
 
     return GetProductDetailResponse.from(
       productDetail,
+      productExternal,
       {
         brand: brandtext,
         product: productText,
@@ -342,10 +345,12 @@ export class ProductService {
 
     // Group by optionType and aggregate option values
     const grouped = new Map<string, ProductFilterOptionValue[]>();
+    const optionUiType = new Map<string, string>();
     const seenByType = new Map<string, Set<number>>();
 
     for (const v of productFilterDtos) {
       const key = String(v.optionType);
+      optionUiType.set(key, v.optionUiType);
       let list = grouped.get(key);
       let seenSet = seenByType.get(key);
 
@@ -367,7 +372,11 @@ export class ProductService {
     }
 
     return Array.from(grouped.entries()).map(([optionType, optionValueList]) =>
-      GetProductFilterResponse.from(optionType, optionValueList),
+      GetProductFilterResponse.from(
+        optionType,
+        optionUiType.get(optionType),
+        optionValueList,
+      ),
     );
   }
 

@@ -290,11 +290,25 @@ export class AdminArticleService {
               section.sectionImageList.length > 0
             ) {
               for (const sectionImage of section.sectionImageList) {
-                promises.push(
-                  this.articleRepositoryService.updateSectionImage(
-                    sectionImage,
-                  ),
-                );
+                if (
+                  sectionImage.oldImageUrl === '' ||
+                  sectionImage.oldImageUrl === null
+                ) {
+                  promises.push(
+                    this.articleRepositoryService.insertSectionImage(
+                      plainToInstance(ArticleSectionImageEntity, {
+                        sectionId: section.id,
+                        imageUrl: sectionImage.newImageUrl,
+                      }),
+                    ),
+                  );
+                } else {
+                  promises.push(
+                    this.articleRepositoryService.updateSectionImage(
+                      sectionImage,
+                    ),
+                  );
+                }
               }
             }
           }

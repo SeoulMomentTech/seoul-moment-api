@@ -28,19 +28,6 @@ export enum ProductVariantStatus {
 }
 
 /**
- * 옵션 타입
- * - 옵션의 종류를 정의 (색상, 사이즈 등)
- */
-export enum OptionType {
-  COLOR = 'COLOR', // 색상 옵션
-  SIZE = 'SIZE', // 사이즈 옵션
-  MATERIAL = 'MATERIAL', // 소재 옵션
-  FIT = 'FIT', // 핏 옵션 (슬림핏, 레귤러핏 등)
-  STYLE = 'STYLE', // 스타일 옵션
-  GENDER = 'GENDER', // 성별 옵션
-}
-
-/**
  * 상품 이미지 타입
  * - 갤러리 이미지의 용도를 구분
  */
