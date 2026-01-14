@@ -115,6 +115,10 @@ export class NewsRepositoryService {
     return this.newsSectionImageRepository.save(entity);
   }
 
+  async deleteSectionImageBySectionId(sectionId: number) {
+    await this.newsSectionImageRepository.delete({ sectionId });
+  }
+
   async findNewsByFilter(
     page: number,
     count: number,
