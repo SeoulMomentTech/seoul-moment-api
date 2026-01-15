@@ -1,4 +1,7 @@
 /* eslint-disable max-lines-per-function */
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
+import { Configuration } from '@app/config/configuration';
 import { UpdateBrandDto } from '@app/repository/dto/brand.dto';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
@@ -16,10 +19,12 @@ import { Transactional } from 'typeorm-transactional';
 import {
   AdminBrandListRequest,
   GetAdminBrandInfoResponse,
+  GetAdminBrandInfoText,
   GetAdminBrandNameDto,
   GetAdminBrandResponse,
   PostAdminBrandRequest,
   UpdateAdminBrandRequest,
+  V2UpdateAdminBrandRequest,
 } from './admin.brand.dto';
 
 @Injectable()
@@ -358,5 +363,180 @@ export class AdminBrandService {
         ),
       ),
     );
+  }
+
+  @Transactional()
+  async brandMultilingualUpdate(
+    brandId: number,
+    list: GetAdminBrandInfoText[],
+  ) {
+    const newContentList: GetAdminBrandInfoText[] = [];
+
+    for (const content of list) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.BRAND,
+        brandId,
+        'name',
+        content.languageId,
+        content.name,
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.BRAND,
+        brandId,
+        'description',
+        content.languageId,
+        content.description,
+      );
+
+      for (const section of content.section) {
+        const sectionId = section.id;
+
+        if (!sectionId) {
+          newContentList.push(content);
+          continue;
+        }
+
+        await this.updateBrandSection(sectionId, content.languageId, section);
+      }
+    }
+
+    const activeLanguage =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    if (newContentList.length > 0) {
+      if (activeLanguage.length === newContentList.length) {
+        const newSectionEntity =
+          await this.brandRepositoryService.insertSection(
+            plainToInstance(BrandSectionEntity, {
+              brandId,
+            }),
+          );
+
+        for (const content of newContentList) {
+          for (const section of content.section) {
+            await this.updateBrandSection(
+              newSectionEntity.id,
+              content.languageId,
+              section,
+            );
+          }
+        }
+      } else {
+        throw new ServiceError(
+          `섹션을 추가하려면 활성 언어 수(${activeLanguage.length})와 동일한 개수의 언어별 입력이 필요합니다. 현재 새로운 섹션은 ${newContentList.length}개 추가되었습니다.`,
+          ServiceErrorCode.GONE,
+        );
+      }
+    }
+  }
+
+  private async updateBrandSection(
+    sectionId: number,
+    languageId: number,
+    section: any,
+  ) {
+    await this.languageRepositoryService.saveMultilingualText(
+      EntityType.BRAND_SECTION,
+      sectionId,
+      'title',
+      languageId,
+      section.title,
+    );
+
+    await this.languageRepositoryService.saveMultilingualText(
+      EntityType.BRAND_SECTION,
+      sectionId,
+      'content',
+      languageId,
+      section.content,
+    );
+
+    await this.brandRepositoryService.deleteSectionImageBySectionId(sectionId);
+
+    for (const image of section.imageList) {
+      await this.brandRepositoryService.insertSectionImage(
+        plainToInstance(BrandSectionImageEntity, {
+          sectionId,
+          imageUrl: image.replace(
+            Configuration.getConfig().IMAGE_DOMAIN_NAME,
+            '',
+          ),
+        }),
+      );
+    }
+  }
+
+  @Transactional()
+  async V2UpdateAdminBrand(brandId: number, dto: V2UpdateAdminBrandRequest) {
+    const brandEntity = await this.brandRepositoryService.getBrandById(brandId);
+
+    const updateBrandDto: UpdateBrandDto = {
+      id: brandId,
+      categoryId: dto.categoryId,
+      englishName: dto.englishName,
+      profileImage: dto.profileImage?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+      bannerImageUrl: dto.productBannerImage?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+    };
+
+    await this.brandRepositoryService.update(updateBrandDto);
+
+    // Banner 이미지 전체 교체
+    if (dto.bannerList) {
+      await this.brandRepositoryService.deleteAllBannerImages(brandId);
+
+      const bannerEntities = dto.bannerList.map((bannerUrl, index) =>
+        plainToInstance(BrandBannerImageEntity, {
+          brandId,
+          imageUrl: bannerUrl.replace(
+            Configuration.getConfig().IMAGE_DOMAIN_NAME,
+            '',
+          ),
+          sortOrder: index + 1,
+        }),
+      );
+
+      if (bannerEntities.length > 0) {
+        await this.brandRepositoryService.bulkInsertInitBannerImage(
+          bannerEntities,
+        );
+      }
+    }
+
+    // Mobile Banner 이미지 전체 교체
+    if (dto.mobileBannerList) {
+      await this.brandRepositoryService.deleteAllMobileBannerImages(brandId);
+
+      const mobileBannerEntities = dto.mobileBannerList.map(
+        (mobileBannerUrl, index) =>
+          plainToInstance(BrandBannerImageEntity, {
+            brandId,
+            mobileImageUrl: mobileBannerUrl.replace(
+              Configuration.getConfig().IMAGE_DOMAIN_NAME,
+              '',
+            ),
+            sortOrder: index + 1,
+          }),
+      );
+
+      if (mobileBannerEntities.length > 0) {
+        await this.brandRepositoryService.bulkInsertInitBannerImage(
+          mobileBannerEntities,
+        );
+      }
+    }
+
+    // 다국어 데이터 업데이트
+    if (dto.multilingualTextList) {
+      await this.brandMultilingualUpdate(
+        brandEntity.id,
+        dto.multilingualTextList,
+      );
+    }
   }
 }

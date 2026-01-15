@@ -234,4 +234,16 @@ export class BrandRepositoryService {
   async delete(id: number) {
     await this.brandRepository.delete(id);
   }
+
+  async deleteSectionImageBySectionId(sectionId: number) {
+    await this.brandSectionImageRepository.delete({ sectionId });
+  }
+
+  async deleteAllBannerImages(brandId: number) {
+    await this.brandBannerImageRepository.delete({ brandId });
+  }
+
+  async deleteAllMobileBannerImages(brandId: number) {
+    await this.brandBannerImageRepository.delete({ brandId });
+  }
 }

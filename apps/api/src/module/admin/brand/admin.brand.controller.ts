@@ -27,6 +27,7 @@ import {
   GetAdminBrandResponse,
   PostAdminBrandRequest,
   UpdateAdminBrandRequest,
+  V2UpdateAdminBrandRequest,
 } from './admin.brand.dto';
 import { AdminBrandService } from './admin.brand.service';
 
@@ -90,6 +91,22 @@ export class AdminBrandController {
     @Body() body: UpdateAdminBrandRequest,
   ) {
     await this.adminBrandService.updateAdminBrand(id, body);
+  }
+
+  @Patch(':id(\\d+)/v2')
+  @ApiOperation({
+    summary: '브랜드 수정 V2',
+    description:
+      '전체 데이터를 교체하는 방식의 브랜드 수정 API입니다. News/Article V2와 동일한 패턴을 따릅니다.',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
+  async V2UpdateAdminBrand(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: V2UpdateAdminBrandRequest,
+  ) {
+    await this.adminBrandService.V2UpdateAdminBrand(id, body);
   }
 
   @Delete(':id(\\d+)')
