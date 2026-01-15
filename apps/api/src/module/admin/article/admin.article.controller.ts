@@ -77,8 +77,7 @@ export class AdminArticleController {
 
   @Patch(':id(\\d+)')
   @ApiOperation({
-    summary: '아티클 수정',
-    description: 'deprecated',
+    summary: '아티클 수정 --- deprecated',
   })
   @HttpCode(HttpStatus.ACCEPTED)
   @UseGuards(OneTimeTokenGuard)
