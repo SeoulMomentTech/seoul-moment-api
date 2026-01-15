@@ -691,6 +691,7 @@ export class GetAdminNewsInfoResponse {
           {
             id: 1,
             title: '브랜드 스토리',
+            subTitle: '브랜드 스토리 서브',
             content:
               '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
             imageList: [
@@ -709,6 +710,7 @@ export class GetAdminNewsInfoResponse {
           {
             id: 1,
             title: 'Brand Story',
+            subTitle: 'Brand Story Sub',
             content:
               'Seoul Moment is a lifestyle brand established in 2020, capturing special moments in Seoul through our products.',
             imageList: [
@@ -726,6 +728,7 @@ export class GetAdminNewsInfoResponse {
           {
             id: 1,
             title: '品牌故事',
+            subTitle: '品牌故事 副標題',
             content:
               '首爾時刻是2020年成立的生活方式品牌，透過產品捕捉首爾的特殊時刻。',
             imageList: [
