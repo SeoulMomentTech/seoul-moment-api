@@ -1,4 +1,6 @@
 /* eslint-disable max-lines-per-function */
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
 import { UpdateNewsDto } from '@app/repository/dto/news.dto';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
@@ -23,6 +25,7 @@ import {
   PostAdminNewsRequest,
   UpdateAdminNewsRequest,
   V2UpdateAdminNewsRequest,
+  GetAdminNewsSection,
 } from './admin.news.dto';
 
 @Injectable()
@@ -201,8 +204,52 @@ export class AdminNewsService {
     }
   }
 
+  async updateNewsSection(
+    sectionId: number,
+    languageId: number,
+    section: GetAdminNewsSection,
+  ) {
+    await this.languageRepositoryService.saveMultilingualText(
+      EntityType.NEWS_SECTION,
+      sectionId,
+      'title',
+      languageId,
+      section.title,
+    );
+    await this.languageRepositoryService.saveMultilingualText(
+      EntityType.NEWS_SECTION,
+      sectionId,
+      'subTitle',
+      languageId,
+      section.subTitle,
+    );
+    await this.languageRepositoryService.saveMultilingualText(
+      EntityType.NEWS_SECTION,
+      sectionId,
+      'content',
+      languageId,
+      section.content,
+    );
+
+    await this.newsRepositoryService.deleteSectionImageBySectionId(sectionId);
+
+    for (const image of section.imageList) {
+      await this.newsRepositoryService.insertSectionImage(
+        plainToInstance(NewsSectionImageEntity, {
+          sectionId,
+          imageUrl: image.replace(
+            Configuration.getConfig().IMAGE_DOMAIN_NAME,
+            '',
+          ),
+        }),
+      );
+    }
+  }
+
   @Transactional()
   async newsMultilingualUpdate(newsId: number, list: GetAdminNewsInfoText[]) {
+    const newContentList: GetAdminNewsInfoText[] = [];
+
     for (const content of list) {
       await this.languageRepositoryService.saveMultilingualText(
         EntityType.NEWS,
@@ -220,56 +267,42 @@ export class AdminNewsService {
       );
 
       for (const section of content.section) {
-        let sectionId = section.id;
+        const sectionId = section.id;
 
         if (!sectionId) {
-          const newsSectionEntity =
-            await this.newsRepositoryService.insertSection(
-              plainToInstance(NewsSectionEntity, {
-                newsId,
-              }),
+          newContentList.push(content);
+          continue;
+        }
+
+        await this.updateNewsSection(sectionId, content.languageId, section);
+      }
+    }
+
+    const activeLanguage =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    if (newContentList.length > 0) {
+      if (activeLanguage.length === newContentList.length) {
+        const newSectionEntity = await this.newsRepositoryService.insertSection(
+          plainToInstance(NewsSectionEntity, {
+            newsId,
+          }),
+        );
+
+        for (const content of newContentList) {
+          for (const section of content.section) {
+            await this.updateNewsSection(
+              newSectionEntity.id,
+              content.languageId,
+              section,
             );
-
-          sectionId = newsSectionEntity.id;
+          }
         }
-
-        await this.languageRepositoryService.saveMultilingualText(
-          EntityType.NEWS_SECTION,
-          sectionId,
-          'title',
-          content.languageId,
-          section.title,
+      } else {
+        throw new ServiceError(
+          `섹션을 추가하려면 활성 언어 수(${activeLanguage.length})와 동일한 개수의 언어별 입력이 필요합니다. 현재 새로운 섹션은 ${newContentList.length}개 추가되었습니다.`,
+          ServiceErrorCode.GONE,
         );
-        await this.languageRepositoryService.saveMultilingualText(
-          EntityType.NEWS_SECTION,
-          sectionId,
-          'subTitle',
-          content.languageId,
-          section.subTitle,
-        );
-        await this.languageRepositoryService.saveMultilingualText(
-          EntityType.NEWS_SECTION,
-          sectionId,
-          'content',
-          content.languageId,
-          section.content,
-        );
-
-        await this.newsRepositoryService.deleteSectionImageBySectionId(
-          sectionId,
-        );
-
-        for (const image of section.imageList) {
-          await this.newsRepositoryService.insertSectionImage(
-            plainToInstance(NewsSectionImageEntity, {
-              sectionId,
-              imageUrl: image.replace(
-                Configuration.getConfig().IMAGE_DOMAIN_NAME,
-                '',
-              ),
-            }),
-          );
-        }
       }
     }
   }
