@@ -168,4 +168,8 @@ export class ArticleRepositoryService {
   async delete(id: number) {
     await this.articleRepository.delete(id);
   }
+
+  async deleteSectionImageBySectionId(sectionId: number) {
+    await this.articleSectionImageRepository.delete({ sectionId });
+  }
 }

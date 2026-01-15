@@ -1,4 +1,5 @@
 /* eslint-disable max-lines-per-function */
+import { Configuration } from '@app/config/configuration';
 import { UpdateArticleDto } from '@app/repository/dto/article.dto';
 import { ArticleSectionImageEntity } from '@app/repository/entity/article-section-image.entity';
 import { ArticleSectionEntity } from '@app/repository/entity/article-section.entity';
@@ -16,10 +17,12 @@ import { Transactional } from 'typeorm-transactional';
 import {
   AdminArticleListRequest,
   GetAdminArticleInfoResponse,
+  GetAdminArticleInfoText,
   GetAdminArticleResponse,
   GetAdminArticleTextDto,
   PostAdminArticleRequest,
   UpdateAdminArticleRequest,
+  V2UpdateAdminArticleRequest,
 } from './admin.article.dto';
 
 @Injectable()
@@ -333,6 +336,117 @@ export class AdminArticleService {
           section.id,
         ),
       ),
+    );
+  }
+
+  @Transactional()
+  async articleMultilingualUpdate(
+    articleId: number,
+    list: GetAdminArticleInfoText[],
+  ) {
+    for (const content of list) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.ARTICLE,
+        articleId,
+        'title',
+        content.languageId,
+        content.title,
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.ARTICLE,
+        articleId,
+        'content',
+        content.languageId,
+        content.content,
+      );
+
+      for (const section of content.section) {
+        let sectionId = section.id;
+
+        if (!sectionId) {
+          const articleSectionEntity =
+            await this.articleRepositoryService.insertSection(
+              plainToInstance(ArticleSectionEntity, {
+                articleId,
+              }),
+            );
+
+          sectionId = articleSectionEntity.id;
+        }
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.ARTICLE_SECTION,
+          sectionId,
+          'title',
+          content.languageId,
+          section.title,
+        );
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.ARTICLE_SECTION,
+          sectionId,
+          'subTitle',
+          content.languageId,
+          section.subTitle,
+        );
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.ARTICLE_SECTION,
+          sectionId,
+          'content',
+          content.languageId,
+          section.content,
+        );
+
+        await this.articleRepositoryService.deleteSectionImageBySectionId(
+          sectionId,
+        );
+
+        for (const image of section.imageList) {
+          await this.articleRepositoryService.insertSectionImage(
+            plainToInstance(ArticleSectionImageEntity, {
+              sectionId,
+              imageUrl: image.replace(
+                Configuration.getConfig().IMAGE_DOMAIN_NAME,
+                '',
+              ),
+            }),
+          );
+        }
+      }
+    }
+  }
+
+  @Transactional()
+  async V2UpdateAdminArticle(
+    articleId: number,
+    dto: V2UpdateAdminArticleRequest,
+  ) {
+    const articleEntity =
+      await this.articleRepositoryService.getArticleById(articleId);
+
+    const updateArticleDto: UpdateArticleDto = {
+      id: articleId,
+      categoryId: dto.categoryId,
+      brandId: dto.brandId,
+      writer: dto.writer,
+      banner: dto.banner?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+      profileImage: dto.profile?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+      homeImage: dto.homeImage?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+    };
+
+    await this.articleRepositoryService.update(updateArticleDto);
+
+    await this.articleMultilingualUpdate(
+      articleEntity.id,
+      dto.multilingualTextList,
     );
   }
 }

@@ -77,6 +77,7 @@ export class AdminNewsController {
   @Patch(':id(\\d+)')
   @ApiOperation({
     summary: '뉴스 수정',
+    description: 'deprecated',
   })
   @HttpCode(HttpStatus.ACCEPTED)
   @UseGuards(OneTimeTokenGuard)

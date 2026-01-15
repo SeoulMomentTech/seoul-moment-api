@@ -27,6 +27,7 @@ import {
   GetAdminArticleResponse,
   PostAdminArticleRequest,
   UpdateAdminArticleRequest,
+  V2UpdateAdminArticleRequest,
 } from './admin.article.dto';
 import { AdminArticleService } from './admin.article.service';
 
@@ -77,6 +78,7 @@ export class AdminArticleController {
   @Patch(':id(\\d+)')
   @ApiOperation({
     summary: '아티클 수정',
+    description: 'deprecated',
   })
   @HttpCode(HttpStatus.ACCEPTED)
   @UseGuards(OneTimeTokenGuard)
@@ -86,6 +88,20 @@ export class AdminArticleController {
     @Body() body: UpdateAdminArticleRequest,
   ) {
     await this.adminArticleService.updateAdminArticle(id, body);
+  }
+
+  @Patch('v2/:id(\\d+)')
+  @ApiOperation({
+    summary: '아티클 수정 (V2)',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(OneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
+  async V2UpdateAdminArticle(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: V2UpdateAdminArticleRequest,
+  ) {
+    await this.adminArticleService.V2UpdateAdminArticle(id, body);
   }
 
   @Delete(':id(\\d+)')

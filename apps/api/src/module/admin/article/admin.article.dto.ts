@@ -453,22 +453,31 @@ export class UpdateAdminArticleSection {
 }
 
 export class GetAdminArticleSection {
-  @ApiProperty({ description: '섹션 ID', example: 1 })
+  @ApiPropertyOptional({ description: '섹션 ID', example: 1 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
   id: number;
 
   @ApiProperty({ description: '섹션 제목', example: '새로운 아티클' })
+  @IsString()
+  @IsDefined()
   title: string;
 
   @ApiProperty({
     description: '섹션 부제목',
     example: '서울모먼트의 새로운 아티클',
   })
+  @IsString()
+  @IsDefined()
   subTitle: string;
 
   @ApiProperty({
     description: '섹션 내용',
     example: '서울모먼트의 새로운 아티클을 전해드립니다...',
   })
+  @IsString()
+  @IsDefined()
   content: string;
 
   @ApiProperty({
@@ -479,6 +488,9 @@ export class GetAdminArticleSection {
     ],
     type: [String],
   })
+  @IsArray()
+  @IsString({ each: true })
+  @IsDefined()
   imageList: string[];
 
   static from(
@@ -574,18 +586,26 @@ export class GetAdminArticleInfoText {
     description: '아티클 제목',
     example: '서울모먼트 신제품 출시',
   })
+  @IsString()
+  @IsDefined()
   title: string;
 
   @ApiProperty({
     description: '아티클 내용',
     example: '서울모먼트의 새로운 제품이 출시되었습니다...',
   })
+  @IsString()
+  @IsDefined()
   content: string;
 
   @ApiProperty({
     description: '아티클 정보 섹션 리스트',
     type: [GetAdminArticleSection],
   })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminArticleSection)
+  @IsDefined()
   section: GetAdminArticleSection[];
 
   static from(
@@ -848,4 +868,116 @@ export class UpdateAdminArticleRequest {
   @Type(() => UpdateAdminArticleInfoText)
   @IsOptional()
   multilingualTextList?: UpdateAdminArticleInfoText[];
+}
+
+export class V2UpdateAdminArticleRequest {
+  @ApiPropertyOptional({ description: '카테고리 ID', example: 1 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  categoryId?: number;
+
+  @ApiPropertyOptional({ description: '브랜드 ID', example: 1 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  brandId?: number;
+
+  @ApiPropertyOptional({ description: '작성자 이름', example: '김서울' })
+  @IsString()
+  @IsOptional()
+  writer?: string;
+
+  @ApiPropertyOptional({
+    description: '배너 이미지 URL',
+    example: 'https://example.com/banner.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  banner?: string;
+
+  @ApiPropertyOptional({
+    description: '작성자 프로필 이미지 URL',
+    example: 'https://example.com/profile.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  profile?: string;
+
+  @ApiPropertyOptional({
+    description: '홈 이미지 URL',
+    example: 'https://example.com/home.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  homeImage?: string;
+
+  @ApiPropertyOptional({
+    description: '다국어 아티클 정보 리스트 (한국어, 영어, 중국어)',
+    type: [GetAdminArticleInfoText],
+    example: [
+      {
+        languageId: 1,
+        title: '아이비 라잌 홀더',
+        content: '웨이럿 미닛 걸',
+        section: [
+          {
+            id: 16,
+            title: '아티클 CEO 이름 스토리',
+            subTitle:
+              'Chwi의 향은 부담스럽지 않고 은은한 자연의 향을 표현하기 위해 전문 조향 기술을 사용합니다.',
+            content:
+              '히어리 세라믹 작가 김은지라고 합니다."라고 해요. 2016년부터 히어리 세라믹을 통해 작업을 이어오는 동안...',
+            imageList: [
+              'https://image-dev.seoulmoment.com.tw/article_section/2025-09-16/seoul-moment-profile.jpg',
+              'https://image-dev.seoulmoment.com.tw/article_section/2025-09-16/seoul-moment-profile.jpg',
+            ],
+          },
+        ],
+      },
+      {
+        languageId: 2,
+        title: 'This is the article.',
+        content: 'Summary content.',
+        section: [
+          {
+            id: 16,
+            title: 'Article CEO Name',
+            subTitle:
+              'Chwi employs professional perfumery techniques to express a subtle, natural fragrance that is never overpowering.',
+            content:
+              'My name is Kim Eun-ji, a ceramic artist at Hearie Ceramics. Since 2016...',
+            imageList: [
+              'https://image-dev.seoulmoment.com.tw/article_section/2025-09-16/seoul-moment-profile.jpg',
+              'https://image-dev.seoulmoment.com.tw/article_section/2025-09-16/seoul-moment-profile.jpg',
+            ],
+          },
+        ],
+      },
+      {
+        languageId: 3,
+        title: '아티클 보도',
+        content: '以下為摘要內容。',
+        section: [
+          {
+            id: 16,
+            title: '品牌執行長姓名',
+            subTitle:
+              'Chwi的香氣採用專業調香技術，旨在呈現不顯厚重、自然淡雅的芬芳。',
+            content:
+              '我是Heary Ceramic的陶藝家金恩智。自2016年透過Heary Ceramic持續創作以來...',
+            imageList: [
+              'https://image-dev.seoulmoment.com.tw/article_section/2025-09-16/seoul-moment-profile.jpg',
+              'https://image-dev.seoulmoment.com.tw/article_section/2025-09-16/seoul-moment-profile.jpg',
+            ],
+          },
+        ],
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminArticleInfoText)
+  @IsOptional()
+  multilingualTextList?: GetAdminArticleInfoText[];
 }
