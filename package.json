@@ -168,9 +168,6 @@
           "<rootDir>/test/**/*.spec.ts"
         ],
         "testEnvironment": "node",
-        "setupFilesAfterEnv": [
-          "<rootDir>/test/setup/jest.setup.ts"
-        ],
         "moduleFileExtensions": [
           "js",
           "json",

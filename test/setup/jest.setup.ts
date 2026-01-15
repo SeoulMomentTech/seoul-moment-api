@@ -1,23 +1,21 @@
-import * as dotenv from 'dotenv';
+// Jest setup file for integration tests
+// This file runs before each test file
 
-// 모든 테스트 실행 전에 환경변수 로드 (가장 먼저!)
-dotenv.config({ path: '.env.test' });
+// Set default timeout for async operations
+jest.setTimeout(30000);
 
-import { TestSetup } from './test-setup';
+// Mock console methods to reduce noise in tests
+global.console = {
+  ...console,
+  // Uncomment to ignore specific console methods during tests
+  // log: jest.fn(),
+  // debug: jest.fn(),
+  // info: jest.fn(),
+  // warn: jest.fn(),
+  // error: jest.fn(),
+};
 
-// 테스트 환경 설정
-beforeAll(async () => {
-  await TestSetup.initialize();
-  // 초기화 완료 후 한 번 정리하여 깨끗한 상태 보장 (DB + Redis)
-  await TestSetup.clearDatabase();
-});
-
-// 각 테스트 후 데이터베이스 및 캐시 정리 (테스트 격리 보장)
-afterEach(async () => {
-  await TestSetup.clearDatabase();
-});
-
-// 모든 테스트 완료 후 정리
-afterAll(async () => {
-  await TestSetup.cleanup();
-});
+// Global test utilities
+global.testUtils = {
+  // Add any global test utilities here
+};

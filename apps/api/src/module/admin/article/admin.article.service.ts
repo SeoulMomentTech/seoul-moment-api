@@ -1,4 +1,6 @@
 /* eslint-disable max-lines-per-function */
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
 import { UpdateArticleDto } from '@app/repository/dto/article.dto';
 import { ArticleSectionImageEntity } from '@app/repository/entity/article-section-image.entity';
@@ -416,6 +418,122 @@ export class AdminArticleService {
   }
 
   @Transactional()
+  async articleMultilingualUpdateV2(
+    articleId: number,
+    list: GetAdminArticleInfoText[],
+  ) {
+    const newContentList: GetAdminArticleInfoText[] = [];
+
+    for (const content of list) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.ARTICLE,
+        articleId,
+        'title',
+        content.languageId,
+        content.title,
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.ARTICLE,
+        articleId,
+        'content',
+        content.languageId,
+        content.content,
+      );
+
+      for (const section of content.section) {
+        const sectionId = section.id;
+
+        if (!sectionId) {
+          newContentList.push(content);
+          continue;
+        }
+
+        await this.updateArticleSectionV2(
+          sectionId,
+          content.languageId,
+          section,
+        );
+      }
+    }
+
+    const activeLanguage =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    if (newContentList.length > 0) {
+      if (activeLanguage.length === newContentList.length) {
+        const newSectionEntity =
+          await this.articleRepositoryService.insertSection(
+            plainToInstance(ArticleSectionEntity, {
+              articleId,
+            }),
+          );
+
+        for (const content of newContentList) {
+          for (const section of content.section) {
+            await this.updateArticleSectionV2(
+              newSectionEntity.id,
+              content.languageId,
+              section,
+            );
+          }
+        }
+      } else {
+        throw new ServiceError(
+          `섹션을 추가하려면 활성 언어 수(${activeLanguage.length})와 동일한 개수의 언어별 입력이 필요합니다. 현재 새로운 섹션은 ${newContentList.length}개 추가되었습니다.`,
+          ServiceErrorCode.GONE,
+        );
+      }
+    }
+  }
+
+  private async updateArticleSectionV2(
+    sectionId: number,
+    languageId: number,
+    section: any,
+  ) {
+    await this.languageRepositoryService.saveMultilingualText(
+      EntityType.ARTICLE_SECTION,
+      sectionId,
+      'title',
+      languageId,
+      section.title,
+    );
+
+    // Article은 News와 달리 subTitle이 있음
+    await this.languageRepositoryService.saveMultilingualText(
+      EntityType.ARTICLE_SECTION,
+      sectionId,
+      'subTitle',
+      languageId,
+      section.subTitle,
+    );
+
+    await this.languageRepositoryService.saveMultilingualText(
+      EntityType.ARTICLE_SECTION,
+      sectionId,
+      'content',
+      languageId,
+      section.content,
+    );
+
+    await this.articleRepositoryService.deleteSectionImageBySectionId(
+      sectionId,
+    );
+
+    for (const image of section.imageList) {
+      await this.articleRepositoryService.insertSectionImage(
+        plainToInstance(ArticleSectionImageEntity, {
+          sectionId,
+          imageUrl: image.replace(
+            Configuration.getConfig().IMAGE_DOMAIN_NAME,
+            '',
+          ),
+        }),
+      );
+    }
+  }
+
+  @Transactional()
   async V2UpdateAdminArticle(
     articleId: number,
     dto: V2UpdateAdminArticleRequest,
@@ -444,7 +562,7 @@ export class AdminArticleService {
 
     await this.articleRepositoryService.update(updateArticleDto);
 
-    await this.articleMultilingualUpdate(
+    await this.articleMultilingualUpdateV2(
       articleEntity.id,
       dto.multilingualTextList,
     );
