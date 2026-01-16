@@ -9,17 +9,16 @@
 ```
 ├── .env.local         # 로컬 개발 환경
 ├── .env.development   # 개발 서버 환경
-├── .env.production    # 프로덕션 환경
-└── .env.test          # 테스트 환경
+└── .env.production    # 프로덕션 환경
 ```
 
 ### 환경 설정
 
 환경은 `NODE_ENV` 변수로 구분됩니다:
+
 - `local`: 로컬 개발 환경
-- `dev`: 개발 서버 환경  
+- `dev`: 개발 서버 환경
 - `prod`: 프로덕션 환경
-- `test`: 테스트 환경
 
 ### GitHub Actions를 통한 AWS SSM 연동
 
@@ -45,7 +44,7 @@ name: Deploy to Development
 
 on:
   push:
-    branches: [ dev ]
+    branches: [dev]
 
 jobs:
   deploy:
@@ -81,9 +80,6 @@ NODE_ENV=dev npm run start:dev
 
 # 프로덕션 환경
 NODE_ENV=prod npm run start:prod
-
-# 테스트 환경
-NODE_ENV=test npm run test
 ```
 
 ### 서버 시작 로그

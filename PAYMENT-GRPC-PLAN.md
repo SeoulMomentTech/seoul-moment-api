@@ -188,22 +188,6 @@ apps/api/src/module/payment/
 - gRPC 요청/응답 로깅
 - 결제 이벤트 로깅
 
-### Phase 8: 테스트
-
-#### 8.1 단위 테스트
-
-- `payment.service.spec.ts`
-- `payment-grpc-client.service.spec.ts`
-
-#### 8.2 통합 테스트
-
-- gRPC 서버 통합 테스트
-- API 서버와 gRPC 서버 통합 테스트
-
-#### 8.3 E2E 테스트
-
-- 전체 결제 플로우 테스트
-
 ## 📦 패키지 스크립트 추가
 
 ### package.json에 추가할 스크립트
@@ -256,12 +240,10 @@ apps/api/src/module/payment/
 3. ✅ gRPC 서버 기본 구현
 4. ✅ gRPC 클라이언트 라이브러리 구현
 5. ✅ API 서버 통합
-6. ✅ 테스트 작성
-7. ✅ 문서화
+6. ✅ 문서화
 
 ## 🔗 참고 자료
 
 - [NestJS Microservices](https://docs.nestjs.com/microservices/basics)
 - [gRPC for Node.js](https://grpc.io/docs/languages/node/)
 - [ts-proto](https://github.com/stephenh/ts-proto)
-

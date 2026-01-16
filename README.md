@@ -18,7 +18,6 @@ seoul-moment-api/
 │   ├── cache/                   # Redis 캐시 관리
 │   ├── external/                # 외부 API 연동 (Google 등)
 │   └── repository/              # 엔티티 및 레포지토리
-└── test/                        # 통합 테스트
 ```
 
 ## 🚀 주요 기능
@@ -42,7 +41,6 @@ seoul-moment-api/
 
 - **로깅**: Winston 기반 구조화된 로깅 및 Morgan HTTP 로깅
 - **데이터베이스**: PostgreSQL + TypeORM, UTC 시간 관리
-- **통합 테스트**: Docker PostgreSQL을 활용한 실제 DB 테스트
 
 ## 🛠️ 설치 및 실행
 
@@ -81,44 +79,6 @@ npm run start:batch:dev
 
 # Batch 프로덕션 모드
 npm run start:batch:prod
-```
-
-## 🧪 테스트
-
-### 단위 테스트
-
-```bash
-# 단위 테스트 실행
-npm run test
-
-# 단위 테스트 watch 모드
-npm run test:watch
-
-# 커버리지 포함 단위 테스트
-npm run test:cov
-```
-
-### 통합 테스트 (실제 PostgreSQL 사용)
-
-```bash
-# 전체 통합 테스트 (추천)
-# DB 컨테이너 시작 → 테스트 → 컨테이너 정리
-npm run test:full
-
-# 단계별 실행
-npm run test:db:up        # PostgreSQL 테스트 컨테이너 시작
-npm run test:integration  # 통합 테스트 실행
-npm run test:db:down      # 테스트 컨테이너 정리
-
-# 개발 중 유용한 명령어
-npm run test:integration:watch  # 통합 테스트 watch 모드
-npm run test:db:logs           # 테스트 DB 로그 확인
-```
-
-### E2E 테스트
-
-```bash
-npm run test:e2e
 ```
 
 ## 📊 데이터베이스 스키마
@@ -390,15 +350,6 @@ OpenSearch를 활용한 고성능 상품 검색 시스템
 - ✅ **Google Sheets 크롤링** (외부 데이터 수집)
 - ✅ **메일 서비스** (자동화된 이메일 발송)
 
-#### 테스트 및 품질
-
-- ✅ **통합 테스트 환경** (Docker PostgreSQL + 실제 DB 테스트)
-- ✅ **완전한 테스트 격리** (외래키 제약조건 비활성화 + TRUNCATE 정리)
-- ✅ **100+ 통합 테스트 완료** (Repository/Service/E2E 전 계층, CRUD/다국어/에러처리/동시성)
-- ✅ **Article & News 테스트** (각 16개 테스트: Repository 6개 + Service 8개 + E2E 8개)
-- ✅ **Redis 캐시 테스트** (캐시 격리 및 성능 테스트)
-- ✅ **테스트 환경 안전성** (실제 DB 데이터 보호 장치)
-
 #### 배포 및 운영
 
 - ✅ **ECS 배포 시스템** (API/Batch 분리 배포)
@@ -454,39 +405,6 @@ curl GET "/product?brandId=1&minPrice=50000&maxPrice=150000&sortBy=reviewAverage
 curl -H "Accept-Language: ko" GET /product/1    # 한국어
 ```
 
-## ✅ 테스트 현황
-
-### 통합 테스트 결과
-
-- **총 70개 테스트 모두 통과** ✅
-- **다국어 시스템 테스트** 완료 (Language, Multilingual Text, Fallback 로직)
-- **완전한 테스트 격리** 구현
-- **실제 PostgreSQL + Redis** 사용으로 신뢰할 수 있는 테스트
-- **테스트 환경 안전성 검증** (실제 DB 데이터 보호)
-- **Cache-only 테스트와 DB+Cache 통합 테스트** 분리
-
-### 테스트 커버리지
-
-```
-BrandRepositoryService Integration Tests
-├── findAllNormalBrandList (4개 테스트)
-│   ├── NORMAL 상태 브랜드만 반환
-│   ├── NORMAL 브랜드 없을 때 빈 배열 반환
-│   ├── eager loading으로 관련 데이터 포함
-│   └── sortOrder에 따른 정렬 검증
-├── findBrandById (3개 테스트)
-│   ├── 존재하는 NORMAL 브랜드 반환
-│   ├── 존재하지 않는 브랜드 시 null 반환
-│   └── BLOCK 상태 브랜드 시 null 반환
-├── getBrandById (3개 테스트)
-│   ├── 존재하는 NORMAL 브랜드 반환
-│   ├── 존재하지 않는 브랜드 시 ServiceError 발생
-│   └── BLOCK 상태 브랜드 시 ServiceError 발생
-└── Database constraints and validation (2개 테스트)
-    ├── 동시성 처리 테스트
-    └── CASCADE 삭제 무결성 테스트
-```
-
 ## 🐛 문제 해결
 
 ### 환경변수 로딩 이슈
@@ -497,24 +415,6 @@ BrandRepositoryService Integration Tests
 2. `ConfigModule.forRoot()` 설정 확인
 3. `NODE_ENV` 환경변수 설정 확인
 
-### 테스트 DB 연결 실패
-
-```bash
-# Docker 상태 확인
-docker ps
-
-# 로그 확인
-npm run test:db:logs
-
-# 포트 충돌 시 컨테이너 재시작
-npm run test:db:down
-npm run test:db:up
-```
-
-### 테스트 관련 문제 해결
-
-상세한 테스트 환경 설정 및 문제 해결 가이드는 [CLAUDE.md](./CLAUDE.md)를 참고하세요.
-
 ## 📚 기술 스택
 
 - **Framework**: NestJS (API + Batch)
@@ -523,7 +423,6 @@ npm run test:db:up
 - **Cache**: Redis (TLS 보안 연결)
 - **External APIs**: Google Sheets API, Serper API
 - **Logging**: Winston + Morgan
-- **Testing**: Jest + Docker (PostgreSQL + Redis)
 - **Documentation**: Swagger/OpenAPI
 - **Code Quality**: ESLint + Prettier
 - **Deployment**: AWS ECS + GitHub Actions
