@@ -685,45 +685,42 @@ export class GetAdminNewsInfoResponse {
     example: [
       {
         languageId: 1,
-        name: '서울모먼트',
-        description: '서울의 특별한 순간들을 담은 라이프스타일 브랜드입니다.',
+        title: '뉴스 제목',
+        content: '뉴스 내용',
         section: [
           {
             id: 1,
-            title: '브랜드 스토리',
-            subTitle: '브랜드 스토리 서브',
-            content:
-              '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
+            title: '뉴스 섹션 제목',
+            subTitle: '뉴스 섹션 서브 제목',
+            content: '뉴스 섹션 내용',
             imageList: [
-              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
-              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
+              'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-01.jpg',
+              'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-02.jpg',
             ],
           },
         ],
       },
       {
         languageId: 2,
-        name: 'Seoul Moment',
-        description:
-          'A lifestyle brand that captures special moments in Seoul.',
+        title: 'News title',
+        content: 'News content',
         section: [
           {
             id: 1,
-            title: 'Brand Story',
-            subTitle: 'Brand Story Sub',
-            content:
-              'Seoul Moment is a lifestyle brand established in 2020, capturing special moments in Seoul through our products.',
+            title: 'News Section title',
+            subTitle: 'News Section sub title',
+            content: 'News Section content',
             imageList: [
-              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
-              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
+              'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-01.jpg',
+              'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-02.jpg',
             ],
           },
         ],
       },
       {
         languageId: 3,
-        name: '首爾時刻',
-        description: '捕捉首爾特殊時刻的生活方式品牌。',
+        title: '首爾時刻',
+        content: '捕捉首爾特殊時刻的生活方式品牌。',
         section: [
           {
             id: 1,
@@ -732,8 +729,8 @@ export class GetAdminNewsInfoResponse {
             content:
               '首爾時刻是2020年成立的生活方式品牌，透過產品捕捉首爾的特殊時刻。',
             imageList: [
-              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
-              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
+              'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-01.jpg',
+              'https://image-dev.seoulmoment.com.tw/news-sections/2025-09-16/section-story-02.jpg',
             ],
           },
         ],
