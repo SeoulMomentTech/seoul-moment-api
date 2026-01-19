@@ -39,6 +39,9 @@ export class BrandEntity extends CommonEntity {
   @Column('varchar', { length: 255, nullable: true })
   bannerImageUrl: string;
 
+  @Column('varchar', { length: 255, nullable: true })
+  mobileBannerImageUrl: string;
+
   @Column('enum', {
     enum: BrandStatus,
     default: BrandStatus.NORMAL,
@@ -95,9 +98,18 @@ export class BrandEntity extends CommonEntity {
   category: CategoryEntity;
 
   getProfileImage(): string {
-    return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.profileImage}`;
+    return this.profileImage
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.profileImage}`
+      : null;
   }
   getBannerImage(): string {
-    return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.bannerImageUrl}`;
+    return this.bannerImageUrl
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.bannerImageUrl}`
+      : null;
+  }
+  getMobileBannerImage(): string {
+    return this.mobileBannerImageUrl
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.mobileBannerImageUrl}`
+      : null;
   }
 }

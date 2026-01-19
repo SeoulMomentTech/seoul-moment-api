@@ -231,6 +231,15 @@ export class PostAdminBrandRequest {
   productBannerImageUrl: string;
 
   @ApiProperty({
+    description: 'S3 업로드 후 상품 모바일 배너 이미지 경로',
+    example:
+      '/brand-products/2025-09-16/seoul-moment-product-mobile-banner.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  productMobileBannerImageUrl: string;
+
+  @ApiProperty({
     description: '영어 브랜드 이름',
     example: 'Seoul Moment',
   })
@@ -251,6 +260,8 @@ export class GetAdminBrandInfoSection {
     description: '섹션 제목',
     example: '브랜드 스토리',
   })
+  @IsString()
+  @IsDefined()
   title: string;
 
   @ApiProperty({
@@ -258,6 +269,8 @@ export class GetAdminBrandInfoSection {
     example:
       '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
   })
+  @IsString()
+  @IsDefined()
   content: string;
 
   @ApiProperty({
@@ -268,6 +281,9 @@ export class GetAdminBrandInfoSection {
     ],
     type: [String],
   })
+  @IsArray()
+  @IsString({ each: true })
+  @IsDefined()
   imageList: string[];
 
   static from(
@@ -322,6 +338,8 @@ export class GetAdminBrandInfoText {
     description: '브랜드 이름',
     example: '서울모먼트',
   })
+  @IsString()
+  @IsDefined()
   name: string;
 
   @ApiProperty({
@@ -329,12 +347,18 @@ export class GetAdminBrandInfoText {
     example:
       '서울의 특별한 순간들을 담은 라이프스타일 브랜드입니다. 한국의 전통미와 현대적 감각을 조화롭게 표현합니다.',
   })
+  @IsString()
+  @IsDefined()
   description: string;
 
   @ApiProperty({
     description: '브랜드 정보 섹션 리스트',
     type: [GetAdminBrandInfoSection],
   })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminBrandInfoSection)
+  @IsDefined()
   section: GetAdminBrandInfoSection[];
 
   static from(
@@ -953,6 +977,15 @@ export class V2UpdateAdminBrandRequest {
   @IsString()
   @IsOptional()
   productBannerImage?: string;
+
+  @ApiPropertyOptional({
+    description: '상품 모바일 배너 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-product-mobile-banner.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  productMobileBannerImage?: string;
 
   @ApiPropertyOptional({
     description: '배너 이미지 URL 리스트',

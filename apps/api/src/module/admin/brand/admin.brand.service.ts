@@ -42,6 +42,7 @@ export class AdminBrandService {
         categoryId: dto.categoryId,
         profileImage: dto.profileImageUrl ?? undefined,
         bannerImageUrl: dto.productBannerImageUrl,
+        mobileBannerImageUrl: dto.productMobileBannerImageUrl,
         englishName: dto.englishName,
       }),
     );
@@ -479,6 +480,10 @@ export class AdminBrandService {
         '',
       ),
       bannerImageUrl: dto.productBannerImage?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+      mobileBannerImageUrl: dto.productMobileBannerImage?.replace(
         Configuration.getConfig().IMAGE_DOMAIN_NAME,
         '',
       ),
