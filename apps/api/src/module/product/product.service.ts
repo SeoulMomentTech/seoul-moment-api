@@ -472,9 +472,7 @@ export class ProductService {
 
   @Transactional()
   async postProductVariant(dto: PostProductVariantRequest) {
-    await this.productRepositoryService.getProductItemById(
-      dto.productItemId,
-    );
+    await this.productRepositoryService.getProductItemById(dto.productItemId);
 
     const skuExists =
       await this.productRepositoryService.existProductVariantBySku(dto.sku);
