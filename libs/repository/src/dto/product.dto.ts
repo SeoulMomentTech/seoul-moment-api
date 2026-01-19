@@ -6,12 +6,14 @@ import { IsOptional } from 'class-validator';
 
 import { ProductBannerEntity } from '../entity/product-banner.entity';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
+import { ProductItemEntity } from '../entity/product-item.entity';
 import { ProductEntity } from '../entity/product.entity';
 import { ProductSortColumn } from '../enum/product.enum';
 
 export type UpdateProductBannerDto = RequireKey<ProductBannerEntity, 'id'>;
 export type UpdateProductDto = RequireKey<ProductEntity, 'id'>;
 export type UpdateProductCategoryDto = RequireKey<ProductCategoryEntity, 'id'>;
+export type UpdateProductItemDto = RequireKey<ProductItemEntity, 'id'>;
 
 export class ProductSortDto {
   @ApiProperty({

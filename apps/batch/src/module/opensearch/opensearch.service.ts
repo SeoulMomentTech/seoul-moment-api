@@ -33,7 +33,7 @@ export class OpensearchService {
             languageCode,
           );
           const productEntity =
-            await this.productRepository.getProductItemByProductItemId(
+            await this.productRepository.getProductItemById(
               productItemList[0].id,
             );
 

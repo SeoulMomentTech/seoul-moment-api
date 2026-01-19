@@ -472,7 +472,7 @@ export class ProductService {
 
   @Transactional()
   async postProductVariant(dto: PostProductVariantRequest) {
-    await this.productRepositoryService.getProductItemByProductItemId(
+    await this.productRepositoryService.getProductItemById(
       dto.productItemId,
     );
 

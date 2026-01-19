@@ -14,6 +14,7 @@ import {
   ProductSortDto,
   UpdateProductBannerDto,
   UpdateProductDto,
+  UpdateProductItemDto,
 } from '../dto/product.dto';
 import { ProductBannerEntity } from '../entity/product-banner.entity';
 import { ProductCategoryEntity } from '../entity/product-category.entity';
@@ -371,12 +372,10 @@ export class ProductRepositoryService implements OnModuleInit {
     return result;
   }
 
-  async getProductItemByProductItemId(
-    productItemId: number,
-  ): Promise<ProductItemEntity> {
+  async getProductItemById(id: number): Promise<ProductItemEntity> {
     const result = await this.productItemRepository.findOne({
       where: {
-        id: productItemId,
+        id,
       },
       relations: [
         'product',
@@ -391,7 +390,7 @@ export class ProductRepositoryService implements OnModuleInit {
 
     if (!result)
       throw new ServiceError(
-        `No exist product item ID: ${productItemId}`,
+        `No exist product item ID: ${id}`,
         ServiceErrorCode.NOT_FOUND_DATA,
       );
 
@@ -736,5 +735,23 @@ export class ProductRepositoryService implements OnModuleInit {
       where: { productItemId },
       relations: ['externalLink'],
     });
+  }
+
+  async updateProductItem(
+    entity: UpdateProductItemDto,
+  ): Promise<ProductItemEntity> {
+    return this.productItemRepository.save(entity);
+  }
+
+  async deleteProductItemImage(productItemId: number) {
+    return this.productItemImageRepository.delete({ productItemId });
+  }
+
+  async deleteProductVariant(productItemId: number) {
+    return this.productVariantRepository.delete({ productItemId });
+  }
+
+  async deleteProductItemById(id: number) {
+    return this.productItemRepository.delete(id);
   }
 }

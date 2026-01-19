@@ -2,7 +2,10 @@
 import { PagingDto } from '@app/common/dto/global.dto';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
-import { ProductSortDto } from '@app/repository/dto/product.dto';
+import {
+  ProductSortDto,
+  UpdateProductItemDto,
+} from '@app/repository/dto/product.dto';
 import { ProductItemImageEntity } from '@app/repository/entity/product-item-image.entity';
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
@@ -14,8 +17,11 @@ import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import {
+  GetAdminProductItemInfoResponse,
   GetAdminProductItemRequest,
   GetAdminProductItemResponse,
+  PatchAdminProductItemRequest,
+  PatchAdminProductVariantRequest,
   PostAdminProductItemRequest,
   PostAdminProductVariantRequest,
 } from './admin.produict.item.dto';
@@ -50,7 +56,7 @@ export class AdminProductItemService {
 
   async postAdminProductVariant(
     productItemId: number,
-    dto: PostAdminProductVariantRequest[],
+    dto: PostAdminProductVariantRequest[] | PatchAdminProductVariantRequest[],
   ) {
     for (const variant of dto) {
       const skuExists =
@@ -116,5 +122,60 @@ export class AdminProductItemService {
     }
 
     await this.postAdminProductVariant(productItemEntity.id, dto.variantList);
+  }
+
+  private async updateProductItemImage(
+    productItemId: number,
+    imageUrlList: string[],
+  ) {
+    await this.productRepositoryService.deleteProductItemImage(productItemId);
+
+    if (imageUrlList && imageUrlList.length > 0) {
+      for (const imageUrl of imageUrlList) {
+        await this.productRepositoryService.insertProductItemImage(
+          plainToInstance(ProductItemImageEntity, {
+            productItemId,
+            imageUrl,
+          }),
+        );
+      }
+    }
+  }
+
+  async getAdminProductItemInfo(
+    productItemId: number,
+  ): Promise<GetAdminProductItemInfoResponse> {
+    const productItemEntity =
+      await this.productRepositoryService.getProductItemById(productItemId);
+
+    return GetAdminProductItemInfoResponse.from(productItemEntity);
+  }
+
+  async patchAdminProductItem(id: number, dto: PatchAdminProductItemRequest) {
+    await this.productRepositoryService.getProductItemById(id);
+
+    const updateDto: UpdateProductItemDto = {
+      id,
+      mainImageUrl: dto.mainImageUrl,
+      price: dto.price,
+      discountPrice: dto.discountPrice,
+      shippingCost: dto.shippingCost,
+      shippingInfo: dto.shippingInfo,
+    };
+
+    await this.productRepositoryService.updateProductItem(updateDto);
+
+    if (dto.imageUrlList && dto.imageUrlList.length > 0) {
+      await this.updateProductItemImage(id, dto.imageUrlList);
+    }
+
+    await this.productRepositoryService.deleteProductVariant(id);
+
+    await this.postAdminProductVariant(id, dto.variantList);
+  }
+
+  async deleteAdminProductItem(id: number) {
+    await this.productRepositoryService.getProductItemById(id);
+    await this.productRepositoryService.deleteProductItemById(id);
   }
 }
