@@ -562,9 +562,132 @@ export class AdminArticleService {
 
     await this.articleRepositoryService.update(updateArticleDto);
 
-    await this.articleMultilingualUpdateV2(
+    await this.V2articleMultilingualUpdate(
       articleEntity.id,
       dto.multilingualTextList,
     );
+  }
+
+  @Transactional()
+  async V2articleMultilingualUpdate(
+    articleId: number,
+    list: GetAdminArticleInfoText[],
+  ) {
+    await this.deleteArticleMultilingual(articleId);
+
+    if (!list || list.length === 0) {
+      return;
+    }
+
+    const firstContent = list[0];
+    const sectionEntities: ArticleSectionEntity[] = [];
+
+    // 섹션 엔티티 생성
+    for (let i = 0; i < firstContent.section.length; i++) {
+      const sectionEntity = await this.articleRepositoryService.insertSection(
+        plainToInstance(ArticleSectionEntity, {
+          articleId,
+        }),
+      );
+      sectionEntities.push(sectionEntity);
+    }
+
+    // 각 언어별 아티클 텍스트 저장
+    for (const content of list) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.ARTICLE,
+        articleId,
+        'title',
+        content.languageId,
+        content.title,
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.ARTICLE,
+        articleId,
+        'content',
+        content.languageId,
+        content.content,
+      );
+    }
+
+    // 각 섹션별로 다국어 데이터 저장
+    for (
+      let sectionIndex = 0;
+      sectionIndex < sectionEntities.length;
+      sectionIndex++
+    ) {
+      const sectionEntity = sectionEntities[sectionIndex];
+
+      // 각 언어별 섹션 데이터 저장
+      for (const content of list) {
+        const sectionData = content.section[sectionIndex];
+        if (!sectionData) {
+          continue;
+        }
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.ARTICLE_SECTION,
+          sectionEntity.id,
+          'title',
+          content.languageId,
+          sectionData.title,
+        );
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.ARTICLE_SECTION,
+          sectionEntity.id,
+          'subTitle',
+          content.languageId,
+          sectionData.subTitle,
+        );
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.ARTICLE_SECTION,
+          sectionEntity.id,
+          'content',
+          content.languageId,
+          sectionData.content,
+        );
+      }
+
+      // 섹션 이미지 저장 (첫 번째 언어의 이미지 리스트 사용)
+      const firstSectionData = list[0]?.section[sectionIndex];
+      const imageList = firstSectionData?.imageList || [];
+
+      for (const image of imageList) {
+        await this.articleRepositoryService.insertSectionImage(
+          plainToInstance(ArticleSectionImageEntity, {
+            sectionId: sectionEntity.id,
+            imageUrl: image.replace(
+              Configuration.getConfig().IMAGE_DOMAIN_NAME,
+              '',
+            ),
+          }),
+        );
+      }
+    }
+  }
+
+  @Transactional()
+  async deleteArticleMultilingual(articleId: number) {
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.ARTICLE,
+      articleId,
+    );
+
+    const articleEntity =
+      await this.articleRepositoryService.getArticleById(articleId);
+    const sectionEntityList = articleEntity.section || [];
+
+    for (const section of sectionEntityList) {
+      await this.languageRepositoryService.deleteMultilingualTexts(
+        EntityType.ARTICLE_SECTION,
+        section.id,
+      );
+
+      await this.articleRepositoryService.deleteSectionImageBySectionId(
+        section.id,
+      );
+
+      await this.articleRepositoryService.deleteSectionById(section.id);
+    }
   }
 }

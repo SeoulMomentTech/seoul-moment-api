@@ -1,6 +1,4 @@
 /* eslint-disable max-lines-per-function */
-import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
-import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
 import { UpdateNewsDto } from '@app/repository/dto/news.dto';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
@@ -25,7 +23,6 @@ import {
   PostAdminNewsRequest,
   UpdateAdminNewsRequest,
   V2UpdateAdminNewsRequest,
-  GetAdminNewsSection,
 } from './admin.news.dto';
 
 @Injectable()
@@ -204,109 +201,6 @@ export class AdminNewsService {
     }
   }
 
-  async updateNewsSection(
-    sectionId: number,
-    languageId: number,
-    section: GetAdminNewsSection,
-  ) {
-    await this.languageRepositoryService.saveMultilingualText(
-      EntityType.NEWS_SECTION,
-      sectionId,
-      'title',
-      languageId,
-      section.title,
-    );
-    await this.languageRepositoryService.saveMultilingualText(
-      EntityType.NEWS_SECTION,
-      sectionId,
-      'subTitle',
-      languageId,
-      section.subTitle,
-    );
-    await this.languageRepositoryService.saveMultilingualText(
-      EntityType.NEWS_SECTION,
-      sectionId,
-      'content',
-      languageId,
-      section.content,
-    );
-
-    await this.newsRepositoryService.deleteSectionImageBySectionId(sectionId);
-
-    for (const image of section.imageList) {
-      await this.newsRepositoryService.insertSectionImage(
-        plainToInstance(NewsSectionImageEntity, {
-          sectionId,
-          imageUrl: image.replace(
-            Configuration.getConfig().IMAGE_DOMAIN_NAME,
-            '',
-          ),
-        }),
-      );
-    }
-  }
-
-  @Transactional()
-  async newsMultilingualUpdate(newsId: number, list: GetAdminNewsInfoText[]) {
-    const newContentList: GetAdminNewsInfoText[] = [];
-
-    for (const content of list) {
-      await this.languageRepositoryService.saveMultilingualText(
-        EntityType.NEWS,
-        newsId,
-        'title',
-        content.languageId,
-        content.title,
-      );
-      await this.languageRepositoryService.saveMultilingualText(
-        EntityType.NEWS,
-        newsId,
-        'content',
-        content.languageId,
-        content.content,
-      );
-
-      for (const section of content.section) {
-        const sectionId = section.id;
-
-        if (!sectionId) {
-          newContentList.push(content);
-          continue;
-        }
-
-        await this.updateNewsSection(sectionId, content.languageId, section);
-      }
-    }
-
-    const activeLanguage =
-      await this.languageRepositoryService.findAllActiveLanguages();
-
-    if (newContentList.length > 0) {
-      if (activeLanguage.length === newContentList.length) {
-        const newSectionEntity = await this.newsRepositoryService.insertSection(
-          plainToInstance(NewsSectionEntity, {
-            newsId,
-          }),
-        );
-
-        for (const content of newContentList) {
-          for (const section of content.section) {
-            await this.updateNewsSection(
-              newSectionEntity.id,
-              content.languageId,
-              section,
-            );
-          }
-        }
-      } else {
-        throw new ServiceError(
-          `섹션을 추가하려면 활성 언어 수(${activeLanguage.length})와 동일한 개수의 언어별 입력이 필요합니다. 현재 새로운 섹션은 ${newContentList.length}개 추가되었습니다.`,
-          ServiceErrorCode.GONE,
-        );
-      }
-    }
-  }
-
   @Transactional()
   async V2UpdateAdminNews(newsId: number, dto: V2UpdateAdminNewsRequest) {
     const newsEntity = await this.newsRepositoryService.getNewsById(newsId);
@@ -332,7 +226,125 @@ export class AdminNewsService {
 
     await this.newsRepositoryService.update(updateNewsDto);
 
-    await this.newsMultilingualUpdate(newsEntity.id, dto.multilingualTextList);
+    await this.V2newsMultilingualUpdate(
+      newsEntity.id,
+      dto.multilingualTextList,
+    );
+  }
+
+  @Transactional()
+  async V2newsMultilingualUpdate(newsId: number, list: GetAdminNewsInfoText[]) {
+    await this.deleteNewsMultilingual(newsId);
+
+    if (!list || list.length === 0) {
+      return;
+    }
+
+    const firstContent = list[0];
+    const sectionEntities: NewsSectionEntity[] = [];
+
+    // 섹션 엔티티 생성
+    for (let i = 0; i < firstContent.section.length; i++) {
+      const sectionEntity = await this.newsRepositoryService.insertSection(
+        plainToInstance(NewsSectionEntity, {
+          newsId,
+        }),
+      );
+      sectionEntities.push(sectionEntity);
+    }
+
+    // 각 언어별 뉴스 텍스트 저장
+    for (const content of list) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.NEWS,
+        newsId,
+        'title',
+        content.languageId,
+        content.title,
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.NEWS,
+        newsId,
+        'content',
+        content.languageId,
+        content.content,
+      );
+    }
+
+    // 각 섹션별로 다국어 데이터 저장
+    for (
+      let sectionIndex = 0;
+      sectionIndex < sectionEntities.length;
+      sectionIndex++
+    ) {
+      const sectionEntity = sectionEntities[sectionIndex];
+
+      // 각 언어별 섹션 데이터 저장
+      for (const content of list) {
+        const sectionData = content.section[sectionIndex];
+        if (!sectionData) {
+          continue;
+        }
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS_SECTION,
+          sectionEntity.id,
+          'title',
+          content.languageId,
+          sectionData.title,
+        );
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS_SECTION,
+          sectionEntity.id,
+          'subTitle',
+          content.languageId,
+          sectionData.subTitle,
+        );
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS_SECTION,
+          sectionEntity.id,
+          'content',
+          content.languageId,
+          sectionData.content,
+        );
+      }
+
+      // 섹션 이미지 저장 (첫 번째 언어의 이미지 리스트 사용)
+      const firstSectionData = list[0]?.section[sectionIndex];
+      const imageList = firstSectionData?.imageList || [];
+
+      for (const image of imageList) {
+        await this.newsRepositoryService.insertSectionImage(
+          plainToInstance(NewsSectionImageEntity, {
+            sectionId: sectionEntity.id,
+            imageUrl: image.replace(
+              Configuration.getConfig().IMAGE_DOMAIN_NAME,
+              '',
+            ),
+          }),
+        );
+      }
+    }
+  }
+
+  @Transactional()
+  async deleteNewsMultilingual(newsId: number) {
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.NEWS,
+      newsId,
+    );
+
+    const sectionEntityList =
+      await this.newsRepositoryService.findNewsSectionByNewsId(newsId);
+
+    for (const section of sectionEntityList) {
+      await this.newsRepositoryService.deleteNewsSectionById(section.id);
+
+      await this.languageRepositoryService.deleteMultilingualTexts(
+        EntityType.NEWS_SECTION,
+        section.id,
+      );
+    }
   }
 
   @Transactional()
@@ -449,17 +461,7 @@ export class AdminNewsService {
 
   @Transactional()
   async deleteAdminNews(newsId: number) {
-    const newsEntity = await this.newsRepositoryService.getNewsById(newsId);
-
+    await this.deleteNewsMultilingual(newsId);
     await this.newsRepositoryService.delete(newsId);
-
-    await Promise.all(
-      newsEntity.section.map((section) =>
-        this.languageRepositoryService.deleteMultilingualTexts(
-          EntityType.NEWS_SECTION,
-          section.id,
-        ),
-      ),
-    );
   }
 }

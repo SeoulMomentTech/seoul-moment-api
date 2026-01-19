@@ -164,7 +164,20 @@ export class NewsRepositoryService {
       { imageUrl: dto.newImageUrl },
     );
   }
+
   async delete(id: number) {
     await this.newsRepository.delete(id);
+  }
+
+  async findNewsSectionByNewsId(newsId: number): Promise<NewsSectionEntity[]> {
+    return this.newsSectionRepository.find({
+      where: {
+        newsId,
+      },
+    });
+  }
+
+  async deleteNewsSectionById(id: number) {
+    await this.newsSectionRepository.delete(id);
   }
 }

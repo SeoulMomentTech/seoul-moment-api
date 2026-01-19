@@ -246,4 +246,8 @@ export class BrandRepositoryService {
   async deleteAllMobileBannerImages(brandId: number) {
     await this.brandBannerImageRepository.delete({ brandId });
   }
+
+  async deleteSectionById(id: number) {
+    await this.brandSectionRepository.delete(id);
+  }
 }

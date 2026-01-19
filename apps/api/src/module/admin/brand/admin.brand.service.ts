@@ -536,12 +536,124 @@ export class AdminBrandService {
       }
     }
 
-    // 다국어 데이터 업데이트
-    if (dto.multilingualTextList) {
-      await this.brandMultilingualUpdate(
-        brandEntity.id,
-        dto.multilingualTextList,
+    await this.V2brandMultilingualUpdate(
+      brandEntity.id,
+      dto.multilingualTextList,
+    );
+  }
+
+  @Transactional()
+  async V2brandMultilingualUpdate(
+    brandId: number,
+    list: GetAdminBrandInfoText[],
+  ) {
+    await this.deleteBrandMultilingual(brandId);
+
+    if (!list || list.length === 0) {
+      return;
+    }
+
+    const firstContent = list[0];
+    const sectionEntities: BrandSectionEntity[] = [];
+
+    // 섹션 엔티티 생성
+    for (let i = 0; i < firstContent.section.length; i++) {
+      const sectionEntity = await this.brandRepositoryService.insertSection(
+        plainToInstance(BrandSectionEntity, {
+          brandId,
+        }),
       );
+      sectionEntities.push(sectionEntity);
+    }
+
+    // 각 언어별 브랜드 텍스트 저장
+    for (const content of list) {
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.BRAND,
+        brandId,
+        'name',
+        content.languageId,
+        content.name,
+      );
+      await this.languageRepositoryService.saveMultilingualText(
+        EntityType.BRAND,
+        brandId,
+        'description',
+        content.languageId,
+        content.description,
+      );
+    }
+
+    // 각 섹션별로 다국어 데이터 저장
+    for (
+      let sectionIndex = 0;
+      sectionIndex < sectionEntities.length;
+      sectionIndex++
+    ) {
+      const sectionEntity = sectionEntities[sectionIndex];
+
+      // 각 언어별 섹션 데이터 저장
+      for (const content of list) {
+        const sectionData = content.section[sectionIndex];
+        if (!sectionData) {
+          continue;
+        }
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND_SECTION,
+          sectionEntity.id,
+          'title',
+          content.languageId,
+          sectionData.title,
+        );
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND_SECTION,
+          sectionEntity.id,
+          'content',
+          content.languageId,
+          sectionData.content,
+        );
+      }
+
+      // 섹션 이미지 저장 (첫 번째 언어의 이미지 리스트 사용)
+      const firstSectionData = list[0]?.section[sectionIndex];
+      const imageList = firstSectionData?.imageList || [];
+
+      for (const image of imageList) {
+        await this.brandRepositoryService.insertSectionImage(
+          plainToInstance(BrandSectionImageEntity, {
+            sectionId: sectionEntity.id,
+            imageUrl: image.replace(
+              Configuration.getConfig().IMAGE_DOMAIN_NAME,
+              '',
+            ),
+          }),
+        );
+      }
+    }
+  }
+
+  @Transactional()
+  async deleteBrandMultilingual(brandId: number) {
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND,
+      brandId,
+    );
+
+    const brandEntity = await this.brandRepositoryService.getBrandById(brandId);
+    const sectionEntityList = brandEntity.section || [];
+
+    for (const section of sectionEntityList) {
+      await this.languageRepositoryService.deleteMultilingualTexts(
+        EntityType.BRAND_SECTION,
+        section.id,
+      );
+
+      await this.brandRepositoryService.deleteSectionImageBySectionId(
+        section.id,
+      );
+
+      await this.brandRepositoryService.deleteSectionById(section.id);
     }
   }
 }

@@ -172,4 +172,8 @@ export class ArticleRepositoryService {
   async deleteSectionImageBySectionId(sectionId: number) {
     await this.articleSectionImageRepository.delete({ sectionId });
   }
+
+  async deleteSectionById(id: number) {
+    await this.articleSectionRepository.delete(id);
+  }
 }

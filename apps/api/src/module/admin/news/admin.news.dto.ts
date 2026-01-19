@@ -458,7 +458,7 @@ export class GetAdminNewsSection {
   @ApiPropertyOptional({ description: '섹션 ID', example: 1 })
   @IsNumber()
   @IsOptional()
-  id: number;
+  id?: number;
 
   @ApiProperty({ description: '섹션 제목', example: '새로운 소식' })
   @IsString()
