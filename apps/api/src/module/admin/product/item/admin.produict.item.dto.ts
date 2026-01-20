@@ -1,3 +1,4 @@
+import { OptionValueDto } from '@app/repository/dto/option.dto';
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -92,6 +93,24 @@ export class GetAdminProductItemResponse {
   }
 }
 
+export class GetAdminProductOptionValueResponse {
+  @ApiProperty({
+    description: '옵션 값 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  id: number;
+
+  @ApiProperty({
+    description: '옵션 값',
+    example: 'Red',
+  })
+  @IsString()
+  @IsDefined()
+  value: string;
+}
+
 export class GetAdminProductVariantResponse {
   @ApiProperty({
     description: 'SKU',
@@ -112,151 +131,40 @@ export class GetAdminProductVariantResponse {
 
   @ApiProperty({
     description: '옵션 값 ID 목록',
-    example: [1, 5],
-  })
-  @IsArray()
-  @IsNumber({}, { each: true })
-  @IsDefined()
-  optionValueIdList: number[];
-
-  static from(entity: ProductVariantEntity) {
-    return plainToInstance(this, {
-      sku: entity.sku,
-      stockQuantity: entity.stockQuantity,
-      optionValueIdList: entity.variantOptions.map((v) => v.optionValueId),
-    });
-  }
-}
-
-export class PostAdminProductVariantRequest {
-  @ApiProperty({
-    description: 'SKU',
-    example: 'NK-TS-RED-M',
-  })
-  @IsString()
-  @IsDefined()
-  sku: string;
-
-  @ApiProperty({
-    description: '재고 수량',
-    example: 50,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsDefined()
-  stockQuantity: number;
-
-  @ApiProperty({
-    description: '옵션 값 ID 목록',
-    example: [1, 5],
-  })
-  @IsArray()
-  @IsNumber({}, { each: true })
-  @IsDefined()
-  optionValueIdList: number[];
-}
-export class PostAdminProductItemRequest {
-  @ApiProperty({
-    description: '상품 ID',
-    example: 11,
-  })
-  @IsNumber()
-  @IsDefined()
-  productId: number;
-
-  @ApiProperty({
-    description: '목록 페이지용 대표 이미지 URL',
-    example: 'https://example.com/main-image.jpg',
-  })
-  @IsString()
-  @IsDefined()
-  mainImageUrl: string;
-
-  @ApiProperty({
-    description: '가격',
-    example: 29900,
-  })
-  @IsNumber()
-  @IsDefined()
-  price: number;
-
-  @ApiPropertyOptional({
-    description: '할인 가격',
-    example: 24900,
-  })
-  @IsNumber()
-  @IsOptional()
-  discountPrice?: number;
-
-  @ApiProperty({
-    description: '배송비용',
-    example: 2500,
-  })
-  @IsNumber()
-  @IsDefined()
-  shippingCost: number;
-
-  @ApiProperty({
-    description: '배송출고 일자',
-    example: 3,
-  })
-  @IsNumber()
-  @IsDefined()
-  shippingInfo: number;
-
-  @ApiPropertyOptional({
-    description: '이미지 URL 목록',
-    example: [
-      'https://example.com/image1.jpg',
-      'https://example.com/image2.jpg',
-      'https://example.com/image3.jpg',
-    ],
-  })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  imageUrlList?: string[];
-
-  @ApiProperty({
-    description: '상품 옵션 목록',
     example: [
       {
-        sku: 'NK-TS-RED-M',
-        stockQuantity: 50,
-        optionValueIdList: [1, 5],
+        id: 1,
+        value: 'Red',
       },
       {
-        sku: 'NK-TS-RED-L',
-        stockQuantity: 30,
-        optionValueIdList: [1, 6],
-      },
-      {
-        sku: 'NK-TS-BLUE-M',
-        stockQuantity: 45,
-        optionValueIdList: [2, 5],
-      },
-      {
-        sku: 'NK-TS-BLUE-L',
-        stockQuantity: 25,
-        optionValueIdList: [2, 6],
-      },
-      {
-        sku: 'NK-TS-GREEN-M',
-        stockQuantity: 20,
-        optionValueIdList: [3, 5],
-      },
-      {
-        sku: 'NK-TS-GREEN-L',
-        stockQuantity: 15,
-        optionValueIdList: [3, 6],
+        id: 5,
+        value: 'M',
       },
     ],
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => PostAdminProductVariantRequest)
+  @Type(() => PostAdminProductOptionValueRequest)
   @IsDefined()
-  variantList: PostAdminProductVariantRequest[];
+  optionValueList: PostAdminProductOptionValueRequest[];
+
+  static from(entity: ProductVariantEntity, optionValueList: OptionValueDto[]) {
+    const variantOptionValueIds = new Set(
+      entity.variantOptions.map((vo) => vo.optionValueId),
+    );
+    const filteredOptionValueList = optionValueList.filter((ov) =>
+      variantOptionValueIds.has(ov.id),
+    );
+
+    return plainToInstance(this, {
+      sku: entity.sku,
+      stockQuantity: entity.stockQuantity,
+      optionValueList: filteredOptionValueList.map((v) => ({
+        id: v.id,
+        value: v.value,
+      })),
+    });
+  }
 }
 
 export class GetAdminProductItemInfoResponse {
@@ -335,32 +243,86 @@ export class GetAdminProductItemInfoResponse {
       {
         sku: 'NK-TS-RED-M',
         stockQuantity: 50,
-        optionValueIdList: [1, 5],
+        optionValueList: [
+          {
+            id: 1,
+            value: 'Red',
+          },
+          {
+            id: 5,
+            value: 'M',
+          },
+        ],
       },
       {
         sku: 'NK-TS-RED-L',
         stockQuantity: 30,
-        optionValueIdList: [1, 6],
+        optionValueList: [
+          {
+            id: 1,
+            value: 'Red',
+          },
+          {
+            id: 6,
+            value: 'L',
+          },
+        ],
       },
       {
         sku: 'NK-TS-BLUE-M',
         stockQuantity: 45,
-        optionValueIdList: [2, 5],
+        optionValueList: [
+          {
+            id: 2,
+            value: 'Blue',
+          },
+          {
+            id: 5,
+            value: 'M',
+          },
+        ],
       },
       {
         sku: 'NK-TS-BLUE-L',
         stockQuantity: 25,
-        optionValueIdList: [2, 6],
+        optionValueList: [
+          {
+            id: 2,
+            value: 'Blue',
+          },
+          {
+            id: 6,
+            value: 'L',
+          },
+        ],
       },
       {
         sku: 'NK-TS-GREEN-M',
         stockQuantity: 20,
-        optionValueIdList: [3, 5],
+        optionValueList: [
+          {
+            id: 3,
+            value: 'Green',
+          },
+          {
+            id: 5,
+            value: 'M',
+          },
+        ],
       },
       {
         sku: 'NK-TS-GREEN-L',
         stockQuantity: 15,
-        optionValueIdList: [3, 6],
+        optionValueList: [
+          {
+            id: 3,
+            value: 'Green',
+          },
+          {
+            id: 6,
+            value: 'L',
+          },
+        ],
       },
     ],
   })
@@ -370,7 +332,7 @@ export class GetAdminProductItemInfoResponse {
   @IsDefined()
   variantList: GetAdminProductVariantResponse[];
 
-  static from(entity: ProductItemEntity) {
+  static from(entity: ProductItemEntity, optionValueList: OptionValueDto[]) {
     return plainToInstance(this, {
       id: entity.id,
       productId: entity.productId,
@@ -381,10 +343,178 @@ export class GetAdminProductItemInfoResponse {
       shippingInfo: entity.shippingInfo,
       imageUrlList: entity.images.map((v) => v.getImage()),
       variantList: entity.variants.map((v) =>
-        GetAdminProductVariantResponse.from(v),
+        GetAdminProductVariantResponse.from(v, optionValueList),
       ),
     });
   }
+}
+
+export class PostAdminProductOptionValueRequest {
+  @ApiProperty({
+    description: '옵션 값 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  id: number;
+
+  @ApiProperty({
+    description: '옵션 값',
+    example: 'Red',
+  })
+  @IsString()
+  @IsDefined()
+  value: string;
+}
+
+export class PostAdminProductVariantRequest {
+  @ApiProperty({
+    description: 'SKU',
+    example: 'NK-TS-RED-M',
+  })
+  @IsString()
+  @IsDefined()
+  sku: string;
+
+  @ApiProperty({
+    description: '재고 수량',
+    example: 50,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  stockQuantity: number;
+
+  @ApiProperty({
+    description: '옵션 값 ID 목록',
+    example: [1, 5],
+  })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @IsDefined()
+  optionValueIdList: number[];
+}
+
+export class PostAdminProductItemRequest {
+  @ApiProperty({
+    description: '상품 ID',
+    example: 11,
+  })
+  @IsNumber()
+  @IsDefined()
+  productId: number;
+
+  @ApiProperty({
+    description: '목록 페이지용 대표 이미지 URL',
+    example: 'https://example.com/main-image.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  mainImageUrl: string;
+
+  @ApiProperty({
+    description: '가격',
+    example: 29900,
+  })
+  @IsNumber()
+  @IsDefined()
+  price: number;
+
+  @ApiPropertyOptional({
+    description: '할인 가격',
+    example: 24900,
+  })
+  @IsNumber()
+  @IsOptional()
+  discountPrice?: number;
+
+  @ApiProperty({
+    description: '배송비용',
+    example: 2500,
+  })
+  @IsNumber()
+  @IsDefined()
+  shippingCost: number;
+
+  @ApiProperty({
+    description: '배송출고 일자',
+    example: 3,
+  })
+  @IsNumber()
+  @IsDefined()
+  shippingInfo: number;
+
+  @ApiPropertyOptional({
+    description: '이미지 URL 목록',
+    example: [
+      'https://example.com/image1.jpg',
+      'https://example.com/image2.jpg',
+      'https://example.com/image3.jpg',
+    ],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  imageUrlList?: string[];
+
+  @ApiProperty({
+    description: '상품 옵션 목록',
+    example: [
+      {
+        sku: 'NK-TS-RED-M',
+        stockQuantity: 50,
+        optionValueList: [1, 5],
+      },
+      {
+        sku: 'NK-TS-RED-L',
+        stockQuantity: 30,
+        optionValueList: [1, 6],
+      },
+      {
+        sku: 'NK-TS-BLUE-M',
+        stockQuantity: 45,
+        optionValueList: [2, 5],
+      },
+      {
+        sku: 'NK-TS-BLUE-L',
+        stockQuantity: 25,
+        optionValueList: [2, 6],
+      },
+      {
+        sku: 'NK-TS-GREEN-M',
+        stockQuantity: 20,
+        optionValueList: [3, 5],
+      },
+      {
+        sku: 'NK-TS-GREEN-L',
+        stockQuantity: 15,
+        optionValueList: [3, 6],
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PostAdminProductVariantRequest)
+  @IsDefined()
+  variantList: PostAdminProductVariantRequest[];
+}
+
+export class PatchAdminProductOptionValueRequest {
+  @ApiPropertyOptional({
+    description: '옵션 값 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @IsOptional()
+  id?: number;
+
+  @ApiPropertyOptional({
+    description: '옵션 값',
+    example: 'Red',
+  })
+  @IsString()
+  @IsOptional()
+  value?: string;
 }
 
 export class PatchAdminProductVariantRequest {
@@ -407,12 +537,22 @@ export class PatchAdminProductVariantRequest {
 
   @ApiPropertyOptional({
     description: '옵션 값 ID 목록',
-    example: [1, 5],
+    example: [
+      {
+        id: 1,
+        value: 'Red',
+      },
+      {
+        id: 5,
+        value: 'M',
+      },
+    ],
   })
   @IsArray()
-  @IsNumber({}, { each: true })
+  @ValidateNested({ each: true })
+  @Type(() => PatchAdminProductOptionValueRequest)
   @IsOptional()
-  optionValueIdList?: number[];
+  optionValueList?: PatchAdminProductOptionValueRequest[];
 }
 
 export class PatchAdminProductItemRequest {
@@ -483,32 +623,86 @@ export class PatchAdminProductItemRequest {
       {
         sku: 'NK-TS-RED-M',
         stockQuantity: 50,
-        optionValueIdList: [1, 5],
+        optionValueList: [
+          {
+            id: 1,
+            value: 'Red',
+          },
+          {
+            id: 5,
+            value: 'M',
+          },
+        ],
       },
       {
         sku: 'NK-TS-RED-L',
         stockQuantity: 30,
-        optionValueIdList: [1, 6],
+        optionValueList: [
+          {
+            id: 1,
+            value: 'Red',
+          },
+          {
+            id: 6,
+            value: 'L',
+          },
+        ],
       },
       {
         sku: 'NK-TS-BLUE-M',
         stockQuantity: 45,
-        optionValueIdList: [2, 5],
+        optionValueList: [
+          {
+            id: 2,
+            value: 'Blue',
+          },
+          {
+            id: 5,
+            value: 'M',
+          },
+        ],
       },
       {
         sku: 'NK-TS-BLUE-L',
         stockQuantity: 25,
-        optionValueIdList: [2, 6],
+        optionValueList: [
+          {
+            id: 2,
+            value: 'Blue',
+          },
+          {
+            id: 6,
+            value: 'L',
+          },
+        ],
       },
       {
         sku: 'NK-TS-GREEN-M',
         stockQuantity: 20,
-        optionValueIdList: [3, 5],
+        optionValueList: [
+          {
+            id: 3,
+            value: 'Green',
+          },
+          {
+            id: 5,
+            value: 'M',
+          },
+        ],
       },
       {
         sku: 'NK-TS-GREEN-L',
         stockQuantity: 15,
-        optionValueIdList: [3, 6],
+        optionValueList: [
+          {
+            id: 3,
+            value: 'Green',
+          },
+          {
+            id: 6,
+            value: 'L',
+          },
+        ],
       },
     ],
   })

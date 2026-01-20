@@ -28,3 +28,21 @@ export class OptionSortDto {
     return plainToInstance(this, { sortColumn, sort });
   }
 }
+
+export class OptionValueDto {
+  @ApiProperty({
+    description: '옵션 값 ID',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '옵션 값',
+    example: 'Red',
+  })
+  value: string;
+
+  static from(id: number, value: string) {
+    return plainToInstance(this, { id, value });
+  }
+}

@@ -2,6 +2,7 @@
 import { PagingDto } from '@app/common/dto/global.dto';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
+import { OptionValueDto } from '@app/repository/dto/option.dto';
 import {
   ProductSortDto,
   UpdateProductItemDto,
@@ -10,7 +11,10 @@ import { ProductItemImageEntity } from '@app/repository/entity/product-item-imag
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { VariantOptionEntity } from '@app/repository/entity/variant-option.entity';
+import { EntityType } from '@app/repository/enum/entity.enum';
+import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ProductSortColumn } from '@app/repository/enum/product.enum';
+import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { OptionRepositoryService } from '@app/repository/service/option.repository.service';
 import { ProductRepositoryService } from '@app/repository/service/product.repository.service';
 import { Injectable } from '@nestjs/common';
@@ -31,6 +35,7 @@ export class AdminProductItemService {
   constructor(
     private readonly productRepositoryService: ProductRepositoryService,
     private readonly optionRepositoryService: OptionRepositoryService,
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
   async getAdminProductItem(
@@ -56,7 +61,7 @@ export class AdminProductItemService {
 
   async postAdminProductVariant(
     productItemId: number,
-    dto: PostAdminProductVariantRequest[] | PatchAdminProductVariantRequest[],
+    dto: PostAdminProductVariantRequest[],
   ) {
     for (const variant of dto) {
       const skuExists =
@@ -90,6 +95,48 @@ export class AdminProductItemService {
           plainToInstance(VariantOptionEntity, {
             variantId: productVariantEntity.id,
             optionValueId: v,
+          }),
+        ),
+      );
+    }
+  }
+
+  async patchAdminProductVariant(
+    productItemId: number,
+    dto: PatchAdminProductVariantRequest[],
+  ) {
+    for (const variant of dto) {
+      const skuExists =
+        await this.productRepositoryService.existProductVariantBySku(
+          variant.sku,
+        );
+      if (skuExists) {
+        throw new ServiceError(
+          `SKU가 이미 존재합니다.: ${variant.sku}`,
+          ServiceErrorCode.CONFLICT,
+        );
+      }
+
+      const productVariantEntity =
+        await this.productRepositoryService.insertProductVariant(
+          plainToInstance(ProductVariantEntity, {
+            productItemId,
+            sku: variant.sku,
+            stockQuantity: variant.stockQuantity,
+          }),
+        );
+
+      await Promise.all(
+        variant.optionValueList.map(async (v) =>
+          this.optionRepositoryService.getOptionValueByOptionValueId(v.id),
+        ),
+      );
+
+      await this.optionRepositoryService.bulkInsertVariantOption(
+        variant.optionValueList.map((v) =>
+          plainToInstance(VariantOptionEntity, {
+            variantId: productVariantEntity.id,
+            optionValueId: v.id,
           }),
         ),
       );
@@ -148,7 +195,49 @@ export class AdminProductItemService {
     const productItemEntity =
       await this.productRepositoryService.getProductItemById(productItemId);
 
-    return GetAdminProductItemInfoResponse.from(productItemEntity);
+    const allVariantOptions = productItemEntity.variants.flatMap(
+      (variant) => variant.variantOptions,
+    );
+
+    const uniqueOptionValueIds = [
+      ...new Set(allVariantOptions.map((vo) => vo.optionValueId)),
+    ];
+
+    const optionValueMap = new Map<number, OptionValueDto>();
+
+    await Promise.all(
+      uniqueOptionValueIds.map(async (optionValueId) => {
+        const multilingualText =
+          await this.languageRepositoryService.findMultilingualTexts(
+            EntityType.OPTION_VALUE,
+            optionValueId,
+            LanguageCode.KOREAN,
+            'value',
+          );
+
+        const optionValueDto = OptionValueDto.from(
+          optionValueId,
+          multilingualText[0].textContent,
+        );
+        optionValueMap.set(optionValueId, optionValueDto);
+      }),
+    );
+
+    const seenIds = new Set<number>();
+    const productItemVariantList = allVariantOptions
+      .map((variantOption) => optionValueMap.get(variantOption.optionValueId))
+      .filter((value): value is OptionValueDto => {
+        if (!value || seenIds.has(value.id)) {
+          return false;
+        }
+        seenIds.add(value.id);
+        return true;
+      });
+
+    return GetAdminProductItemInfoResponse.from(
+      productItemEntity,
+      productItemVariantList,
+    );
   }
 
   async patchAdminProductItem(id: number, dto: PatchAdminProductItemRequest) {
@@ -171,7 +260,7 @@ export class AdminProductItemService {
 
     await this.productRepositoryService.deleteProductVariant(id);
 
-    await this.postAdminProductVariant(id, dto.variantList);
+    await this.patchAdminProductVariant(id, dto.variantList);
   }
 
   async deleteAdminProductItem(id: number) {
