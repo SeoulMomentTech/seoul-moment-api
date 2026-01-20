@@ -45,7 +45,10 @@ export class AdminProductBannerController {
   @Post()
   @ApiOperation({ summary: '상품 배너 등록' })
   async postProductBanner(@Body() body: PostAdminProductBannerRequest) {
-    await this.adminProductBannerService.postProductBanner(body.imageUrl);
+    await this.adminProductBannerService.postProductBanner(
+      body.imageUrl,
+      body.mobileImageUrl,
+    );
   }
 
   @Patch('sort')
@@ -62,7 +65,11 @@ export class AdminProductBannerController {
     @Param('id', ParseIntPipe) id: number,
     @Body() body: PatchAdminProductBannerRequest,
   ) {
-    await this.adminProductBannerService.patchProductBanner(id, body.imageUrl);
+    await this.adminProductBannerService.patchProductBanner(
+      id,
+      body.imageUrl,
+      body.mobileImageUrl,
+    );
   }
 
   @Delete(':id(\\d+)')

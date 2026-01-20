@@ -103,9 +103,16 @@ export class GetProductBannerResponse {
   })
   banner: string;
 
+  @ApiProperty({
+    description: '모바일 상품 배너',
+    example: 'https://example.com/mobile-image1.jpg',
+  })
+  mobileBanner: string;
+
   static from(entity: ProductBannerEntity) {
     return plainToInstance(this, {
       banner: entity.getImage(),
+      mobileBanner: entity.getMobileImage(),
     });
   }
 }

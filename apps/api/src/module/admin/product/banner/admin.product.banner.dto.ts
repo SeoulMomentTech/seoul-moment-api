@@ -1,10 +1,11 @@
 import { ProductBannerEntity } from '@app/repository/entity/product-banner.entity';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
   IsNumber,
+  IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
@@ -28,6 +29,13 @@ export class AdminProductBannerListResponse {
   imageUrl: string;
 
   @ApiProperty({
+    description: '모바일 배너 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/product-banners/2025-09-16/product-banner-01.jpg',
+  })
+  mobileImageUrl: string;
+
+  @ApiProperty({
     description: '배너 정렬 순서',
     example: 1,
   })
@@ -49,6 +57,7 @@ export class AdminProductBannerListResponse {
     return plainToInstance(this, {
       id: entity.id,
       imageUrl: entity.getImage(),
+      mobileImageUrl: entity.getMobileImage(),
       sort: entity.sortOrder,
       createDate: entity.createDate,
       updateDate: entity.updateDate,
@@ -64,16 +73,32 @@ export class PostAdminProductBannerRequest {
   @IsString()
   @IsDefined()
   imageUrl: string;
-}
 
-export class PatchAdminProductBannerRequest {
   @ApiProperty({
-    description: '배너 이미지 URL',
+    description: '모바일 배너 이미지 URL',
     example: '/product-banners/2025-09-16/product-banner-01.jpg',
   })
   @IsString()
   @IsDefined()
+  mobileImageUrl: string;
+}
+
+export class PatchAdminProductBannerRequest {
+  @ApiPropertyOptional({
+    description: '배너 이미지 URL',
+    example: '/product-banners/2025-09-16/product-banner-01.jpg',
+  })
+  @IsString()
+  @IsOptional()
   imageUrl?: string;
+
+  @ApiPropertyOptional({
+    description: '모바일 배너 이미지 URL',
+    example: '/product-banners/2025-09-16/product-banner-01.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  mobileImageUrl?: string;
 }
 
 export class PatchAdminProductBannerSortOrder {
@@ -126,6 +151,13 @@ export class GetAdminProductBannerDetailResponse {
   imageUrl: string;
 
   @ApiProperty({
+    description: '모바일 배너 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/product-banners/2025-09-16/product-banner-01.jpg',
+  })
+  mobileImageUrl: string;
+
+  @ApiProperty({
     description: '배너 정렬 순서',
     example: 1,
   })
@@ -147,6 +179,7 @@ export class GetAdminProductBannerDetailResponse {
     return plainToInstance(this, {
       id: entity.id,
       imageUrl: entity.getImage(),
+      mobileImageUrl: entity.getMobileImage(),
       sortOrder: entity.sortOrder,
       createDate: entity.createDate,
       updateDate: entity.updateDate,

@@ -35,18 +35,24 @@ export class AdminProductBannerService {
     ];
   }
 
-  async postProductBanner(imageUrl: string) {
+  async postProductBanner(imageUrl: string, mobileImageUrl: string) {
     await this.productRepositoryService.insertBanner(
       plainToInstance(ProductBannerEntity, {
         image: imageUrl,
+        mobileImage: mobileImageUrl,
       }),
     );
   }
 
-  async patchProductBanner(id: number, imageUrl: string) {
+  async patchProductBanner(
+    id: number,
+    imageUrl: string,
+    mobileImageUrl: string,
+  ) {
     const updateDto: UpdateProductBannerDto = {
       id,
       image: imageUrl,
+      mobileImage: mobileImageUrl,
     };
 
     await this.productRepositoryService.updateBanner(updateDto);
