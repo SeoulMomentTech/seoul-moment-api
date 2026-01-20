@@ -10,6 +10,7 @@ import {
 
 import { ArticleEntity } from './article.entity';
 import { BrandBannerImageEntity } from './brand-banner-image.entity';
+import { BrandMobileBannerImageEntity } from './brand-mobile-banner-image.entity';
 import { BrandSectionEntity } from './brand-section.entity';
 import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
@@ -39,9 +40,6 @@ export class BrandEntity extends CommonEntity {
   @Column('varchar', { length: 255, nullable: true })
   bannerImageUrl: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  mobileBannerImageUrl: string;
-
   @Column('enum', {
     enum: BrandStatus,
     default: BrandStatus.NORMAL,
@@ -58,6 +56,16 @@ export class BrandEntity extends CommonEntity {
     },
   )
   bannerImage: BrandBannerImageEntity[];
+
+  @OneToMany(
+    () => BrandMobileBannerImageEntity,
+    (brandMobileBannerImage) => brandMobileBannerImage.brand,
+    {
+      cascade: true,
+      eager: true,
+    },
+  )
+  mobileBannerImage: BrandMobileBannerImageEntity[];
 
   @OneToMany(() => BrandSectionEntity, (brandSection) => brandSection.brand, {
     cascade: true,
@@ -105,11 +113,6 @@ export class BrandEntity extends CommonEntity {
   getBannerImage(): string {
     return this.bannerImageUrl
       ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.bannerImageUrl}`
-      : null;
-  }
-  getMobileBannerImage(): string {
-    return this.mobileBannerImageUrl
-      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.mobileBannerImageUrl}`
       : null;
   }
 }

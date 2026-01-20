@@ -6,6 +6,7 @@ import { ArticleSectionImageEntity } from './entity/article-section-image.entity
 import { ArticleSectionEntity } from './entity/article-section.entity';
 import { ArticleEntity } from './entity/article.entity';
 import { BrandBannerImageEntity } from './entity/brand-banner-image.entity';
+import { BrandMobileBannerImageEntity } from './entity/brand-mobile-banner-image.entity';
 import { BrandSectionImageEntity } from './entity/brand-section-image.entity';
 import { BrandSectionEntity } from './entity/brand-section.entity';
 import { BrandEntity } from './entity/brand.entity';
@@ -51,6 +52,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     TypeOrmModule.forFeature([
       BrandEntity,
       BrandBannerImageEntity,
+      BrandMobileBannerImageEntity,
       BrandSectionEntity,
       BrandSectionImageEntity,
       LanguageEntity,

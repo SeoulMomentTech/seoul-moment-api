@@ -12,6 +12,7 @@ import { In, Like, Repository } from 'typeorm';
 
 import { UpdateBrandDto } from '../dto/brand.dto';
 import { BrandBannerImageEntity } from '../entity/brand-banner-image.entity';
+import { BrandMobileBannerImageEntity } from '../entity/brand-mobile-banner-image.entity';
 import { BrandSectionImageEntity } from '../entity/brand-section-image.entity';
 import { BrandSectionEntity } from '../entity/brand-section.entity';
 import { BrandEntity } from '../entity/brand.entity';
@@ -29,6 +30,9 @@ export class BrandRepositoryService {
 
     @InjectRepository(BrandBannerImageEntity)
     private readonly brandBannerImageRepository: Repository<BrandBannerImageEntity>,
+
+    @InjectRepository(BrandMobileBannerImageEntity)
+    private readonly brandMobileBannerImageRepository: Repository<BrandMobileBannerImageEntity>,
 
     @InjectRepository(BrandSectionEntity)
     private readonly brandSectionRepository: Repository<BrandSectionEntity>,
@@ -146,6 +150,23 @@ export class BrandRepositoryService {
     return await this.brandBannerImageRepository.save(entity);
   }
 
+  async bulkInsertInitMobileBannerImage(
+    entites: BrandMobileBannerImageEntity[],
+  ): Promise<BrandMobileBannerImageEntity[]> {
+    return this.brandMobileBannerImageRepository.save(entites);
+  }
+
+  async insertMobileBannerImage(
+    entity: BrandMobileBannerImageEntity,
+  ): Promise<BrandMobileBannerImageEntity> {
+    await this.sortOrderHelper.setNextSortOrder(
+      entity,
+      this.brandMobileBannerImageRepository,
+    );
+
+    return await this.brandMobileBannerImageRepository.save(entity);
+  }
+
   private getFirstLetterCondition(type: BrandNameFilter): string {
     // 'A_TO_D' -> ['A', 'TO', 'D'] -> startLetter: 'A', endLetter: 'D'
     const parts = type.split('_');
@@ -201,13 +222,6 @@ export class BrandRepositoryService {
     );
   }
 
-  async updateMobileBannerImage(dto: UpdateAdminBrandImage) {
-    await this.brandBannerImageRepository.update(
-      { mobileImageUrl: dto.oldImageUrl },
-      { mobileImageUrl: dto.newImageUrl },
-    );
-  }
-
   async updateSectionSortOrder(dto: UpdateAdminBrandSectionSortOrder) {
     await this.brandSectionRepository.update(
       { id: dto.sectionId },
@@ -244,7 +258,14 @@ export class BrandRepositoryService {
   }
 
   async deleteAllMobileBannerImages(brandId: number) {
-    await this.brandBannerImageRepository.delete({ brandId });
+    await this.brandMobileBannerImageRepository.delete({ brandId });
+  }
+
+  async deleteBannerImagesByIds(ids: number[]) {
+    if (ids.length === 0) {
+      return;
+    }
+    await this.brandBannerImageRepository.delete({ id: In(ids) });
   }
 
   async deleteSectionById(id: number) {

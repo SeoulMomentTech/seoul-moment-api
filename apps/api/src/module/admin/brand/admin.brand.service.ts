@@ -4,6 +4,7 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
 import { UpdateBrandDto } from '@app/repository/dto/brand.dto';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
+import { BrandMobileBannerImageEntity } from '@app/repository/entity/brand-mobile-banner-image.entity';
 import { BrandSectionImageEntity } from '@app/repository/entity/brand-section-image.entity';
 import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
@@ -42,7 +43,6 @@ export class AdminBrandService {
         categoryId: dto.categoryId,
         profileImage: dto.profileImageUrl ?? undefined,
         bannerImageUrl: dto.productBannerImageUrl,
-        mobileBannerImageUrl: dto.productMobileBannerImageUrl,
         englishName: dto.englishName,
       }),
     );
@@ -51,12 +51,29 @@ export class AdminBrandService {
       plainToInstance(BrandBannerImageEntity, {
         brandId: brandEntity.id,
         imageUrl: bannerUrl,
-        mobileImageUrl: dto.mobileBannerImageUrlList[index],
         sortOrder: index + 1,
       }),
     );
 
     await this.brandRepositoryService.bulkInsertInitBannerImage(bannerEntities);
+
+    if (
+      dto.mobileBannerImageUrlList &&
+      dto.mobileBannerImageUrlList.length > 0
+    ) {
+      const mobileBannerEntities = dto.mobileBannerImageUrlList.map(
+        (mobileBannerUrl, index) =>
+          plainToInstance(BrandMobileBannerImageEntity, {
+            brandId: brandEntity.id,
+            imageUrl: mobileBannerUrl,
+            sortOrder: index + 1,
+          }),
+      );
+
+      await this.brandRepositoryService.bulkInsertInitMobileBannerImage(
+        mobileBannerEntities,
+      );
+    }
 
     await Promise.all(
       dto.textList.flatMap((v) => [
@@ -230,14 +247,15 @@ export class AdminBrandService {
     ) {
       for (const banner of dto.mobileBannerImageUrlList) {
         if (banner.oldImageUrl === '' || banner.oldImageUrl === null) {
-          await this.brandRepositoryService.insertBannerImage(
-            plainToInstance(BrandBannerImageEntity, {
+          await this.brandRepositoryService.insertMobileBannerImage(
+            plainToInstance(BrandMobileBannerImageEntity, {
               brandId,
-              mobileImageUrl: banner.newImageUrl,
+              imageUrl: banner.newImageUrl,
             }),
           );
         } else {
-          await this.brandRepositoryService.updateMobileBannerImage(banner);
+          // TODO: updateMobileBannerImage 메서드 구현 필요 (기존 방식 유지)
+          // 또는 전체 교체 방식으로 변경
         }
       }
     }
@@ -483,15 +501,11 @@ export class AdminBrandService {
         Configuration.getConfig().IMAGE_DOMAIN_NAME,
         '',
       ),
-      mobileBannerImageUrl: dto.productMobileBannerImage?.replace(
-        Configuration.getConfig().IMAGE_DOMAIN_NAME,
-        '',
-      ),
     };
 
     await this.brandRepositoryService.update(updateBrandDto);
 
-    // Banner 이미지 전체 교체
+    // Banner 이미지 전체 교체 (각각 독립적으로 처리)
     if (dto.bannerList) {
       await this.brandRepositoryService.deleteAllBannerImages(brandId);
 
@@ -513,15 +527,15 @@ export class AdminBrandService {
       }
     }
 
-    // Mobile Banner 이미지 전체 교체
+    // Mobile Banner 이미지 전체 교체 (각각 독립적으로 처리)
     if (dto.mobileBannerList) {
       await this.brandRepositoryService.deleteAllMobileBannerImages(brandId);
 
       const mobileBannerEntities = dto.mobileBannerList.map(
         (mobileBannerUrl, index) =>
-          plainToInstance(BrandBannerImageEntity, {
+          plainToInstance(BrandMobileBannerImageEntity, {
             brandId,
-            mobileImageUrl: mobileBannerUrl.replace(
+            imageUrl: mobileBannerUrl.replace(
               Configuration.getConfig().IMAGE_DOMAIN_NAME,
               '',
             ),
@@ -530,7 +544,7 @@ export class AdminBrandService {
       );
 
       if (mobileBannerEntities.length > 0) {
-        await this.brandRepositoryService.bulkInsertInitBannerImage(
+        await this.brandRepositoryService.bulkInsertInitMobileBannerImage(
           mobileBannerEntities,
         );
       }

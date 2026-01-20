@@ -231,15 +231,6 @@ export class PostAdminBrandRequest {
   productBannerImageUrl: string;
 
   @ApiProperty({
-    description: 'S3 업로드 후 상품 모바일 배너 이미지 경로',
-    example:
-      '/brand-products/2025-09-16/seoul-moment-product-mobile-banner.jpg',
-  })
-  @IsString()
-  @IsDefined()
-  productMobileBannerImageUrl: string;
-
-  @ApiProperty({
     description: '영어 브랜드 이름',
     example: 'Seoul Moment',
   })
@@ -533,10 +524,10 @@ export class GetAdminBrandInfoResponse {
         .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),
-      mobileBannerList: entity.bannerImage
-        .filter((v) => v.mobileImageUrl !== null && v.mobileImageUrl !== '')
+      mobileBannerList: entity.mobileBannerImage
+        .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((v) => v.getMobileImage()),
+        .map((v) => v.getImage()),
       multilingualTextList,
     });
   }
@@ -977,15 +968,6 @@ export class V2UpdateAdminBrandRequest {
   @IsString()
   @IsOptional()
   productBannerImage?: string;
-
-  @ApiPropertyOptional({
-    description: '상품 모바일 배너 이미지 URL',
-    example:
-      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-product-mobile-banner.jpg',
-  })
-  @IsString()
-  @IsOptional()
-  productMobileBannerImage?: string;
 
   @ApiPropertyOptional({
     description: '배너 이미지 URL 리스트',

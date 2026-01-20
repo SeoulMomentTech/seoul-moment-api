@@ -11,9 +11,9 @@ import {
 import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
 
-@Entity('brand_banner_image')
+@Entity('brand_mobile_banner_image')
 @Index(['brandId', 'sortOrder'])
-export class BrandBannerImageEntity extends CommonEntity {
+export class BrandMobileBannerImageEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
@@ -26,7 +26,7 @@ export class BrandBannerImageEntity extends CommonEntity {
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 
-  @ManyToOne(() => BrandEntity, (brand) => brand.bannerImage, {
+  @ManyToOne(() => BrandEntity, (brand) => brand.mobileBannerImage, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })

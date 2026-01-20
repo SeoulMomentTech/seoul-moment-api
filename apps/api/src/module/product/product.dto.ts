@@ -46,14 +46,6 @@ export class GetProductBannerByBrandResponse {
   banner: string;
 
   @ApiProperty({
-    description: '모바일 배너 이미지',
-    example: 'https://example.com/image1.jpg',
-  })
-  @IsString()
-  @IsDefined()
-  mobileBanner: string;
-
-  @ApiProperty({
     description: '브랜드 이름',
     example: '브랜드 이름',
   })
@@ -96,7 +88,6 @@ export class GetProductBannerByBrandResponse {
     return plainToInstance(this, {
       brandId: entity.id,
       banner: entity.getBannerImage(),
-      mobileBanner: entity.getMobileBannerImage(),
       name: name.getContent(),
       englishName: entity.englishName,
       description: description.getContent(),

@@ -155,10 +155,10 @@ export class GetBrandIntroduceResponse {
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
         .map((v) => v.getImage()),
-      mobileBannerList: entity.bannerImage
+      mobileBannerList: entity.mobileBannerImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .filter((v) => v.mobileImageUrl !== null && v.mobileImageUrl !== '')
-        .map((v) => v.getMobileImage()),
+        .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
+        .map((v) => v.getImage()),
       name: nameField.getContentByLanguageWithFallback(language) || '',
       description:
         descriptionField.getContentByLanguageWithFallback(language) || '',
