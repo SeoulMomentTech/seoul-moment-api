@@ -6,7 +6,7 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GetProductDetailOptionValue } from 'apps/api/src/module/product/product.dto';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 
 import { LanguageRepositoryService } from './language.repository.service';
 import {
@@ -659,6 +659,18 @@ export class ProductRepositoryService implements OnModuleInit {
   async existProductVariantBySku(sku: string): Promise<boolean> {
     const result = await this.productVariantRepository.findOneBy({
       sku,
+      status: ProductVariantStatus.ACTIVE,
+    });
+    return !!result;
+  }
+
+  async existProductVariantBySkuAndId(
+    sku: string,
+    productItemId: number,
+  ): Promise<boolean> {
+    const result = await this.productVariantRepository.findOneBy({
+      sku,
+      productItemId: Not(productItemId),
       status: ProductVariantStatus.ACTIVE,
     });
     return !!result;

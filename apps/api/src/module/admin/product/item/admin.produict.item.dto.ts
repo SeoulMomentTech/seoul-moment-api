@@ -463,32 +463,32 @@ export class PostAdminProductItemRequest {
       {
         sku: 'NK-TS-RED-M',
         stockQuantity: 50,
-        optionValueList: [1, 5],
+        optionValueIdList: [10, 12],
       },
       {
         sku: 'NK-TS-RED-L',
         stockQuantity: 30,
-        optionValueList: [1, 6],
+        optionValueIdList: [10, 13],
       },
       {
         sku: 'NK-TS-BLUE-M',
         stockQuantity: 45,
-        optionValueList: [2, 5],
+        optionValueIdList: [10, 14],
       },
       {
         sku: 'NK-TS-BLUE-L',
         stockQuantity: 25,
-        optionValueList: [2, 6],
+        optionValueIdList: [11, 12],
       },
       {
         sku: 'NK-TS-GREEN-M',
         stockQuantity: 20,
-        optionValueList: [3, 5],
+        optionValueIdList: [11, 13],
       },
       {
         sku: 'NK-TS-GREEN-L',
         stockQuantity: 15,
-        optionValueList: [3, 6],
+        optionValueIdList: [11, 14],
       },
     ],
   })
@@ -537,22 +537,12 @@ export class PatchAdminProductVariantRequest {
 
   @ApiPropertyOptional({
     description: '옵션 값 ID 목록',
-    example: [
-      {
-        id: 1,
-        value: 'Red',
-      },
-      {
-        id: 5,
-        value: 'M',
-      },
-    ],
+    example: [1, 5],
   })
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PatchAdminProductOptionValueRequest)
+  @IsNumber({}, { each: true })
   @IsOptional()
-  optionValueList?: PatchAdminProductOptionValueRequest[];
+  optionValueIdList?: number[];
 }
 
 export class PatchAdminProductItemRequest {
@@ -623,86 +613,32 @@ export class PatchAdminProductItemRequest {
       {
         sku: 'NK-TS-RED-M',
         stockQuantity: 50,
-        optionValueList: [
-          {
-            id: 1,
-            value: 'Red',
-          },
-          {
-            id: 5,
-            value: 'M',
-          },
-        ],
+        optionValueIdList: [1, 5],
       },
       {
         sku: 'NK-TS-RED-L',
         stockQuantity: 30,
-        optionValueList: [
-          {
-            id: 1,
-            value: 'Red',
-          },
-          {
-            id: 6,
-            value: 'L',
-          },
-        ],
+        optionValueIdList: [1, 6],
       },
       {
         sku: 'NK-TS-BLUE-M',
         stockQuantity: 45,
-        optionValueList: [
-          {
-            id: 2,
-            value: 'Blue',
-          },
-          {
-            id: 5,
-            value: 'M',
-          },
-        ],
+        optionValueIdList: [2, 5],
       },
       {
         sku: 'NK-TS-BLUE-L',
         stockQuantity: 25,
-        optionValueList: [
-          {
-            id: 2,
-            value: 'Blue',
-          },
-          {
-            id: 6,
-            value: 'L',
-          },
-        ],
+        optionValueIdList: [2, 6],
       },
       {
         sku: 'NK-TS-GREEN-M',
         stockQuantity: 20,
-        optionValueList: [
-          {
-            id: 3,
-            value: 'Green',
-          },
-          {
-            id: 5,
-            value: 'M',
-          },
-        ],
+        optionValueIdList: [3, 5],
       },
       {
         sku: 'NK-TS-GREEN-L',
         stockQuantity: 15,
-        optionValueList: [
-          {
-            id: 3,
-            value: 'Green',
-          },
-          {
-            id: 6,
-            value: 'L',
-          },
-        ],
+        optionValueIdList: [3, 6],
       },
     ],
   })

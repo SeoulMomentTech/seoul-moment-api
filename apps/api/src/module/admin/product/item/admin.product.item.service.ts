@@ -107,8 +107,9 @@ export class AdminProductItemService {
   ) {
     for (const variant of dto) {
       const skuExists =
-        await this.productRepositoryService.existProductVariantBySku(
+        await this.productRepositoryService.existProductVariantBySkuAndId(
           variant.sku,
+          productItemId,
         );
       if (skuExists) {
         throw new ServiceError(
@@ -127,16 +128,16 @@ export class AdminProductItemService {
         );
 
       await Promise.all(
-        variant.optionValueList.map(async (v) =>
-          this.optionRepositoryService.getOptionValueByOptionValueId(v.id),
+        variant.optionValueIdList.map(async (v) =>
+          this.optionRepositoryService.getOptionValueByOptionValueId(v),
         ),
       );
 
       await this.optionRepositoryService.bulkInsertVariantOption(
-        variant.optionValueList.map((v) =>
+        variant.optionValueIdList.map((v) =>
           plainToInstance(VariantOptionEntity, {
             variantId: productVariantEntity.id,
-            optionValueId: v.id,
+            optionValueId: v,
           }),
         ),
       );
