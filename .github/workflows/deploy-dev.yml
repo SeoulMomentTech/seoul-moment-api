@@ -2,7 +2,7 @@ name: Deploy to ECS (dev)
 
 on:
   push:
-    branches: ['dev']
+    branches: ['dev', 'test/plent']
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}

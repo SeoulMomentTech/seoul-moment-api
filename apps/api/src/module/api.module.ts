@@ -23,6 +23,7 @@ import { HomeModule } from './home/home.module';
 import { LanguageModule } from './language/language.module';
 import { NewsModule } from './news/news.module';
 import { PartnerModule } from './partner/partner.module';
+import { PlenModule } from './plen/plen.module';
 import { ProductModule } from './product/product.module';
 
 @Module({
@@ -54,6 +55,7 @@ import { ProductModule } from './product/product.module';
     ProductModule,
     CategoryModule,
     PartnerModule,
+    PlenModule,
     LanguageModule,
     AuthModule,
   ],
