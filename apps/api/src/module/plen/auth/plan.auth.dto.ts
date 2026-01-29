@@ -5,34 +5,35 @@ import { IsDefined, IsEmail, IsString } from 'class-validator';
 
 export class PostPlanLoginRequest {
   @ApiProperty({
-    description: '아이디',
-    example: '1234567890',
-  })
-  @IsString()
-  @IsDefined()
-  id: string;
-
-  @ApiProperty({
     description: '이메일',
     example: 'test@test.com',
   })
   @IsEmail()
   @IsDefined()
   email: string;
+
+  @ApiProperty({
+    description: '카카오 토큰',
+    example: 'kakao_token',
+  })
+  @IsString()
+  @IsDefined()
+  kakaoToken: string;
 }
 
 export class PostPlanLoginResponse {
   @ApiProperty({
-    description: 'uuid',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'JWT 토큰',
+    example:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
   })
   @IsString()
   @IsDefined()
-  id: string;
+  token: string;
 
-  static from(entity: PlanUserEntity) {
+  static from(token: string) {
     return plainToInstance(this, {
-      id: entity.id,
+      token,
     });
   }
 }

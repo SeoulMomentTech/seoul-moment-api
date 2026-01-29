@@ -8,20 +8,20 @@ export class PlanUserEntity extends CommonEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  naverId: string;
+  @Column('int', { nullable: true })
+  naverId: number;
 
   @Column('varchar', { length: 255, nullable: true })
   naverEmail: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  kakaoId: string;
+  @Column('int', { nullable: true, comment: 'kakao app_id' })
+  kakaoId: number;
 
   @Column('varchar', { length: 255, nullable: true })
   kakaoEmail: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  googleId: string;
+  @Column('int', { nullable: true })
+  googleId: number;
 
   @Column('varchar', { length: 255, nullable: true })
   googleEmail: string;
