@@ -19,7 +19,7 @@ import { initializeTransactionalContext } from 'typeorm-transactional';
 import { v4 as uuidV4 } from 'uuid';
 
 import { AppModule } from './module/api.module';
-import { PlenModule } from './module/plen/plen.module';
+import { PlenModule } from './module/plen/plan.module';
 
 async function bootstrap() {
   const config = Configuration.getConfig();

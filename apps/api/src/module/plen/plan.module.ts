@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { PlenHelloController } from './plen.hello.controller';
+import { PlenHelloController } from './plan.controller';
 
 @Module({
   imports: [],

@@ -3,7 +3,7 @@ import { SupportEnv } from '../enum/config.enum';
 
 const getConfig = (): ConfigImpl => ({
   NODE_ENV: SupportEnv.LOCAL,
-  PORT: 3000,
+  PORT: 3111,
   API_VERSION: 'v1',
 
   IMAGE_DOMAIN_NAME: process.env.IMAGE_DOMAIN_NAME || '',

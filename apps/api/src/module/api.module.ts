@@ -23,7 +23,7 @@ import { HomeModule } from './home/home.module';
 import { LanguageModule } from './language/language.module';
 import { NewsModule } from './news/news.module';
 import { PartnerModule } from './partner/partner.module';
-import { PlenModule } from './plen/plen.module';
+import { PlenModule } from './plen/plan.module';
 import { ProductModule } from './product/product.module';
 
 @Module({
