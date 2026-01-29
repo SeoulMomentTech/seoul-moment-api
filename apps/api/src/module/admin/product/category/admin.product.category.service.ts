@@ -18,7 +18,6 @@ import {
   GetAdminProductCategoryInfoResponse,
   GetAdminProductCategoryNameDto,
 } from './admin.product.category.dto';
-import { GetAdminProductNameDto } from '../admin.product.dto';
 
 @Injectable()
 export class AdminProductCategoryService {
