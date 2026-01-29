@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { PagingDto } from '@app/common/dto/global.dto';
 import { UpdateProductCategoryDto } from '@app/repository/dto/product.dto';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
@@ -17,7 +18,6 @@ import {
   GetAdminProductCategoryInfoResponse,
   GetAdminProductCategoryNameDto,
 } from './admin.product.category.dto';
-import { GetAdminProductNameDto } from '../admin.product.dto';
 
 @Injectable()
 export class AdminProductCategoryService {
@@ -50,7 +50,7 @@ export class AdminProductCategoryService {
                 'name',
               );
             if (multilingualText.length > 0) {
-              return GetAdminProductNameDto.from(
+              return GetAdminProductCategoryNameDto.from(
                 language.code,
                 multilingualText[0].textContent,
               );
