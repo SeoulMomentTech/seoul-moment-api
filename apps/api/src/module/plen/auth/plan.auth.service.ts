@@ -4,7 +4,7 @@ import { PlanUserRepositoryService } from '@app/repository/service/plan-user.rep
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
-import { PostPlanLoginRequest } from './plan.auth.dto';
+import { PostPlanLoginRequest, PostPlanLoginResponse } from './plan.auth.dto';
 
 @Injectable()
 export class PlanAuthService {
@@ -12,7 +12,10 @@ export class PlanAuthService {
     private readonly planUserRepositoryService: PlanUserRepositoryService,
   ) {}
 
-  async login(signUpRequest: PostPlanLoginRequest, platformType: PlatformType) {
+  async login(
+    signUpRequest: PostPlanLoginRequest,
+    platformType: PlatformType,
+  ): Promise<PostPlanLoginResponse> {
     let planUser = await this.planUserRepositoryService.findByPlatfomeType(
       platformType,
       signUpRequest.id,
@@ -26,5 +29,7 @@ export class PlanAuthService {
         }),
       );
     }
+
+    return PostPlanLoginResponse.from(planUser);
   }
 }
