@@ -50,23 +50,10 @@ export class AdminProductCategoryService {
                 language.code,
                 'name',
               );
-
-            const multilingualOriginText =
-              await this.languageRepositoryService.findMultilingualTexts(
-                EntityType.PRODUCT_CATEGORY,
-                productCategoryEntity.id,
-                language.code,
-                'origin',
-              );
-
-            if (
-              multilingualText.length > 0 &&
-              multilingualOriginText.length > 0
-            ) {
-              return GetAdminProductNameDto.from(
+            if (multilingualText.length > 0) {
+              return GetAdminProductCategoryNameDto.from(
                 language.code,
                 multilingualText[0].textContent,
-                multilingualOriginText[0].textContent,
               );
             }
             return null;
