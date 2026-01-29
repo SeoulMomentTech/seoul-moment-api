@@ -19,7 +19,8 @@ import { initializeTransactionalContext } from 'typeorm-transactional';
 import { v4 as uuidV4 } from 'uuid';
 
 import { AppModule } from './module/api.module';
-import { PlenModule } from './module/plen/plan.module';
+import { PlanAuthModule } from './module/plen/auth/plan.auth.module';
+import { PlanModule } from './module/plen/plan.module';
 
 async function bootstrap() {
   const config = Configuration.getConfig();
@@ -45,7 +46,7 @@ async function bootstrap() {
 
   morganSetting(app);
   swaggerSettring(app, {
-    plenInclude: [PlenModule], // 이 모듈에 속한 컨트롤러만 /docs-plen에 표시
+    plenInclude: [PlanModule, PlanAuthModule], // 이 모듈에 속한 컨트롤러만 /docs-plen에 표시
   });
 
   app.use(bodyParser.json({ limit: '100mb' }));

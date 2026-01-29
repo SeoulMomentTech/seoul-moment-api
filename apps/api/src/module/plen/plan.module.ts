@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 
-import { PlenHelloController } from './plan.controller';
+import { PlanAuthModule } from './auth/plan.auth.module';
+import { PlenHelloController as PlanHelloController } from './plan.controller';
 
 @Module({
-  imports: [],
-  controllers: [PlenHelloController],
-  providers: [],
+  imports: [PlanAuthModule],
+  controllers: [PlanHelloController],
 })
-export class PlenModule {}
+export class PlanModule {}

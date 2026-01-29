@@ -25,6 +25,7 @@ import { OptionValueEntity } from './entity/option-value.entity';
 import { OptionEntity } from './entity/option.entity';
 import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
+import { PlanUserEntity } from './entity/plan-user.entity';
 import { ProductBannerEntity } from './entity/product-banner.entity';
 import { ProductCategoryEntity } from './entity/product-category.entity';
 import { ProductExternalEntity } from './entity/product-external.entity';
@@ -46,6 +47,7 @@ import { LanguageRepositoryService } from './service/language.repository.service
 import { NewsRepositoryService } from './service/news.repository.service';
 import { OptionRepositoryService } from './service/option.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
+import { PlanUserRepositoryService } from './service/plan-user.repository.service';
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
 
@@ -86,6 +88,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
       ProductExternalEntity,
       ExternalLinkEntity,
       AdminRoleEntity,
+      PlanUserEntity,
     ]),
   ],
   providers: [
@@ -103,6 +106,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     AdminRepositoryService,
     AdminRoleRepositoryService,
     AdminRepositoryService,
+    PlanUserRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -118,6 +122,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     ProductFilterRepositoryService,
     AdminRepositoryService,
     AdminRoleRepositoryService,
+    PlanUserRepositoryService,
   ],
 })
 export class RepositoryModule {}
