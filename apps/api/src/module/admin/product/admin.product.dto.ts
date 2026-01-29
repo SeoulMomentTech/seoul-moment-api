@@ -42,10 +42,19 @@ export class GetAdminProductNameDto {
   })
   name: string;
 
-  static from(languageCode: LanguageCode, name: string) {
+  @ApiProperty({
+    description: '상품 원산지',
+    example: '일본',
+  })
+  @IsString()
+  @IsDefined()
+  origin: string;
+
+  static from(languageCode: LanguageCode, name: string, origin: string) {
     return plainToInstance(this, {
       languageCode,
       name,
+      origin,
     });
   }
 }
@@ -63,14 +72,17 @@ export class GetAdminProductResponse {
       {
         languageCode: LanguageCode.KOREAN,
         name: '나이키 드라이핏 티셔츠',
+        origin: '일본',
       },
       {
         languageCode: LanguageCode.ENGLISH,
         name: 'Nike Dry-Fit T-Shirt',
+        origin: 'USA',
       },
       {
         languageCode: LanguageCode.TAIWAN,
         name: '耐吉乾爽T恤',
+        origin: '中国',
       },
     ],
     type: [GetAdminProductNameDto],
@@ -331,6 +343,14 @@ export class GetAdminProductDetailResponse {
   detailInfoImageUrl: string;
 
   @ApiProperty({
+    description: '상품 원산지',
+    example: '일본',
+  })
+  @IsString()
+  @IsDefined()
+  origin: string;
+
+  @ApiProperty({
     description: '상품 상태',
     enum: ProductStatus,
     example: ProductStatus.NORMAL,
@@ -345,14 +365,17 @@ export class GetAdminProductDetailResponse {
       {
         languageCode: LanguageCode.KOREAN,
         name: '나이키 드라이핏 티셔츠',
+        origin: '일본',
       },
       {
         languageCode: LanguageCode.ENGLISH,
         name: 'Nike Dry-Fit T-Shirt',
+        origin: 'USA',
       },
       {
         languageCode: LanguageCode.TAIWAN,
         name: '耐吉乾爽T恤',
+        origin: '中国',
       },
     ],
     type: [GetAdminProductNameDto],

@@ -47,17 +47,30 @@ export class AdminProductService {
       products.map(async (product) => {
         const nameDto = await Promise.all(
           languages.map(async (language) => {
-            const multilingualText =
+            const multilingualNameText =
               await this.languageRepositoryService.findMultilingualTexts(
                 EntityType.PRODUCT,
                 product.id,
                 language.code,
                 'name',
               );
-            if (multilingualText.length > 0) {
+
+            const multilingualOriginText =
+              await this.languageRepositoryService.findMultilingualTexts(
+                EntityType.PRODUCT,
+                product.id,
+                language.code,
+                'origin',
+              );
+
+            if (
+              multilingualNameText.length > 0 &&
+              multilingualOriginText.length > 0
+            ) {
               return GetAdminProductNameDto.from(
                 language.code,
-                multilingualText[0].textContent,
+                multilingualNameText[0].textContent,
+                multilingualOriginText[0].textContent,
               );
             }
             return null;
@@ -178,17 +191,30 @@ export class AdminProductService {
 
     const nameDto = await Promise.all(
       languages.map(async (language) => {
-        const multilingualText =
+        const multilingualNameText =
           await this.languageRepositoryService.findMultilingualTexts(
             EntityType.PRODUCT,
             productEntity.id,
             language.code,
             'name',
           );
-        if (multilingualText.length > 0) {
+
+        const multilingualOriginText =
+          await this.languageRepositoryService.findMultilingualTexts(
+            EntityType.PRODUCT,
+            productEntity.id,
+            language.code,
+            'origin',
+          );
+
+        if (
+          multilingualNameText.length > 0 &&
+          multilingualOriginText.length > 0
+        ) {
           return GetAdminProductNameDto.from(
             language.code,
-            multilingualText[0].textContent,
+            multilingualNameText[0].textContent,
+            multilingualOriginText[0].textContent,
           );
         }
         return null;
