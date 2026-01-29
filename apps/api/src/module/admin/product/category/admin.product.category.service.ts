@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { PagingDto } from '@app/common/dto/global.dto';
 import { UpdateProductCategoryDto } from '@app/repository/dto/product.dto';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
@@ -49,10 +50,23 @@ export class AdminProductCategoryService {
                 language.code,
                 'name',
               );
-            if (multilingualText.length > 0) {
+
+            const multilingualOriginText =
+              await this.languageRepositoryService.findMultilingualTexts(
+                EntityType.PRODUCT_CATEGORY,
+                productCategoryEntity.id,
+                language.code,
+                'origin',
+              );
+
+            if (
+              multilingualText.length > 0 &&
+              multilingualOriginText.length > 0
+            ) {
               return GetAdminProductNameDto.from(
                 language.code,
                 multilingualText[0].textContent,
+                multilingualOriginText[0].textContent,
               );
             }
             return null;
