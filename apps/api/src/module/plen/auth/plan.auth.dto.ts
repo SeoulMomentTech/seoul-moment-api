@@ -1,4 +1,3 @@
-import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 import { IsDefined, IsEmail, IsString } from 'class-validator';

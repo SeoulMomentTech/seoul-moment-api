@@ -15,10 +15,9 @@ export class KakaoService {
     const { result, data } =
       await this.httpRequestService.sendGetRequest<KakaoValidateTokenResponse>(
         `${this.kakaoUrl}/v1/user/access_token_info`,
+        {},
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          Authorization: `Bearer ${token}`,
         },
       );
 

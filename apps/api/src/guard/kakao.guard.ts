@@ -35,11 +35,10 @@ export class KakaoGuard implements CanActivate {
       throw new ServiceError('Invalid token', ServiceErrorCode.UNAUTHORIZED);
     }
 
-    const kakaoValidateTokenResponse =
-      await this.kakaoService.validateToken(token);
+    await this.kakaoService.validateToken(payload.kakaoToken);
 
     const planUser = await this.planUserRepositoryService.getByKakaoInfo(
-      kakaoValidateTokenResponse.app_id,
+      payload.kakaoId,
       payload.planUserId,
     );
 

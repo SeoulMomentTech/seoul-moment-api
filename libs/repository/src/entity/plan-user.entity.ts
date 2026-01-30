@@ -14,7 +14,7 @@ export class PlanUserEntity extends CommonEntity {
   @Column('varchar', { length: 255, nullable: true })
   naverEmail: string;
 
-  @Column('int', { nullable: true, comment: 'kakao app_id' })
+  @Column('bigint', { nullable: true, comment: 'kakao id' })
   kakaoId: number;
 
   @Column('varchar', { length: 255, nullable: true })

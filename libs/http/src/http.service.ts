@@ -1,8 +1,9 @@
+/* eslint-disable max-lines-per-function */
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { LoggerService } from '@app/common/log/logger.service';
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
 
 @Injectable()
@@ -33,8 +34,27 @@ export class HttpRequestService {
 
       return { result: true, data };
     } catch (error) {
-      this.logger.error(`sendPostRequest Error url: ${url}`, error);
-
+      if (error.status === HttpStatus.UNAUTHORIZED) {
+        throw new ServiceError(
+          `sendPostRequest UNAUTHORIZED Error url: ${url}`,
+          ServiceErrorCode.UNAUTHORIZED,
+        );
+      } else if (error.status === HttpStatus.BAD_REQUEST) {
+        throw new ServiceError(
+          `sendPostRequest BAD_REQUEST Error url: ${url}`,
+          ServiceErrorCode.BAD_REQUEST,
+        );
+      } else if (error.status === HttpStatus.FORBIDDEN) {
+        throw new ServiceError(
+          `sendPostRequest FORBIDDEN Error url: ${url}`,
+          ServiceErrorCode.FORBIDDEN,
+        );
+      } else if (error.status === HttpStatus.GONE) {
+        throw new ServiceError(
+          `sendPostRequest GONE Error url: ${url}`,
+          ServiceErrorCode.GONE,
+        );
+      }
       throw new ServiceError(
         `sendPostRequest Error url: ${url}`,
         ServiceErrorCode.INTERNAL_SERVER_ERROR,
@@ -63,10 +83,33 @@ export class HttpRequestService {
 
       return { result: true, data };
     } catch (error) {
-      this.logger.error(`sendPostRequest Error url: ${url}`, error);
-
+      if (error.status === HttpStatus.UNAUTHORIZED) {
+        this.logger.error(
+          'sendGetRequest UNAUTHORIZED Error url: ${url}',
+          error,
+        );
+        throw new ServiceError(
+          `sendGetRequest UNAUTHORIZED Error url: ${url}`,
+          ServiceErrorCode.UNAUTHORIZED,
+        );
+      } else if (error.status === HttpStatus.BAD_REQUEST) {
+        throw new ServiceError(
+          `sendGetRequest BAD_REQUEST Error url: ${url}`,
+          ServiceErrorCode.BAD_REQUEST,
+        );
+      } else if (error.status === HttpStatus.FORBIDDEN) {
+        throw new ServiceError(
+          `sendGetRequest FORBIDDEN Error url: ${url}`,
+          ServiceErrorCode.FORBIDDEN,
+        );
+      } else if (error.status === HttpStatus.GONE) {
+        throw new ServiceError(
+          `sendGetRequest GONE Error url: ${url}`,
+          ServiceErrorCode.GONE,
+        );
+      }
       throw new ServiceError(
-        `sendPostRequest Error url: ${url}`,
+        `sendGetRequest Error url: ${url}`,
         ServiceErrorCode.INTERNAL_SERVER_ERROR,
       );
     }

@@ -27,13 +27,13 @@ export class PlanAuthService {
 
     let planUser = await this.planUserRepositoryService.findByPlatfomeType(
       platformType,
-      kakaoValidateTokenResponse.app_id,
+      kakaoValidateTokenResponse.id,
     );
 
     if (!planUser) {
       planUser = await this.planUserRepositoryService.create(
         plainToInstance(PlanUserEntity, {
-          [platformType + 'Id']: kakaoValidateTokenResponse.app_id,
+          [platformType + 'Id']: kakaoValidateTokenResponse.id,
           [platformType + 'Email']: signUpRequest.email,
         }),
       );
@@ -42,7 +42,7 @@ export class PlanAuthService {
     const jwtToken = await this.commonAuthService.generateJwt(
       {
         planUserId: planUser.id,
-        kakaoId: kakaoValidateTokenResponse.app_id,
+        kakaoId: kakaoValidateTokenResponse.id,
         kakaoToken: signUpRequest.kakaoToken,
       },
       JwtType.ONE_TIME_TOKEN,
