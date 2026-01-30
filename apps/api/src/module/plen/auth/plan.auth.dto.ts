@@ -1,16 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
-import { IsDefined, IsEmail, IsString } from 'class-validator';
+import { IsDefined, IsString } from 'class-validator';
 
 export class PostPlanLoginRequest {
-  @ApiProperty({
-    description: '이메일',
-    example: 'test@test.com',
-  })
-  @IsEmail()
-  @IsDefined()
-  email: string;
-
   @ApiProperty({
     description: '카카오 토큰',
     example: 'kakao_token',

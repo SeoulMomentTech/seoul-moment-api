@@ -3,7 +3,10 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { HttpRequestService } from '@app/http/http.service';
 import { Injectable } from '@nestjs/common';
 
-import { KakaoValidateTokenResponse } from './kakao.dto';
+import {
+  KakaoUserInfoResponseDto,
+  KakaoValidateTokenResponse,
+} from './kakao.dto';
 
 @Injectable()
 export class KakaoService {
@@ -24,6 +27,24 @@ export class KakaoService {
     if (!result) {
       throw new ServiceError(
         'Failed to validate token',
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
+
+    return data;
+  }
+
+  async getUserInfo(token: string): Promise<KakaoUserInfoResponseDto> {
+    const { result, data } =
+      await this.httpRequestService.sendGetRequest<KakaoUserInfoResponseDto>(
+        `${this.kakaoUrl}/v2/user/me`,
+        {},
+        { Authorization: `Bearer ${token}` },
+      );
+
+    if (!result) {
+      throw new ServiceError(
+        'Failed to get user info',
         ServiceErrorCode.UNAUTHORIZED,
       );
     }

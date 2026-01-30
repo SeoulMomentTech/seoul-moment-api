@@ -25,16 +25,21 @@ export class PlanAuthService {
       signUpRequest.kakaoToken,
     );
 
+    const kakaoUserInfo = await this.kakaoService.getUserInfo(
+      signUpRequest.kakaoToken,
+    );
+
     let planUser = await this.planUserRepositoryService.findByPlatfomeType(
       platformType,
       kakaoValidateTokenResponse.id,
+      kakaoUserInfo.kakao_account.email,
     );
 
     if (!planUser) {
       planUser = await this.planUserRepositoryService.create(
         plainToInstance(PlanUserEntity, {
           [platformType + 'Id']: kakaoValidateTokenResponse.id,
-          [platformType + 'Email']: signUpRequest.email,
+          [platformType + 'Email']: kakaoUserInfo.kakao_account.email,
         }),
       );
     }

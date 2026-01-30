@@ -21,14 +21,24 @@ export class PlanUserRepositoryService {
   async findByPlatfomeType(
     platformType: PlatformType,
     id: number,
+    email: string,
   ): Promise<PlanUserEntity | null> {
     switch (platformType) {
       case PlatformType.KAKAO:
-        return this.planUserRepository.findOneBy({ kakaoId: id });
+        return this.planUserRepository.findOneBy({
+          kakaoId: id,
+          kakaoEmail: email,
+        });
       case PlatformType.NAVER:
-        return this.planUserRepository.findOneBy({ naverId: id });
+        return this.planUserRepository.findOneBy({
+          naverId: id,
+          naverEmail: email,
+        });
       case PlatformType.GOOGLE:
-        return this.planUserRepository.findOneBy({ googleId: id });
+        return this.planUserRepository.findOneBy({
+          googleId: id,
+          googleEmail: email,
+        });
     }
   }
 
