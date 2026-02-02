@@ -2,6 +2,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
 import { PlanScheduleEntity } from './plan-schedule.entity';
+import { PlanUserCategoryEntity } from './plan-user-category.entity';
 import { PlanUserStatus } from '../enum/plan-user.enum';
 
 @Entity('plan_user')
@@ -47,4 +48,9 @@ export class PlanUserEntity extends CommonEntity {
     cascade: true,
   })
   schedules: PlanScheduleEntity[];
+
+  @OneToMany(() => PlanUserCategoryEntity, (category) => category.planUser, {
+    cascade: true,
+  })
+  categories: PlanUserCategoryEntity[];
 }

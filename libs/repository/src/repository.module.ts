@@ -25,7 +25,9 @@ import { OptionValueEntity } from './entity/option-value.entity';
 import { OptionEntity } from './entity/option.entity';
 import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
+import { PlanCategoryEntity } from './entity/plan-category.entity';
 import { PlanScheduleEntity } from './entity/plan-schedule.entity';
+import { PlanUserCategoryEntity } from './entity/plan-user-category.entity';
 import { PlanUserEntity } from './entity/plan-user.entity';
 import { ProductBannerEntity } from './entity/product-banner.entity';
 import { ProductCategoryEntity } from './entity/product-category.entity';
@@ -48,6 +50,8 @@ import { LanguageRepositoryService } from './service/language.repository.service
 import { NewsRepositoryService } from './service/news.repository.service';
 import { OptionRepositoryService } from './service/option.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
+import { PlanCategoryRepositoryService } from './service/plan-category.repository.service';
+import { PlanScheduleRepositoryService } from './service/plan-schedule.repository.service';
 import { PlanUserRepositoryService } from './service/plan-user.repository.service';
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
@@ -91,6 +95,8 @@ import { ProductRepositoryService } from './service/product.repository.service';
       AdminRoleEntity,
       PlanUserEntity,
       PlanScheduleEntity,
+      PlanCategoryEntity,
+      PlanUserCategoryEntity,
     ]),
   ],
   providers: [
@@ -109,6 +115,8 @@ import { ProductRepositoryService } from './service/product.repository.service';
     AdminRoleRepositoryService,
     AdminRepositoryService,
     PlanUserRepositoryService,
+    PlanScheduleRepositoryService,
+    PlanCategoryRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -125,6 +133,8 @@ import { ProductRepositoryService } from './service/product.repository.service';
     AdminRepositoryService,
     AdminRoleRepositoryService,
     PlanUserRepositoryService,
+    PlanScheduleRepositoryService,
+    PlanCategoryRepositoryService,
   ],
 })
 export class RepositoryModule {}
