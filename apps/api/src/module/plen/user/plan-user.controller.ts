@@ -1,11 +1,22 @@
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { SwaggerAuthName } from '@app/common/docs/swagger.dto';
 import { ResponseDataDto } from '@app/common/type/response-data';
-import { Controller, Get, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 
-import { GetPlanUserResponse } from './plan-user.dto';
+import {
+  GetPlanUserResponse,
+  PatchPlanUserRequest,
+  PatchPlanUserResponse,
+} from './plan-user.dto';
 import { PlanUserService } from './plan-user.service';
 import { PlanUserRequest } from '../plan.type';
 
@@ -22,5 +33,19 @@ export class PlanUserController {
     @Request() req: PlanUserRequest,
   ): Promise<ResponseDataDto<GetPlanUserResponse>> {
     return new ResponseDataDto(GetPlanUserResponse.from(req.user));
+  }
+
+  @Patch()
+  @ApiOperation({ summary: '플랜 유저 정보 수정' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(PatchPlanUserResponse)
+  async patchPlanUser(
+    @Request() req: PlanUserRequest,
+    @Body() body: PatchPlanUserRequest,
+  ): Promise<ResponseDataDto<PatchPlanUserResponse>> {
+    const result = await this.planUserService.patchPlanUser(req.user.id, body);
+
+    return new ResponseDataDto(result);
   }
 }

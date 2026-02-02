@@ -1,6 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
+import { PlanScheduleEntity } from './plan-schedule.entity';
 import { PlanUserStatus } from '../enum/plan-user.enum';
 
 @Entity('plan_user')
@@ -41,4 +42,9 @@ export class PlanUserEntity extends CommonEntity {
     nullable: false,
   })
   status: PlanUserStatus;
+
+  @OneToMany(() => PlanScheduleEntity, (schedule) => schedule.planUser, {
+    cascade: true,
+  })
+  schedules: PlanScheduleEntity[];
 }

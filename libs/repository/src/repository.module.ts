@@ -25,6 +25,7 @@ import { OptionValueEntity } from './entity/option-value.entity';
 import { OptionEntity } from './entity/option.entity';
 import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
+import { PlanScheduleEntity } from './entity/plan-schedule.entity';
 import { PlanUserEntity } from './entity/plan-user.entity';
 import { ProductBannerEntity } from './entity/product-banner.entity';
 import { ProductCategoryEntity } from './entity/product-category.entity';
@@ -89,6 +90,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
       ExternalLinkEntity,
       AdminRoleEntity,
       PlanUserEntity,
+      PlanScheduleEntity,
     ]),
   ],
   providers: [
