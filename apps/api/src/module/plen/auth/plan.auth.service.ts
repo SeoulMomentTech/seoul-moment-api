@@ -32,7 +32,6 @@ export class PlanAuthService {
     let planUser = await this.planUserRepositoryService.findByPlatfomeType(
       platformType,
       kakaoValidateTokenResponse.id,
-      kakaoUserInfo.kakao_account.email,
     );
 
     if (!planUser) {
@@ -46,6 +45,7 @@ export class PlanAuthService {
 
     const jwtToken = await this.commonAuthService.generateJwt(
       {
+        platformType,
         planUserId: planUser.id,
         kakaoId: kakaoValidateTokenResponse.id,
         kakaoToken: signUpRequest.kakaoToken,

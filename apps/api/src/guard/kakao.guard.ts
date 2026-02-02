@@ -1,6 +1,8 @@
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { KakaoService } from '@app/external/kakao/kakao.service';
+import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
+import { PlatformType } from '@app/repository/enum/plan-user.enum';
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
 import {
   CanActivate,
@@ -11,7 +13,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
-export class KakaoGuard implements CanActivate {
+export class PlanApiGuard implements CanActivate {
   constructor(
     @Inject()
     private readonly kakaoService: KakaoService,
@@ -30,7 +32,19 @@ export class KakaoGuard implements CanActivate {
     }
 
     const payload = this.jwtService.verify(token);
+    let planUser = null;
+    if (payload.platformType === PlatformType.KAKAO) {
+      planUser = await this.validateKakaoToken(payload);
+    }
 
+    request.user = planUser;
+
+    return true;
+  }
+
+  private async validateKakaoToken(
+    payload: Record<string, any>,
+  ): Promise<PlanUserEntity> {
     if (!payload) {
       throw new ServiceError('Invalid token', ServiceErrorCode.UNAUTHORIZED);
     }
@@ -42,8 +56,6 @@ export class KakaoGuard implements CanActivate {
       payload.planUserId,
     );
 
-    request.user = planUser;
-
-    return true;
+    return planUser;
   }
 }

@@ -21,7 +21,7 @@ export class PlanUserRepositoryService {
   async findByPlatfomeType(
     platformType: PlatformType,
     id: number,
-    email: string,
+    email?: string,
   ): Promise<PlanUserEntity | null> {
     switch (platformType) {
       case PlatformType.KAKAO:
@@ -53,5 +53,22 @@ export class PlanUserRepositoryService {
     }
 
     return result;
+  }
+
+  async getById(id: string): Promise<PlanUserEntity> {
+    const result = await this.planUserRepository.findOneBy({ id });
+
+    if (!result) {
+      throw new ServiceError(
+        'Plan user not found id: ${id}',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
+  async update(planUser: PlanUserEntity): Promise<PlanUserEntity> {
+    return this.planUserRepository.save(planUser);
   }
 }

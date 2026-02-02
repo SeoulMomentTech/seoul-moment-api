@@ -37,7 +37,8 @@ export function swaggerSettring(
   const plenConfig = new DocumentBuilder()
     .setTitle('Plen Api Document')
     .setDescription(
-      'Plen 전용 API 문서. 필요시 include 옵션으로 특정 모듈만 포함 가능.',
+      `Plen 전용 API 문서. 필요시 include 옵션으로 특정 모듈만 포함 가능.
+      JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybVR5cGUiOiJrYWthbyIsInBsYW5Vc2VySWQiOiJhMjk2MGFhNS04ZmZlLTQzMDItYWQwNy0xMWNmMTYwMmQ0ZDUiLCJrYWthb0lkIjo0NzE5MjAwOTkzLCJrYWthb1Rva2VuIjoiMUFobWp6UDJITEFoMjhORzE2THRJQ016ejBpVFhzTnBBQUFBQVFvTkc1b0FBQUdjR19HU1EtanFPUDZvMUNabyIsImp3dFR5cGUiOiJPTkVfVElNRV9USU1FIiwiaWF0IjoxNzY5OTk1MzQzLCJleHAiOjQ5MjM1OTUzNDN9.Mbuno5nYIPGJaNirKd68LnFKhBU6cWbZzHrC6dzXGwY`,
     )
     .addBearerAuth(
       {

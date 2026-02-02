@@ -26,6 +26,15 @@ export class PlanUserEntity extends CommonEntity {
   @Column('varchar', { length: 255, nullable: true })
   googleEmail: string;
 
+  @Column('date', { nullable: true, comment: '웨딩 날짜' })
+  weddingDate: Date;
+
+  @Column('int', { nullable: true, comment: '예산 (만원 단위)' })
+  budget: number;
+
+  @Column('varchar', { length: 255, nullable: true, comment: '이름/닉네임' })
+  name: string;
+
   @Column('enum', {
     enum: PlanUserStatus,
     default: PlanUserStatus.NORMAL,
