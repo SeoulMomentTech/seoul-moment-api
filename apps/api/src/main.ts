@@ -22,6 +22,7 @@ import { AppModule } from './module/api.module';
 import { PlanAuthModule } from './module/plen/auth/plan.auth.module';
 import { PlanModule } from './module/plen/plan.module';
 import { PlanSettingModule } from './module/plen/setting/plan-setting.module';
+import { PlanUserModule } from './module/plen/user/plan.user.module';
 
 async function bootstrap() {
   const config = Configuration.getConfig();
@@ -47,7 +48,12 @@ async function bootstrap() {
 
   morganSetting(app);
   swaggerSettring(app, {
-    plenInclude: [PlanModule, PlanAuthModule, PlanSettingModule], // 이 모듈에 속한 컨트롤러만 /docs-plen에 표시
+    plenInclude: [
+      PlanModule,
+      PlanAuthModule,
+      PlanSettingModule,
+      PlanUserModule,
+    ], // 이 모듈에 속한 컨트롤러만 /docs-plen에 표시
   });
 
   app.use(bodyParser.json({ limit: '100mb' }));
