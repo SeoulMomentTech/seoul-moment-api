@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import { IsString, IsDefined, IsNumber } from 'class-validator';
 
-export class PatchPlanSettingRequest {
+export class PostPlanSettingRequest {
   @ApiProperty({
     description: '웨딩 날짜',
     example: '2025-02-24',
@@ -30,7 +30,7 @@ export class PatchPlanSettingRequest {
   name: string;
 }
 
-export class PatchPlanSettingResponse {
+export class PostPlanSettingResponse {
   @ApiProperty({
     description: 'UUID',
     example: '123e4567-e89b-12d3-a456-426614174000',

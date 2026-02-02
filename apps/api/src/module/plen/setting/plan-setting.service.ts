@@ -2,8 +2,8 @@ import { PlanUserRepositoryService } from '@app/repository/service/plan-user.rep
 import { Injectable } from '@nestjs/common';
 
 import {
-  PatchPlanSettingRequest,
-  PatchPlanSettingResponse,
+  PostPlanSettingRequest,
+  PostPlanSettingResponse,
 } from './plan-setting.dto';
 
 @Injectable()
@@ -12,18 +12,18 @@ export class PlanSettingService {
     private readonly planUserRepositoryService: PlanUserRepositoryService,
   ) {}
 
-  async patchPlanSetting(
+  async postPlanSetting(
     id: string,
-    patchPlanSettingRequest: PatchPlanSettingRequest,
-  ): Promise<PatchPlanSettingResponse> {
+    postPlanSettingRequest: PostPlanSettingRequest,
+  ): Promise<PostPlanSettingResponse> {
     const planUser = await this.planUserRepositoryService.getById(id);
 
-    planUser.weddingDate = new Date(patchPlanSettingRequest.weddingDate);
-    planUser.budget = patchPlanSettingRequest.budget;
-    planUser.name = patchPlanSettingRequest.name;
+    planUser.weddingDate = new Date(postPlanSettingRequest.weddingDate);
+    planUser.budget = postPlanSettingRequest.budget;
+    planUser.name = postPlanSettingRequest.name;
 
     await this.planUserRepositoryService.update(planUser);
 
-    return PatchPlanSettingResponse.from(planUser);
+    return PostPlanSettingResponse.from(planUser);
   }
 }

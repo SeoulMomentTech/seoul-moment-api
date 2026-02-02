@@ -1,13 +1,14 @@
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { SwaggerAuthName } from '@app/common/docs/swagger.dto';
 import { ResponseDataDto } from '@app/common/type/response-data';
-import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 
+import { PlanUserRequest } from '../plan.type';
 import {
-  PatchPlanSettingRequest,
-  PatchPlanSettingResponse,
+  PostPlanSettingRequest,
+  PostPlanSettingResponse,
 } from './plan-setting.dto';
 import { PlanSettingService } from './plan-setting.service';
 
@@ -15,20 +16,21 @@ import { PlanSettingService } from './plan-setting.service';
 export class PlanSettingController {
   constructor(private readonly planSettingService: PlanSettingService) {}
 
-  @Patch(
-    ':id([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})',
-  )
+  @Post()
   @ApiOperation({
-    summary: '플랜 설정 수정',
+    summary: '플랜 설정',
   })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(PlanApiGuard)
-  @ResponseData(PatchPlanSettingResponse)
-  async patchPlanSetting(
-    @Param('id') id: string,
-    @Body() body: PatchPlanSettingRequest,
-  ): Promise<ResponseDataDto<PatchPlanSettingResponse>> {
-    const result = await this.planSettingService.patchPlanSetting(id, body);
+  @ResponseData(PostPlanSettingResponse)
+  async postPlanSetting(
+    @Request() req: PlanUserRequest,
+    @Body() body: PostPlanSettingRequest,
+  ): Promise<ResponseDataDto<PostPlanSettingResponse>> {
+    const result = await this.planSettingService.postPlanSetting(
+      req.user.id,
+      body,
+    );
 
     return new ResponseDataDto(result);
   }
