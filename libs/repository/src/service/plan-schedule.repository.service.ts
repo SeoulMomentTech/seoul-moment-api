@@ -47,6 +47,7 @@ export class PlanScheduleRepositoryService {
   async getById(id: number): Promise<PlanScheduleEntity> {
     const result = await this.planScheduleRepository.findOne({
       where: { id, status: PlanScheduleStatus.NORMAL },
+      relations: ['planUser'],
     });
 
     if (!result) {

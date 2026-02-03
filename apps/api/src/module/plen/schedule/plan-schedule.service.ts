@@ -9,6 +9,7 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
+  GetPlanScheduleDetailResponse,
   GetPlanScheduleListRequest,
   GetPlanScheduleResponse,
   PostPlanScheduleRequest,
@@ -82,5 +83,13 @@ export class PlanScheduleService {
     };
 
     await this.planScheduleRepositoryService.update(updateDto);
+  }
+
+  async getPlanScheduleDetail(
+    id: number,
+  ): Promise<GetPlanScheduleDetailResponse> {
+    const planSchedule = await this.planScheduleRepositoryService.getById(id);
+
+    return GetPlanScheduleDetailResponse.from(planSchedule);
   }
 }

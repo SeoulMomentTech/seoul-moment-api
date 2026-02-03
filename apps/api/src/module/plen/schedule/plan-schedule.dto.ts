@@ -277,3 +277,89 @@ export class GetPlanUserTotalAmountResponse {
     });
   }
 }
+
+export class GetPlanScheduleDetailResponse {
+  @ApiProperty({
+    description: 'ID',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '카테고리 이름',
+  })
+  categoryName: string;
+
+  @ApiProperty({
+    description: '제목',
+    example: '저녁 식사',
+  })
+  title: string;
+
+  @ApiProperty({
+    description: '금액',
+    example: 10000,
+  })
+  @Type(() => Number)
+  amount: number;
+
+  @ApiProperty({
+    description: '시작 날짜',
+    example: '2025-02-24',
+  })
+  startDate: string;
+
+  @ApiProperty({
+    description: '위치',
+    example: '서울시 강남구 역삼동',
+  })
+  location: string;
+
+  @ApiProperty({
+    description: '위도',
+    example: 37.5665,
+  })
+  locationLat: number;
+
+  @ApiProperty({
+    description: '경도',
+    example: 127.036344,
+  })
+  locationLng: number;
+
+  @ApiProperty({
+    description: '메모',
+    example: '저녁 식사 장소',
+  })
+  memo: string;
+
+  @ApiProperty({
+    description: '결제 타입',
+    example: 'CREDIT',
+    enum: PlanSchedulePayType,
+  })
+  payType: PlanSchedulePayType;
+
+  @ApiProperty({
+    description: '추가 카테고리 이름 리스트',
+    example: ['저녁 식사', '저녁 식사'],
+  })
+  addCategoryNameList: string[];
+
+  static from(entity: PlanScheduleEntity) {
+    return plainToInstance(this, {
+      id: entity.id,
+      categoryName: entity.categoryName,
+      title: entity.title,
+      amount: entity.amount,
+      startDate: entity.startDate,
+      location: entity.location,
+      locationLat: entity.locationLat,
+      locationLng: entity.locationLng,
+      memo: entity.memo,
+      payType: entity.payType,
+      addCategoryNameList:
+        entity.planUser?.categories?.map((category) => category.name) ?? [],
+    });
+  }
+}

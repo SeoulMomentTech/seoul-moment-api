@@ -21,6 +21,7 @@ import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 import { PlanScheduleService } from './plan-schedule.service';
 import { PlanUserRequest } from '../plan.type';
 import {
+  GetPlanScheduleDetailResponse,
   GetPlanScheduleListRequest,
   GetPlanScheduleResponse,
   PostPlanScheduleRequest,
@@ -68,5 +69,17 @@ export class PlanScheduleController {
   @UseGuards(PlanApiGuard)
   async deletePlanSchedule(@Param('id', ParseIntPipe) id: number) {
     await this.planScheduleService.deletePlanSchedule(id);
+  }
+
+  @Get(':id(\\d+)')
+  @ApiOperation({ summary: '플랜 스케줄 상세 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(GetPlanScheduleDetailResponse)
+  async getPlanScheduleDetail(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ResponseDataDto<GetPlanScheduleDetailResponse>> {
+    const result = await this.planScheduleService.getPlanScheduleDetail(id);
+    return new ResponseDataDto(result);
   }
 }
