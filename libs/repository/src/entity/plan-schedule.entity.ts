@@ -43,7 +43,7 @@ export class PlanScheduleEntity extends CommonEntity {
   @Column('varchar', { length: 255, nullable: true })
   location: string;
 
-  @Column('decimal', { precision: 10, scale: 8, nullable: true })
+  @Column('decimal', { precision: 11, scale: 8, nullable: true })
   locationLat: number;
 
   @Column('decimal', { precision: 11, scale: 8, nullable: true })

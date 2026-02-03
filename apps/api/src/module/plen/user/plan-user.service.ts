@@ -1,3 +1,4 @@
+import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
 import { Injectable } from '@nestjs/common';
 
@@ -7,6 +8,7 @@ import { PatchPlanUserRequest, PatchPlanUserResponse } from './plan-user.dto';
 export class PlanUserService {
   constructor(
     private readonly planUserRepositoryService: PlanUserRepositoryService,
+    private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
   ) {}
 
   async patchPlanUser(
@@ -22,5 +24,12 @@ export class PlanUserService {
     await this.planUserRepositoryService.update(planUser);
 
     return PatchPlanUserResponse.from(planUser);
+  }
+
+  async getPlanUserTotalAmount(id: string): Promise<number> {
+    const totalAmount =
+      await this.planScheduleRepositoryService.getTotalAmount(id);
+
+    return totalAmount;
   }
 }

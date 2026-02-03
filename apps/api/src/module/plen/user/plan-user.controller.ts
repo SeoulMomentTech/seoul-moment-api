@@ -19,6 +19,7 @@ import {
 } from './plan-user.dto';
 import { PlanUserService } from './plan-user.service';
 import { PlanUserRequest } from '../plan.type';
+import { GetPlanUserTotalAmountResponse } from '../schedule/plan-schedule.dto';
 
 @Controller('plan/user')
 export class PlanUserController {
@@ -47,5 +48,21 @@ export class PlanUserController {
     const result = await this.planUserService.patchPlanUser(req.user.id, body);
 
     return new ResponseDataDto(result);
+  }
+
+  @Get('total-amount')
+  @ApiOperation({ summary: '플랜 유저 총 금액 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(GetPlanUserTotalAmountResponse)
+  async getPlanUserTotalAmount(
+    @Request() req: PlanUserRequest,
+  ): Promise<ResponseDataDto<GetPlanUserTotalAmountResponse>> {
+    const totalAmount = await this.planUserService.getPlanUserTotalAmount(
+      req.user.id,
+    );
+    return new ResponseDataDto(
+      GetPlanUserTotalAmountResponse.from(totalAmount),
+    );
   }
 }

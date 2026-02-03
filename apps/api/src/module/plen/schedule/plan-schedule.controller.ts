@@ -1,13 +1,28 @@
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
+import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { SwaggerAuthName } from '@app/common/docs/swagger.dto';
 import { ResponseDataDto } from '@app/common/type/response-data';
-import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import { ResponseListDto } from '@app/common/type/response-list';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 
 import { PlanScheduleService } from './plan-schedule.service';
 import { PlanUserRequest } from '../plan.type';
 import {
+  GetPlanScheduleListRequest,
+  GetPlanScheduleResponse,
   PostPlanScheduleRequest,
   PostPlanScheduleResponse,
 } from './plan-schedule.dto';
@@ -16,7 +31,6 @@ import {
 export class PlanScheduleController {
   constructor(private readonly planScheduleService: PlanScheduleService) {}
 
-  // TODO 스케줄 등록시 유저 카테고리 넣어야함
   @Post()
   @ApiOperation({ summary: '플랜 스케줄 생성' })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
@@ -32,5 +46,27 @@ export class PlanScheduleController {
     );
 
     return new ResponseDataDto(result);
+  }
+
+  @Get('list')
+  @ApiOperation({ summary: '플랜 스케줄 목록 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseList(GetPlanScheduleResponse)
+  async getPlanScheduleList(
+    @Query() query: GetPlanScheduleListRequest,
+  ): Promise<ResponseListDto<GetPlanScheduleResponse>> {
+    const [result, total] =
+      await this.planScheduleService.getPlanScheduleList(query);
+
+    return new ResponseListDto(result, total);
+  }
+
+  @Delete(':id(\\d+)')
+  @ApiOperation({ summary: '플랜 스케줄 삭제' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  async deletePlanSchedule(@Param('id', ParseIntPipe) id: number) {
+    await this.planScheduleService.deletePlanSchedule(id);
   }
 }
