@@ -13,5 +13,6 @@ export enum PlanScheduleSortColumn {
 
 export enum PlanScheduleStatus {
   NORMAL = 'NORMAL',
+  COMPLETED = 'COMPLETED',
   DELETE = 'DELETE',
 }

@@ -2,6 +2,7 @@ import { PlanScheduleEntity } from '@app/repository/entity/plan-schedule.entity'
 import {
   PlanSchedulePayType,
   PlanScheduleSortColumn,
+  PlanScheduleStatus,
 } from '@app/repository/enum/plan-schedule.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
@@ -341,10 +342,11 @@ export class GetPlanScheduleDetailResponse {
   payType: PlanSchedulePayType;
 
   @ApiProperty({
-    description: '추가 카테고리 이름 리스트',
-    example: ['저녁 식사', '저녁 식사'],
+    description: '상태',
+    example: PlanScheduleStatus.NORMAL,
+    enum: PlanScheduleStatus,
   })
-  addCategoryNameList: string[];
+  status: PlanScheduleStatus;
 
   static from(entity: PlanScheduleEntity) {
     return plainToInstance(this, {
@@ -358,8 +360,7 @@ export class GetPlanScheduleDetailResponse {
       locationLng: entity.locationLng,
       memo: entity.memo,
       payType: entity.payType,
-      addCategoryNameList:
-        entity.planUser?.categories?.map((category) => category.name) ?? [],
+      status: entity.status,
     });
   }
 }
