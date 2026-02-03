@@ -37,4 +37,17 @@ export class PlanCategoryRepositoryService {
   ): Promise<PlanUserCategoryEntity[]> {
     return this.planUserCategoryRepository.save(entity);
   }
+
+  async save(entity: PlanUserCategoryEntity): Promise<PlanUserCategoryEntity> {
+    return this.planUserCategoryRepository.save(entity);
+  }
+
+  async findByPlanUserIdAndName(
+    planUserId: string,
+    name: string,
+  ): Promise<PlanUserCategoryEntity | null> {
+    return this.planUserCategoryRepository.findOne({
+      where: { planUserId, name },
+    });
+  }
 }

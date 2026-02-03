@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { UpdatePlanScheduleDto } from '@app/repository/dto/plan-schedule.dto';
 import { PlanScheduleEntity } from '@app/repository/entity/plan-schedule.entity';
 import { PlanUserCategoryEntity } from '@app/repository/entity/plan-user-category.entity';
@@ -12,6 +13,8 @@ import {
   GetPlanScheduleDetailResponse,
   GetPlanScheduleListRequest,
   GetPlanScheduleResponse,
+  PatchPlanScheduleRequest,
+  PatchPlanScheduleResponse,
   PostPlanScheduleRequest,
   PostPlanScheduleResponse,
 } from './plan-schedule.dto';
@@ -35,7 +38,9 @@ export class PlanScheduleService {
         title: postPlanScheduleRequest.title,
         payType: postPlanScheduleRequest.payType,
         amount: postPlanScheduleRequest.amount,
-        startDate: new Date(postPlanScheduleRequest.startDate),
+        startDate: postPlanScheduleRequest.startDate
+          ? new Date(postPlanScheduleRequest.startDate)
+          : null,
         location: postPlanScheduleRequest.location,
         locationLat: postPlanScheduleRequest.locationLat,
         locationLng: postPlanScheduleRequest.locationLng,
@@ -43,14 +48,16 @@ export class PlanScheduleService {
       }),
     );
 
-    await this.planCategoryRepositoryService.bulkInsert(
-      postPlanScheduleRequest.addCategoryNameList.map((name) =>
-        plainToInstance(PlanUserCategoryEntity, {
-          planUserId: id,
-          name,
-        }),
-      ),
-    );
+    if (postPlanScheduleRequest.addCategoryNameList) {
+      await this.planCategoryRepositoryService.bulkInsert(
+        postPlanScheduleRequest.addCategoryNameList.map((name) =>
+          plainToInstance(PlanUserCategoryEntity, {
+            planUserId: id,
+            name,
+          }),
+        ),
+      );
+    }
 
     return PostPlanScheduleResponse.from(planSchedule);
   }
@@ -91,5 +98,50 @@ export class PlanScheduleService {
     const planSchedule = await this.planScheduleRepositoryService.getById(id);
 
     return GetPlanScheduleDetailResponse.from(planSchedule);
+  }
+
+  @Transactional()
+  async patchPlanSchedule(
+    id: number,
+    body: PatchPlanScheduleRequest,
+  ): Promise<PatchPlanScheduleResponse> {
+    const planSchedule = await this.planScheduleRepositoryService.getById(id);
+
+    const updateDto: UpdatePlanScheduleDto = {
+      id: planSchedule.id,
+      categoryName: body.categoryName,
+      title: body.title,
+      payType: body.payType,
+      amount: body.amount,
+      startDate: body.startDate ? new Date(body.startDate) : null,
+      location: body.location,
+      locationLat: body.locationLat,
+      locationLng: body.locationLng,
+      memo: body.memo,
+    };
+
+    await this.planScheduleRepositoryService.update(updateDto);
+
+    if (body.addCategoryNameList) {
+      for (const name of body.addCategoryNameList) {
+        const existingCategory =
+          await this.planCategoryRepositoryService.findByPlanUserIdAndName(
+            planSchedule.planUser.id,
+            name,
+          );
+        if (existingCategory) {
+          continue;
+        }
+
+        await this.planCategoryRepositoryService.save(
+          plainToInstance(PlanUserCategoryEntity, {
+            planUserId: planSchedule.planUser.id,
+            name,
+          }),
+        );
+      }
+    }
+
+    return PatchPlanScheduleResponse.from(planSchedule);
   }
 }

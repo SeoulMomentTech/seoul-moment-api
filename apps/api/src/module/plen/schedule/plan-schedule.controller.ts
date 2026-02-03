@@ -10,6 +10,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   Request,
@@ -24,6 +25,8 @@ import {
   GetPlanScheduleDetailResponse,
   GetPlanScheduleListRequest,
   GetPlanScheduleResponse,
+  PatchPlanScheduleRequest,
+  PatchPlanScheduleResponse,
   PostPlanScheduleRequest,
   PostPlanScheduleResponse,
 } from './plan-schedule.dto';
@@ -80,6 +83,19 @@ export class PlanScheduleController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<ResponseDataDto<GetPlanScheduleDetailResponse>> {
     const result = await this.planScheduleService.getPlanScheduleDetail(id);
+    return new ResponseDataDto(result);
+  }
+
+  @Patch(':id(\\d+)')
+  @ApiOperation({ summary: '플랜 스케줄 수정' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(PatchPlanScheduleResponse)
+  async patchPlanSchedule(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: PatchPlanScheduleRequest,
+  ): Promise<ResponseDataDto<PatchPlanScheduleResponse>> {
+    const result = await this.planScheduleService.patchPlanSchedule(id, body);
     return new ResponseDataDto(result);
   }
 }
