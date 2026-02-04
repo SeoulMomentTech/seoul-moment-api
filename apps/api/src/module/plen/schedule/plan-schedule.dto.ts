@@ -273,6 +273,23 @@ export class GetPlanScheduleListRequest extends ListFilterDto {
   @IsOptional()
   @IsEnum(PlanScheduleSortColumn)
   sortColumn?: PlanScheduleSortColumn;
+
+  @ApiPropertyOptional({
+    description: '상태',
+    example: PlanScheduleStatus.NORMAL,
+    enum: PlanScheduleStatus,
+  })
+  @IsOptional()
+  @IsEnum(PlanScheduleStatus)
+  status?: PlanScheduleStatus;
+
+  @ApiPropertyOptional({
+    description: '카테고리 이름',
+    example: '저녁 식사',
+  })
+  @IsOptional()
+  @IsString()
+  categoryName?: string;
 }
 
 export class GetPlanUserTotalAmountResponse {

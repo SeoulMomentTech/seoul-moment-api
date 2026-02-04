@@ -65,4 +65,7 @@ export class PlanUserEntity extends CommonEntity {
     cascade: true,
   })
   members: PlanUserRoomMemberEntity[];
+
+  @Column('timestamp', { nullable: true, comment: '마지막 로그인 일시' })
+  lastLoginDate: Date;
 }

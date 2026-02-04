@@ -39,14 +39,14 @@ export class PlanUserService {
   }
 
   async getPlanUserAmount(id: string): Promise<GetPlanUserAmountResponse> {
-    const initialCapital = await this.getPlanUserTotalAmount(id);
+    const user = await this.planUserRepositoryService.getById(id);
     const plannedUseAmount =
       await this.planScheduleRepositoryService.getPlannedUseAmount(id);
     const usedAmount =
       await this.planScheduleRepositoryService.getUsedAmount(id);
 
     return GetPlanUserAmountResponse.from(
-      initialCapital,
+      user.budget,
       plannedUseAmount,
       usedAmount,
     );

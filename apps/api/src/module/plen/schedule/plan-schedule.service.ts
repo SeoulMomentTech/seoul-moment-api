@@ -70,6 +70,8 @@ export class PlanScheduleService {
       await this.planScheduleRepositoryService.getList(
         request.page,
         request.count,
+        request.categoryName,
+        request.status,
         request.search,
         request.sortColumn,
         request.sort,

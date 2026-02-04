@@ -72,6 +72,8 @@ export class PlanScheduleRepositoryService {
   async getList(
     page: number,
     count: number,
+    categoryName?: string,
+    status?: PlanScheduleStatus,
     search?: string,
     sortColumn: PlanScheduleSortColumn = PlanScheduleSortColumn.CREATE,
     sort: DatabaseSort = DatabaseSort.DESC,
@@ -82,6 +84,14 @@ export class PlanScheduleRepositoryService {
 
     if (search) {
       findOptions.title = Like(`%${search}%`);
+    }
+
+    if (status) {
+      findOptions.status = status;
+    }
+
+    if (categoryName) {
+      findOptions.categoryName = categoryName;
     }
 
     return this.planScheduleRepository.findAndCount({
@@ -131,10 +141,7 @@ export class PlanScheduleRepositoryService {
     const query = this.planScheduleRepository
       .createQueryBuilder('ps')
       .select('ps.categoryName', 'categoryName')
-      .addSelect(
-        `SUM(CASE WHEN ps.status = :normalStatus THEN ps.amount ELSE 0 END)`,
-        'totalAmount',
-      )
+      .addSelect(`SUM(ps.amount)`, 'totalAmount')
       .addSelect(
         `SUM(CASE WHEN ps.status = :completedStatus THEN ps.amount ELSE 0 END)`,
         'usedAmount',

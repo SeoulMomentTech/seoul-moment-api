@@ -65,6 +65,9 @@ export class PlanApiGuard implements CanActivate {
       payload.planUserId,
     );
 
+    planUser.lastLoginDate = new Date();
+    await this.planUserRepositoryService.update(planUser);
+
     return planUser;
   }
 }
