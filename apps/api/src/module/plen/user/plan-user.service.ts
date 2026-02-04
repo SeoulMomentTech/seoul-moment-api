@@ -2,7 +2,12 @@ import { PlanScheduleRepositoryService } from '@app/repository/service/plan-sche
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
 import { Injectable } from '@nestjs/common';
 
-import { PatchPlanUserRequest, PatchPlanUserResponse } from './plan-user.dto';
+import {
+  GetPlanUserAmountCategory,
+  GetPlanUserAmountResponse,
+  PatchPlanUserRequest,
+  PatchPlanUserResponse,
+} from './plan-user.dto';
 
 @Injectable()
 export class PlanUserService {
@@ -31,5 +36,38 @@ export class PlanUserService {
       await this.planScheduleRepositoryService.getTotalAmount(id);
 
     return totalAmount;
+  }
+
+  async getPlanUserAmount(id: string): Promise<GetPlanUserAmountResponse> {
+    const initialCapital = await this.getPlanUserTotalAmount(id);
+    const plannedUseAmount =
+      await this.planScheduleRepositoryService.getPlannedUseAmount(id);
+    const usedAmount =
+      await this.planScheduleRepositoryService.getUsedAmount(id);
+
+    return GetPlanUserAmountResponse.from(
+      initialCapital,
+      plannedUseAmount,
+      usedAmount,
+    );
+  }
+
+  async getPlanUserCategoryChartList(
+    id: string,
+    categoryName: string,
+  ): Promise<GetPlanUserAmountCategory[]> {
+    const categoryChartList =
+      await this.planScheduleRepositoryService.getCategoryChartList(
+        id,
+        categoryName,
+      );
+
+    return categoryChartList.map((v) =>
+      GetPlanUserAmountCategory.from(
+        v.categoryName,
+        v.totalAmount,
+        v.usedAmount,
+      ),
+    );
   }
 }

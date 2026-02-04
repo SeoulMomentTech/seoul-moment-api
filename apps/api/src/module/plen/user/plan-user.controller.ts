@@ -1,11 +1,14 @@
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
+import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { SwaggerAuthName } from '@app/common/docs/swagger.dto';
 import { ResponseDataDto } from '@app/common/type/response-data';
+import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
   Controller,
   Get,
   Patch,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -13,6 +16,9 @@ import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 
 import {
+  GetPlanUserAmountCategory,
+  GetPlanUserAmountCategoryRequest,
+  GetPlanUserAmountResponse,
   GetPlanUserResponse,
   PatchPlanUserRequest,
   PatchPlanUserResponse,
@@ -64,5 +70,35 @@ export class PlanUserController {
     return new ResponseDataDto(
       GetPlanUserTotalAmountResponse.from(totalAmount),
     );
+  }
+
+  @Get('amount/detail')
+  @ApiOperation({ summary: '플랜 유저 금액 상세 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(GetPlanUserAmountResponse)
+  async getPlanUserAmount(
+    @Request() req: PlanUserRequest,
+  ): Promise<ResponseDataDto<GetPlanUserAmountResponse>> {
+    const amount = await this.planUserService.getPlanUserAmount(req.user.id);
+
+    return new ResponseDataDto(amount);
+  }
+
+  @Get('amount/category-chart')
+  @ApiOperation({ summary: '플랜 유저 금액 상세 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseList(GetPlanUserAmountCategory)
+  async getPlanUserAmountCategoryChart(
+    @Request() req: PlanUserRequest,
+    @Query() query: GetPlanUserAmountCategoryRequest,
+  ): Promise<ResponseListDto<GetPlanUserAmountCategory>> {
+    const amount = await this.planUserService.getPlanUserCategoryChartList(
+      req.user.id,
+      query.categoryName,
+    );
+
+    return new ResponseListDto(amount);
   }
 }

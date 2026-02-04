@@ -3,7 +3,8 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Like, Repository } from 'typeorm';
+import { GetPlanUserAmountCategory } from 'apps/api/src/module/plen/user/plan-user.dto';
+import { FindOptionsWhere, In, Like, Not, Repository } from 'typeorm';
 
 import { UpdatePlanScheduleDto } from '../dto/plan-schedule.dto';
 import { PlanScheduleEntity } from '../entity/plan-schedule.entity';
@@ -27,7 +28,7 @@ export class PlanScheduleRepositoryService {
     sort: DatabaseSort = DatabaseSort.DESC,
   ): Promise<[PlanScheduleEntity[], number]> {
     const findOptions: FindOptionsWhere<PlanScheduleEntity> = {
-      status: PlanScheduleStatus.NORMAL,
+      status: Not(In([PlanScheduleStatus.DELETE])),
     };
 
     if (categoryName) {
@@ -46,7 +47,7 @@ export class PlanScheduleRepositoryService {
 
   async getById(id: number): Promise<PlanScheduleEntity> {
     const result = await this.planScheduleRepository.findOne({
-      where: { id, status: PlanScheduleStatus.NORMAL },
+      where: { id, status: Not(In([PlanScheduleStatus.DELETE])) },
       relations: ['planUser'],
     });
 
@@ -76,7 +77,7 @@ export class PlanScheduleRepositoryService {
     sort: DatabaseSort = DatabaseSort.DESC,
   ): Promise<[PlanScheduleEntity[], number]> {
     const findOptions: FindOptionsWhere<PlanScheduleEntity> = {
-      status: PlanScheduleStatus.NORMAL,
+      status: Not(In([PlanScheduleStatus.DELETE])),
     };
 
     if (search) {
@@ -95,10 +96,75 @@ export class PlanScheduleRepositoryService {
 
   async getTotalAmount(id: string): Promise<number> {
     const result = await this.planScheduleRepository.find({
-      where: { planUserId: id, status: PlanScheduleStatus.NORMAL },
+      where: { planUserId: id, status: Not(In([PlanScheduleStatus.DELETE])) },
       select: { amount: true },
     });
 
     return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
+  }
+
+  async getPlannedUseAmount(id: string): Promise<number> {
+    const result = await this.planScheduleRepository.find({
+      where: {
+        planUserId: id,
+        status: PlanScheduleStatus.NORMAL,
+      },
+      select: { amount: true },
+    });
+
+    return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
+  }
+
+  async getUsedAmount(id: string): Promise<number> {
+    const result = await this.planScheduleRepository.find({
+      where: { planUserId: id, status: PlanScheduleStatus.COMPLETED },
+      select: { amount: true },
+    });
+
+    return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
+  }
+
+  async getCategoryChartList(
+    id: string,
+    categoryName?: string,
+  ): Promise<GetPlanUserAmountCategory[]> {
+    const query = this.planScheduleRepository
+      .createQueryBuilder('ps')
+      .select('ps.categoryName', 'categoryName')
+      .addSelect(
+        `SUM(CASE WHEN ps.status = :normalStatus THEN ps.amount ELSE 0 END)`,
+        'totalAmount',
+      )
+      .addSelect(
+        `SUM(CASE WHEN ps.status = :completedStatus THEN ps.amount ELSE 0 END)`,
+        'usedAmount',
+      )
+      .where('ps.planUserId = :id', { id })
+      .andWhere('ps.status IN (:...statusList)', {
+        statusList: [PlanScheduleStatus.NORMAL, PlanScheduleStatus.COMPLETED],
+      })
+      .setParameters({
+        normalStatus: PlanScheduleStatus.NORMAL,
+        completedStatus: PlanScheduleStatus.COMPLETED,
+      })
+      .groupBy('ps.categoryName');
+
+    if (categoryName) {
+      query.andWhere('ps.categoryName = :categoryName', { categoryName });
+    }
+
+    const result = await query.getRawMany<{
+      categoryName: string;
+      totalAmount: string;
+      usedAmount: string;
+    }>();
+
+    return result.map((v) =>
+      GetPlanUserAmountCategory.from(
+        v.categoryName,
+        Number(v.totalAmount ?? 0),
+        Number(v.usedAmount ?? 0),
+      ),
+    );
   }
 }

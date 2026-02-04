@@ -31,7 +31,16 @@ export class PlanApiGuard implements CanActivate {
       throw new ServiceError('Token not found', ServiceErrorCode.UNAUTHORIZED);
     }
 
-    const payload = this.jwtService.verify(token);
+    let payload: Record<string, any> = {};
+    try {
+      payload = this.jwtService.verify(token);
+    } catch (error) {
+      throw new ServiceError(
+        `Invalid token: ${error.message}`,
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
+
     let planUser = null;
     if (payload.platformType === PlatformType.KAKAO) {
       planUser = await this.validateKakaoToken(payload);

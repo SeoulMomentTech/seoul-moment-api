@@ -243,6 +243,15 @@ export class GetPlanScheduleResponse {
   @IsDefined()
   startDate: string;
 
+  @ApiProperty({
+    description: '상태',
+    example: PlanScheduleStatus.NORMAL,
+    enum: PlanScheduleStatus,
+  })
+  @IsEnum(PlanScheduleStatus)
+  @IsDefined()
+  status: PlanScheduleStatus;
+
   static from(entity: PlanScheduleEntity) {
     return plainToInstance(this, {
       id: entity.id,
@@ -250,6 +259,7 @@ export class GetPlanScheduleResponse {
       title: entity.title,
       amount: entity.amount,
       startDate: entity.startDate,
+      status: entity.status,
     });
   }
 }
@@ -543,6 +553,43 @@ export class PatchPlanScheduleResponse {
       locationLat: entity.locationLat,
       locationLng: entity.locationLng,
       memo: entity.memo,
+    });
+  }
+}
+
+export class PatchPlanScheduleStatusRequest {
+  @ApiProperty({
+    description: '상태',
+    example: PlanScheduleStatus.NORMAL,
+    enum: PlanScheduleStatus,
+  })
+  @IsEnum(PlanScheduleStatus)
+  @IsDefined()
+  status: PlanScheduleStatus;
+}
+
+export class PatchPlanScheduleStatusResponse {
+  @ApiProperty({
+    description: 'ID',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  id: number;
+
+  @ApiProperty({
+    description: '상태',
+    example: PlanScheduleStatus.NORMAL,
+    enum: PlanScheduleStatus,
+  })
+  @IsEnum(PlanScheduleStatus)
+  @IsDefined()
+  status: PlanScheduleStatus;
+
+  static from(entity: PlanScheduleEntity) {
+    return plainToInstance(this, {
+      id: entity.id,
+      status: entity.status,
     });
   }
 }

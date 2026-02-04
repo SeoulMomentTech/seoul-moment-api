@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
+import { PlanUserRoomEntity } from './plan-user-room.entity';
 import { PlanUserEntity } from './plan-user.entity';
 import {
   PlanSchedulePayType,
@@ -20,6 +21,9 @@ export class PlanScheduleEntity extends CommonEntity {
 
   @Column('int', { name: 'plan_user_id', nullable: false })
   planUserId: string;
+
+  @Column('int', { name: 'plan_user_room_id', nullable: true })
+  planUserRoomId: number;
 
   @Column('varchar', { length: 255, nullable: false })
   categoryName: string;
@@ -64,4 +68,10 @@ export class PlanScheduleEntity extends CommonEntity {
   })
   @JoinColumn({ name: 'plan_user_id' })
   planUser: PlanUserEntity;
+
+  @ManyToOne(() => PlanUserRoomEntity, (room) => room.schedules, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'plan_user_room_id' })
+  planUserRoom: PlanUserRoomEntity;
 }

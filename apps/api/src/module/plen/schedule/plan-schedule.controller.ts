@@ -27,6 +27,8 @@ import {
   GetPlanScheduleResponse,
   PatchPlanScheduleRequest,
   PatchPlanScheduleResponse,
+  PatchPlanScheduleStatusRequest,
+  PatchPlanScheduleStatusResponse,
   PostPlanScheduleRequest,
   PostPlanScheduleResponse,
 } from './plan-schedule.dto';
@@ -96,6 +98,23 @@ export class PlanScheduleController {
     @Body() body: PatchPlanScheduleRequest,
   ): Promise<ResponseDataDto<PatchPlanScheduleResponse>> {
     const result = await this.planScheduleService.patchPlanSchedule(id, body);
+    return new ResponseDataDto(result);
+  }
+
+  @Patch('status/:id(\\d+)')
+  @ApiOperation({ summary: '플랜 스케줄 상태 수정' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(PatchPlanScheduleStatusResponse)
+  async patchPlanScheduleStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: PatchPlanScheduleStatusRequest,
+  ): Promise<ResponseDataDto<PatchPlanScheduleStatusResponse>> {
+    const result = await this.planScheduleService.patchPlanScheduleStatus(
+      id,
+      body.status,
+    );
+
     return new ResponseDataDto(result);
   }
 }

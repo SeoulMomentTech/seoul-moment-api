@@ -28,6 +28,8 @@ import { PartnerEntity } from './entity/partner.entity';
 import { PlanCategoryEntity } from './entity/plan-category.entity';
 import { PlanScheduleEntity } from './entity/plan-schedule.entity';
 import { PlanUserCategoryEntity } from './entity/plan-user-category.entity';
+import { PlanUserRoomMemberEntity } from './entity/plan-user-room-member.entity';
+import { PlanUserRoomEntity } from './entity/plan-user-room.entity';
 import { PlanUserEntity } from './entity/plan-user.entity';
 import { ProductBannerEntity } from './entity/product-banner.entity';
 import { ProductCategoryEntity } from './entity/product-category.entity';
@@ -97,6 +99,8 @@ import { ProductRepositoryService } from './service/product.repository.service';
       PlanScheduleEntity,
       PlanCategoryEntity,
       PlanUserCategoryEntity,
+      PlanUserRoomEntity,
+      PlanUserRoomMemberEntity,
     ]),
   ],
   providers: [

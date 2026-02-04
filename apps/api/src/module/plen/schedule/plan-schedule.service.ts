@@ -15,6 +15,7 @@ import {
   GetPlanScheduleResponse,
   PatchPlanScheduleRequest,
   PatchPlanScheduleResponse,
+  PatchPlanScheduleStatusResponse,
   PostPlanScheduleRequest,
   PostPlanScheduleResponse,
 } from './plan-schedule.dto';
@@ -143,5 +144,22 @@ export class PlanScheduleService {
     }
 
     return PatchPlanScheduleResponse.from(planSchedule);
+  }
+
+  async patchPlanScheduleStatus(
+    id: number,
+    status: PlanScheduleStatus,
+  ): Promise<PatchPlanScheduleStatusResponse> {
+    const planSchedule = await this.planScheduleRepositoryService.getById(id);
+
+    const updateDto: UpdatePlanScheduleDto = {
+      id: planSchedule.id,
+      status,
+    };
+
+    const updatedPlanSchedule =
+      await this.planScheduleRepositoryService.update(updateDto);
+
+    return PatchPlanScheduleStatusResponse.from(updatedPlanSchedule);
   }
 }

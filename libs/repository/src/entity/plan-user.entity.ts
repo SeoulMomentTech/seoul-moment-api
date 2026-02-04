@@ -3,6 +3,8 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { CommonEntity } from './common.entity';
 import { PlanScheduleEntity } from './plan-schedule.entity';
 import { PlanUserCategoryEntity } from './plan-user-category.entity';
+import { PlanUserRoomMemberEntity } from './plan-user-room-member.entity';
+import { PlanUserRoomEntity } from './plan-user-room.entity';
 import { PlanUserStatus } from '../enum/plan-user.enum';
 
 @Entity('plan_user')
@@ -53,4 +55,14 @@ export class PlanUserEntity extends CommonEntity {
     cascade: true,
   })
   categories: PlanUserCategoryEntity[];
+
+  @OneToMany(() => PlanUserRoomEntity, (room) => room.owner, {
+    cascade: true,
+  })
+  rooms: PlanUserRoomEntity[];
+
+  @OneToMany(() => PlanUserRoomMemberEntity, (member) => member.planUser, {
+    cascade: true,
+  })
+  members: PlanUserRoomMemberEntity[];
 }
