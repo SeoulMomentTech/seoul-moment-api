@@ -1,7 +1,8 @@
 import { PlanAllCategoryDto } from '@app/repository/dto/plan-category.dto';
 import { PlanCategoryType } from '@app/repository/enum/plan-category.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
+import { IsOptional, IsString } from 'class-validator';
 
 export class GetPlanCategoryResponse {
   @ApiProperty({
@@ -37,4 +38,14 @@ export class GetPlanCategoryResponse {
       type: entity.type,
     });
   }
+}
+
+export class GetPlanCategoryListRequest {
+  @ApiPropertyOptional({
+    description: '사용자 아이디',
+    example: '1',
+  })
+  @IsOptional()
+  @IsString()
+  userId?: string;
 }

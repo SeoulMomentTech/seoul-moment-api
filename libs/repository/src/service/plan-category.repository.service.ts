@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindManyOptions, Repository } from 'typeorm';
 
 import { PlanAllCategoryDto } from '../dto/plan-category.dto';
 import { PlanCategoryEntity } from '../entity/plan-category.entity';
@@ -36,11 +36,23 @@ export class PlanCategoryRepositoryService implements OnModuleInit {
     }
   }
 
-  async findAll(): Promise<PlanAllCategoryDto[]> {
-    const [planCategories, planUserCategories] = await Promise.all([
-      this.planCategoryRepository.find({ select: ['id', 'name', 'color'] }),
-      this.planUserCategoryRepository.find({ select: ['id', 'name'] }),
-    ]);
+  async findAll(userId?: string): Promise<PlanAllCategoryDto[]> {
+    let planUserCategories: PlanUserCategoryEntity[] = [];
+
+    const userCategoryFindOptions: FindManyOptions<PlanUserCategoryEntity> = {
+      select: ['id', 'name'],
+    };
+
+    const planCategories = await this.planCategoryRepository.find({
+      select: ['id', 'name', 'color'],
+    });
+
+    if (userId) {
+      userCategoryFindOptions.where = { planUserId: userId };
+      planUserCategories = await this.planUserCategoryRepository.find(
+        userCategoryFindOptions,
+      );
+    }
 
     return [
       ...planCategories.map((c) =>
