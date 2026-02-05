@@ -235,10 +235,23 @@ export class ProductService {
       ),
     ]);
 
+    const getProductRequest = GetProductRequest.from(1, 5);
+
+    if (productDetail.product.brandId) {
+      getProductRequest.brandId = productDetail.product.brandId;
+    }
+    if (productDetail.product.categoryId) {
+      getProductRequest.categoryId = productDetail.product.categoryId;
+    }
+    if (productDetail.product.productCategoryId) {
+      getProductRequest.productCategoryId =
+        productDetail.product.productCategoryId;
+    }
+
     const [relate, count] = await this.getProduct(
-      GetProductRequest.from(1, 5),
+      getProductRequest,
       language,
-      productDetail.product.id,
+      productDetail.id,
     );
 
     return GetProductDetailResponse.from(

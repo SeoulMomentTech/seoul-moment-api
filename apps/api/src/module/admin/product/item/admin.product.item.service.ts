@@ -19,6 +19,7 @@ import { OptionRepositoryService } from '@app/repository/service/option.reposito
 import { ProductRepositoryService } from '@app/repository/service/product.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { Transactional } from 'typeorm-transactional';
 
 import {
   GetAdminProductItemInfoResponse,
@@ -59,6 +60,7 @@ export class AdminProductItemService {
     ];
   }
 
+  @Transactional()
   async postAdminProductVariant(
     productItemId: number,
     dto: PostAdminProductVariantRequest[],
@@ -101,6 +103,7 @@ export class AdminProductItemService {
     }
   }
 
+  @Transactional()
   async patchAdminProductVariant(
     productItemId: number,
     dto: PatchAdminProductVariantRequest[],
@@ -144,6 +147,7 @@ export class AdminProductItemService {
     }
   }
 
+  @Transactional()
   async postAdminProductItem(dto: PostAdminProductItemRequest) {
     await this.productRepositoryService.getProductByProductId(dto.productId);
     const productItemEntity =
@@ -241,6 +245,7 @@ export class AdminProductItemService {
     );
   }
 
+  @Transactional()
   async patchAdminProductItem(id: number, dto: PatchAdminProductItemRequest) {
     await this.productRepositoryService.getProductItemById(id);
 

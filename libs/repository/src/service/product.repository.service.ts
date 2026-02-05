@@ -264,7 +264,7 @@ export class ProductRepositoryService implements OnModuleInit {
       }
 
       if (withoutId) {
-        query.andWhere('p.id != :withoutId', { withoutId });
+        query.andWhere('pc.id != :withoutId', { withoutId });
       }
 
       // 옵션 필터링: EXISTS 서브쿼리 사용 (JOIN 대신)
