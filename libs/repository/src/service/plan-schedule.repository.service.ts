@@ -114,7 +114,7 @@ export class PlanScheduleRepositoryService {
     });
   }
 
-  async getTotalAmount(id: string): Promise<number> {
+  async getPlanAmount(id: string): Promise<number> {
     const result = await this.planScheduleRepository.find({
       where: { planUserId: id, status: Not(In([PlanScheduleStatus.DELETE])) },
       select: { amount: true },
@@ -182,6 +182,13 @@ export class PlanScheduleRepositoryService {
         Number(v.totalAmount ?? 0),
         Number(v.usedAmount ?? 0),
       ),
+    );
+  }
+
+  async updatePlanUserRoomId(planUserId: string, planUserRoomId: number) {
+    await this.planScheduleRepository.update(
+      { planUserId },
+      { planUserRoomId },
     );
   }
 }

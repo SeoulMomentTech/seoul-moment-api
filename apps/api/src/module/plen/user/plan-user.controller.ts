@@ -23,6 +23,7 @@ import {
   GetPlanUserAmountResponse,
   GetPlanUserResponse,
   GetPlanUserRoomMemberResponse,
+  GetPlanUserRoomResponse,
   PatchPlanUserRequest,
   PatchPlanUserResponse,
   PostPlanUserRoomResponse,
@@ -150,5 +151,17 @@ export class PlanUserController {
     );
 
     return new ResponseDataDto(result);
+  }
+
+  @Get('room/list')
+  @ApiOperation({ summary: '유저가 속해있는 방 리슨트' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseList(GetPlanUserRoomResponse)
+  async getPlanUserRoomList(
+    @Request() req: PlanUserRequest,
+  ): Promise<ResponseListDto<GetPlanUserRoomResponse>> {
+    const result = await this.planUserService.getPlanUserRoomList(req.user.id);
+    return new ResponseListDto(result);
   }
 }

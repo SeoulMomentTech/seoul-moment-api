@@ -14,6 +14,7 @@ import {
   GetPlanUserAmountResponse,
   GetPlanUserResponse,
   GetPlanUserRoomMemberResponse,
+  GetPlanUserRoomResponse,
   PatchPlanUserRequest,
   PatchPlanUserResponse,
   PostPlanUserRoomResponse,
@@ -45,7 +46,7 @@ export class PlanUserService {
 
   async getPlanUserTotalAmount(id: string): Promise<number> {
     const totalAmount =
-      await this.planScheduleRepositoryService.getTotalAmount(id);
+      await this.planScheduleRepositoryService.getPlanAmount(id);
 
     return totalAmount;
   }
@@ -99,6 +100,11 @@ export class PlanUserService {
       createPlanUserRoom,
       id,
       PlanUserRoomMemberPermission.OWNER,
+    );
+
+    await this.planScheduleRepositoryService.updatePlanUserRoomId(
+      id,
+      createPlanUserRoom.id,
     );
 
     return PostPlanUserRoomResponse.from(createPlanUserRoom);
@@ -180,5 +186,28 @@ export class PlanUserService {
     return planUserRoomMemberList.map((v) =>
       GetPlanUserRoomMemberResponse.from(v.planUser),
     );
+  }
+
+  async getPlanUserRoomList(id: string): Promise<GetPlanUserRoomResponse[]> {
+    const result: GetPlanUserRoomResponse[] = [];
+
+    const planUserRoomMemberEntityList =
+      await this.planUserRoomMemberRepositoryService.getByPlanUserIdWithoutOwner(
+        id,
+      );
+
+    for (const planUserRoomMemberEntity of planUserRoomMemberEntityList) {
+      const planUserRoom = planUserRoomMemberEntity.room;
+
+      const planAmount = await this.planScheduleRepositoryService.getPlanAmount(
+        planUserRoom.owner.id,
+      );
+
+      const remainingBudget = planUserRoom.owner.budget - planAmount;
+
+      result.push(GetPlanUserRoomResponse.from(planUserRoom, remainingBudget));
+    }
+
+    return result;
   }
 }

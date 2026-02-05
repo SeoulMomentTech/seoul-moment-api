@@ -20,7 +20,7 @@ export class PlanUserRoomEntity extends CommonEntity {
   @Column('varchar', { name: 'owner_id', nullable: false })
   ownerId: string;
 
-  @OneToOne(() => PlanUserEntity, (planUser) => planUser.rooms, {
+  @OneToOne(() => PlanUserEntity, (planUser) => planUser.room, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'owner_id' })

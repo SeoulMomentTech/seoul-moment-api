@@ -1,5 +1,11 @@
 import { Configuration } from '@app/config/configuration';
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 import { CommonEntity } from './common.entity';
 import { PlanScheduleEntity } from './plan-schedule.entity';
@@ -64,10 +70,10 @@ export class PlanUserEntity extends CommonEntity {
   })
   categories: PlanUserCategoryEntity[];
 
-  @OneToMany(() => PlanUserRoomEntity, (room) => room.owner, {
+  @OneToOne(() => PlanUserRoomEntity, (room) => room.owner, {
     cascade: true,
   })
-  rooms: PlanUserRoomEntity[];
+  room: PlanUserRoomEntity;
 
   @OneToMany(() => PlanUserRoomMemberEntity, (member) => member.planUser, {
     cascade: true,

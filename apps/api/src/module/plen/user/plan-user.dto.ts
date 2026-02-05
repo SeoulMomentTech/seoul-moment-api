@@ -1,5 +1,6 @@
 import { PlanUserRoomEntity } from '@app/repository/entity/plan-user-room.entity';
 import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
+import { PlanScheduleStatus } from '@app/repository/enum/plan-schedule.enum';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
@@ -254,6 +255,57 @@ export class GetPlanUserRoomMemberResponse {
       permission: entity.members.find(
         (member) => member.planUserId === entity.id,
       )?.permission,
+    });
+  }
+}
+
+export class GetPlanUserRoomResponse {
+  @ApiProperty({
+    description: '방 ID',
+    example: 1,
+  })
+  roomId: number;
+
+  @ApiProperty({
+    description: '주인 이름',
+    example: '홍길동',
+  })
+  onwerName: string;
+
+  @ApiProperty({
+    description: '웨딩 날짜',
+    example: '2025-02-24',
+  })
+  weddingDate: string;
+
+  @ApiProperty({
+    description: '예산 (만원 단위)',
+    example: 10000,
+  })
+  budget: number;
+
+  @ApiProperty({
+    description: '남은 금액 (만원 단위)',
+    example: 10000,
+  })
+  remainingBudget: number;
+
+  @ApiProperty({
+    description: '계획 개수',
+    example: 10,
+  })
+  planCount: number;
+
+  static from(entity: PlanUserRoomEntity, remainingBudget: number) {
+    return plainToInstance(this, {
+      roomId: entity.id,
+      onwerName: entity.owner.name,
+      weddingDate: entity.owner.weddingDate,
+      budget: entity.owner.budget,
+      remainingBudget,
+      planCount: entity.owner.schedules.filter(
+        (v) => v.status !== PlanScheduleStatus.DELETE,
+      ).length,
     });
   }
 }
