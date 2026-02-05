@@ -5,6 +5,7 @@ import { PlanUserCategoryEntity } from '@app/repository/entity/plan-user-categor
 import { PlanScheduleStatus } from '@app/repository/enum/plan-schedule.enum';
 import { PlanCategoryRepositoryService } from '@app/repository/service/plan-category.repository.service';
 import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
+import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
@@ -25,6 +26,7 @@ export class PlanScheduleService {
   constructor(
     private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
     private readonly planCategoryRepositoryService: PlanCategoryRepositoryService,
+    private readonly planUserRoomRepositoryService: PlanUserRoomRepositoryService,
   ) {}
 
   @Transactional()
@@ -64,18 +66,48 @@ export class PlanScheduleService {
   }
 
   async getPlanScheduleList(
+    planUserId: string,
     request: GetPlanScheduleListRequest,
   ): Promise<[GetPlanScheduleResponse[], number]> {
     const [planScheduleEntities, total] =
       await this.planScheduleRepositoryService.getList(
         request.page,
         request.count,
+        planUserId,
         request.categoryName,
         request.status,
         request.search,
         request.sortColumn,
         request.sort,
       );
+
+    return [
+      planScheduleEntities.map((entity) =>
+        GetPlanScheduleResponse.from(entity),
+      ),
+      total,
+    ];
+  }
+
+  async getPlanScheduleShareRoomPlanList(
+    shareCode: string,
+    request: GetPlanScheduleListRequest,
+  ): Promise<[GetPlanScheduleResponse[], number]> {
+    const planUserRoom =
+      await this.planUserRoomRepositoryService.getByShareCode(shareCode);
+
+    const [planScheduleEntities, total] =
+      await this.planScheduleRepositoryService.getList(
+        request.page,
+        request.count,
+        planUserRoom.ownerId,
+        request.categoryName,
+        request.status,
+        request.search,
+        request.sortColumn,
+        request.sort,
+      );
+
     return [
       planScheduleEntities.map((entity) =>
         GetPlanScheduleResponse.from(entity),

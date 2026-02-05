@@ -54,6 +54,8 @@ import { OptionRepositoryService } from './service/option.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
 import { PlanCategoryRepositoryService } from './service/plan-category.repository.service';
 import { PlanScheduleRepositoryService } from './service/plan-schedule.repository.service';
+import { PlanUserRoomMemberRepositoryService } from './service/plan-user--room-member.repository.service';
+import { PlanUserRoomRepositoryService } from './service/plan-user-room.repository.service';
 import { PlanUserRepositoryService } from './service/plan-user.repository.service';
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
@@ -121,6 +123,8 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PlanUserRepositoryService,
     PlanScheduleRepositoryService,
     PlanCategoryRepositoryService,
+    PlanUserRoomRepositoryService,
+    PlanUserRoomMemberRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -139,6 +143,8 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PlanUserRepositoryService,
     PlanScheduleRepositoryService,
     PlanCategoryRepositoryService,
+    PlanUserRoomRepositoryService,
+    PlanUserRoomMemberRepositoryService,
   ],
 })
 export class RepositoryModule {}

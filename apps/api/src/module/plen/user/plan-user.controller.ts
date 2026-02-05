@@ -7,7 +7,9 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Patch,
+  Post,
   Query,
   Request,
   UseGuards,
@@ -20,8 +22,10 @@ import {
   GetPlanUserAmountCategoryRequest,
   GetPlanUserAmountResponse,
   GetPlanUserResponse,
+  GetPlanUserRoomMemberResponse,
   PatchPlanUserRequest,
   PatchPlanUserResponse,
+  PostPlanUserRoomResponse,
 } from './plan-user.dto';
 import { PlanUserService } from './plan-user.service';
 import { PlanUserRequest } from '../plan.type';
@@ -39,7 +43,11 @@ export class PlanUserController {
   async getPlanUser(
     @Request() req: PlanUserRequest,
   ): Promise<ResponseDataDto<GetPlanUserResponse>> {
-    return new ResponseDataDto(GetPlanUserResponse.from(req.user));
+    const roomMemberList =
+      await this.planUserService.getPlanUserRoomMemberListByUserId(req.user.id);
+    return new ResponseDataDto(
+      GetPlanUserResponse.from(req.user, roomMemberList),
+    );
   }
 
   @Patch()
@@ -100,5 +108,47 @@ export class PlanUserController {
     );
 
     return new ResponseListDto(amount);
+  }
+
+  @Get('room/member/:shareCode([0-9a-fA-F-]{36})')
+  @ApiOperation({ summary: '플랜 유저 방 멤버 목록 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseList(GetPlanUserRoomMemberResponse)
+  async getPlanUserRoomMemberList(
+    @Param('shareCode') shareCode: string,
+  ): Promise<ResponseListDto<GetPlanUserRoomMemberResponse>> {
+    const result =
+      await this.planUserService.getPlanUserRoomMemberList(shareCode);
+    return new ResponseListDto(result);
+  }
+
+  @Post('room')
+  @ApiOperation({ summary: '플랜 유저 방 생성' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(PostPlanUserRoomResponse)
+  async postPlanUserRoom(
+    @Request() req: PlanUserRequest,
+  ): Promise<ResponseDataDto<PostPlanUserRoomResponse>> {
+    const result = await this.planUserService.postPlanUserRoom(req.user.id);
+    return new ResponseDataDto(result);
+  }
+
+  @Get(':shareCode([0-9a-fA-F-]{36})')
+  @ApiOperation({ summary: '플랜 유저 방 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(GetPlanUserResponse)
+  async getPlanUserShareRoom(
+    @Request() req: PlanUserRequest,
+    @Param('shareCode') shareCode: string,
+  ): Promise<ResponseDataDto<GetPlanUserResponse>> {
+    const result = await this.planUserService.getPlanUserRoom(
+      req.user.id,
+      shareCode,
+    );
+
+    return new ResponseDataDto(result);
   }
 }

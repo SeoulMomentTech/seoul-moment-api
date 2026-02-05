@@ -70,7 +70,7 @@ export class PlanScheduleEntity extends CommonEntity {
   planUser: PlanUserEntity;
 
   @ManyToOne(() => PlanUserRoomEntity, (room) => room.schedules, {
-    onDelete: 'CASCADE',
+    onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'plan_user_room_id' })
   planUserRoom: PlanUserRoomEntity;

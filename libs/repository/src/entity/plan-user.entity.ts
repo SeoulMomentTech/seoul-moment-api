@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
@@ -39,6 +40,13 @@ export class PlanUserEntity extends CommonEntity {
   @Column('varchar', { length: 255, nullable: true, comment: '이름/닉네임' })
   name: string;
 
+  @Column('varchar', {
+    length: 255,
+    nullable: true,
+    comment: '플랜 유저 이미지',
+  })
+  profileImageUrl: string;
+
   @Column('enum', {
     enum: PlanUserStatus,
     default: PlanUserStatus.NORMAL,
@@ -68,4 +76,10 @@ export class PlanUserEntity extends CommonEntity {
 
   @Column('timestamp', { nullable: true, comment: '마지막 로그인 일시' })
   lastLoginDate: Date;
+
+  getProfileImageUrl(): string {
+    return this.profileImageUrl
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.profileImageUrl}`
+      : null;
+  }
 }

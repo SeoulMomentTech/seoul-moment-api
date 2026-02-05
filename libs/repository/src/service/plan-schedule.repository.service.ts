@@ -72,11 +72,13 @@ export class PlanScheduleRepositoryService {
   async getList(
     page: number,
     count: number,
+    planUserId: string,
     categoryName?: string,
     status?: PlanScheduleStatus,
     search?: string,
     sortColumn: PlanScheduleSortColumn = PlanScheduleSortColumn.CREATE,
     sort: DatabaseSort = DatabaseSort.DESC,
+    planUserRoomId?: number,
   ): Promise<[PlanScheduleEntity[], number]> {
     const findOptions: FindOptionsWhere<PlanScheduleEntity> = {
       status: Not(In([PlanScheduleStatus.DELETE])),
@@ -92,6 +94,14 @@ export class PlanScheduleRepositoryService {
 
     if (categoryName) {
       findOptions.categoryName = categoryName;
+    }
+
+    if (planUserId) {
+      findOptions.planUserId = planUserId;
+    }
+
+    if (planUserRoomId) {
+      findOptions.planUserRoomId = planUserRoomId;
     }
 
     return this.planScheduleRepository.findAndCount({

@@ -1,12 +1,22 @@
+import { PlanUserRoomMemberEntity } from '@app/repository/entity/plan-user-room-member.entity';
+import { PlanUserRoomEntity } from '@app/repository/entity/plan-user-room.entity';
+import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
+import { PlanUserRoomMemberRepositoryService } from '@app/repository/service/plan-user--room-member.repository.service';
+import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
 import { Injectable } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { Transactional } from 'typeorm-transactional';
 
 import {
   GetPlanUserAmountCategory,
   GetPlanUserAmountResponse,
+  GetPlanUserResponse,
+  GetPlanUserRoomMemberResponse,
   PatchPlanUserRequest,
   PatchPlanUserResponse,
+  PostPlanUserRoomResponse,
 } from './plan-user.dto';
 
 @Injectable()
@@ -14,6 +24,8 @@ export class PlanUserService {
   constructor(
     private readonly planUserRepositoryService: PlanUserRepositoryService,
     private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
+    private readonly planUserRoomRepositoryService: PlanUserRoomRepositoryService,
+    private readonly planUserRoomMemberRepositoryService: PlanUserRoomMemberRepositoryService,
   ) {}
 
   async patchPlanUser(
@@ -68,6 +80,105 @@ export class PlanUserService {
         v.totalAmount,
         v.usedAmount,
       ),
+    );
+  }
+
+  @Transactional()
+  async postPlanUserRoom(id: string): Promise<PostPlanUserRoomResponse> {
+    const planUserRoom =
+      await this.planUserRoomRepositoryService.findByOwnerId(id);
+
+    if (planUserRoom) {
+      return PostPlanUserRoomResponse.from(planUserRoom);
+    }
+
+    const createPlanUserRoom =
+      await this.planUserRoomRepositoryService.create(id);
+
+    await this.createIfNotExistsPlanUserRoomMember(
+      createPlanUserRoom,
+      id,
+      PlanUserRoomMemberPermission.OWNER,
+    );
+
+    return PostPlanUserRoomResponse.from(createPlanUserRoom);
+  }
+
+  async getPlanUserRoom(
+    id: string,
+    shareCode: string,
+  ): Promise<GetPlanUserResponse> {
+    const planUserRoom =
+      await this.planUserRoomRepositoryService.getByShareCode(shareCode);
+
+    const userEntity = await this.planUserRepositoryService.getById(
+      planUserRoom.ownerId,
+    );
+
+    await this.createIfNotExistsPlanUserRoomMember(
+      planUserRoom,
+      id,
+      PlanUserRoomMemberPermission.READ,
+    );
+
+    return GetPlanUserResponse.from(userEntity);
+  }
+
+  private async createIfNotExistsPlanUserRoomMember(
+    planUserRoom: PlanUserRoomEntity,
+    planUserId: string,
+    permission: PlanUserRoomMemberPermission,
+  ) {
+    const planUserRoomMember =
+      await this.planUserRoomMemberRepositoryService.findByRoomIdAndPlanUserId(
+        planUserRoom.id,
+        planUserId,
+      );
+
+    if (!planUserRoomMember) {
+      await this.planUserRoomMemberRepositoryService.create(
+        plainToInstance(PlanUserRoomMemberEntity, {
+          roomId: planUserRoom.id,
+          planUserId,
+          permission,
+        }),
+      );
+    }
+  }
+
+  async getPlanUserRoomMemberList(
+    shareCode: string,
+  ): Promise<GetPlanUserRoomMemberResponse[]> {
+    const planUserRoom =
+      await this.planUserRoomRepositoryService.getByShareCode(shareCode);
+
+    const planUserRoomMemberList =
+      await this.planUserRoomMemberRepositoryService.getByRoomId(
+        planUserRoom.id,
+      );
+
+    return planUserRoomMemberList.map((v) =>
+      GetPlanUserRoomMemberResponse.from(v.planUser),
+    );
+  }
+
+  async getPlanUserRoomMemberListByUserId(
+    userId: string,
+  ): Promise<GetPlanUserRoomMemberResponse[]> {
+    const planUserRoom =
+      await this.planUserRoomRepositoryService.findByOwnerId(userId);
+
+    if (!planUserRoom) {
+      return [];
+    }
+
+    const planUserRoomMemberList =
+      await this.planUserRoomMemberRepositoryService.getByRoomId(
+        planUserRoom.id,
+      );
+
+    return planUserRoomMemberList.map((v) =>
+      GetPlanUserRoomMemberResponse.from(v.planUser),
     );
   }
 }

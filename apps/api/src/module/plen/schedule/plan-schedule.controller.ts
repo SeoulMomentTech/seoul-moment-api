@@ -60,10 +60,32 @@ export class PlanScheduleController {
   @UseGuards(PlanApiGuard)
   @ResponseList(GetPlanScheduleResponse)
   async getPlanScheduleList(
+    @Request() req: PlanUserRequest,
+    @Query() query: GetPlanScheduleListRequest,
+  ): Promise<ResponseListDto<GetPlanScheduleResponse>> {
+    const [result, total] = await this.planScheduleService.getPlanScheduleList(
+      req.user.id,
+      query,
+    );
+
+    return new ResponseListDto(result, total);
+  }
+
+  @Get('room/:shareCode/list')
+  @ApiOperation({ summary: '플랜 스케줄 목록 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseList(GetPlanScheduleResponse)
+  async getPlanScheduleShareRoomList(
+    @Request() req: PlanUserRequest,
+    @Param('shareCode') shareCode: string,
     @Query() query: GetPlanScheduleListRequest,
   ): Promise<ResponseListDto<GetPlanScheduleResponse>> {
     const [result, total] =
-      await this.planScheduleService.getPlanScheduleList(query);
+      await this.planScheduleService.getPlanScheduleShareRoomPlanList(
+        shareCode,
+        query,
+      );
 
     return new ResponseListDto(result, total);
   }

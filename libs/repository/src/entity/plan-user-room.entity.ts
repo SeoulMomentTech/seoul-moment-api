@@ -2,8 +2,8 @@ import {
   Column,
   Entity,
   JoinColumn,
-  ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -20,13 +20,20 @@ export class PlanUserRoomEntity extends CommonEntity {
   @Column('varchar', { name: 'owner_id', nullable: false })
   ownerId: string;
 
-  @ManyToOne(() => PlanUserEntity, (planUser) => planUser.rooms)
+  @OneToOne(() => PlanUserEntity, (planUser) => planUser.rooms, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'owner_id' })
   owner: PlanUserEntity;
+
+  @Column('varchar', { nullable: false })
+  shareCode: string;
 
   @OneToMany(() => PlanUserRoomMemberEntity, (member) => member.room)
   members: PlanUserRoomMemberEntity[];
 
-  @OneToMany(() => PlanScheduleEntity, (schedule) => schedule.planUserRoom)
+  @OneToMany(() => PlanScheduleEntity, (schedule) => schedule.planUserRoom, {
+    cascade: true,
+  })
   schedules: PlanScheduleEntity[];
 }

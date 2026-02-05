@@ -1,4 +1,6 @@
+import { PlanUserRoomEntity } from '@app/repository/entity/plan-user-room.entity';
 import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
+import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import { IsDefined, IsNumber, IsOptional, IsString } from 'class-validator';
@@ -28,12 +30,41 @@ export class GetPlanUserResponse {
   })
   name: string;
 
-  static from(entity: PlanUserEntity) {
+  @ApiProperty({
+    description: '플랜 유저 방 멤버 목록',
+    example: [
+      {
+        planUserId: '123e4567-e89b-12d3-a456-426614174000',
+        name: '세리프',
+        image: 'https://example.com/image.png',
+        permission: 'READ',
+      },
+      {
+        planUserId: '123e4567-e89b-12d3-a456-426614174000',
+        name: '세리프',
+        image: 'https://example.com/image.png',
+        permission: 'WRITE',
+      },
+      {
+        planUserId: '123e4567-e89b-12d3-a456-426614174000',
+        name: '세리프',
+        image: 'https://example.com/image.png',
+        permission: 'OWNER',
+      },
+    ],
+  })
+  members: GetPlanUserRoomMemberResponse[];
+
+  static from(
+    entity: PlanUserEntity,
+    members: GetPlanUserRoomMemberResponse[] = [],
+  ) {
     return plainToInstance(this, {
       id: entity.id,
       weddingDate: entity.weddingDate,
       budget: entity.budget,
       name: entity.name,
+      members,
     });
   }
 }
@@ -175,4 +206,54 @@ export class GetPlanUserAmountCategoryRequest {
   @IsOptional()
   @IsString()
   categoryName: string;
+}
+
+export class PostPlanUserRoomResponse {
+  @ApiProperty({
+    description: '방 공유 코드',
+    example: '1234567890',
+  })
+  shareCode: string;
+
+  static from(entity: PlanUserRoomEntity) {
+    return plainToInstance(this, {
+      shareCode: entity.shareCode,
+    });
+  }
+}
+
+export class GetPlanUserRoomMemberResponse {
+  @ApiProperty({
+    description: '플랜 유저 ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  planUserId: string;
+
+  @ApiProperty({
+    description: '플랜 유저 이름/닉네임',
+    example: '세리프',
+  })
+  name: string;
+
+  @ApiProperty({
+    description: '플랜 유저 이미지',
+  })
+  image: string;
+
+  @ApiProperty({
+    description: '플랜 유저 권한',
+    example: 'READ',
+  })
+  permission: PlanUserRoomMemberPermission;
+
+  static from(entity: PlanUserEntity) {
+    return plainToInstance(this, {
+      planUserId: entity.id,
+      name: entity.name,
+      image: entity.getProfileImageUrl(),
+      permission: entity.members.find(
+        (member) => member.planUserId === entity.id,
+      )?.permission,
+    });
+  }
 }
