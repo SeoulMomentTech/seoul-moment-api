@@ -28,7 +28,7 @@ export class PlanUserRoomRepositoryService {
 
     if (!result) {
       throw new ServiceError(
-        'Plan user room not found ownerId: ${ownerId}',
+        `Plan user room not found ownerId: ${ownerId}`,
         ServiceErrorCode.NOT_FOUND_DATA,
       );
     }
@@ -53,10 +53,22 @@ export class PlanUserRoomRepositoryService {
 
     if (!result) {
       throw new ServiceError(
-        'Plan user room not found shareCode: ${shareCode}',
+        `Plan user room not found shareCode: ${shareCode}`,
         ServiceErrorCode.NOT_FOUND_DATA,
       );
     }
     return this.planUserRoomRepository.findOneBy({ shareCode });
+  }
+
+  async getByRoomId(id: number): Promise<PlanUserRoomEntity> {
+    const result = await this.planUserRoomRepository.findOneBy({ id });
+
+    if (!result) {
+      throw new ServiceError(
+        `Plan user room not found roomId: ${id}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+    return this.planUserRoomRepository.findOneBy({ id });
   }
 }

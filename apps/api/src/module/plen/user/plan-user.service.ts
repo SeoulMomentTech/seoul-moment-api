@@ -168,6 +168,22 @@ export class PlanUserService {
     );
   }
 
+  async getPlanUserRoomMemberListByRoomId(
+    roomId: number,
+  ): Promise<GetPlanUserRoomMemberResponse[]> {
+    const planUserRoom =
+      await this.planUserRoomRepositoryService.getByRoomId(roomId);
+
+    const planUserRoomMemberList =
+      await this.planUserRoomMemberRepositoryService.getByRoomId(
+        planUserRoom.id,
+      );
+
+    return planUserRoomMemberList.map((v) =>
+      GetPlanUserRoomMemberResponse.from(v.planUser),
+    );
+  }
+
   async getPlanUserRoomMemberListByUserId(
     userId: string,
   ): Promise<GetPlanUserRoomMemberResponse[]> {
@@ -205,7 +221,17 @@ export class PlanUserService {
 
       const remainingBudget = planUserRoom.owner.budget - planAmount;
 
-      result.push(GetPlanUserRoomResponse.from(planUserRoom, remainingBudget));
+      const memberDtoList = await this.getPlanUserRoomMemberListByRoomId(
+        planUserRoom.id,
+      );
+
+      result.push(
+        GetPlanUserRoomResponse.from(
+          planUserRoom,
+          remainingBudget,
+          memberDtoList,
+        ),
+      );
     }
 
     return result;

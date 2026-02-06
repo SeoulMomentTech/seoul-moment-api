@@ -296,7 +296,11 @@ export class GetPlanUserRoomResponse {
   })
   planCount: number;
 
-  static from(entity: PlanUserRoomEntity, remainingBudget: number) {
+  static from(
+    entity: PlanUserRoomEntity,
+    remainingBudget: number,
+    memberDtoList: GetPlanUserRoomMemberResponse[],
+  ) {
     return plainToInstance(this, {
       roomId: entity.id,
       onwerName: entity.owner.name,
@@ -306,6 +310,7 @@ export class GetPlanUserRoomResponse {
       planCount: entity.owner.schedules.filter(
         (v) => v.status !== PlanScheduleStatus.DELETE,
       ).length,
+      members: memberDtoList,
     });
   }
 }
