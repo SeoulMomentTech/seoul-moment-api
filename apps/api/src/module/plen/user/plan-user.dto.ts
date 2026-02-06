@@ -4,7 +4,13 @@ import { PlanScheduleStatus } from '@app/repository/enum/plan-schedule.enum';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
-import { IsDefined, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsDefined,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class GetPlanUserResponse {
   @ApiProperty({
@@ -216,9 +222,16 @@ export class PostPlanUserRoomResponse {
   })
   shareCode: string;
 
+  @ApiProperty({
+    description: '방 쓰기 공유 코드',
+    example: '1234567890',
+  })
+  writeShareCode: string;
+
   static from(entity: PlanUserRoomEntity) {
     return plainToInstance(this, {
       shareCode: entity.shareCode,
+      writeShareCode: entity.writeShareCode,
     });
   }
 }
@@ -307,10 +320,20 @@ export class GetPlanUserRoomResponse {
       weddingDate: entity.owner.weddingDate,
       budget: entity.owner.budget,
       remainingBudget,
-      planCount: entity.owner.schedules.filter(
+      planCount: entity.schedules.filter(
         (v) => v.status !== PlanScheduleStatus.DELETE,
       ).length,
       members: memberDtoList,
     });
   }
+}
+
+export class GetPlanUserRoomRequest {
+  @ApiProperty({
+    description: '플랜 유저 방 권한 쓰기 여부',
+    example: true,
+  })
+  @IsBoolean()
+  @IsDefined()
+  isPermissionWrite: boolean;
 }

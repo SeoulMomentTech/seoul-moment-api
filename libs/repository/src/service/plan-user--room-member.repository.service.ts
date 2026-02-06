@@ -60,7 +60,7 @@ export class PlanUserRoomMemberRepositoryService {
   ): Promise<PlanUserRoomMemberEntity[]> {
     return this.planUserRoomMemberRepository.find({
       where: { planUserId, room: { ownerId: Not(planUserId) } },
-      relations: ['room', 'room.owner', 'room.owner.schedules'],
+      relations: ['room', 'room.owner', 'room.schedules'],
     });
   }
 }

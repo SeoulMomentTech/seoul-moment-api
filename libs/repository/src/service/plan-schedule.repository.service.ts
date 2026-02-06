@@ -123,6 +123,18 @@ export class PlanScheduleRepositoryService {
     return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
   }
 
+  async getPlanAmountByRoomId(roomId: number): Promise<number> {
+    const result = await this.planScheduleRepository.find({
+      where: {
+        planUserRoomId: roomId,
+        status: Not(In([PlanScheduleStatus.DELETE])),
+      },
+      select: { amount: true },
+    });
+
+    return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
+  }
+
   async getPlannedUseAmount(id: string): Promise<number> {
     const result = await this.planScheduleRepository.find({
       where: {

@@ -171,7 +171,7 @@ export class PlanUserController {
   }
 
   @Get('room/list')
-  @ApiOperation({ summary: '유저가 속해있는 방 리슨트' })
+  @ApiOperation({ summary: '유저가 속해있는 방 리스트' })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(PlanApiGuard)
   @ResponseList(GetPlanUserRoomResponse)

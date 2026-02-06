@@ -18,6 +18,7 @@ export class PlanUserRoomRepositoryService {
     const planUserRoom = this.planUserRoomRepository.create({
       ownerId,
       shareCode: uuidV4(),
+      writeShareCode: uuidV4(),
     });
 
     return this.planUserRoomRepository.save(planUserRoom);

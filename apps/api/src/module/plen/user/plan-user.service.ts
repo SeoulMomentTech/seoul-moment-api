@@ -243,9 +243,10 @@ export class PlanUserService {
     for (const planUserRoomMemberEntity of planUserRoomMemberEntityList) {
       const planUserRoom = planUserRoomMemberEntity.room;
 
-      const planAmount = await this.planScheduleRepositoryService.getPlanAmount(
-        planUserRoom.owner.id,
-      );
+      const planAmount =
+        await this.planScheduleRepositoryService.getPlanAmountByRoomId(
+          planUserRoom.id,
+        );
 
       const remainingBudget = planUserRoom.owner.budget - planAmount;
 

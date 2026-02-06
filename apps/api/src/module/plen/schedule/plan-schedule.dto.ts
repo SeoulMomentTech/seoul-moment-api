@@ -20,6 +20,14 @@ import {
 import { ListFilterDto } from '../../admin/admin.dto';
 
 export class PostPlanScheduleRequest {
+  @ApiPropertyOptional({
+    description: '방 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @IsOptional()
+  roomId?: number;
+
   @ApiProperty({
     description: '카테고리 이름',
     example: '저녁 식사',

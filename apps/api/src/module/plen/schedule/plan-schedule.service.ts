@@ -1,10 +1,14 @@
 /* eslint-disable max-lines-per-function */
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { UpdatePlanScheduleDto } from '@app/repository/dto/plan-schedule.dto';
 import { PlanScheduleEntity } from '@app/repository/entity/plan-schedule.entity';
 import { PlanUserCategoryEntity } from '@app/repository/entity/plan-user-category.entity';
 import { PlanScheduleStatus } from '@app/repository/enum/plan-schedule.enum';
+import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { PlanCategoryRepositoryService } from '@app/repository/service/plan-category.repository.service';
 import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
+import { PlanUserRoomMemberRepositoryService } from '@app/repository/service/plan-user--room-member.repository.service';
 import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -27,6 +31,7 @@ export class PlanScheduleService {
     private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
     private readonly planCategoryRepositoryService: PlanCategoryRepositoryService,
     private readonly planUserRoomRepositoryService: PlanUserRoomRepositoryService,
+    private readonly planUserRoomMemberRepositoryService: PlanUserRoomMemberRepositoryService,
   ) {}
 
   @Transactional()
@@ -34,9 +39,29 @@ export class PlanScheduleService {
     id: string,
     postPlanScheduleRequest: PostPlanScheduleRequest,
   ): Promise<PostPlanScheduleResponse> {
+    if (postPlanScheduleRequest.roomId) {
+      const planUserRoom = await this.planUserRoomRepositoryService.getByRoomId(
+        postPlanScheduleRequest.roomId,
+      );
+
+      const planUserRoomMember =
+        await this.planUserRoomMemberRepositoryService.getByRoomIdAndPlanUserId(
+          planUserRoom.id,
+          id,
+        );
+
+      if (planUserRoomMember.permission === PlanUserRoomMemberPermission.READ) {
+        throw new ServiceError(
+          'You are not allowed to create a plan schedule in this room',
+          ServiceErrorCode.FORBIDDEN,
+        );
+      }
+    }
+
     const planSchedule = await this.planScheduleRepositoryService.create(
       plainToInstance(PlanScheduleEntity, {
         planUserId: id,
+        planUserRoomId: postPlanScheduleRequest.roomId,
         categoryName: postPlanScheduleRequest.categoryName,
         title: postPlanScheduleRequest.title,
         payType: postPlanScheduleRequest.payType,
@@ -100,12 +125,13 @@ export class PlanScheduleService {
       await this.planScheduleRepositoryService.getList(
         request.page,
         request.count,
-        planUserRoom.ownerId,
+        undefined,
         request.categoryName,
         request.status,
         request.search,
         request.sortColumn,
         request.sort,
+        planUserRoom.id,
       );
 
     return [
@@ -127,12 +153,13 @@ export class PlanScheduleService {
       await this.planScheduleRepositoryService.getList(
         request.page,
         request.count,
-        planUserRoom.ownerId,
+        undefined,
         request.categoryName,
         request.status,
         request.search,
         request.sortColumn,
         request.sort,
+        planUserRoom.id,
       );
 
     return [
