@@ -51,6 +51,40 @@ export class PlanUserController {
     );
   }
 
+  @Get(':shareCode([0-9a-fA-F-]{36})')
+  @ApiOperation({ summary: '플랜 유저 방 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(GetPlanUserResponse)
+  async getPlanUserShareRoom(
+    @Request() req: PlanUserRequest,
+    @Param('shareCode') shareCode: string,
+  ): Promise<ResponseDataDto<GetPlanUserResponse>> {
+    const result = await this.planUserService.getPlanUserRoom(
+      req.user.id,
+      shareCode,
+    );
+
+    return new ResponseDataDto(result);
+  }
+
+  @Get('room/:roomId([0-9]+)')
+  @ApiOperation({ summary: '플랜 유저 방 조회 (방 ID로 조회)' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(GetPlanUserResponse)
+  async getPlanUserShareRoomByRoomId(
+    @Request() req: PlanUserRequest,
+    @Param('roomId') roomId: number,
+  ): Promise<ResponseDataDto<GetPlanUserResponse>> {
+    const result = await this.planUserService.getPlanUserRoomByRoomId(
+      req.user.id,
+      roomId,
+    );
+
+    return new ResponseDataDto(result);
+  }
+
   @Patch()
   @ApiOperation({ summary: '플랜 유저 정보 수정' })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
@@ -133,23 +167,6 @@ export class PlanUserController {
     @Request() req: PlanUserRequest,
   ): Promise<ResponseDataDto<PostPlanUserRoomResponse>> {
     const result = await this.planUserService.postPlanUserRoom(req.user.id);
-    return new ResponseDataDto(result);
-  }
-
-  @Get(':shareCode([0-9a-fA-F-]{36})')
-  @ApiOperation({ summary: '플랜 유저 방 조회' })
-  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
-  @UseGuards(PlanApiGuard)
-  @ResponseData(GetPlanUserResponse)
-  async getPlanUserShareRoom(
-    @Request() req: PlanUserRequest,
-    @Param('shareCode') shareCode: string,
-  ): Promise<ResponseDataDto<GetPlanUserResponse>> {
-    const result = await this.planUserService.getPlanUserRoom(
-      req.user.id,
-      shareCode,
-    );
-
     return new ResponseDataDto(result);
   }
 

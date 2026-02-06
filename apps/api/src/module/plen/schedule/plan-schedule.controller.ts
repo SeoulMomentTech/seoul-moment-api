@@ -71,19 +71,36 @@ export class PlanScheduleController {
     return new ResponseListDto(result, total);
   }
 
-  @Get('room/:shareCode/list')
-  @ApiOperation({ summary: '플랜 스케줄 목록 조회' })
+  @Get('room/:shareCode([0-9a-fA-F-]{36})/list')
+  @ApiOperation({ summary: '플랜 스케줄 목록 조회 (방 공유 코드로 조회)' })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(PlanApiGuard)
   @ResponseList(GetPlanScheduleResponse)
   async getPlanScheduleShareRoomList(
-    @Request() req: PlanUserRequest,
     @Param('shareCode') shareCode: string,
     @Query() query: GetPlanScheduleListRequest,
   ): Promise<ResponseListDto<GetPlanScheduleResponse>> {
     const [result, total] =
       await this.planScheduleService.getPlanScheduleShareRoomPlanList(
         shareCode,
+        query,
+      );
+
+    return new ResponseListDto(result, total);
+  }
+
+  @Get('room/:roomId([0-9]+)/list')
+  @ApiOperation({ summary: '플랜 스케줄 목록 조회 (방 ID로 조회)' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseList(GetPlanScheduleResponse)
+  async getPlanScheduleRoomListByRoomId(
+    @Param('roomId') roomId: number,
+    @Query() query: GetPlanScheduleListRequest,
+  ): Promise<ResponseListDto<GetPlanScheduleResponse>> {
+    const [result, total] =
+      await this.planScheduleService.getPlanScheduleRoomPlanListByRoomId(
+        roomId,
         query,
       );
 

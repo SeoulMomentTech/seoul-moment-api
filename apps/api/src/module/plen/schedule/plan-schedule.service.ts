@@ -116,6 +116,33 @@ export class PlanScheduleService {
     ];
   }
 
+  async getPlanScheduleRoomPlanListByRoomId(
+    roomId: number,
+    request: GetPlanScheduleListRequest,
+  ): Promise<[GetPlanScheduleResponse[], number]> {
+    const planUserRoom =
+      await this.planUserRoomRepositoryService.getByRoomId(roomId);
+
+    const [planScheduleEntities, total] =
+      await this.planScheduleRepositoryService.getList(
+        request.page,
+        request.count,
+        planUserRoom.ownerId,
+        request.categoryName,
+        request.status,
+        request.search,
+        request.sortColumn,
+        request.sort,
+      );
+
+    return [
+      planScheduleEntities.map((entity) =>
+        GetPlanScheduleResponse.from(entity),
+      ),
+      total,
+    ];
+  }
+
   async deletePlanSchedule(id: number) {
     const planSchedule = await this.planScheduleRepositoryService.getById(id);
 

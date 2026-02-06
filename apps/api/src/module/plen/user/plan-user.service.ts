@@ -127,7 +127,35 @@ export class PlanUserService {
       PlanUserRoomMemberPermission.READ,
     );
 
-    return GetPlanUserResponse.from(userEntity);
+    const roomMemberList = await this.getPlanUserRoomMemberListByUserId(
+      planUserRoom.ownerId,
+    );
+
+    return GetPlanUserResponse.from(userEntity, roomMemberList);
+  }
+
+  async getPlanUserRoomByRoomId(
+    id: string,
+    roomId: number,
+  ): Promise<GetPlanUserResponse> {
+    const planUserRoom =
+      await this.planUserRoomRepositoryService.getByRoomId(roomId);
+
+    const userEntity = await this.planUserRepositoryService.getById(
+      planUserRoom.ownerId,
+    );
+
+    await this.createIfNotExistsPlanUserRoomMember(
+      planUserRoom,
+      id,
+      PlanUserRoomMemberPermission.READ,
+    );
+
+    const roomMemberList = await this.getPlanUserRoomMemberListByUserId(
+      planUserRoom.ownerId,
+    );
+
+    return GetPlanUserResponse.from(userEntity, roomMemberList);
   }
 
   private async createIfNotExistsPlanUserRoomMember(
