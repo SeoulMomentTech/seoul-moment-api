@@ -61,6 +61,28 @@ export class PlanUserRoomRepositoryService {
     return this.planUserRoomRepository.findOneBy({ shareCode });
   }
 
+  async findByReadShareCode(
+    readShareCode: string,
+  ): Promise<PlanUserRoomEntity | null> {
+    return this.planUserRoomRepository.findOneBy({ shareCode: readShareCode });
+  }
+
+  async getByWriteShareCode(
+    writeShareCode: string,
+  ): Promise<PlanUserRoomEntity | null> {
+    const result = await this.planUserRoomRepository.findOneBy({
+      writeShareCode,
+    });
+    if (!result) {
+      throw new ServiceError(
+        `Plan user room not found writeShareCode: ${writeShareCode}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
   async getByRoomId(id: number): Promise<PlanUserRoomEntity> {
     const result = await this.planUserRoomRepository.findOneBy({ id });
 

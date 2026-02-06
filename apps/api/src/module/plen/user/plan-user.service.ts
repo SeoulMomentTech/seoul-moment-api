@@ -114,8 +114,17 @@ export class PlanUserService {
     id: string,
     shareCode: string,
   ): Promise<GetPlanUserResponse> {
-    const planUserRoom =
-      await this.planUserRoomRepositoryService.getByShareCode(shareCode);
+    let permission: PlanUserRoomMemberPermission =
+      PlanUserRoomMemberPermission.READ;
+
+    let planUserRoom =
+      await this.planUserRoomRepositoryService.findByReadShareCode(shareCode);
+
+    if (!planUserRoom) {
+      planUserRoom =
+        await this.planUserRoomRepositoryService.getByWriteShareCode(shareCode);
+      permission = PlanUserRoomMemberPermission.WRITE;
+    }
 
     const userEntity = await this.planUserRepositoryService.getById(
       planUserRoom.ownerId,
@@ -124,7 +133,7 @@ export class PlanUserService {
     await this.createIfNotExistsPlanUserRoomMember(
       planUserRoom,
       id,
-      PlanUserRoomMemberPermission.READ,
+      permission,
     );
 
     const roomMemberList = await this.getPlanUserRoomMemberListByUserId(
@@ -143,12 +152,6 @@ export class PlanUserService {
 
     const userEntity = await this.planUserRepositoryService.getById(
       planUserRoom.ownerId,
-    );
-
-    await this.createIfNotExistsPlanUserRoomMember(
-      planUserRoom,
-      id,
-      PlanUserRoomMemberPermission.READ,
     );
 
     const roomMemberList = await this.getPlanUserRoomMemberListByUserId(
@@ -183,8 +186,13 @@ export class PlanUserService {
   async getPlanUserRoomMemberList(
     shareCode: string,
   ): Promise<GetPlanUserRoomMemberResponse[]> {
-    const planUserRoom =
-      await this.planUserRoomRepositoryService.getByShareCode(shareCode);
+    let planUserRoom =
+      await this.planUserRoomRepositoryService.findByReadShareCode(shareCode);
+
+    if (!planUserRoom) {
+      planUserRoom =
+        await this.planUserRoomRepositoryService.getByWriteShareCode(shareCode);
+    }
 
     const planUserRoomMemberList =
       await this.planUserRoomMemberRepositoryService.getByRoomId(
