@@ -2,13 +2,7 @@ import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
-import {
-  IsBoolean,
-  IsDefined,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsDefined, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class GetPlanUserResponse {
   @ApiProperty({
@@ -247,14 +241,4 @@ export class GetPlanUserRoomMemberResponse {
       )?.permission,
     });
   }
-}
-
-export class GetPlanUserRoomRequest {
-  @ApiProperty({
-    description: '플랜 유저 방 권한 쓰기 여부',
-    example: true,
-  })
-  @IsBoolean()
-  @IsDefined()
-  isPermissionWrite: boolean;
 }

@@ -37,13 +37,13 @@ export class PlanUserEntity extends CommonEntity {
   @Column('varchar', { length: 255, nullable: true })
   googleEmail: string;
 
-  @Column('date', { nullable: false, comment: '웨딩 날짜' })
+  @Column('date', { nullable: true, comment: '웨딩 날짜' })
   weddingDate: Date;
 
-  @Column('int', { nullable: false, comment: '예산 (만원 단위)' })
+  @Column('int', { nullable: true, comment: '예산 (만원 단위)' })
   budget: number;
 
-  @Column('varchar', { length: 255, nullable: false, comment: '이름/닉네임' })
+  @Column('varchar', { length: 255, nullable: true, comment: '이름/닉네임' })
   name: string;
 
   @Column('varchar', {
