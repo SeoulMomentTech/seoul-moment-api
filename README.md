@@ -447,3 +447,5 @@ NODE_ENV=development docker compose push batch
 - **dev-batch 브랜치**: Batch 애플리케이션 자동 배포
 - **main 브랜치**: API 애플리케이션 자동 배포
 - ECS 태스크 정의 분리로 독립적인 배포 관리
+
+배포 테스트
