@@ -22,6 +22,7 @@ import { AppModule } from './module/api.module';
 import { PlanAuthModule } from './module/plen/auth/plan.auth.module';
 import { PlanCategoryModule } from './module/plen/category/plan-category.module';
 import { PlanModule } from './module/plen/plan.module';
+import { PlanRoomModule } from './module/plen/room/plan-room.module';
 import { PlanScheduleModule } from './module/plen/schedule/plan-schedule.module';
 import { PlanSettingModule } from './module/plen/setting/plan-setting.module';
 import { PlanUserModule } from './module/plen/user/plan.user.module';
@@ -57,6 +58,7 @@ async function bootstrap() {
       PlanUserModule,
       PlanScheduleModule,
       PlanCategoryModule,
+      PlanRoomModule,
     ], // 이 모듈에 속한 컨트롤러만 /docs-plen에 표시
   });
 
