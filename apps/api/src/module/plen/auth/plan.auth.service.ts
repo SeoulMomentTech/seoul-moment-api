@@ -6,6 +6,7 @@ import { PlatformType } from '@app/repository/enum/plan-user.enum';
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { v4 as uuidV4 } from 'uuid';
 
 import { PostPlanLoginRequest, PostPlanLoginResponse } from './plan.auth.dto';
 
@@ -39,6 +40,7 @@ export class PlanAuthService {
         plainToInstance(PlanUserEntity, {
           [platformType + 'Id']: kakaoValidateTokenResponse.id,
           [platformType + 'Email']: kakaoUserInfo.kakao_account.email,
+          roomShareCode: uuidV4(),
         }),
       );
     }

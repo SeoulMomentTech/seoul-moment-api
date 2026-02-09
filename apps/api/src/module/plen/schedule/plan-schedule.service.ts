@@ -114,34 +114,6 @@ export class PlanScheduleService {
     ];
   }
 
-  async getPlanScheduleShareRoomPlanList(
-    shareCode: string,
-    request: GetPlanScheduleListRequest,
-  ): Promise<[GetPlanScheduleResponse[], number]> {
-    const planUserRoom =
-      await this.planUserRoomRepositoryService.getByShareCode(shareCode);
-
-    const [planScheduleEntities, total] =
-      await this.planScheduleRepositoryService.getList(
-        request.page,
-        request.count,
-        undefined,
-        request.categoryName,
-        request.status,
-        request.search,
-        request.sortColumn,
-        request.sort,
-        planUserRoom.id,
-      );
-
-    return [
-      planScheduleEntities.map((entity) =>
-        GetPlanScheduleResponse.from(entity),
-      ),
-      total,
-    ];
-  }
-
   async getPlanScheduleRoomPlanListByRoomId(
     roomId: number,
     request: GetPlanScheduleListRequest,

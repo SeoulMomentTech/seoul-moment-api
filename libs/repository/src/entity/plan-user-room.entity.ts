@@ -26,12 +26,6 @@ export class PlanUserRoomEntity extends CommonEntity {
   @JoinColumn({ name: 'owner_id' })
   owner: PlanUserEntity;
 
-  @Column('varchar', { nullable: false })
-  shareCode: string;
-
-  @Column('varchar', { nullable: false })
-  writeShareCode: string;
-
   @OneToMany(() => PlanUserRoomMemberEntity, (member) => member.room)
   members: PlanUserRoomMemberEntity[];
 

@@ -3,7 +3,6 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { v4 as uuidV4 } from 'uuid';
 
 import { PlanUserRoomEntity } from '../entity/plan-user-room.entity';
 
@@ -17,8 +16,6 @@ export class PlanUserRoomRepositoryService {
   async create(ownerId: string): Promise<PlanUserRoomEntity> {
     const planUserRoom = this.planUserRoomRepository.create({
       ownerId,
-      shareCode: uuidV4(),
-      writeShareCode: uuidV4(),
     });
 
     return this.planUserRoomRepository.save(planUserRoom);
@@ -47,40 +44,6 @@ export class PlanUserRoomRepositoryService {
 
   async findByOwnerId(ownerId: string): Promise<PlanUserRoomEntity | null> {
     return this.planUserRoomRepository.findOneBy({ ownerId });
-  }
-
-  async getByShareCode(shareCode: string): Promise<PlanUserRoomEntity> {
-    const result = await this.planUserRoomRepository.findOneBy({ shareCode });
-
-    if (!result) {
-      throw new ServiceError(
-        `Plan user room not found shareCode: ${shareCode}`,
-        ServiceErrorCode.NOT_FOUND_DATA,
-      );
-    }
-    return this.planUserRoomRepository.findOneBy({ shareCode });
-  }
-
-  async findByReadShareCode(
-    readShareCode: string,
-  ): Promise<PlanUserRoomEntity | null> {
-    return this.planUserRoomRepository.findOneBy({ shareCode: readShareCode });
-  }
-
-  async getByWriteShareCode(
-    writeShareCode: string,
-  ): Promise<PlanUserRoomEntity | null> {
-    const result = await this.planUserRoomRepository.findOneBy({
-      writeShareCode,
-    });
-    if (!result) {
-      throw new ServiceError(
-        `Plan user room not found writeShareCode: ${writeShareCode}`,
-        ServiceErrorCode.NOT_FOUND_DATA,
-      );
-    }
-
-    return result;
   }
 
   async getByRoomId(id: number): Promise<PlanUserRoomEntity> {

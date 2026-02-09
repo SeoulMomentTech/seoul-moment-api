@@ -68,6 +68,18 @@ export class PlanUserRepositoryService {
     return result;
   }
 
+  async getByRoomShareCode(roomShareCode: string): Promise<PlanUserEntity> {
+    const result = await this.planUserRepository.findOneBy({ roomShareCode });
+
+    if (!result) {
+      throw new ServiceError(
+        `Plan user not found roomShareCode: ${roomShareCode}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+    return result;
+  }
+
   async update(planUser: PlanUserEntity): Promise<PlanUserEntity> {
     return this.planUserRepository.save(planUser);
   }
