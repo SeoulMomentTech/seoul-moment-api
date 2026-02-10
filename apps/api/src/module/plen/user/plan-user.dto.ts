@@ -12,6 +12,12 @@ export class GetPlanUserResponse {
   id: string;
 
   @ApiProperty({
+    description: '방 ID',
+    example: 1,
+  })
+  roomId: number;
+
+  @ApiProperty({
     description: '웨딩 날짜',
     example: '2025-02-24',
   })
@@ -60,6 +66,7 @@ export class GetPlanUserResponse {
   ) {
     return plainToInstance(this, {
       id: entity.id,
+      roomId: entity?.room?.id,
       weddingDate: entity.weddingDate,
       budget: entity.budget,
       name: entity.name,

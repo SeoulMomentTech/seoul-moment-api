@@ -1,33 +1,33 @@
 import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
-import { IsString, IsDefined, IsNumber } from 'class-validator';
+import { IsString, IsDefined, IsNumber, IsOptional } from 'class-validator';
 
 export class PostPlanSettingRequest {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '웨딩 날짜',
     example: '2025-02-24',
   })
   @IsString()
-  @IsDefined()
-  weddingDate: string;
+  @IsOptional()
+  weddingDate?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '예산 (만원 단위)',
     example: 10000,
   })
   @IsNumber()
   @Type(() => Number)
-  @IsDefined()
-  budget: number;
+  @IsOptional()
+  budget?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '이름/닉네임',
     example: '세리프',
   })
   @IsString()
-  @IsDefined()
-  name: string;
+  @IsOptional()
+  name?: string;
 }
 
 export class PostPlanSettingResponse {

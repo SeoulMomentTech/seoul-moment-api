@@ -61,12 +61,23 @@ export class PlanRoomService {
     }
   }
 
+  private async createIfNotExistsPlanUserRoom(ownerId: string) {
+    const planUserRoom =
+      await this.planUserRoomRepositoryService.findByOwnerId(ownerId);
+
+    if (planUserRoom) {
+      return planUserRoom;
+    }
+
+    return this.planUserRoomRepositoryService.create(ownerId);
+  }
+
   @Transactional()
   async postPlanRoom(userId: string, shareCode: string) {
     const ownerUserEntity =
       await this.planUserRepositoryService.getByRoomShareCode(shareCode);
 
-    const createPlanUserRoom = await this.planUserRoomRepositoryService.create(
+    const createPlanUserRoom = await this.createIfNotExistsPlanUserRoom(
       ownerUserEntity.id,
     );
 

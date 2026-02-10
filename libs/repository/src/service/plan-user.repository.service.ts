@@ -55,6 +55,16 @@ export class PlanUserRepositoryService {
     return result;
   }
 
+  async findByKakaoInfo(
+    kakaoId: number,
+    id: string,
+  ): Promise<PlanUserEntity | null> {
+    return this.planUserRepository.findOne({
+      where: { kakaoId, id },
+      relations: ['room'],
+    });
+  }
+
   async getById(id: string): Promise<PlanUserEntity> {
     const result = await this.planUserRepository.findOneBy({ id });
 

@@ -18,7 +18,9 @@ export class PlanSettingService {
   ): Promise<PostPlanSettingResponse> {
     const planUser = await this.planUserRepositoryService.getById(id);
 
-    planUser.weddingDate = new Date(postPlanSettingRequest.weddingDate);
+    planUser.weddingDate = postPlanSettingRequest.weddingDate
+      ? new Date(postPlanSettingRequest.weddingDate)
+      : null;
     planUser.budget = postPlanSettingRequest.budget;
     planUser.name = postPlanSettingRequest.name;
 

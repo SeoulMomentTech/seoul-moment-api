@@ -60,10 +60,17 @@ export class PlanApiGuard implements CanActivate {
 
     await this.kakaoService.validateToken(payload.kakaoToken);
 
-    const planUser = await this.planUserRepositoryService.getByKakaoInfo(
+    const planUser = await this.planUserRepositoryService.findByKakaoInfo(
       payload.kakaoId,
       payload.planUserId,
     );
+
+    if (!planUser) {
+      throw new ServiceError(
+        `Plan user not found kakaoId: ${payload.kakaoId}, planUserId: ${payload.planUserId}`,
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
 
     planUser.lastLoginDate = new Date();
     await this.planUserRepositoryService.update(planUser);
