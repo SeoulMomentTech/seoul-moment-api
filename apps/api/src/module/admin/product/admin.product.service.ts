@@ -99,7 +99,10 @@ export class AdminProductService {
         brandId: dto.brandId,
         categoryId: dto.categoryId,
         productCategoryId: dto.productCategoryId,
-        detailInfoImageUrl: dto.detailInfoImageUrl,
+        detailInfoImageUrl: dto.detailInfoImageUrl.replace(
+          Configuration.getConfig().IMAGE_DOMAIN_NAME,
+          '',
+        ),
       }),
     );
 
