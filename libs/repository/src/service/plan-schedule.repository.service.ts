@@ -81,7 +81,9 @@ export class PlanScheduleRepositoryService {
     planUserRoomId?: number,
   ): Promise<[PlanScheduleEntity[], number]> {
     const findOptions: FindOptionsWhere<PlanScheduleEntity> = {
-      status: Not(In([PlanScheduleStatus.DELETE])),
+      status: Not(
+        In([PlanScheduleStatus.DELETE, PlanScheduleStatus.COMPLETED]),
+      ),
     };
 
     if (search) {
