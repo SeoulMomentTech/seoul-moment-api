@@ -24,6 +24,7 @@ import {
 } from './plan-room.dto';
 import { PlanRoomService } from './plan-room.service';
 import { PlanUserRequest } from '../plan.type';
+import { GetPlanUserTotalAmountResponse } from '../schedule/plan-schedule.dto';
 
 @Controller('plan/room')
 export class PlanRoomController {
@@ -50,6 +51,18 @@ export class PlanRoomController {
   ): Promise<ResponseDataDto<GetPlanRoomResponse>> {
     const result = await this.planRoomService.getPlanRoomInfo(roomId);
 
+    return new ResponseDataDto(result);
+  }
+
+  @Get('total-amount/:roomId([0-9]+)')
+  @ApiOperation({ summary: '플랜 유저 방 총 금액 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(GetPlanUserTotalAmountResponse)
+  async getPlanRoomTotalAmount(
+    @Param('roomId', ParseIntPipe) roomId: number,
+  ): Promise<ResponseDataDto<GetPlanUserTotalAmountResponse>> {
+    const result = await this.planRoomService.getPlanRoomTotalAmount(roomId);
     return new ResponseDataDto(result);
   }
 

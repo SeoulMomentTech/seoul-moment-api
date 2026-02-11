@@ -307,9 +307,27 @@ export class GetPlanUserTotalAmountResponse {
   })
   totalAmount: number;
 
-  static from(totalAmount: number) {
+  @ApiProperty({
+    description: '사용한 금액',
+    example: 10000,
+  })
+  usedAmount: number;
+
+  @ApiProperty({
+    description: '남은 금액',
+    example: 10000,
+  })
+  remainingAmount: number;
+
+  static from(
+    totalAmount: number,
+    usedAmount: number,
+    remainingAmount: number,
+  ) {
     return plainToInstance(this, {
       totalAmount,
+      usedAmount,
+      remainingAmount,
     });
   }
 }

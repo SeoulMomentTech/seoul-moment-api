@@ -47,7 +47,10 @@ export class PlanUserRoomRepositoryService {
   }
 
   async getByRoomId(id: number): Promise<PlanUserRoomEntity> {
-    const result = await this.planUserRoomRepository.findOneBy({ id });
+    const result = await this.planUserRoomRepository.findOne({
+      where: { id },
+      relations: ['owner'],
+    });
 
     if (!result) {
       throw new ServiceError(
@@ -55,6 +58,6 @@ export class PlanUserRoomRepositoryService {
         ServiceErrorCode.NOT_FOUND_DATA,
       );
     }
-    return this.planUserRoomRepository.findOneBy({ id });
+    return result;
   }
 }

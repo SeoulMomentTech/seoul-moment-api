@@ -11,6 +11,7 @@ import {
   PatchPlanUserRequest,
   PatchPlanUserResponse,
 } from './plan-user.dto';
+import { GetPlanUserTotalAmountResponse } from '../schedule/plan-schedule.dto';
 
 @Injectable()
 export class PlanUserService {
@@ -36,11 +37,18 @@ export class PlanUserService {
     return PatchPlanUserResponse.from(planUser);
   }
 
-  async getPlanUserTotalAmount(id: string): Promise<number> {
-    const totalAmount =
+  async getPlanUserTotalAmount(
+    id: string,
+    budget: number,
+  ): Promise<GetPlanUserTotalAmountResponse> {
+    const planAmount =
       await this.planScheduleRepositoryService.getPlanAmount(id);
 
-    return totalAmount;
+    return GetPlanUserTotalAmountResponse.from(
+      budget,
+      planAmount,
+      budget - planAmount,
+    );
   }
 
   async getPlanUserAmount(id: string): Promise<GetPlanUserAmountResponse> {

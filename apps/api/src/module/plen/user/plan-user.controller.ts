@@ -54,12 +54,11 @@ export class PlanUserController {
   async getPlanUserTotalAmount(
     @Request() req: PlanUserRequest,
   ): Promise<ResponseDataDto<GetPlanUserTotalAmountResponse>> {
-    const totalAmount = await this.planUserService.getPlanUserTotalAmount(
+    const result = await this.planUserService.getPlanUserTotalAmount(
       req.user.id,
+      req.user.budget,
     );
-    return new ResponseDataDto(
-      GetPlanUserTotalAmountResponse.from(totalAmount),
-    );
+    return new ResponseDataDto(result);
   }
 
   @Get('amount/detail')
