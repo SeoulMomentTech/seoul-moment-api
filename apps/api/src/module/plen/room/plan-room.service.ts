@@ -15,6 +15,7 @@ import {
   GetPlanRoomResponse,
 } from './plan-room.dto';
 import { GetPlanUserTotalAmountResponse } from '../schedule/plan-schedule.dto';
+import { GetPlanUserAmountResponse } from '../user/plan-user.dto';
 
 @Injectable()
 export class PlanRoomService {
@@ -38,6 +39,24 @@ export class PlanRoomService {
     );
 
     return GetPlanRoomResponse.from(userEntity, roomMemberList);
+  }
+
+  async getPlanRoomAmount(roomId: number): Promise<GetPlanUserAmountResponse> {
+    const planUserRoomEntity =
+      await this.planUserRoomRepositoryService.getByRoomId(roomId);
+
+    const plannedUseAmount =
+      await this.planScheduleRepositoryService.getPlannedUseAmountByRoomId(
+        roomId,
+      );
+    const usedAmount =
+      await this.planScheduleRepositoryService.getUsedAmountByRoomId(roomId);
+
+    return GetPlanUserAmountResponse.from(
+      planUserRoomEntity.owner.budget,
+      plannedUseAmount,
+      usedAmount,
+    );
   }
 
   private async createIfNotExistsPlanUserRoomMember(

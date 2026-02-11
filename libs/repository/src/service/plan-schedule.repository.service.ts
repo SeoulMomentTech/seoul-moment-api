@@ -4,7 +4,7 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GetPlanUserAmountCategory } from 'apps/api/src/module/plen/user/plan-user.dto';
-import { FindOptionsWhere, In, Like, Not, Repository } from 'typeorm';
+import { FindOptionsWhere, In, IsNull, Like, Not, Repository } from 'typeorm';
 
 import { UpdatePlanScheduleDto } from '../dto/plan-schedule.dto';
 import { PlanScheduleEntity } from '../entity/plan-schedule.entity';
@@ -116,9 +116,13 @@ export class PlanScheduleRepositoryService {
     });
   }
 
-  async getPlanAmount(id: string): Promise<number> {
+  async getPlanAmount(id: string, roomId?: number): Promise<number> {
     const result = await this.planScheduleRepository.find({
-      where: { planUserId: id, status: Not(In([PlanScheduleStatus.DELETE])) },
+      where: {
+        planUserId: id,
+        status: Not(In([PlanScheduleStatus.DELETE])),
+        planUserRoomId: !roomId ? IsNull() : roomId,
+      },
       select: { amount: true },
     });
 
@@ -137,11 +141,12 @@ export class PlanScheduleRepositoryService {
     return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
   }
 
-  async getPlannedUseAmount(id: string): Promise<number> {
+  async getPlannedUseAmount(id: string, roomId?: number): Promise<number> {
     const result = await this.planScheduleRepository.find({
       where: {
         planUserId: id,
         status: PlanScheduleStatus.NORMAL,
+        planUserRoomId: !roomId ? IsNull() : roomId,
       },
       select: { amount: true },
     });
@@ -149,9 +154,37 @@ export class PlanScheduleRepositoryService {
     return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
   }
 
-  async getUsedAmount(id: string): Promise<number> {
+  async getPlannedUseAmountByRoomId(roomId: number): Promise<number> {
     const result = await this.planScheduleRepository.find({
-      where: { planUserId: id, status: PlanScheduleStatus.COMPLETED },
+      where: {
+        status: PlanScheduleStatus.NORMAL,
+        planUserRoomId: roomId,
+      },
+      select: { amount: true },
+    });
+
+    return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
+  }
+
+  async getUsedAmount(id: string, roomId?: number): Promise<number> {
+    const result = await this.planScheduleRepository.find({
+      where: {
+        planUserId: id,
+        status: PlanScheduleStatus.COMPLETED,
+        planUserRoomId: !roomId ? IsNull() : roomId,
+      },
+      select: { amount: true },
+    });
+
+    return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
+  }
+
+  async getUsedAmountByRoomId(roomId: number): Promise<number> {
+    const result = await this.planScheduleRepository.find({
+      where: {
+        status: PlanScheduleStatus.COMPLETED,
+        planUserRoomId: roomId,
+      },
       select: { amount: true },
     });
 

@@ -1,3 +1,4 @@
+import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
 import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
 import { PlanUserRoomMemberRepositoryService } from '@app/repository/service/plan-user--room-member.repository.service';
 import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
@@ -41,8 +42,13 @@ export class PlanUserService {
     id: string,
     budget: number,
   ): Promise<GetPlanUserTotalAmountResponse> {
-    const planAmount =
-      await this.planScheduleRepositoryService.getPlanAmount(id);
+    const planUserRoomEntity =
+      await this.planUserRoomRepositoryService.findByOwnerId(id);
+
+    const planAmount = await this.planScheduleRepositoryService.getPlanAmount(
+      id,
+      planUserRoomEntity?.id,
+    );
 
     return GetPlanUserTotalAmountResponse.from(
       budget,
@@ -51,15 +57,24 @@ export class PlanUserService {
     );
   }
 
-  async getPlanUserAmount(id: string): Promise<GetPlanUserAmountResponse> {
-    const user = await this.planUserRepositoryService.getById(id);
+  async getPlanUserAmount(
+    userEntity: PlanUserEntity,
+  ): Promise<GetPlanUserAmountResponse> {
+    const planUserRoomEntity =
+      await this.planUserRoomRepositoryService.findByOwnerId(userEntity.id);
+
     const plannedUseAmount =
-      await this.planScheduleRepositoryService.getPlannedUseAmount(id);
-    const usedAmount =
-      await this.planScheduleRepositoryService.getUsedAmount(id);
+      await this.planScheduleRepositoryService.getPlannedUseAmount(
+        userEntity.id,
+        planUserRoomEntity?.id,
+      );
+    const usedAmount = await this.planScheduleRepositoryService.getUsedAmount(
+      userEntity.id,
+      planUserRoomEntity?.id,
+    );
 
     return GetPlanUserAmountResponse.from(
-      user.budget,
+      userEntity.budget,
       plannedUseAmount,
       usedAmount,
     );

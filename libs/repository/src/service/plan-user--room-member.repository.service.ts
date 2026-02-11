@@ -2,7 +2,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 
 import { PlanUserRoomMemberEntity } from '../entity/plan-user-room-member.entity';
 
@@ -59,7 +59,7 @@ export class PlanUserRoomMemberRepositoryService {
     planUserId: string,
   ): Promise<PlanUserRoomMemberEntity[]> {
     return this.planUserRoomMemberRepository.find({
-      where: { planUserId, room: { ownerId: Not(planUserId) } },
+      where: { planUserId },
       relations: ['room', 'room.owner', 'room.schedules'],
     });
   }
