@@ -13,9 +13,6 @@ export class ExternalLinkEntity extends CommonEntity {
   name: string;
 
   @Column('varchar', { length: 255, nullable: false })
-  url: string;
-
-  @Column('varchar', { length: 255, nullable: false })
   imageUrl: string;
 
   @OneToMany(

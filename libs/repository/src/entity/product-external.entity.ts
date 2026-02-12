@@ -21,6 +21,9 @@ export class ProductExternalEntity extends CommonEntity {
   @Column('int', { name: 'external_link_id', nullable: false })
   externalLinkId: number;
 
+  @Column('varchar', { length: 255, nullable: false })
+  url: string;
+
   @ManyToOne(
     () => ExternalLinkEntity,
     (externalLink) => externalLink.productExternals,

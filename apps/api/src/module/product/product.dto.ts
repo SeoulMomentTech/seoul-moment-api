@@ -463,7 +463,7 @@ export class GetProductDetailExternal {
       id: entity.id,
       name: entity.externalLink.name,
       imageUrl: entity.externalLink.getImageUrl(),
-      url: entity.externalLink.url,
+      url: entity.url,
     });
   }
 }
