@@ -4,7 +4,15 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GetPlanUserAmountCategory } from 'apps/api/src/module/plen/user/plan-user.dto';
-import { FindOptionsWhere, In, IsNull, Like, Not, Repository } from 'typeorm';
+import {
+  Between,
+  FindOptionsWhere,
+  In,
+  IsNull,
+  Like,
+  Not,
+  Repository,
+} from 'typeorm';
 
 import { UpdatePlanScheduleDto } from '../dto/plan-schedule.dto';
 import { PlanScheduleEntity } from '../entity/plan-schedule.entity';
@@ -237,5 +245,24 @@ export class PlanScheduleRepositoryService {
       { planUserId },
       { planUserRoomId },
     );
+  }
+
+  async getCalendarList(
+    planUserId: string,
+    month: number,
+    year: number,
+    roomId?: number,
+  ): Promise<PlanScheduleEntity[]> {
+    const startDate = new Date(year, month - 1, 1, 0, 0, 0);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+    return this.planScheduleRepository.find({
+      where: {
+        planUserId,
+        status: Not(In([PlanScheduleStatus.DELETE])),
+        planUserRoomId: !roomId ? IsNull() : roomId,
+        startDate: Between(startDate, endDate),
+      },
+    });
   }
 }

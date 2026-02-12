@@ -636,3 +636,51 @@ export class PatchPlanScheduleStatusResponse {
     });
   }
 }
+
+export class GetCalendarDayItem {
+  @ApiProperty({ description: '스케줄 ID', example: 1 })
+  id: number;
+
+  @ApiProperty({ description: '제목', example: '상견례' })
+  title: string;
+}
+
+export class GetCalendarListResponse {
+  @ApiProperty({ description: '날짜 (YYYY-MM-DD)', example: '2025-02-01' })
+  day: string;
+
+  @ApiProperty({
+    description: '해당 날짜의 스케줄 목록',
+    type: [GetCalendarDayItem],
+  })
+  list: GetCalendarDayItem[];
+}
+
+export class GetCalendarListRequest {
+  @ApiProperty({
+    description: '월',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  month: number;
+
+  @ApiProperty({
+    description: '년',
+    example: 2025,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  year: number;
+
+  @ApiPropertyOptional({
+    description: '방 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  roomId?: number;
+}

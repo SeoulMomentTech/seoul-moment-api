@@ -15,6 +15,7 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
+  GetCalendarListResponse,
   GetPlanScheduleDetailResponse,
   GetPlanScheduleListRequest,
   GetPlanScheduleResponse,
@@ -221,5 +222,50 @@ export class PlanScheduleService {
       await this.planScheduleRepositoryService.update(updateDto);
 
     return PatchPlanScheduleStatusResponse.from(updatedPlanSchedule);
+  }
+
+  async getCalendarList(
+    planUserId: string,
+    month: number,
+    year: number,
+    roomId?: number,
+  ): Promise<GetCalendarListResponse[]> {
+    if (roomId) {
+      await this.planUserRoomRepositoryService.getByRoomId(roomId);
+    }
+
+    const planSchedules =
+      await this.planScheduleRepositoryService.getCalendarList(
+        planUserId,
+        month,
+        year,
+        roomId,
+      );
+
+    const dayMap = new Map<string, { id: number; title: string }[]>();
+
+    for (const schedule of planSchedules) {
+      if (!schedule.startDate) continue;
+
+      const d = new Date(schedule.startDate);
+      const dayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+      const existing = dayMap.get(dayStr) ?? [];
+      existing.push({ id: schedule.id, title: schedule.title });
+      dayMap.set(dayStr, existing);
+    }
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const result: GetCalendarListResponse[] = [];
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const list = dayMap.get(dayStr) ?? [];
+      if (list.length > 0) {
+        result.push({ day: dayStr, list });
+      }
+    }
+
+    return result.sort((a, b) => a.day.localeCompare(b.day));
   }
 }

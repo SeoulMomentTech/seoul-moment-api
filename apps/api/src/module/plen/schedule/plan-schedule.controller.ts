@@ -22,6 +22,8 @@ import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 import { PlanScheduleService } from './plan-schedule.service';
 import { PlanUserRequest } from '../plan.type';
 import {
+  GetCalendarListRequest,
+  GetCalendarListResponse,
   GetPlanScheduleDetailResponse,
   GetPlanScheduleListRequest,
   GetPlanScheduleResponse,
@@ -52,6 +54,24 @@ export class PlanScheduleController {
     );
 
     return new ResponseDataDto(result);
+  }
+
+  @Get('calendar')
+  @ApiOperation({ summary: '플랜 스케줄 캘린더 조회 (월별)' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseList(GetCalendarListResponse)
+  async getCalendarList(
+    @Request() req: PlanUserRequest,
+    @Query() query: GetCalendarListRequest,
+  ): Promise<ResponseListDto<GetCalendarListResponse>> {
+    const result = await this.planScheduleService.getCalendarList(
+      req.user.id,
+      query.month,
+      query.year,
+      query.roomId,
+    );
+    return new ResponseListDto(result);
   }
 
   @Get('list')
