@@ -60,6 +60,18 @@ export class GetPlanUserResponse {
   })
   members: GetPlanUserRoomMemberResponse[];
 
+  @ApiProperty({
+    description: '메인 가이드 조회 여부',
+    example: true,
+  })
+  hasSeenMainGuide: boolean;
+
+  @ApiProperty({
+    description: '예산 가이드 조회 여부',
+    example: true,
+  })
+  hasSeenBudgetGuide: boolean;
+
   static from(
     entity: PlanUserEntity,
     members: GetPlanUserRoomMemberResponse[] = [],
@@ -71,6 +83,8 @@ export class GetPlanUserResponse {
       budget: entity.budget,
       name: entity.name,
       members,
+      hasSeenMainGuide: entity.hasSeenMainGuideDate !== null,
+      hasSeenBudgetGuide: entity.hasSeenBudgetGuideDate !== null,
     });
   }
 }

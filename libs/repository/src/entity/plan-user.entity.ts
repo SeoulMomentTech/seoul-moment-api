@@ -58,9 +58,15 @@ export class PlanUserEntity extends CommonEntity {
 
   @Column('date', {
     nullable: true,
-    comment: '첫 방문 일시',
+    comment: '메인 가이드 조회 여부',
   })
-  firstVisitDate: Date;
+  hasSeenMainGuideDate: Date;
+
+  @Column('date', {
+    nullable: true,
+    comment: '예산 가이드 조회 여부',
+  })
+  hasSeenBudgetGuideDate: Date;
 
   @Column('enum', {
     enum: PlanUserStatus,

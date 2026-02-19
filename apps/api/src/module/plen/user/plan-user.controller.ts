@@ -8,6 +8,7 @@ import {
   Controller,
   Get,
   Patch,
+  Post,
   Query,
   Request,
   UseGuards,
@@ -103,5 +104,21 @@ export class PlanUserController {
     const result = await this.planUserService.patchPlanUser(req.user.id, body);
 
     return new ResponseDataDto(result);
+  }
+
+  @Post('has-seen-main-guide')
+  @ApiOperation({ summary: '메인 가이드 조회 여부 수정' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  async postHasSeenMainGuide(@Request() req: PlanUserRequest) {
+    await this.planUserService.postHasSeenMainGuide(req.user.id);
+  }
+
+  @Post('has-seen-budget-guide')
+  @ApiOperation({ summary: '예산 가이드 조회 여부 수정' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  async postHasSeenBudgetGuide(@Request() req: PlanUserRequest) {
+    await this.planUserService.postHasSeenBudgetGuide(req.user.id);
   }
 }

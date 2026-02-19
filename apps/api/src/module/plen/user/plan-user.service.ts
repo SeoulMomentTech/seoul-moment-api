@@ -119,4 +119,16 @@ export class PlanUserService {
       GetPlanUserRoomMemberResponse.from(v.planUser),
     );
   }
+
+  async postHasSeenMainGuide(id: string): Promise<void> {
+    const planUser = await this.planUserRepositoryService.getById(id);
+    planUser.hasSeenMainGuideDate = new Date();
+    await this.planUserRepositoryService.update(planUser);
+  }
+
+  async postHasSeenBudgetGuide(id: string): Promise<void> {
+    const planUser = await this.planUserRepositoryService.getById(id);
+    planUser.hasSeenBudgetGuideDate = new Date();
+    await this.planUserRepositoryService.update(planUser);
+  }
 }
