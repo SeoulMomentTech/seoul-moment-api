@@ -11,6 +11,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -25,7 +26,11 @@ import {
 import { PlanRoomService } from './plan-room.service';
 import { PlanUserRequest } from '../plan.type';
 import { GetPlanUserTotalAmountResponse } from '../schedule/plan-schedule.dto';
-import { GetPlanUserAmountResponse } from '../user/plan-user.dto';
+import {
+  GetPlanUserAmountCategory,
+  GetPlanUserAmountCategoryRequest,
+  GetPlanUserAmountResponse,
+} from '../user/plan-user.dto';
 
 @Controller('plan/room')
 export class PlanRoomController {
@@ -103,5 +108,22 @@ export class PlanRoomController {
     @Param('shareCode') shareCode: string,
   ) {
     await this.planRoomService.postPlanRoom(req.user.id, shareCode);
+  }
+
+  @Get('amount/category-chart/:roomId([0-9]+)')
+  @ApiOperation({ summary: '플랜 유저 금액 차트 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseList(GetPlanUserAmountCategory)
+  async getPlanUserAmountCategoryChart(
+    @Param('roomId', ParseIntPipe) roomId: number,
+    @Query() query: GetPlanUserAmountCategoryRequest,
+  ): Promise<ResponseListDto<GetPlanUserAmountCategory>> {
+    const amount = await this.planRoomService.getPlanRoomCategoryChartList(
+      roomId,
+      query.categoryName,
+    );
+
+    return new ResponseListDto(amount);
   }
 }

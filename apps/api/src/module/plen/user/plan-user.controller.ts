@@ -75,7 +75,7 @@ export class PlanUserController {
   }
 
   @Get('amount/category-chart')
-  @ApiOperation({ summary: '플랜 유저 금액 상세 조회' })
+  @ApiOperation({ summary: '플랜 유저 금액 차트 조회' })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(PlanApiGuard)
   @ResponseList(GetPlanUserAmountCategory)

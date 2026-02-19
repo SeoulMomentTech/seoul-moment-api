@@ -200,7 +200,8 @@ export class PlanScheduleRepositoryService {
   }
 
   async getCategoryChartList(
-    id: string,
+    id?: string,
+    roomId?: number,
     categoryName?: string,
   ): Promise<GetPlanUserAmountCategory[]> {
     const query = this.planScheduleRepository
@@ -211,7 +212,7 @@ export class PlanScheduleRepositoryService {
         `SUM(CASE WHEN ps.status = :completedStatus THEN ps.amount ELSE 0 END)`,
         'usedAmount',
       )
-      .where('ps.planUserId = :id', { id })
+      .where('1=1')
       .andWhere('ps.status IN (:...statusList)', {
         statusList: [PlanScheduleStatus.NORMAL, PlanScheduleStatus.COMPLETED],
       })
@@ -220,6 +221,14 @@ export class PlanScheduleRepositoryService {
         completedStatus: PlanScheduleStatus.COMPLETED,
       })
       .groupBy('ps.categoryName');
+
+    if (id) {
+      query.andWhere('ps.planUserId = :id', { id });
+    }
+
+    if (roomId) {
+      query.andWhere('ps.planUserRoomId = :roomId', { roomId });
+    }
 
     if (categoryName) {
       query.andWhere('ps.categoryName = :categoryName', { categoryName });

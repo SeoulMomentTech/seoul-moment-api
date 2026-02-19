@@ -56,6 +56,12 @@ export class PlanUserEntity extends CommonEntity {
   @Column('varchar', { length: 255, nullable: false, comment: '방 공유 코드' })
   roomShareCode: string;
 
+  @Column('date', {
+    nullable: true,
+    comment: '첫 방문 일시',
+  })
+  firstVisitDate: Date;
+
   @Column('enum', {
     enum: PlanUserStatus,
     default: PlanUserStatus.NORMAL,

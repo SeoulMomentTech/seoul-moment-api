@@ -15,7 +15,10 @@ import {
   GetPlanRoomResponse,
 } from './plan-room.dto';
 import { GetPlanUserTotalAmountResponse } from '../schedule/plan-schedule.dto';
-import { GetPlanUserAmountResponse } from '../user/plan-user.dto';
+import {
+  GetPlanUserAmountCategory,
+  GetPlanUserAmountResponse,
+} from '../user/plan-user.dto';
 
 @Injectable()
 export class PlanRoomService {
@@ -202,6 +205,26 @@ export class PlanRoomService {
       planUserRoomEntity.owner.budget,
       planAmount,
       planUserRoomEntity.owner.budget - planAmount,
+    );
+  }
+
+  async getPlanRoomCategoryChartList(
+    roomId: number,
+    categoryName: string,
+  ): Promise<GetPlanUserAmountCategory[]> {
+    const categoryChartList =
+      await this.planScheduleRepositoryService.getCategoryChartList(
+        undefined,
+        roomId,
+        categoryName,
+      );
+
+    return categoryChartList.map((v) =>
+      GetPlanUserAmountCategory.from(
+        v.categoryName,
+        v.totalAmount,
+        v.usedAmount,
+      ),
     );
   }
 }

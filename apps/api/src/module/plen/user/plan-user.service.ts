@@ -87,6 +87,7 @@ export class PlanUserService {
     const categoryChartList =
       await this.planScheduleRepositoryService.getCategoryChartList(
         id,
+        undefined,
         categoryName,
       );
 
