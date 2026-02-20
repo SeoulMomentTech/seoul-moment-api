@@ -36,15 +36,23 @@ export class PlanCategoryRepositoryService implements OnModuleInit {
     }
   }
 
-  async findAll(userId?: string): Promise<PlanAllCategoryDto[]> {
+  async findAll(
+    userId?: string,
+    roomId?: number,
+  ): Promise<PlanAllCategoryDto[]> {
     let planUserCategories: PlanUserCategoryEntity[] = [];
+    let planRoomCategories: PlanUserCategoryEntity[] = [];
 
     const userCategoryFindOptions: FindManyOptions<PlanUserCategoryEntity> = {
       select: ['id', 'name'],
     };
 
+    const roomCategoryFindOptions: FindManyOptions<PlanUserCategoryEntity> = {
+      select: ['id', 'name'],
+    };
+
     const planCategories = await this.planCategoryRepository.find({
-      select: ['id', 'name', 'color'],
+      select: ['id', 'name'],
     });
 
     if (userId) {
@@ -54,12 +62,22 @@ export class PlanCategoryRepositoryService implements OnModuleInit {
       );
     }
 
+    if (roomId) {
+      roomCategoryFindOptions.where = { planUserRoomId: roomId };
+      planRoomCategories = await this.planUserCategoryRepository.find(
+        roomCategoryFindOptions,
+      );
+    }
+
     return [
       ...planCategories.map((c) =>
-        PlanAllCategoryDto.from(c.id, c.name, PlanCategoryType.SYSTEM, c.color),
+        PlanAllCategoryDto.from(c.id, c.name, PlanCategoryType.SYSTEM),
       ),
       ...planUserCategories.map((c) =>
         PlanAllCategoryDto.from(c.id, c.name, PlanCategoryType.USER),
+      ),
+      ...planRoomCategories.map((c) =>
+        PlanAllCategoryDto.from(c.id, c.name, PlanCategoryType.ROOM),
       ),
     ];
   }
@@ -81,5 +99,12 @@ export class PlanCategoryRepositoryService implements OnModuleInit {
     return this.planUserCategoryRepository.findOne({
       where: { planUserId, name },
     });
+  }
+
+  async updatePlanUserRoomId(planUserId: string, planUserRoomId: number) {
+    await this.planUserCategoryRepository.update(
+      { planUserId },
+      { planUserRoomId },
+    );
   }
 }

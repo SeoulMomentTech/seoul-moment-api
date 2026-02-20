@@ -17,12 +17,6 @@ export class GetPlanCategoryResponse {
   name: string;
 
   @ApiProperty({
-    description: '색상',
-    example: '#8E9DAB',
-  })
-  color: string;
-
-  @ApiProperty({
     description: '타입',
     example: PlanCategoryType.SYSTEM,
     enum: PlanCategoryType,
@@ -33,7 +27,6 @@ export class GetPlanCategoryResponse {
     return plainToInstance(this, {
       id: entity.id,
       name: entity.name,
-      color: entity.color,
       type: entity.type,
     });
   }

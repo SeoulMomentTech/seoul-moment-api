@@ -9,7 +9,4 @@ export class PlanCategoryEntity extends CommonEntity {
 
   @Column('varchar', { length: 255, nullable: false, unique: true })
   name: string;
-
-  @Column('varchar', { length: 255, nullable: false })
-  color: string;
 }

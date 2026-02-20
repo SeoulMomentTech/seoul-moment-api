@@ -83,6 +83,7 @@ export class PlanScheduleService {
           plainToInstance(PlanUserCategoryEntity, {
             planUserId: id,
             name,
+            planUserRoomId: postPlanScheduleRequest.roomId,
           }),
         ),
       );

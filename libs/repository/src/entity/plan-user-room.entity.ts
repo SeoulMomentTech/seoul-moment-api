@@ -9,6 +9,7 @@ import {
 
 import { CommonEntity } from './common.entity';
 import { PlanScheduleEntity } from './plan-schedule.entity';
+import { PlanUserCategoryEntity } from './plan-user-category.entity';
 import { PlanUserRoomMemberEntity } from './plan-user-room-member.entity';
 import { PlanUserEntity } from './plan-user.entity';
 
@@ -33,4 +34,13 @@ export class PlanUserRoomEntity extends CommonEntity {
     cascade: true,
   })
   schedules: PlanScheduleEntity[];
+
+  @OneToMany(
+    () => PlanUserCategoryEntity,
+    (category) => category.planUserRoom,
+    {
+      cascade: true,
+    },
+  )
+  categories: PlanUserCategoryEntity[];
 }

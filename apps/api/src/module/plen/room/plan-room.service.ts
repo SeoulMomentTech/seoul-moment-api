@@ -1,6 +1,7 @@
 import { PlanUserRoomMemberEntity } from '@app/repository/entity/plan-user-room-member.entity';
 import { PlanUserRoomEntity } from '@app/repository/entity/plan-user-room.entity';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
+import { PlanCategoryRepositoryService } from '@app/repository/service/plan-category.repository.service';
 import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
 import { PlanUserRoomMemberRepositoryService } from '@app/repository/service/plan-user--room-member.repository.service';
 import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
@@ -27,6 +28,7 @@ export class PlanRoomService {
     private readonly planUserRepositoryService: PlanUserRepositoryService,
     private readonly planUserRoomMemberRepositoryService: PlanUserRoomMemberRepositoryService,
     private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
+    private readonly planCategoryRepositoryService: PlanCategoryRepositoryService,
   ) {}
 
   async getPlanRoomInfo(roomId: number): Promise<GetPlanRoomResponse> {
@@ -117,6 +119,11 @@ export class PlanRoomService {
     );
 
     await this.planScheduleRepositoryService.updatePlanUserRoomId(
+      ownerUserEntity.id,
+      createPlanUserRoom.id,
+    );
+
+    await this.planCategoryRepositoryService.updatePlanUserRoomId(
       ownerUserEntity.id,
       createPlanUserRoom.id,
     );
