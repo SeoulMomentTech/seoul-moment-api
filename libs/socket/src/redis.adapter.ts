@@ -14,14 +14,31 @@ const MAX_RECONNECT_RETRIES = 10;
 const MIN_RECONNECT_DELAY_MS = 2000;
 const CONNECT_TOTAL_TIMEOUT_MS = 15000;
 
+/** 객체/에러를 ECS에서 읽을 수 있는 문자열로 변환 ( [object Object] 방지 ) */
+function stringifyForLog(value: unknown): string {
+  if (value instanceof Error) {
+    return `${value.message}\n${value.stack ?? ''}`.trim();
+  }
+  if (typeof value === 'object' && value !== null) {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
 /** ECS CloudWatch 로그용으로 의도적으로 console 사용 */
 function log(msg: string, ...args: unknown[]) {
+  const rest = args.map((a) => (typeof a === 'object' && a !== null ? stringifyForLog(a) : a));
   // eslint-disable-next-line no-console
-  console.log(`[RedisIoAdapter] ${msg}`, ...args);
+  console.log(`[RedisIoAdapter] ${msg}`, ...rest);
 }
 function logError(msg: string, ...args: unknown[]) {
+  const rest = args.map((a) => (typeof a === 'object' && a !== null ? stringifyForLog(a) : a));
   // eslint-disable-next-line no-console
-  console.error(`[RedisIoAdapter] ${msg}`, ...args);
+  console.error(`[RedisIoAdapter] ${msg}`, ...rest);
 }
 
 function timeoutMs(ms: number): Promise<never> {
@@ -80,11 +97,10 @@ export class RedisIoAdapter extends IoAdapter {
       },
     };
 
-    /** ElastiCache TLS 환경 대응: 인증서 검증 우회 옵션 포함 */
+    /** ElastiCache TLS: node-redis는 socket.tls를 boolean으로만 받고, rejectUnauthorized는 socket 직속 */
     if (useTls) {
-      socketOptions.tls = {
-        rejectUnauthorized: false,
-      };
+      socketOptions.tls = true;
+      socketOptions.rejectUnauthorized = false;
     }
 
     const redisConfig = {
