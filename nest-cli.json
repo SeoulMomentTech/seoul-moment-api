@@ -97,6 +97,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/auth/tsconfig.lib.json"
       }
+    },
+    "socket": {
+      "type": "library",
+      "root": "libs/socket",
+      "entryFile": "index",
+      "sourceRoot": "libs/socket/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/socket/tsconfig.lib.json"
+      }
     }
   },
   "monorepo": true,

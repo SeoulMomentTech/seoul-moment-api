@@ -64,6 +64,7 @@ export class LoggerService {
 
   info(message: string, object?: Record<string, any>): void {
     this.logger.info({
+      traceId: this.getTraceId(),
       message,
       ...object,
     });
@@ -71,6 +72,7 @@ export class LoggerService {
 
   warn(message: string, object?: Record<string, any>): void {
     this.logger.warn({
+      traceId: this.getTraceId(),
       message,
       ...object,
     });
@@ -80,6 +82,7 @@ export class LoggerService {
   error(message: string, error?: any, object?: Record<string, any>): void;
   error(message: string, error?: any, object?: Record<string, any>): void {
     const logObject: Record<string, any> = {
+      traceId: this.getTraceId(),
       message,
       ...(object || {}),
     };
@@ -93,6 +96,7 @@ export class LoggerService {
 
   debug(message: string, object?: Record<string, any>): void {
     this.logger.debug({
+      traceId: this.getTraceId(),
       message,
       ...object,
     });

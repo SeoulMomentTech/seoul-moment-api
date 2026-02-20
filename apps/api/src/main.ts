@@ -3,6 +3,7 @@ import { swaggerSettring } from '@app/common/docs/swagger';
 import { LoggerService } from '@app/common/log/logger.service';
 import morganSetting from '@app/common/log/morgan';
 import { Configuration } from '@app/config/configuration';
+import { RedisIoAdapter } from '@app/socket/redis.adapter';
 import {
   BadRequestException,
   HttpStatus,
@@ -94,6 +95,11 @@ async function bootstrap() {
   if (config.REDIS_HOST) {
     logger.info(`🔴 Redis: ${config.REDIS_HOST}:${config.REDIS_PORT}`);
   }
+
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+
+  app.useWebSocketAdapter(redisIoAdapter);
 
   await app.listen(config.PORT);
 

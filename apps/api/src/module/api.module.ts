@@ -5,6 +5,7 @@ import { LoggerModule } from '@app/common/log/logger.module';
 import { DatabaseModule } from '@app/database/database.module';
 import { DatabaseService } from '@app/database/database.service';
 import { RepositoryModule } from '@app/repository/repository.module';
+import { SocketModule } from '@app/socket/socket.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
@@ -58,6 +59,7 @@ import { ProductModule } from './product/product.module';
     PlanModule,
     LanguageModule,
     AuthModule,
+    SocketModule,
   ],
   controllers: [HealthController],
   providers: [

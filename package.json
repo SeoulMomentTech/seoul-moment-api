@@ -48,10 +48,13 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/platform-socket.io": "^10.4.22",
     "@nestjs/schedule": "^6.0.0",
     "@nestjs/swagger": "^8.1.1",
     "@nestjs/typeorm": "^11.0.0",
+    "@nestjs/websockets": "^10.4.22",
     "@opensearch-project/opensearch": "^3.5.1",
+    "@socket.io/redis-adapter": "^8.3.0",
     "@types/multer": "^2.0.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
@@ -67,9 +70,11 @@
     "openai": "^6.15.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
+    "redis": "^5.11.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
     "sharp": "^0.34.5",
+    "socket.io": "^4.8.3",
     "typeorm": "^0.3.26",
     "typeorm-naming-strategies": "^4.1.0",
     "typeorm-transactional": "^0.5.0",
@@ -134,7 +139,8 @@
       "^@app/external(|/.*)$": "<rootDir>/libs/external/src/$1",
       "^@app/http(|/.*)$": "<rootDir>/libs/http/src/$1",
       "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1",
-      "^@app/auth(|/.*)$": "<rootDir>/libs/auth/src/$1"
+      "^@app/auth(|/.*)$": "<rootDir>/libs/auth/src/$1",
+      "^@app/socket(|/.*)$": "<rootDir>/libs/socket/src/$1"
     },
     "projects": [
       {
