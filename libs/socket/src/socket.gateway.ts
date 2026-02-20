@@ -1,4 +1,9 @@
+/* eslint-disable max-lines-per-function */
 import { LoggerService } from '@app/common/log/logger.service';
+import { ChatMessageEntity } from '@app/repository/entity/chat-message.entity';
+import { ChatMessageType } from '@app/repository/enum/chat-message.enum';
+import { ChatMessageRepositoryService } from '@app/repository/service/chat-message.repository.service';
+import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
 import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
 import {
@@ -10,6 +15,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { plainToInstance } from 'class-transformer';
 import { Server, Socket } from 'socket.io';
 
 // DB 대용으로 사용할 메모리 객체
@@ -22,6 +28,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger: LoggerService,
     private readonly planUserRoomRepositoryService: PlanUserRoomRepositoryService,
     private readonly planUserRepositoryService: PlanUserRepositoryService,
+    private readonly chatMessageRepositoryService: ChatMessageRepositoryService,
+    private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
   ) {}
 
   @WebSocketServer() server: Server;
@@ -61,7 +69,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
 
-      this.logger.info('============== roomsData ==============', {
+      this.logger.info('============== roomsData ==============\n', {
         roomsData,
       });
 
@@ -81,9 +89,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('message')
   async handleMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { room: number; message: string },
+    @MessageBody()
+    payload: { room: number; message: string; messageType: ChatMessageType },
   ) {
-    const { room, message } = payload;
+    const { room, message, messageType } = payload;
 
     try {
       await this.planUserRoomRepositoryService.getByRoomId(room);
@@ -94,12 +103,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `[MSG] Room: ${room} | User: ${senderPlanUser.id} | Text: ${message}`,
       );
 
+      const chatMessage = await this.chatMessageRepositoryService.create(
+        plainToInstance(ChatMessageEntity, {
+          roomId: room,
+          planUserId: senderPlanUser.id,
+          message:
+            messageType === ChatMessageType.TEXT
+              ? { text: message }
+              : { scheduleId: Number(message) },
+          messageType,
+        }),
+      );
+
+      const chatMessageDto = await this.chatMessageRepositoryService.findById(
+        chatMessage.id,
+      );
+
       // 소켓 서버에서 room.toString() 채널로 메시지 전송
       this.server.to(room.toString()).emit('message', {
         senderId: senderPlanUser.id,
         senderName: senderPlanUser.name,
         senderProfileImageUrl: senderPlanUser.profileImageUrl,
-        message,
+        message: chatMessageDto,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

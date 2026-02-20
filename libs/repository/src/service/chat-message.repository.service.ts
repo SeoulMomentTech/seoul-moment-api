@@ -59,4 +59,26 @@ export class ChatMessageRepositoryService {
       total,
     ];
   }
+
+  async findById(id: number): Promise<ChatMessageDto | null> {
+    const chatMessage = await this.chatMessageRepository.findOne({
+      where: { id },
+    });
+
+    if (chatMessage.messageType === ChatMessageType.TEXT) {
+      return ChatMessageDto.from(chatMessage, chatMessage.message.text);
+    } else if (chatMessage.messageType === ChatMessageType.SCHEDULE) {
+      const schedule = await this.planScheduleRepositoryService.findById(
+        chatMessage.message.scheduleId,
+      );
+
+      return ChatMessageDto.from(
+        chatMessage,
+        schedule ? null : '플랜이 삭제 되거나 없습니다.',
+        schedule ? ChatMessageScheduleDto.from(schedule) : null,
+      );
+    }
+
+    return null;
+  }
 }
