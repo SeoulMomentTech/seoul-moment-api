@@ -92,12 +92,15 @@ export class RedisIoAdapter extends IoAdapter {
       socket: socketOptions,
     };
 
+    let pubClient: ReturnType<typeof createClient> | undefined;
+    let subClient: ReturnType<typeof createClient> | undefined;
+
     try {
       log('📦 [Step 3] Redis 클라이언트 인스턴스 생성 중...');
-      const pubClient = createClient(redisConfig);
+      pubClient = createClient(redisConfig);
 
       log('👯 [Step 4] Sub 클라이언트 복제(duplicate) 중...');
-      const subClient = pubClient.duplicate();
+      subClient = pubClient.duplicate();
 
       /** * [중요] connect() 호출 직전에 에러 리스너를 붙여야
        * 초기 연결 단계의 에러를 놓치지 않습니다.
@@ -126,8 +129,8 @@ export class RedisIoAdapter extends IoAdapter {
 
       /** 연결 실패 시 자원 정리: 좀비 커넥션 방지 */
       try {
-        await pubClient.quit().catch(() => {});
-        await subClient.quit().catch(() => {});
+        if (typeof pubClient?.quit === 'function') await pubClient.quit().catch(() => {});
+        if (typeof subClient?.quit === 'function') await subClient.quit().catch(() => {});
       } catch {
         // ignore
       }
