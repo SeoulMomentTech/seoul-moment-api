@@ -98,10 +98,10 @@ async function bootstrap() {
     logger.info(`🔴 Redis: ${config.REDIS_HOST}:${config.REDIS_PORT}`);
   }
 
-  const redisIoAdapter = new RedisIoAdapter(app);
-  await redisIoAdapter.connectToRedis();
+  // const redisIoAdapter = new RedisIoAdapter(app);
+  // await redisIoAdapter.connectToRedis();
 
-  app.useWebSocketAdapter(redisIoAdapter);
+  // app.useWebSocketAdapter(redisIoAdapter);
 
   await app.listen(config.PORT);
 
