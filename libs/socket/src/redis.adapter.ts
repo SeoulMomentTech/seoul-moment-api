@@ -129,8 +129,10 @@ export class RedisIoAdapter extends IoAdapter {
 
       /** 연결 실패 시 자원 정리: 좀비 커넥션 방지 */
       try {
-        if (typeof pubClient?.quit === 'function') await pubClient.quit().catch(() => {});
-        if (typeof subClient?.quit === 'function') await subClient.quit().catch(() => {});
+        if (typeof pubClient?.quit === 'function')
+          await pubClient.quit().catch(() => {});
+        if (typeof subClient?.quit === 'function')
+          await subClient.quit().catch(() => {});
       } catch {
         // ignore
       }
