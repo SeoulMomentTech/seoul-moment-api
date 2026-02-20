@@ -31,12 +31,16 @@ function stringifyForLog(value: unknown): string {
 
 /** ECS CloudWatch 로그용으로 의도적으로 console 사용 */
 function log(msg: string, ...args: unknown[]) {
-  const rest = args.map((a) => (typeof a === 'object' && a !== null ? stringifyForLog(a) : a));
+  const rest = args.map((a) =>
+    typeof a === 'object' && a !== null ? stringifyForLog(a) : a,
+  );
   // eslint-disable-next-line no-console
   console.log(`[RedisIoAdapter] ${msg}`, ...rest);
 }
 function logError(msg: string, ...args: unknown[]) {
-  const rest = args.map((a) => (typeof a === 'object' && a !== null ? stringifyForLog(a) : a));
+  const rest = args.map((a) =>
+    typeof a === 'object' && a !== null ? stringifyForLog(a) : a,
+  );
   // eslint-disable-next-line no-console
   console.error(`[RedisIoAdapter] ${msg}`, ...rest);
 }
