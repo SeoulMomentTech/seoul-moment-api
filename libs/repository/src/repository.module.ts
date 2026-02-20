@@ -12,6 +12,7 @@ import { BrandSectionImageEntity } from './entity/brand-section-image.entity';
 import { BrandSectionEntity } from './entity/brand-section.entity';
 import { BrandEntity } from './entity/brand.entity';
 import { CategoryEntity } from './entity/category.entity';
+import { ChatMessageEntity } from './entity/chat-message.entity';
 import { ExternalLinkEntity } from './entity/external-link.entity';
 import { HomeBannerImageEntity } from './entity/home-banner-image.entity';
 import { HomeSectionImageEntity } from './entity/home-section-image.entity';
@@ -47,6 +48,7 @@ import { AdminRepositoryService } from './service/admin.repository.service';
 import { ArticleRepositoryService } from './service/article.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
 import { CategoryRepositoryService } from './service/category.repository.service';
+import { ChatMessageRepositoryService } from './service/chat-message.repository.service';
 import { HomeRepositoryService } from './service/home.repository.service';
 import { LanguageRepositoryService } from './service/language.repository.service';
 import { NewsRepositoryService } from './service/news.repository.service';
@@ -103,6 +105,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
       PlanUserCategoryEntity,
       PlanUserRoomEntity,
       PlanUserRoomMemberEntity,
+      ChatMessageEntity,
     ]),
   ],
   providers: [
@@ -125,6 +128,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
     PlanUserRoomMemberRepositoryService,
+    ChatMessageRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -145,6 +149,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
     PlanUserRoomMemberRepositoryService,
+    ChatMessageRepositoryService,
   ],
 })
 export class RepositoryModule {}

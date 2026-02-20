@@ -22,6 +22,7 @@ import { v4 as uuidV4 } from 'uuid';
 import { AppModule } from './module/api.module';
 import { PlanAuthModule } from './module/plen/auth/plan.auth.module';
 import { PlanCategoryModule } from './module/plen/category/plan-category.module';
+import { ChatModule } from './module/plen/chat/chat.module';
 import { PlanModule } from './module/plen/plan.module';
 import { PlanRoomModule } from './module/plen/room/plan-room.module';
 import { PlanScheduleModule } from './module/plen/schedule/plan-schedule.module';
@@ -60,6 +61,7 @@ async function bootstrap() {
       PlanScheduleModule,
       PlanCategoryModule,
       PlanRoomModule,
+      ChatModule,
     ], // 이 모듈에 속한 컨트롤러만 /docs-plen에 표시
   });
 

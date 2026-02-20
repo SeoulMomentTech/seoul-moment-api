@@ -69,6 +69,13 @@ export class PlanScheduleRepositoryService {
     return result;
   }
 
+  async findById(id: number): Promise<PlanScheduleEntity | null> {
+    return await this.planScheduleRepository.findOne({
+      where: { id, status: Not(In([PlanScheduleStatus.DELETE])) },
+      relations: ['planUser'],
+    });
+  }
+
   async create(entity: PlanScheduleEntity): Promise<PlanScheduleEntity> {
     return this.planScheduleRepository.save(entity);
   }
@@ -272,6 +279,12 @@ export class PlanScheduleRepositoryService {
         planUserRoomId: !roomId ? IsNull() : roomId,
         startDate: Between(startDate, endDate),
       },
+    });
+  }
+
+  async findByIds(ids: number[]): Promise<PlanScheduleEntity[]> {
+    return this.planScheduleRepository.find({
+      where: { id: In(ids) },
     });
   }
 }
