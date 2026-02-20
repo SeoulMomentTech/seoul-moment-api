@@ -51,9 +51,7 @@ export class RedisIoAdapter extends IoAdapter {
       connectTimeout: 10000,
       reconnectStrategy: (retries: number): number | false => {
         if (retries >= MAX_RECONNECT_RETRIES) {
-          logError(
-            `reconnect aborted after ${MAX_RECONNECT_RETRIES} retries`,
-          );
+          logError(`reconnect aborted after ${MAX_RECONNECT_RETRIES} retries`);
           return false;
         }
         const delay = Math.max(
