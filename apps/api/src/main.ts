@@ -98,10 +98,17 @@ async function bootstrap() {
     logger.info(`🔴 Redis: ${config.REDIS_HOST}:${config.REDIS_PORT}`);
   }
 
-  const redisIoAdapter = new RedisIoAdapter(app);
-  await redisIoAdapter.connectToRedis();
-
-  app.useWebSocketAdapter(redisIoAdapter);
+  // Redis adapter 사용 시 연결 실패/재연결 반복 시 CPU 80% 폭주. 인스턴스 2개 이상일 때만 켜기.
+  if (config.REDIS_HOST) {
+    logger.info('[main] WebSocket: using Redis adapter (multi-instance)');
+    const redisIoAdapter = new RedisIoAdapter(app);
+    await redisIoAdapter.connectToRedis();
+    app.useWebSocketAdapter(redisIoAdapter);
+  } else {
+    logger.info(
+      '[main] WebSocket: using in-memory adapter (single instance, no Redis Socket.IO)',
+    );
+  }
 
   await app.listen(config.PORT);
 
