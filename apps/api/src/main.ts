@@ -53,6 +53,7 @@ async function bootstrap() {
 
   morganSetting(app);
   swaggerSettring(app, {
+    docsExcludePaths: ['/plan'], // /plan으로 시작하는 경로는 /docs에서 제외
     plenInclude: [
       PlanModule,
       PlanAuthModule,

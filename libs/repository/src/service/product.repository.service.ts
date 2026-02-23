@@ -186,6 +186,7 @@ export class ProductRepositoryService implements OnModuleInit {
     search?: string,
     withoutId?: number,
     optionIdList?: number[],
+    mainView?: boolean,
   ): Promise<[ProductItemEntity[], number]> {
     // 대용량 최적화: 옵션 필터링을 위한 서브쿼리 생성
     const buildOptionFilterSubquery = () => {
@@ -247,6 +248,11 @@ export class ProductRepositoryService implements OnModuleInit {
         .andWhere('b.status = :brandStatus', {
           brandStatus: BrandStatus.NORMAL,
         });
+
+      if (mainView !== undefined) {
+        console.log('mainView', mainView);
+        query.andWhere('pc.main_view = :mainView', { mainView });
+      }
 
       // 필터 조건들
       if (brandId) {

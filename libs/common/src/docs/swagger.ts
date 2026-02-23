@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { INestApplication, Type } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -7,6 +8,8 @@ const SWAGGER_DOCS_PATH = 'docs';
 const SWAGGER_DOCS_PLEN_PATH = 'docs-plen';
 
 export interface SwaggerSettingOptions {
+  /** docs에서 제외할 경로 prefix 목록 (예: ['/plan']) */
+  docsExcludePaths?: string[];
   /** docs-plen에 노출할 모듈. 이 모듈에 속한 컨트롤러만 문서에 표시 */
   plenInclude?: Type[];
 }
@@ -31,6 +34,16 @@ export function swaggerSettring(
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
+
+  if (options?.docsExcludePaths?.length) {
+    const excludePrefixes = options.docsExcludePaths;
+    Object.keys(document.paths).forEach((path) => {
+      if (excludePrefixes.some((prefix) => path.startsWith(prefix))) {
+        delete document.paths[path];
+      }
+    });
+  }
+
   SwaggerModule.setup(SWAGGER_DOCS_PATH, app, document);
 
   // /docs-plen: plen 전용 문서 (설정·포함 모듈 등을 따로 관리 가능)

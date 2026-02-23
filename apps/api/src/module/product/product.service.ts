@@ -129,6 +129,7 @@ export class ProductService {
     language: LanguageCode,
     withoutId?: number,
   ): Promise<[GetProductResponse[], number]> {
+    console.log('dto', dto);
     const [productItemList, count] =
       await this.productRepositoryService.findProductItem(
         PagingDto.from(dto.page, dto.count),
@@ -141,6 +142,7 @@ export class ProductService {
         dto.search,
         withoutId,
         dto.optionIdList,
+        dto.mainView,
       );
 
     const [brandText, productText, optionValueText] = await Promise.all([

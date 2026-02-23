@@ -67,6 +67,13 @@ export class ProductItemEntity extends CommonEntity {
   })
   shippingInfo: number;
 
+  @Column('boolean', {
+    default: false,
+    nullable: false,
+    comment: '메인 페이지 노출 여부',
+  })
+  mainView: boolean;
+
   @Column('enum', {
     enum: ProductItemStatus,
     default: ProductItemStatus.NORMAL,

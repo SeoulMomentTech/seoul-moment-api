@@ -166,6 +166,7 @@ export class ProductController {
         query.categoryId,
         query.productCategoryId,
         query.optionIdList,
+        query.mainView,
       ),
       acceptLanguage,
     );

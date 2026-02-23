@@ -16,6 +16,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsDefined,
   IsEnum,
   IsInt,
@@ -245,6 +246,19 @@ export class GetProductRequest {
   @IsNumber({}, { each: true })
   optionIdList: number[];
 
+  @ApiPropertyOptional({
+    description: '메인 페이지 노출 여부',
+    example: true,
+  })
+  @IsBoolean()
+  @Transform(({ value }) =>
+    value === undefined || value === null
+      ? undefined
+      : value === 'true' || value === true,
+  )
+  @IsOptional()
+  mainView: boolean;
+
   static from(
     page: number,
     count: number,
@@ -255,6 +269,7 @@ export class GetProductRequest {
     categoryId?: number,
     productCategoryId?: number,
     optionIdList?: number[],
+    mainView?: boolean,
   ) {
     return plainToInstance(this, {
       page,
@@ -266,6 +281,7 @@ export class GetProductRequest {
       categoryId,
       productCategoryId,
       optionIdList,
+      mainView,
     });
   }
 
