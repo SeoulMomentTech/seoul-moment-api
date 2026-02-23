@@ -26,6 +26,7 @@ export class ChatController {
       roomId,
       query.page,
       query.count,
+      query.sort,
     );
     return new ResponseListDto(result, total);
   }

@@ -1,3 +1,4 @@
+import { DatabaseSort } from '@app/common/enum/global.enum';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -26,13 +27,15 @@ export class ChatMessageRepositoryService {
     roomId: number,
     page: number,
     count: number,
+    sort: DatabaseSort,
   ): Promise<[ChatMessageDto[], number]> {
     const [messageEntityList, total] =
       await this.chatMessageRepository.findAndCount({
         where: { roomId },
-        order: { createDate: 'DESC' },
+        order: { createDate: sort },
         skip: (page - 1) * count,
         take: count,
+        relations: ['planUser'],
       });
 
     const promises = messageEntityList.map(async (v) => {

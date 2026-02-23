@@ -32,6 +32,9 @@ export class ChatMessageScheduleDto {
 
 export class ChatMessageDto {
   id: number;
+  planUserId: string;
+  planUserName: string;
+  planUserProfileImageUrl: string;
   text?: string;
   messageType: ChatMessageType;
   schedule?: ChatMessageScheduleDto;
@@ -44,6 +47,9 @@ export class ChatMessageDto {
   ) {
     return plainToInstance(this, {
       id: entity.id,
+      planUserId: entity.planUserId,
+      planUserName: entity.planUser.name,
+      planUserProfileImageUrl: entity.planUser.getProfileImageUrl(),
       messageType: entity.messageType,
       text,
       schedule,
