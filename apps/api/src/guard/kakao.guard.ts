@@ -25,11 +25,13 @@ export class PlanApiGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const token = request.headers.authorization.split(' ')[1];
+    let token = request.headers.authorization;
 
     if (!token) {
       throw new ServiceError('Token not found', ServiceErrorCode.UNAUTHORIZED);
     }
+
+    token = token.split(' ')[1];
 
     let payload: Record<string, any> = {};
     try {

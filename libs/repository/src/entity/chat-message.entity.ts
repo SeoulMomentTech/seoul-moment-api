@@ -7,8 +7,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+import { ChatRoomEntity } from './chat-room.entity';
 import { CommonEntity } from './common.entity';
-import { PlanUserRoomEntity } from './plan-user-room.entity';
 import { PlanUserEntity } from './plan-user.entity';
 import { ChatMessageObject } from '../dto/chat-message.dto';
 import { ChatMessageType } from '../enum/chat-message.enum';
@@ -38,11 +38,18 @@ export class ChatMessageEntity extends CommonEntity {
   })
   messageType: ChatMessageType;
 
-  @ManyToOne(() => PlanUserRoomEntity, (room) => room.chatMessages, {
+  @Column('boolean', {
+    default: false,
+    nullable: false,
+    comment: '메시지 읽음 여부',
+  })
+  isViewed: boolean;
+
+  @ManyToOne(() => ChatRoomEntity, (chatRoom) => chatRoom.messages, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'room_id' })
-  room: PlanUserRoomEntity;
+  chatRoom: ChatRoomEntity;
 
   @ManyToOne(() => PlanUserEntity, (planUser) => planUser.chatMessages, {
     onDelete: 'CASCADE',

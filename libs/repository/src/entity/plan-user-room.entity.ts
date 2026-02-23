@@ -7,7 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { ChatMessageEntity } from './chat-message.entity';
+import { ChatRoomEntity } from './chat-room.entity';
 import { CommonEntity } from './common.entity';
 import { PlanScheduleEntity } from './plan-schedule.entity';
 import { PlanUserCategoryEntity } from './plan-user-category.entity';
@@ -45,6 +45,6 @@ export class PlanUserRoomEntity extends CommonEntity {
   )
   categories: PlanUserCategoryEntity[];
 
-  @OneToMany(() => ChatMessageEntity, (message) => message.room)
-  chatMessages: ChatMessageEntity[];
+  @OneToMany(() => ChatRoomEntity, (chatRoom) => chatRoom.planUserRoom)
+  chatRooms: ChatRoomEntity[];
 }

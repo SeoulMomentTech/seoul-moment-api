@@ -95,7 +95,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { room, message, messageType } = payload;
 
     try {
-      await this.planUserRoomRepositoryService.getByRoomId(room);
+      const chatRoom =
+        await this.chatMessageRepositoryService.getChatRoom(room);
+
+      await this.planUserRoomRepositoryService.getByRoomId(
+        chatRoom.planUserRoomId,
+      );
 
       const senderPlanUser = (client as any).planUser;
 

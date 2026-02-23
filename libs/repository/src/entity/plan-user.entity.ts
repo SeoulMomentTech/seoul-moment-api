@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 
 import { ChatMessageEntity } from './chat-message.entity';
+import { ChatRoomMemberEntity } from './chat-room-member.entity';
 import { CommonEntity } from './common.entity';
 import { PlanScheduleEntity } from './plan-schedule.entity';
 import { PlanUserCategoryEntity } from './plan-user-category.entity';
@@ -100,6 +101,11 @@ export class PlanUserEntity extends CommonEntity {
     cascade: true,
   })
   chatMessages: ChatMessageEntity[];
+
+  @OneToMany(() => ChatRoomMemberEntity, (member) => member.planUser, {
+    cascade: true,
+  })
+  chatRoomMembers: ChatRoomMemberEntity[];
 
   @Column('timestamp', { nullable: true, comment: '마지막 로그인 일시' })
   lastLoginDate: Date;

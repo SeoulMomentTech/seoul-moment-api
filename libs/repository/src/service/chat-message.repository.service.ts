@@ -1,4 +1,6 @@
 import { DatabaseSort } from '@app/common/enum/global.enum';
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,6 +11,8 @@ import {
   ChatMessageScheduleDto,
 } from '../dto/chat-message.dto';
 import { ChatMessageEntity } from '../entity/chat-message.entity';
+import { ChatRoomMemberEntity } from '../entity/chat-room-member.entity';
+import { ChatRoomEntity } from '../entity/chat-room.entity';
 import { ChatMessageType } from '../enum/chat-message.enum';
 
 @Injectable()
@@ -16,6 +20,13 @@ export class ChatMessageRepositoryService {
   constructor(
     @InjectRepository(ChatMessageEntity)
     private readonly chatMessageRepository: Repository<ChatMessageEntity>,
+
+    @InjectRepository(ChatRoomEntity)
+    private readonly chatRoomRepository: Repository<ChatRoomEntity>,
+
+    @InjectRepository(ChatRoomMemberEntity)
+    private readonly chatRoomMemberRepository: Repository<ChatRoomMemberEntity>,
+
     private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
   ) {}
 
@@ -83,5 +94,38 @@ export class ChatMessageRepositoryService {
     }
 
     return null;
+  }
+
+  async createChatRoom(entity: ChatRoomEntity): Promise<ChatRoomEntity> {
+    return this.chatRoomRepository.save(entity);
+  }
+
+  async getChatRoom(chatRoomId: number): Promise<ChatRoomEntity> {
+    const result = await this.chatRoomRepository.findOne({
+      where: { id: chatRoomId },
+      relations: ['members'],
+    });
+
+    if (!result) {
+      throw new ServiceError(
+        `Chat room not found chatRoomId: ${chatRoomId}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+    return result;
+  }
+
+  async createChatRoomMember(
+    entity: ChatRoomMemberEntity,
+  ): Promise<ChatRoomMemberEntity> {
+    return this.chatRoomMemberRepository.save(entity);
+  }
+
+  async findChatRoomByPlanUserId(
+    planUserId: string,
+  ): Promise<ChatRoomEntity[]> {
+    return this.chatRoomRepository.find({
+      where: { members: { planUserId } },
+    });
   }
 }

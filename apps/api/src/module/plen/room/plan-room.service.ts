@@ -1,6 +1,10 @@
+/* eslint-disable max-lines-per-function */
+import { ChatRoomMemberEntity } from '@app/repository/entity/chat-room-member.entity';
+import { ChatRoomEntity } from '@app/repository/entity/chat-room.entity';
 import { PlanUserRoomMemberEntity } from '@app/repository/entity/plan-user-room-member.entity';
 import { PlanUserRoomEntity } from '@app/repository/entity/plan-user-room.entity';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
+import { ChatMessageRepositoryService } from '@app/repository/service/chat-message.repository.service';
 import { PlanCategoryRepositoryService } from '@app/repository/service/plan-category.repository.service';
 import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
 import { PlanUserRoomMemberRepositoryService } from '@app/repository/service/plan-user--room-member.repository.service';
@@ -29,6 +33,7 @@ export class PlanRoomService {
     private readonly planUserRoomMemberRepositoryService: PlanUserRoomMemberRepositoryService,
     private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
     private readonly planCategoryRepositoryService: PlanCategoryRepositoryService,
+    private readonly chatMessageRepositoryService: ChatMessageRepositoryService,
   ) {}
 
   async getPlanRoomInfo(roomId: number): Promise<GetPlanRoomResponse> {
@@ -127,6 +132,28 @@ export class PlanRoomService {
       ownerUserEntity.id,
       createPlanUserRoom.id,
     );
+
+    const chatRoomEntity =
+      await this.chatMessageRepositoryService.createChatRoom(
+        plainToInstance(ChatRoomEntity, {
+          planUserRoomId: createPlanUserRoom.id,
+        }),
+      );
+
+    await Promise.all([
+      this.chatMessageRepositoryService.createChatRoomMember(
+        plainToInstance(ChatRoomMemberEntity, {
+          chatRoomId: chatRoomEntity.id,
+          planUserId: ownerUserEntity.id,
+        }),
+      ),
+      this.chatMessageRepositoryService.createChatRoomMember(
+        plainToInstance(ChatRoomMemberEntity, {
+          chatRoomId: chatRoomEntity.id,
+          planUserId: userId,
+        }),
+      ),
+    ]);
   }
 
   private async getPlanUserRoomMemberListByUserId(

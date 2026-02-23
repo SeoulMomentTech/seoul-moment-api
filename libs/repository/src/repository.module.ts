@@ -13,6 +13,8 @@ import { BrandSectionEntity } from './entity/brand-section.entity';
 import { BrandEntity } from './entity/brand.entity';
 import { CategoryEntity } from './entity/category.entity';
 import { ChatMessageEntity } from './entity/chat-message.entity';
+import { ChatRoomMemberEntity } from './entity/chat-room-member.entity';
+import { ChatRoomEntity } from './entity/chat-room.entity';
 import { ExternalLinkEntity } from './entity/external-link.entity';
 import { HomeBannerImageEntity } from './entity/home-banner-image.entity';
 import { HomeSectionImageEntity } from './entity/home-section-image.entity';
@@ -106,6 +108,8 @@ import { ProductRepositoryService } from './service/product.repository.service';
       PlanUserRoomEntity,
       PlanUserRoomMemberEntity,
       ChatMessageEntity,
+      ChatRoomEntity,
+      ChatRoomMemberEntity,
     ]),
   ],
   providers: [
