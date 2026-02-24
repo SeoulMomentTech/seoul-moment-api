@@ -121,4 +121,12 @@ export class PlanUserController {
   async postHasSeenBudgetGuide(@Request() req: PlanUserRequest) {
     await this.planUserService.postHasSeenBudgetGuide(req.user.id);
   }
+
+  @Post('has-seen-chat-guide')
+  @ApiOperation({ summary: '채팅 가이드 조회 여부 수정' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  async postHasSeenChatGuide(@Request() req: PlanUserRequest) {
+    await this.planUserService.postHasSeenChatGuide(req.user.id);
+  }
 }

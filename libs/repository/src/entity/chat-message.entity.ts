@@ -13,14 +13,14 @@ import { PlanUserEntity } from './plan-user.entity';
 import { ChatMessageObject } from '../dto/chat-message.dto';
 import { ChatMessageType } from '../enum/chat-message.enum';
 
-@Index(['roomId', 'messageType'])
+@Index(['chatRoomId', 'messageType'])
 @Entity('chat_message')
 export class ChatMessageEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column('int', { name: 'room_id', nullable: false })
-  roomId: number;
+  @Column('int', { name: 'chat_room_id', nullable: false })
+  chatRoomId: number;
 
   @Column('varchar', { name: 'plan_user_id', nullable: false })
   planUserId: string;
@@ -48,7 +48,7 @@ export class ChatMessageEntity extends CommonEntity {
   @ManyToOne(() => ChatRoomEntity, (chatRoom) => chatRoom.messages, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'room_id' })
+  @JoinColumn({ name: 'chat_room_id' })
   chatRoom: ChatRoomEntity;
 
   @ManyToOne(() => PlanUserEntity, (planUser) => planUser.chatMessages, {

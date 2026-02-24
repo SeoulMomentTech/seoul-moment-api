@@ -10,6 +10,7 @@ import {
   ChatMessageDto,
   ChatMessageScheduleDto,
 } from '../dto/chat-message.dto';
+import { UpdateChatRoomDto } from '../dto/chat-room.dto';
 import { ChatMessageEntity } from '../entity/chat-message.entity';
 import { ChatRoomMemberEntity } from '../entity/chat-room-member.entity';
 import { ChatRoomEntity } from '../entity/chat-room.entity';
@@ -34,15 +35,15 @@ export class ChatMessageRepositoryService {
     return this.chatMessageRepository.save(entity);
   }
 
-  async findByRoomId(
-    roomId: number,
+  async findByChatRoomId(
+    chatRoomId: number,
     page: number,
     count: number,
     sort: DatabaseSort,
   ): Promise<[ChatMessageDto[], number]> {
     const [messageEntityList, total] =
       await this.chatMessageRepository.findAndCount({
-        where: { roomId },
+        where: { chatRoomId },
         order: { createDate: sort },
         skip: (page - 1) * count,
         take: count,
@@ -77,6 +78,7 @@ export class ChatMessageRepositoryService {
   async findById(id: number): Promise<ChatMessageDto | null> {
     const chatMessage = await this.chatMessageRepository.findOne({
       where: { id },
+      relations: ['planUser'],
     });
 
     if (chatMessage.messageType === ChatMessageType.TEXT) {
@@ -115,6 +117,23 @@ export class ChatMessageRepositoryService {
     return result;
   }
 
+  async getChatRoomByPlanUserRoomId(
+    planUserRoomId: number,
+  ): Promise<ChatRoomEntity[]> {
+    const result = await this.chatRoomRepository.find({
+      where: { planUserRoomId },
+    });
+
+    if (!result) {
+      throw new ServiceError(
+        `Chat room not found planUserRoomId: ${planUserRoomId}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
   async createChatRoomMember(
     entity: ChatRoomMemberEntity,
   ): Promise<ChatRoomMemberEntity> {
@@ -127,5 +146,23 @@ export class ChatMessageRepositoryService {
     return this.chatRoomRepository.find({
       where: { members: { planUserId } },
     });
+  }
+
+  async updateChatRoom(dto: UpdateChatRoomDto): Promise<ChatRoomEntity> {
+    return this.chatRoomRepository.save(dto);
+  }
+
+  async getChatRoomById(id: number): Promise<ChatRoomEntity> {
+    const result = await this.chatRoomRepository.findOne({
+      where: { id },
+    });
+
+    if (!result) {
+      throw new ServiceError(
+        `Chat room not found id: ${id}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+    return result;
   }
 }

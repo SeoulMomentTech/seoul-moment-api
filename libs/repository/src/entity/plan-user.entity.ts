@@ -70,6 +70,12 @@ export class PlanUserEntity extends CommonEntity {
   })
   hasSeenBudgetGuideDate: Date;
 
+  @Column('date', {
+    nullable: true,
+    comment: '채팅 가이드 조회 여부',
+  })
+  hasSeenChatGuideDate: Date;
+
   @Column('enum', {
     enum: PlanUserStatus,
     default: PlanUserStatus.NORMAL,

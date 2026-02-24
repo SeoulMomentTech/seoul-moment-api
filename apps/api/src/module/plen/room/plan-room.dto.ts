@@ -5,6 +5,7 @@ import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-roo
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 
+import { ChatRoomResponse } from '../chat/chat.dto';
 import { GetPlanUserRoomMemberResponse } from '../user/plan-user.dto';
 
 export class GetPlanRoomMemberResponse {
@@ -148,6 +149,17 @@ export class GetPlanRoomListResponse {
   })
   planCount: number;
 
+  @ApiProperty({
+    description: '채팅방 목록',
+    example: [
+      {
+        id: 1,
+        name: '채팅방 이름',
+      },
+    ],
+  })
+  chatRooms: ChatRoomResponse[];
+
   static from(
     entity: PlanUserRoomEntity,
     remainingBudget: number,
@@ -163,6 +175,9 @@ export class GetPlanRoomListResponse {
         (v) => v.status !== PlanScheduleStatus.DELETE,
       ).length,
       members: memberDtoList,
+      chatRooms: entity.chatRooms.map((chatRoom) =>
+        ChatRoomResponse.from(chatRoom),
+      ),
     });
   }
 }

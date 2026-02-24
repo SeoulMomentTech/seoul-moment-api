@@ -60,7 +60,15 @@ export class PlanUserRoomMemberRepositoryService {
   ): Promise<PlanUserRoomMemberEntity[]> {
     return this.planUserRoomMemberRepository.find({
       where: { planUserId },
-      relations: ['room', 'room.owner', 'room.schedules'],
+      relations: [
+        'room',
+        'room.owner',
+        'room.schedules',
+        'room.chatRooms',
+        'room.chatRooms.members',
+        'room.chatRooms.members.planUser',
+        'room.chatRooms.members.planUser.members',
+      ],
     });
   }
 }

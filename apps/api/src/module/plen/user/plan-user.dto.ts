@@ -72,6 +72,12 @@ export class GetPlanUserResponse {
   })
   hasSeenBudgetGuide: boolean;
 
+  @ApiProperty({
+    description: '채팅 가이드 조회 여부',
+    example: true,
+  })
+  hasSeenChatGuide: boolean;
+
   static from(
     entity: PlanUserEntity,
     members: GetPlanUserRoomMemberResponse[] = [],
@@ -85,6 +91,7 @@ export class GetPlanUserResponse {
       members,
       hasSeenMainGuide: entity.hasSeenMainGuideDate !== null,
       hasSeenBudgetGuide: entity.hasSeenBudgetGuideDate !== null,
+      hasSeenChatGuide: entity.hasSeenChatGuideDate !== null,
     });
   }
 }

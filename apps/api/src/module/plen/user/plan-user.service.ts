@@ -131,4 +131,10 @@ export class PlanUserService {
     planUser.hasSeenBudgetGuideDate = new Date();
     await this.planUserRepositoryService.update(planUser);
   }
+
+  async postHasSeenChatGuide(id: string): Promise<void> {
+    const planUser = await this.planUserRepositoryService.getById(id);
+    planUser.hasSeenChatGuideDate = new Date();
+    await this.planUserRepositoryService.update(planUser);
+  }
 }

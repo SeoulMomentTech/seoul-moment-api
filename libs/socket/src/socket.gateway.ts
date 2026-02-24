@@ -39,6 +39,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: Socket) {
+    const planUser = (client as any).planUser;
+    this.logger.info(
+      `[DISCONNECT] Socket: ${client.id} | User: ${planUser?.id || 'unknown'}`,
+    );
+
     // 유저가 예기치 않게 나갔을 때 모든 방에서 해당 유저 제거
     this.removeUserFromAllRooms(client.id);
     this.emitRoomList();
@@ -54,7 +59,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       // 1. DB 또는 서비스에서 방 존재 여부 확인
       // 여기서 404 에러가 발생하면 catch 블록으로 넘어갑니다.
-      await this.planUserRoomRepositoryService.getByRoomId(room);
+      const chatRoom =
+        await this.chatMessageRepositoryService.getChatRoom(room);
+
+      await this.planUserRoomRepositoryService.getByRoomId(
+        chatRoom.planUserRoomId,
+      );
       const planUser = await this.planUserRepositoryService.getById(userId);
 
       // 3. 소켓 객체에 데이터 바인딩
@@ -110,7 +120,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const chatMessage = await this.chatMessageRepositoryService.create(
         plainToInstance(ChatMessageEntity, {
-          roomId: room,
+          chatRoomId: room,
           planUserId: senderPlanUser.id,
           message:
             messageType === ChatMessageType.TEXT
@@ -149,6 +159,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.removeUserFromRoom(client.id, room);
     await client.leave(room);
     this.emitRoomList();
+
+    const planUser = (client as any).planUser;
+
+    this.logger.info(
+      `[LEAVE] Socket: ${client.id} | User: ${planUser?.id || 'unknown'}`,
+    );
   }
 
   // 특정 방에서 유저 제거 및 방 삭제 로직
