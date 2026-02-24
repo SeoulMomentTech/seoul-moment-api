@@ -3,7 +3,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThan, Not, Repository } from 'typeorm';
 
 import { PlanScheduleRepositoryService } from './plan-schedule.repository.service';
 import {
@@ -17,7 +17,7 @@ import { ChatRoomEntity } from '../entity/chat-room.entity';
 import { ChatMessageType } from '../enum/chat-message.enum';
 
 @Injectable()
-export class ChatMessageRepositoryService {
+export class ChatRepositoryService {
   constructor(
     @InjectRepository(ChatMessageEntity)
     private readonly chatMessageRepository: Repository<ChatMessageEntity>,
@@ -50,9 +50,17 @@ export class ChatMessageRepositoryService {
         relations: ['planUser'],
       });
 
+    const members = await this.chatRoomMemberRepository.find({
+      where: { chatRoomId },
+    });
+
     const promises = messageEntityList.map(async (v) => {
+      const unreadCount = members.filter(
+        (m) => m.lastReadMessageId < v.id && m.planUserId !== v.planUserId,
+      ).length;
+
       if (v.messageType === ChatMessageType.TEXT) {
-        return ChatMessageDto.from(v, v.message.text);
+        return ChatMessageDto.from(v, v.message.text, null, unreadCount);
       } else if (v.messageType === ChatMessageType.SCHEDULE) {
         const schedule = await this.planScheduleRepositoryService.findById(
           v.message.scheduleId,
@@ -62,6 +70,7 @@ export class ChatMessageRepositoryService {
           v,
           schedule ? null : '플랜이 삭제 되거나 없습니다.',
           schedule ? ChatMessageScheduleDto.from(schedule) : null,
+          unreadCount,
         );
       }
       return null;
@@ -81,8 +90,19 @@ export class ChatMessageRepositoryService {
       relations: ['planUser'],
     });
 
+    const unreadCount = await this.getUnreadCount(
+      chatMessage.chatRoomId,
+      chatMessage.id,
+      chatMessage.planUserId,
+    );
+
     if (chatMessage.messageType === ChatMessageType.TEXT) {
-      return ChatMessageDto.from(chatMessage, chatMessage.message.text);
+      return ChatMessageDto.from(
+        chatMessage,
+        chatMessage.message.text,
+        null,
+        unreadCount,
+      );
     } else if (chatMessage.messageType === ChatMessageType.SCHEDULE) {
       const schedule = await this.planScheduleRepositoryService.findById(
         chatMessage.message.scheduleId,
@@ -92,6 +112,7 @@ export class ChatMessageRepositoryService {
         chatMessage,
         schedule ? null : '플랜이 삭제 되거나 없습니다.',
         schedule ? ChatMessageScheduleDto.from(schedule) : null,
+        unreadCount,
       );
     }
 
@@ -155,6 +176,7 @@ export class ChatMessageRepositoryService {
   async getChatRoomById(id: number): Promise<ChatRoomEntity> {
     const result = await this.chatRoomRepository.findOne({
       where: { id },
+      relations: ['members', 'members.planUser', 'members.planUser.members'],
     });
 
     if (!result) {
@@ -164,5 +186,44 @@ export class ChatMessageRepositoryService {
       );
     }
     return result;
+  }
+
+  async findLatestChatMessage(
+    chatRoomId: number,
+  ): Promise<ChatMessageEntity | null> {
+    return this.chatMessageRepository.findOne({
+      where: { chatRoomId },
+      order: { createDate: 'DESC' },
+    });
+  }
+
+  async updateChatRoomMember(
+    chatRoomId: number,
+    planUserId: string,
+    lastReadMessageId: number,
+  ) {
+    await this.chatRoomMemberRepository.update(
+      {
+        chatRoomId,
+        planUserId,
+      },
+      {
+        lastReadMessageId,
+      },
+    );
+  }
+
+  async getUnreadCount(
+    chatRoomId: number,
+    messageId: number,
+    senderId: string,
+  ): Promise<number> {
+    return this.chatRoomMemberRepository.count({
+      where: {
+        chatRoomId,
+        lastReadMessageId: LessThan(messageId),
+        planUserId: Not(senderId),
+      },
+    });
   }
 }

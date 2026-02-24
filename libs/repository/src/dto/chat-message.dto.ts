@@ -39,11 +39,13 @@ export class ChatMessageDto {
   messageType: ChatMessageType;
   schedule?: ChatMessageScheduleDto;
   createDate: Date;
+  unreadCount: number;
 
   static from(
     entity: ChatMessageEntity,
     text?: string,
     schedule?: ChatMessageScheduleDto,
+    unreadCount?: number,
   ) {
     return plainToInstance(this, {
       id: entity.id,
@@ -54,6 +56,7 @@ export class ChatMessageDto {
       text,
       schedule,
       createDate: entity.createDate,
+      unreadCount: unreadCount ?? 0,
     });
   }
 }

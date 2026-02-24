@@ -3,6 +3,7 @@ import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
+import { IsDefined, IsString } from 'class-validator';
 
 import { ListFilterDto } from '../../admin/admin.dto';
 
@@ -75,5 +76,7 @@ export class PatchChatRoomNameRequest {
     description: '채팅방 이름',
     example: '채팅방 이름',
   })
+  @IsString()
+  @IsDefined()
   name: string;
 }

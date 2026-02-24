@@ -38,13 +38,6 @@ export class ChatMessageEntity extends CommonEntity {
   })
   messageType: ChatMessageType;
 
-  @Column('boolean', {
-    default: false,
-    nullable: false,
-    comment: '메시지 읽음 여부',
-  })
-  isViewed: boolean;
-
   @ManyToOne(() => ChatRoomEntity, (chatRoom) => chatRoom.messages, {
     onDelete: 'CASCADE',
   })

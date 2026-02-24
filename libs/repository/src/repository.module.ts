@@ -50,7 +50,7 @@ import { AdminRepositoryService } from './service/admin.repository.service';
 import { ArticleRepositoryService } from './service/article.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
 import { CategoryRepositoryService } from './service/category.repository.service';
-import { ChatMessageRepositoryService } from './service/chat-message.repository.service';
+import { ChatRepositoryService } from './service/chat.repository.service';
 import { HomeRepositoryService } from './service/home.repository.service';
 import { LanguageRepositoryService } from './service/language.repository.service';
 import { NewsRepositoryService } from './service/news.repository.service';
@@ -132,7 +132,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
     PlanUserRoomMemberRepositoryService,
-    ChatMessageRepositoryService,
+    ChatRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -153,7 +153,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
     PlanUserRoomMemberRepositoryService,
-    ChatMessageRepositoryService,
+    ChatRepositoryService,
   ],
 })
 export class RepositoryModule {}

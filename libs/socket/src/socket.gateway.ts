@@ -2,7 +2,7 @@
 import { LoggerService } from '@app/common/log/logger.service';
 import { ChatMessageEntity } from '@app/repository/entity/chat-message.entity';
 import { ChatMessageType } from '@app/repository/enum/chat-message.enum';
-import { ChatMessageRepositoryService } from '@app/repository/service/chat-message.repository.service';
+import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
 import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
 import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
@@ -22,33 +22,48 @@ import { Server, Socket } from 'socket.io';
 // 구조: { "방이름": { users: ["socketId1", "socketId2"], createdAt: Date } }
 const roomsData: Record<string, { users: string[]; createdAt: Date }> = {};
 
-@WebSocketGateway({ namespace: 'chat', cors: { origin: '*' } })
+@WebSocketGateway({
+  namespace: 'chat',
+  cors: {
+    origin: ['http://localhost:3000', 'https://wedding-plant.vercel.app'],
+    credentials: true,
+  },
+})
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly logger: LoggerService,
     private readonly planUserRoomRepositoryService: PlanUserRoomRepositoryService,
     private readonly planUserRepositoryService: PlanUserRepositoryService,
-    private readonly chatMessageRepositoryService: ChatMessageRepositoryService,
+    private readonly chatMessageRepositoryService: ChatRepositoryService,
     private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
   ) {}
 
   @WebSocketServer() server: Server;
-
   handleConnection() {
     this.emitRoomList();
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     const planUser = (client as any).planUser;
+    const chatRoomId = (client as any).chatRoomId;
+
     this.logger.info(
-      `[DISCONNECT] Socket: ${client.id} | User: ${planUser?.id || 'unknown'}`,
+      `[DISCONNECT] Socket: ${client.id} | User: ${planUser?.id || 'unknown'} | Room: ${chatRoomId || 'unknown'}`,
     );
 
     // 유저가 예기치 않게 나갔을 때 모든 방에서 해당 유저 제거
-    this.removeUserFromAllRooms(client.id);
+    if (planUser) {
+      this.removeUserFromAllRooms(planUser.id);
+    }
     this.emitRoomList();
-  }
 
+    // 마지막 읽은 메시지 업데이트
+    if (planUser && chatRoomId) {
+      await this.updateChatRoomMember(chatRoomId, planUser.id);
+    }
+  }
+  // TODO joinRoom 에 나말고 다른 사람이 접속했을때 모든 읽은 데이터 업데이트 해야 하는데 어떻게 웹 소켓으로 레이아웃을 반영하지..
+  // TODO 안읽은 메시지 카운트도 해야겠다
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
@@ -69,6 +84,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // 3. 소켓 객체에 데이터 바인딩
       (client as any).planUser = planUser;
+      (client as any).chatRoomId = room;
 
       // 4. 메모리 데이터 업데이트 (roomsData)
       if (!roomsData[room]) {
@@ -78,6 +94,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           roomsData[room].users.push(userId);
         }
       }
+
+      await this.updateChatRoomMember(room, userId);
 
       this.logger.info('============== roomsData ==============\n', {
         roomsData,
@@ -130,6 +148,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }),
       );
 
+      console.log('roomsData[room].users.length', roomsData[room].users.length);
+      console.log('chatRoom.members.length', chatRoom.members.length);
+
+      if (roomsData[room].users.length === chatRoom.members.length) {
+        await Promise.all(
+          chatRoom.members.map(
+            async (v) => await this.updateChatRoomMember(room, v.planUserId),
+          ),
+        );
+      }
+
       const chatMessageDto = await this.chatMessageRepositoryService.findById(
         chatMessage.id,
       );
@@ -141,6 +170,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         senderProfileImageUrl: senderPlanUser.profileImageUrl,
         message: chatMessageDto,
         timestamp: new Date().toISOString(),
+        unreadCount: chatMessageDto?.unreadCount ?? 0,
       });
     } catch (error) {
       this.logger.error(`메시지 전송 실패 (Room: ${room}):`, error.message);
@@ -156,22 +186,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() room: string,
   ) {
-    this.removeUserFromRoom(client.id, room);
-    await client.leave(room);
-    this.emitRoomList();
-
     const planUser = (client as any).planUser;
 
-    this.logger.info(
-      `[LEAVE] Socket: ${client.id} | User: ${planUser?.id || 'unknown'}`,
-    );
+    if (planUser) {
+      this.removeUserFromRoom(planUser.id, room);
+      this.logger.info(`[LEAVE] Socket: ${client.id} | User: ${planUser.id}`);
+      await this.updateChatRoomMember(Number(room), planUser.id);
+    } else {
+      this.logger.warn(`[LEAVE] Socket: ${client.id} | User: unknown`);
+      client.emit('error', '존재하지 않는 유저이거나 방 퇴장에 실패했습니다.');
+    }
+
+    await client.leave(room);
+    this.emitRoomList();
   }
 
   // 특정 방에서 유저 제거 및 방 삭제 로직
-  private removeUserFromRoom(socketId: string, room: string) {
+  private removeUserFromRoom(userId: string, room: string) {
     if (roomsData[room]) {
       roomsData[room].users = roomsData[room].users.filter(
-        (id) => id !== socketId,
+        (id) => id !== userId,
       );
 
       // 방에 아무도 없으면 방 삭제
@@ -183,9 +217,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // 모든 방을 돌며 유저 제거 (연결 해제 시 사용)
-  private removeUserFromAllRooms(socketId: string) {
+  private removeUserFromAllRooms(userId: string) {
     Object.keys(roomsData).forEach((room) => {
-      this.removeUserFromRoom(socketId, room);
+      this.removeUserFromRoom(userId, room);
     });
   }
 
@@ -196,5 +230,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       count: roomsData[name].users.length,
     }));
     this.server.emit('roomList', list);
+  }
+
+  private async updateChatRoomMember(chatRoomId: number, planUserId: string) {
+    const latestChatMessage =
+      await this.chatMessageRepositoryService.findLatestChatMessage(chatRoomId);
+
+    await this.chatMessageRepositoryService.updateChatRoomMember(
+      chatRoomId,
+      planUserId,
+      latestChatMessage?.id || 0,
+    );
   }
 }
