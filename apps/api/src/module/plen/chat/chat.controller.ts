@@ -13,6 +13,7 @@ import {
   Param,
   Patch,
   Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
@@ -21,9 +22,11 @@ import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 import {
   ChatRoomResponse,
   GetChatMessagesRequest,
+  GetChatRoomMessageCountResponse,
   PatchChatRoomNameRequest,
 } from './chat.dto';
 import { ChatService } from './chat.service';
+import { PlanUserRequest } from '../plan.type';
 
 @Controller('plan/chat')
 export class ChatController {
@@ -70,5 +73,22 @@ export class ChatController {
     @Body() body: PatchChatRoomNameRequest,
   ): Promise<void> {
     await this.chatService.patchChatRoomName(chatRoomId, body.name);
+  }
+
+  @Get('message/count/:chatRoomId([0-9]+)')
+  @ApiOperation({ summary: '채팅방 메시지 개수 조회' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(GetChatRoomMessageCountResponse)
+  async getChatRoomMessageCount(
+    @Request() req: PlanUserRequest,
+    @Param('chatRoomId') chatRoomId: number,
+  ): Promise<ResponseDataDto<GetChatRoomMessageCountResponse>> {
+    const result = await this.chatService.getChatRoomMessageCount(
+      chatRoomId,
+      req.user.id,
+    );
+
+    return new ResponseDataDto(GetChatRoomMessageCountResponse.from(result));
   }
 }

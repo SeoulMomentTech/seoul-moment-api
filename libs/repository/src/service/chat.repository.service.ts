@@ -3,7 +3,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Not, Repository } from 'typeorm';
+import { LessThan, MoreThan, Not, Repository } from 'typeorm';
 
 import { PlanScheduleRepositoryService } from './plan-schedule.repository.service';
 import {
@@ -223,6 +223,26 @@ export class ChatRepositoryService {
         chatRoomId,
         lastReadMessageId: LessThan(messageId),
         planUserId: Not(senderId),
+      },
+    });
+  }
+
+  async getUnreadMessageCount(
+    chatRoomId: number,
+    planUserId: string,
+  ): Promise<number> {
+    const member = await this.chatRoomMemberRepository.findOne({
+      where: { chatRoomId, planUserId },
+    });
+
+    if (!member) {
+      return 0;
+    }
+
+    return this.chatMessageRepository.count({
+      where: {
+        chatRoomId,
+        id: MoreThan(member.lastReadMessageId),
       },
     });
   }

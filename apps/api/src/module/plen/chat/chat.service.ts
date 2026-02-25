@@ -8,9 +8,7 @@ import { ChatRoomResponse } from './chat.dto';
 
 @Injectable()
 export class ChatService {
-  constructor(
-    private readonly chatMessageRepositoryService: ChatRepositoryService,
-  ) {}
+  constructor(private readonly chatRepositoryService: ChatRepositoryService) {}
 
   async getChatMessages(
     chatRoomId: number,
@@ -18,7 +16,7 @@ export class ChatService {
     count: number,
     sort: DatabaseSort,
   ): Promise<[ChatMessageDto[], number]> {
-    return this.chatMessageRepositoryService.findByChatRoomId(
+    return this.chatRepositoryService.findByChatRoomId(
       chatRoomId,
       page,
       count,
@@ -27,20 +25,31 @@ export class ChatService {
   }
 
   async patchChatRoomName(chatRoomId: number, name: string): Promise<void> {
-    await this.chatMessageRepositoryService.getChatRoomById(chatRoomId);
+    await this.chatRepositoryService.getChatRoomById(chatRoomId);
 
     const updateDto: UpdateChatRoomDto = {
       id: chatRoomId,
       name,
     };
 
-    await this.chatMessageRepositoryService.updateChatRoom(updateDto);
+    await this.chatRepositoryService.updateChatRoom(updateDto);
   }
 
   async getChatRoomInfo(chatRoomId: number): Promise<ChatRoomResponse> {
-    const result =
-      await this.chatMessageRepositoryService.getChatRoomById(chatRoomId);
+    const result = await this.chatRepositoryService.getChatRoomById(chatRoomId);
 
     return ChatRoomResponse.from(result);
+  }
+
+  async getChatRoomMessageCount(
+    chatRoomId: number,
+    planUserId: string,
+  ): Promise<number> {
+    const count = await this.chatRepositoryService.getUnreadMessageCount(
+      chatRoomId,
+      planUserId,
+    );
+
+    return count;
   }
 }

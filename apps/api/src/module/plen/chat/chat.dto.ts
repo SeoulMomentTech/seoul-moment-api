@@ -80,3 +80,17 @@ export class PatchChatRoomNameRequest {
   @IsDefined()
   name: string;
 }
+
+export class GetChatRoomMessageCountResponse {
+  @ApiProperty({
+    description: '채팅방 메시지 개수',
+    example: 1,
+  })
+  count: number;
+
+  static from(count: number) {
+    return plainToInstance(this, {
+      count,
+    });
+  }
+}
