@@ -3,7 +3,6 @@ import { LoggerService } from '@app/common/log/logger.service';
 import { ChatMessageEntity } from '@app/repository/entity/chat-message.entity';
 import { ChatMessageType } from '@app/repository/enum/chat-message.enum';
 import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
-import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
 import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
 import {
@@ -15,6 +14,8 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { PlanNotificationMessageDto } from 'apps/api/src/module/plen/notification/plan-notification.dto';
+import { PlanNotificationService } from 'apps/api/src/module/plen/notification/plan-notification.service';
 import { plainToInstance } from 'class-transformer';
 import { Server, Socket } from 'socket.io';
 
@@ -35,7 +36,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly planUserRoomRepositoryService: PlanUserRoomRepositoryService,
     private readonly planUserRepositoryService: PlanUserRepositoryService,
     private readonly chatMessageRepositoryService: ChatRepositoryService,
-    private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
+    private readonly planNotificationService: PlanNotificationService,
   ) {}
 
   @WebSocketServer() server: Server;
@@ -62,8 +63,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.updateChatRoomMember(chatRoomId, planUser.id);
     }
   }
-  // TODO joinRoom 에 나말고 다른 사람이 접속했을때 모든 읽은 데이터 업데이트 해야 하는데 어떻게 웹 소켓으로 레이아웃을 반영하지..
-  // TODO 안읽은 메시지 카운트도 해야겠다
+
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
@@ -148,9 +148,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }),
       );
 
-      console.log('roomsData[room].users.length', roomsData[room].users.length);
-      console.log('chatRoom.members.length', chatRoom.members.length);
-
       if (roomsData[room].users.length === chatRoom.members.length) {
         await Promise.all(
           chatRoom.members.map(
@@ -161,6 +158,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const chatMessageDto = await this.chatMessageRepositoryService.findById(
         chatMessage.id,
+      );
+
+      this.planNotificationService.emitMessage(
+        PlanNotificationMessageDto.from(room, chatMessageDto),
       );
 
       // 소켓 서버에서 room.toString() 채널로 메시지 전송

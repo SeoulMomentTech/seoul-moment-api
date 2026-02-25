@@ -1,8 +1,30 @@
+import { ChatRoomEntity } from '@app/repository/entity/chat-room.entity';
 import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import { IsDefined, IsNumber, IsOptional, IsString } from 'class-validator';
+
+export class GetUserChatRoomResponse {
+  @ApiProperty({
+    description: '채팅방 ID',
+    example: 1,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '채팅방 이름',
+    example: '채팅방 이름',
+  })
+  name: string;
+
+  static from(entity: ChatRoomEntity) {
+    return plainToInstance(GetUserChatRoomResponse, {
+      id: entity.id,
+      name: entity.name ?? '채팅방',
+    });
+  }
+}
 
 export class GetPlanUserResponse {
   @ApiProperty({
@@ -61,6 +83,17 @@ export class GetPlanUserResponse {
   members: GetPlanUserRoomMemberResponse[];
 
   @ApiProperty({
+    description: '채팅방 목록',
+    example: [
+      {
+        id: 1,
+        name: '채팅방 이름',
+      },
+    ],
+  })
+  chatRooms: GetUserChatRoomResponse[];
+
+  @ApiProperty({
     description: '메인 가이드 조회 여부',
     example: true,
   })
@@ -81,6 +114,7 @@ export class GetPlanUserResponse {
   static from(
     entity: PlanUserEntity,
     members: GetPlanUserRoomMemberResponse[] = [],
+    chatRooms: GetUserChatRoomResponse[] = [],
   ) {
     return plainToInstance(this, {
       id: entity.id,
@@ -92,6 +126,7 @@ export class GetPlanUserResponse {
       hasSeenMainGuide: entity.hasSeenMainGuideDate !== null,
       hasSeenBudgetGuide: entity.hasSeenBudgetGuideDate !== null,
       hasSeenChatGuide: entity.hasSeenChatGuideDate !== null,
+      chatRooms,
     });
   }
 }

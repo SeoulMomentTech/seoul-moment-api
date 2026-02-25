@@ -25,6 +25,7 @@ import { LanguageModule } from './language/language.module';
 import { NewsModule } from './news/news.module';
 import { PartnerModule } from './partner/partner.module';
 import { ChatModule } from './plen/chat/chat.module';
+import { PlanNotificationModule } from './plen/notification/plan-notification.module';
 import { PlanModule } from './plen/plan.module';
 import { ProductModule } from './product/product.module';
 
@@ -62,6 +63,7 @@ import { ProductModule } from './product/product.module';
     AuthModule,
     SocketModule,
     ChatModule,
+    PlanNotificationModule,
   ],
   controllers: [HealthController],
   providers: [

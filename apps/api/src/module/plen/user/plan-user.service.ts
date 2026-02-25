@@ -1,4 +1,5 @@
 import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
+import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
 import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
 import { PlanUserRoomMemberRepositoryService } from '@app/repository/service/plan-user--room-member.repository.service';
 import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
@@ -9,6 +10,7 @@ import {
   GetPlanUserAmountCategory,
   GetPlanUserAmountResponse,
   GetPlanUserRoomMemberResponse,
+  GetUserChatRoomResponse,
   PatchPlanUserRequest,
   PatchPlanUserResponse,
 } from './plan-user.dto';
@@ -21,6 +23,7 @@ export class PlanUserService {
     private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
     private readonly planUserRoomRepositoryService: PlanUserRoomRepositoryService,
     private readonly planUserRoomMemberRepositoryService: PlanUserRoomMemberRepositoryService,
+    private readonly chatRoomRepositoryService: ChatRepositoryService,
   ) {}
 
   async patchPlanUser(
@@ -136,5 +139,12 @@ export class PlanUserService {
     const planUser = await this.planUserRepositoryService.getById(id);
     planUser.hasSeenChatGuideDate = new Date();
     await this.planUserRepositoryService.update(planUser);
+  }
+
+  async getUserChatRoomList(id: string): Promise<GetUserChatRoomResponse[]> {
+    const chatRoomList =
+      await this.chatRoomRepositoryService.findChatRoomByPlanUserId(id);
+
+    return chatRoomList.map((v) => GetUserChatRoomResponse.from(v));
   }
 }
