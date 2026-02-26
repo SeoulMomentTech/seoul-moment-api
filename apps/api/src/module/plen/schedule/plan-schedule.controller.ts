@@ -19,8 +19,6 @@ import {
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 
-import { PlanScheduleService } from './plan-schedule.service';
-import { PlanUserRequest } from '../plan.type';
 import {
   GetCalendarListRequest,
   GetCalendarListResponse,
@@ -31,9 +29,12 @@ import {
   PatchPlanScheduleResponse,
   PatchPlanScheduleStatusRequest,
   PatchPlanScheduleStatusResponse,
+  PostPlanScheduleNotificationRequest,
   PostPlanScheduleRequest,
   PostPlanScheduleResponse,
 } from './plan-schedule.dto';
+import { PlanScheduleService } from './plan-schedule.service';
+import { PlanUserRequest } from '../plan.type';
 
 @Controller('plan/schedule')
 export class PlanScheduleController {
@@ -52,8 +53,22 @@ export class PlanScheduleController {
       req.user.id,
       body,
     );
-
     return new ResponseDataDto(result);
+  }
+
+  @Post('notification')
+  @ApiOperation({ summary: '플랜 스케줄 알림 전송' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  async postPlanScheduleNotification(
+    @Request() req: PlanUserRequest,
+    @Body() body: PostPlanScheduleNotificationRequest,
+  ) {
+    await this.planScheduleService.postPlanScheduleNotification(
+      req.user.id,
+      body.chatRoomId,
+      body.scheduleId,
+    );
   }
 
   @Get('calendar')

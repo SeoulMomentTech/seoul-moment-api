@@ -118,7 +118,33 @@ export class PostPlanScheduleRequest {
   memo?: string;
 }
 
+export class PostPlanScheduleNotificationRequest {
+  @ApiProperty({
+    description: '채팅방 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  chatRoomId: number;
+
+  @ApiProperty({
+    description: '스케줄 ID',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  scheduleId: number;
+}
+
 export class PostPlanScheduleResponse {
+  @ApiProperty({
+    description: 'ID',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  id: number;
+
   @ApiProperty({
     description: '카테고리 이름',
     example: '저녁 식사',
@@ -196,6 +222,7 @@ export class PostPlanScheduleResponse {
 
   static from(entity: PlanScheduleEntity) {
     return plainToInstance(this, {
+      id: entity.id,
       categoryName: entity.categoryName,
       title: entity.title,
       payType: entity.payType,

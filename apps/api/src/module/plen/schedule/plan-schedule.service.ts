@@ -2,10 +2,13 @@
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { UpdatePlanScheduleDto } from '@app/repository/dto/plan-schedule.dto';
+import { ChatMessageEntity } from '@app/repository/entity/chat-message.entity';
 import { PlanScheduleEntity } from '@app/repository/entity/plan-schedule.entity';
 import { PlanUserCategoryEntity } from '@app/repository/entity/plan-user-category.entity';
+import { ChatMessageType } from '@app/repository/enum/chat-message.enum';
 import { PlanScheduleStatus } from '@app/repository/enum/plan-schedule.enum';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
+import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
 import { PlanCategoryRepositoryService } from '@app/repository/service/plan-category.repository.service';
 import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
 import { PlanUserRoomMemberRepositoryService } from '@app/repository/service/plan-user--room-member.repository.service';
@@ -25,6 +28,8 @@ import {
   PostPlanScheduleRequest,
   PostPlanScheduleResponse,
 } from './plan-schedule.dto';
+import { PlanNotificationMessageDto } from '../notification/plan-notification.dto';
+import { PlanNotificationService } from '../notification/plan-notification.service';
 
 @Injectable()
 export class PlanScheduleService {
@@ -33,6 +38,8 @@ export class PlanScheduleService {
     private readonly planCategoryRepositoryService: PlanCategoryRepositoryService,
     private readonly planUserRoomRepositoryService: PlanUserRoomRepositoryService,
     private readonly planUserRoomMemberRepositoryService: PlanUserRoomMemberRepositoryService,
+    private readonly planNotificationService: PlanNotificationService,
+    private readonly chatMessageRepositoryService: ChatRepositoryService,
   ) {}
 
   @Transactional()
@@ -90,6 +97,40 @@ export class PlanScheduleService {
     }
 
     return PostPlanScheduleResponse.from(planSchedule);
+  }
+
+  async postPlanScheduleNotification(
+    planUserId: string,
+    chatRoomId: number,
+    scheduleId: number,
+  ) {
+    const chatMessage = await this.chatMessageRepositoryService.create(
+      plainToInstance(ChatMessageEntity, {
+        chatRoomId,
+        planUserId,
+        message: {
+          scheduleId,
+        },
+        messageType: ChatMessageType.SCHEDULE,
+      }),
+    );
+
+    const chatMessageDto = await this.chatMessageRepositoryService.findById(
+      chatMessage.id,
+    );
+
+    const latestChatMessage =
+      await this.chatMessageRepositoryService.findLatestChatMessage(chatRoomId);
+
+    await this.chatMessageRepositoryService.updateChatRoomMember(
+      chatRoomId,
+      planUserId,
+      latestChatMessage?.id || 0,
+    );
+
+    this.planNotificationService.emitMessage(
+      PlanNotificationMessageDto.from(chatRoomId, chatMessageDto),
+    );
   }
 
   async getPlanScheduleList(
