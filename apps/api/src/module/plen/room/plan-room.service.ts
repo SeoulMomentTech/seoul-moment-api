@@ -107,36 +107,54 @@ export class PlanRoomService {
     const ownerUserEntity =
       await this.planUserRepositoryService.getByRoomShareCode(shareCode);
 
-    const createPlanUserRoom = await this.createIfNotExistsPlanUserRoom(
+    if (userId === ownerUserEntity.id) {
+      return;
+    }
+
+    const planUserRoom = await this.createIfNotExistsPlanUserRoom(
       ownerUserEntity.id,
     );
 
-    await this.createIfNotExistsPlanUserRoomMember(
-      createPlanUserRoom,
-      ownerUserEntity.id,
-      PlanUserRoomMemberPermission.OWNER,
+    const planUserRoomMember =
+      await this.planUserRoomMemberRepositoryService.findByRoomIdAndPlanUserId(
+        planUserRoom.id,
+        userId,
+      );
+
+    if (planUserRoomMember) {
+      return;
+    }
+
+    await this.planUserRoomMemberRepositoryService.create(
+      plainToInstance(PlanUserRoomMemberEntity, {
+        roomId: planUserRoom.id,
+        planUserId: ownerUserEntity.id,
+        permission: PlanUserRoomMemberPermission.OWNER,
+      }),
     );
 
-    await this.createIfNotExistsPlanUserRoomMember(
-      createPlanUserRoom,
-      userId,
-      PlanUserRoomMemberPermission.WRITE,
+    await this.planUserRoomMemberRepositoryService.create(
+      plainToInstance(PlanUserRoomMemberEntity, {
+        roomId: planUserRoom.id,
+        planUserId: userId,
+        permission: PlanUserRoomMemberPermission.WRITE,
+      }),
     );
 
     await this.planScheduleRepositoryService.updatePlanUserRoomId(
       ownerUserEntity.id,
-      createPlanUserRoom.id,
+      planUserRoom.id,
     );
 
     await this.planCategoryRepositoryService.updatePlanUserRoomId(
       ownerUserEntity.id,
-      createPlanUserRoom.id,
+      planUserRoom.id,
     );
 
     const chatRoomEntity =
       await this.chatMessageRepositoryService.createChatRoom(
         plainToInstance(ChatRoomEntity, {
-          planUserRoomId: createPlanUserRoom.id,
+          planUserRoomId: planUserRoom.id,
         }),
       );
 
