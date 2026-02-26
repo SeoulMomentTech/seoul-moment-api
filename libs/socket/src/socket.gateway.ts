@@ -97,9 +97,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       await this.updateChatRoomMember(room, userId);
 
-      this.logger.info('============== roomsData ==============\n', {
-        roomsData,
-      });
+      this.logger.info(
+        `============== roomsData ============== ${JSON.stringify(roomsData)}`,
+      );
 
       // 5. 실제 소켓 룸 입장
       await client.join(room.toString());
@@ -118,9 +118,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody()
-    payload: { room: number; message: string; messageType: ChatMessageType },
+    payload: {
+      room: number;
+      message: string;
+      messageType: ChatMessageType;
+      planUser?: { id: string; name: string; profileImageUrl: string };
+    },
   ) {
-    const { room, message, messageType } = payload;
+    const { room, message, messageType, planUser } = payload;
 
     try {
       const chatRoom =
@@ -130,7 +135,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         chatRoom.planUserRoomId,
       );
 
-      const senderPlanUser = (client as any).planUser;
+      const senderPlanUser = planUser || (client as any).planUser;
 
       this.logger.info(
         `[MSG] Room: ${room} | User: ${senderPlanUser.id} | Text: ${message}`,
@@ -148,11 +153,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }),
       );
 
-      if (roomsData[room].users.length === chatRoom.members.length) {
+      if (roomsData[room]?.users?.length) {
+        if (roomsData[room].users.length === chatRoom.members.length) {
+          await Promise.all(
+            chatRoom.members.map(
+              async (v) => await this.updateChatRoomMember(room, v.planUserId),
+            ),
+          );
+        }
+      }
+
+      if (planUser) {
         await Promise.all(
-          chatRoom.members.map(
-            async (v) => await this.updateChatRoomMember(room, v.planUserId),
-          ),
+          chatRoom.members
+            .filter((v) => v.planUserId === planUser.id)
+            .map(
+              async (v) => await this.updateChatRoomMember(room, v.planUserId),
+            ),
         );
       }
 

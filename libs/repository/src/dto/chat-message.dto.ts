@@ -17,6 +17,7 @@ export class ChatMessageScheduleDto {
   startDate: Date | null;
   status: PlanScheduleStatus;
   title: string;
+  location: string | null;
 
   static from(entity: PlanScheduleEntity) {
     return plainToInstance(this, {
@@ -26,6 +27,7 @@ export class ChatMessageScheduleDto {
       startDate: entity.startDate,
       status: entity.status,
       title: entity.title,
+      location: entity.location,
     });
   }
 }

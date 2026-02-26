@@ -86,14 +86,14 @@ function morganSetting(app: INestApplication<any>) {
             bodyType = HttpDataType.REQUEST_BODY;
 
             logger.info(
-              `${bodyType}:\n${JSON.stringify(convertMessage, null, 2)}`,
+              `${bodyType}: ${JSON.stringify(convertMessage)}`,
             );
           } else if (message.includes(HttpDataType.RESPONSE_BODY)) {
             convertMessage = convertBodyMessage(message);
             bodyType = HttpDataType.RESPONSE_BODY;
 
             logger.info(
-              `${bodyType}:\n${JSON.stringify(convertMessage, null, 2)}`,
+              `${bodyType}: ${JSON.stringify(convertMessage)}`,
             );
           } else {
             // Response status 등의 기타 메시지
