@@ -85,16 +85,12 @@ function morganSetting(app: INestApplication<any>) {
             convertMessage = convertBodyMessage(message);
             bodyType = HttpDataType.REQUEST_BODY;
 
-            logger.info(
-              `${bodyType}: ${JSON.stringify(convertMessage)}`,
-            );
+            logger.info(`${bodyType}: ${JSON.stringify(convertMessage)}`);
           } else if (message.includes(HttpDataType.RESPONSE_BODY)) {
             convertMessage = convertBodyMessage(message);
             bodyType = HttpDataType.RESPONSE_BODY;
 
-            logger.info(
-              `${bodyType}: ${JSON.stringify(convertMessage)}`,
-            );
+            logger.info(`${bodyType}: ${JSON.stringify(convertMessage)}`);
           } else {
             // Response status 등의 기타 메시지
             const ansiRegex = /\u001b\[[0-9;]*m/g;
