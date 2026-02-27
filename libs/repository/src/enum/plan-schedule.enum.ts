@@ -5,10 +5,10 @@ export enum PlanSchedulePayType {
 }
 
 export enum PlanScheduleSortColumn {
-  CREATE = 'createDate',
-  PAY_TYPE = 'payType',
+  TITLE = 'title',
   AMOUNT = 'amount',
   START_DATE = 'startDate',
+  CREATE = 'createDate',
 }
 
 export enum PlanScheduleStatus {

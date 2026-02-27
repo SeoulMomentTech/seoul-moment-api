@@ -301,7 +301,7 @@ export class GetPlanScheduleResponse {
 
 export class GetPlanScheduleListRequest extends ListFilterDto {
   @ApiPropertyOptional({
-    description: '검색 칼럼',
+    description: '소트 칼럼',
     example: PlanScheduleSortColumn.START_DATE,
     enum: PlanScheduleSortColumn,
   })
