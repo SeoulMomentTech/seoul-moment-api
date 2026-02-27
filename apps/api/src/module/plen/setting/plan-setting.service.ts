@@ -23,6 +23,13 @@ export class PlanSettingService {
       : null;
     planUser.budget = postPlanSettingRequest.budget;
     planUser.name = postPlanSettingRequest.name;
+    planUser.requiredAgreementDate =
+      postPlanSettingRequest.requiredAgreementDate
+        ? new Date(postPlanSettingRequest.requiredAgreementDate)
+        : null;
+    planUser.adAgreementDate = postPlanSettingRequest.adAgreementDate
+      ? new Date(postPlanSettingRequest.adAgreementDate)
+      : null;
 
     await this.planUserRepositoryService.update(planUser);
 

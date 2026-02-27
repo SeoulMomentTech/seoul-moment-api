@@ -28,6 +28,22 @@ export class PostPlanSettingRequest {
   @IsString()
   @IsOptional()
   name?: string;
+
+  @ApiPropertyOptional({
+    description: '필수 동의 여부',
+    example: '2025-02-24',
+  })
+  @IsString()
+  @IsOptional()
+  requiredAgreementDate?: string;
+
+  @ApiPropertyOptional({
+    description: '광고 동의 여부',
+    example: '2025-02-24',
+  })
+  @IsString()
+  @IsOptional()
+  adAgreementDate?: string;
 }
 
 export class PostPlanSettingResponse {

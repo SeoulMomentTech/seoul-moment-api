@@ -76,6 +76,18 @@ export class PlanUserEntity extends CommonEntity {
   })
   hasSeenChatGuideDate: Date;
 
+  @Column('date', {
+    nullable: true,
+    comment: '필수 동의 여부',
+  })
+  requiredAgreementDate: Date;
+
+  @Column('date', {
+    nullable: true,
+    comment: '광고 동의 여부',
+  })
+  adAgreementDate: Date;
+
   @Column('enum', {
     enum: PlanUserStatus,
     default: PlanUserStatus.NORMAL,

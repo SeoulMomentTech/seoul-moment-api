@@ -156,6 +156,22 @@ export class PatchPlanUserRequest {
   @IsString()
   @IsDefined()
   name: string;
+
+  @ApiProperty({
+    description: '필수 동의 여부',
+    example: '2025-02-24',
+  })
+  @IsString()
+  @IsDefined()
+  requiredAgreementDate: string;
+
+  @ApiProperty({
+    description: '광고 동의 여부',
+    example: '2025-02-24',
+  })
+  @IsString()
+  @IsDefined()
+  adAgreementDate: string;
 }
 
 export class PatchPlanUserResponse {

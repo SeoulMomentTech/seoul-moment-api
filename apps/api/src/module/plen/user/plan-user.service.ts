@@ -35,6 +35,10 @@ export class PlanUserService {
     planUser.weddingDate = new Date(patchPlanUserRequest.weddingDate);
     planUser.budget = patchPlanUserRequest.budget;
     planUser.name = patchPlanUserRequest.name;
+    planUser.requiredAgreementDate = new Date(
+      patchPlanUserRequest.requiredAgreementDate,
+    );
+    planUser.adAgreementDate = new Date(patchPlanUserRequest.adAgreementDate);
 
     await this.planUserRepositoryService.update(planUser);
 
