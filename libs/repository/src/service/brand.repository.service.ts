@@ -78,7 +78,6 @@ export class BrandRepositoryService {
   async findAllNormalBrandListByFilter(
     type: BrandNameFilter,
     categoryId?: number,
-    brandIdList?: number[],
   ): Promise<BrandEntity[]> {
     const query = this.brandRepository
       .createQueryBuilder('brand')
@@ -99,10 +98,6 @@ export class BrandRepositoryService {
 
     if (categoryId) {
       query.andWhere('brand.categoryId = :categoryId', { categoryId });
-    }
-
-    if (brandIdList && brandIdList.length > 0) {
-      query.andWhere('brand.id IN (:...brandIdList)', { brandIdList });
     }
 
     return query.getMany();

@@ -5,8 +5,8 @@ import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text
 import { BrandNameFilter } from '@app/repository/enum/brand.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { plainToInstance, Transform, Type } from 'class-transformer';
-import { IsArray, IsNumber, IsOptional } from 'class-validator';
+import { plainToInstance, Type } from 'class-transformer';
+import { IsNumber, IsOptional } from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
@@ -184,20 +184,6 @@ export class GetBrandListByNameFilterTypeRequest {
   @IsNumber()
   @Type(() => Number)
   categoryId?: number;
-
-  @ApiPropertyOptional({
-    description: '브랜드 ID 리스트',
-    example: [1, 2, 3],
-    type: [Number],
-  })
-  @IsOptional()
-  @Transform(({ value }) =>
-    Array.isArray(value) ? value : value != null ? [value] : undefined,
-  )
-  @IsArray()
-  @IsNumber({}, { each: true })
-  @Type(() => Number)
-  brandIdList?: number[];
 }
 export class GetBrandListByName {
   @ApiProperty({

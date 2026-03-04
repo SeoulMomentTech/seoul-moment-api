@@ -187,7 +187,7 @@ export class ProductRepositoryService implements OnModuleInit {
     withoutId?: number,
     optionIdList?: number[],
     mainView?: boolean,
-  ): Promise<[ProductItemEntity[], number, number[]]> {
+  ): Promise<[ProductItemEntity[], number]> {
     // 대용량 최적화: 옵션 필터링을 위한 서브쿼리 생성
     const buildOptionFilterSubquery = () => {
       if (!optionIdList || optionIdList.length === 0) {
@@ -250,6 +250,7 @@ export class ProductRepositoryService implements OnModuleInit {
         });
 
       if (mainView !== undefined) {
+        console.log('mainView', mainView);
         query.andWhere('pc.main_view = :mainView', { mainView });
       }
 
@@ -304,22 +305,10 @@ export class ProductRepositoryService implements OnModuleInit {
       return parseInt(result?.count || '0', 10);
     };
 
-    // brandIdList: count/page 제한 없이 필터 조건에 맞는 product_item의 product.brand_id를 GROUP BY
-    const getBrandIdList = async (): Promise<number[]> => {
-      const brandQuery = buildMainQuery('DISTINCT p.brand_id as brand_id');
-      const brandResults = await brandQuery.getRawMany();
-      return brandResults
-        .map((r) => r.brand_id)
-        .filter((id): id is number => id != null);
-    };
-
-    const [totalCount, brandIdList] = await Promise.all([
-      getOptimizedCount(),
-      getBrandIdList(),
-    ]);
+    const totalCount = await getOptimizedCount();
 
     if (totalCount === 0) {
-      return [[], 0, brandIdList];
+      return [[], 0];
     }
 
     // ID 조회 쿼리 (대용량 최적화: 필요한 컬럼만 SELECT)
@@ -341,7 +330,7 @@ export class ProductRepositoryService implements OnModuleInit {
     const productItemIds = await idQuery.getRawMany();
 
     if (productItemIds.length === 0) {
-      return [[], totalCount, brandIdList];
+      return [[], totalCount];
     }
 
     const ids = productItemIds.map((item) => item.pc_id);
@@ -370,7 +359,7 @@ export class ProductRepositoryService implements OnModuleInit {
       )
       .getMany();
 
-    return [results, totalCount, brandIdList];
+    return [results, totalCount];
   }
 
   async getProductByProductId(productId: number): Promise<ProductEntity> {
