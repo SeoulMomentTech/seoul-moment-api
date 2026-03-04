@@ -81,6 +81,7 @@ export class BrandRepositoryService {
   ): Promise<BrandEntity[]> {
     const query = this.brandRepository
       .createQueryBuilder('brand')
+      .leftJoinAndSelect('brand.products', 'products')
       .leftJoin(
         'multilingual_text',
         'mt',

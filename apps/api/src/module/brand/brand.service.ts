@@ -82,13 +82,34 @@ export class BrandService {
     const result: GetBrandListByNameResponse[] = [];
 
     for (const value of Object.values(BrandNameFilter)) {
-      const brandListByNameFilterType = await this.getBrandListByNameFilterType(
-        value,
-        categoryId,
-      );
+      const brandEntityList =
+        await this.brandRepositoryService.findAllNormalBrandListByFilter(
+          value,
+          categoryId,
+        );
+
+      const brandText =
+        await this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.BRAND,
+          brandEntityList.map((v) => v.id),
+          LanguageCode.ENGLISH, // 영어 고정
+        );
+
+      const brandListByNameFilterType = [];
+
+      brandEntityList.forEach((v) => {
+        if (v.products.length > 0) {
+          brandListByNameFilterType.push(GetBrandListByName.from(v, brandText));
+        }
+      });
 
       result.push(
-        GetBrandListByNameResponse.from(value, brandListByNameFilterType),
+        GetBrandListByNameResponse.from(
+          value,
+          brandListByNameFilterType.sort((a, b) =>
+            a.name.localeCompare(b.name),
+          ),
+        ),
       );
     }
 
