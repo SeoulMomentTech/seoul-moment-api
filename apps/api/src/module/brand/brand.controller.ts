@@ -36,7 +36,10 @@ export class BrandController {
   async getBrandListByName(
     @Query() query: GetBrandListByNameFilterTypeRequest,
   ): Promise<ResponseListDto<GetBrandListByNameResponse>> {
-    const result = await this.brandService.getBrandListByName(query.categoryId);
+    const result = await this.brandService.getBrandListByName(
+      query.categoryId,
+      query.brandIdList,
+    );
     return new ResponseListDto(result);
   }
 

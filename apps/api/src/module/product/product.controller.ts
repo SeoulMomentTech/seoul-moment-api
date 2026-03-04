@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseException } from '@app/common/decorator/response-exception.decorator';
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
@@ -16,7 +17,13 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiHeader,
+  ApiOkResponse,
+  ApiOperation,
+  getSchemaPath,
+} from '@nestjs/swagger';
 
 import {
   GetProductBannerByBrandResponse,
@@ -150,12 +157,48 @@ export class ProductController {
     description: 'Alternative way to specify language preference (ko, en, zh)',
     enum: LanguageCode,
   })
+  @HttpCode(HttpStatus.OK)
+  @ApiExtraModels(GetProductResponse)
+  @ApiOkResponse({
+    schema: {
+      allOf: [
+        {
+          properties: {
+            result: {
+              type: 'boolean',
+              example: true,
+            },
+            data: {
+              type: 'object',
+              properties: {
+                total: {
+                  type: 'number',
+                  example: 0,
+                },
+                brandIdList: {
+                  type: 'array',
+                  items: { type: 'number' },
+                },
+                list: {
+                  type: 'array',
+                  items: { $ref: getSchemaPath(GetProductResponse) },
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+  })
   @ResponseList(GetProductResponse)
   async getProduct(
     @Headers('Accept-language') acceptLanguage: LanguageCode,
     @Query() query: GetProductRequest,
-  ): Promise<ResponseListDto<GetProductResponse>> {
-    const [result, count] = await this.productService.getProduct(
+  ): Promise<{
+    result: boolean;
+    data: { total: number; brandIdList: number[]; list: GetProductResponse[] };
+  }> {
+    const [result, count, brandIdList] = await this.productService.getProduct(
       GetProductRequest.from(
         query.page,
         query.count,
@@ -170,7 +213,14 @@ export class ProductController {
       ),
       acceptLanguage,
     );
-    return new ResponseListDto(result, count);
+    return {
+      result: true,
+      data: {
+        total: count,
+        brandIdList,
+        list: result,
+      },
+    };
   }
 
   @Post()

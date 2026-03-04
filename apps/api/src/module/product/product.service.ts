@@ -128,9 +128,8 @@ export class ProductService {
     dto: GetProductRequest,
     language: LanguageCode,
     withoutId?: number,
-  ): Promise<[GetProductResponse[], number]> {
-    console.log('dto', dto);
-    const [productItemList, count] =
+  ): Promise<[GetProductResponse[], number, number[]]> {
+    const [productItemList, count, brandIdList] =
       await this.productRepositoryService.findProductItem(
         PagingDto.from(dto.page, dto.count),
         dto.isNotExistSort()
@@ -178,6 +177,7 @@ export class ProductService {
         }),
       ),
       count,
+      brandIdList,
     ];
   }
 

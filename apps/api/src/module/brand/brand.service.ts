@@ -57,11 +57,13 @@ export class BrandService {
   async getBrandListByNameFilterType(
     filter: BrandNameFilter,
     categoryId?: number,
+    brandIdList?: number[],
   ): Promise<GetBrandListByName[]> {
     const brandEntityList =
       await this.brandRepositoryService.findAllNormalBrandListByFilter(
         filter,
         categoryId,
+        brandIdList,
       );
 
     const brandText =
@@ -78,6 +80,7 @@ export class BrandService {
 
   async getBrandListByName(
     categoryId?: number,
+    brandIdList?: number[],
   ): Promise<GetBrandListByNameResponse[]> {
     const result: GetBrandListByNameResponse[] = [];
 
@@ -85,6 +88,7 @@ export class BrandService {
       const brandListByNameFilterType = await this.getBrandListByNameFilterType(
         value,
         categoryId,
+        brandIdList,
       );
 
       result.push(
