@@ -36,6 +36,12 @@ export class AdminProductBannerListResponse {
   mobileImageUrl: string;
 
   @ApiProperty({
+    description: '상품 배너 URL',
+    example: 'https://example.com',
+  })
+  url: string;
+
+  @ApiProperty({
     description: '배너 정렬 순서',
     example: 1,
   })
@@ -58,6 +64,7 @@ export class AdminProductBannerListResponse {
       id: entity.id,
       imageUrl: entity.getImage(),
       mobileImageUrl: entity.getMobileImage(),
+      url: entity.url,
       sort: entity.sortOrder,
       createDate: entity.createDate,
       updateDate: entity.updateDate,
@@ -81,6 +88,14 @@ export class PostAdminProductBannerRequest {
   @IsString()
   @IsDefined()
   mobileImageUrl: string;
+
+  @ApiPropertyOptional({
+    description: '상품 배너 URL',
+    example: 'https://example.com',
+  })
+  @IsString()
+  @IsOptional()
+  url?: string;
 }
 
 export class PatchAdminProductBannerRequest {
@@ -99,6 +114,14 @@ export class PatchAdminProductBannerRequest {
   @IsString()
   @IsOptional()
   mobileImageUrl?: string;
+
+  @ApiPropertyOptional({
+    description: '상품 배너 URL',
+    example: 'https://example.com',
+  })
+  @IsString()
+  @IsOptional()
+  url?: string;
 }
 
 export class PatchAdminProductBannerSortOrder {
@@ -158,6 +181,12 @@ export class GetAdminProductBannerDetailResponse {
   mobileImageUrl: string;
 
   @ApiProperty({
+    description: '상품 배너 URL',
+    example: 'https://example.com',
+  })
+  url: string;
+
+  @ApiProperty({
     description: '배너 정렬 순서',
     example: 1,
   })
@@ -180,6 +209,7 @@ export class GetAdminProductBannerDetailResponse {
       id: entity.id,
       imageUrl: entity.getImage(),
       mobileImageUrl: entity.getMobileImage(),
+      url: entity.url,
       sortOrder: entity.sortOrder,
       createDate: entity.createDate,
       updateDate: entity.updateDate,

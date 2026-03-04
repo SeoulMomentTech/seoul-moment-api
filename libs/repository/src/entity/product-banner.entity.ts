@@ -15,6 +15,9 @@ export class ProductBannerEntity extends CommonEntity {
   @Column('varchar', { length: 500, nullable: true })
   mobileImage: string;
 
+  @Column('varchar', { length: 500, nullable: true })
+  url: string;
+
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
 

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { DatabaseSort } from '@app/common/enum/global.enum';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
@@ -95,34 +96,50 @@ export class PlanScheduleRepositoryService {
     sort: DatabaseSort = DatabaseSort.DESC,
     planUserRoomId?: number,
   ): Promise<[PlanScheduleEntity[], number]> {
-    const findOptions: FindOptionsWhere<PlanScheduleEntity> = {
+    const baseCondition: FindOptionsWhere<PlanScheduleEntity> = {
       status: Not(
         In([PlanScheduleStatus.DELETE, PlanScheduleStatus.COMPLETED]),
       ),
     };
 
     if (search) {
-      findOptions.title = Like(`%${search}%`);
+      baseCondition.title = Like(`%${search}%`);
     }
 
     if (status) {
-      findOptions.status = status;
+      baseCondition.status = status;
     }
 
     if (categoryName) {
-      findOptions.categoryName = categoryName;
+      baseCondition.categoryName = categoryName;
     }
 
     if (planUserId) {
-      findOptions.planUserId = planUserId;
+      baseCondition.planUserId = planUserId;
     }
 
+    const whereConditions: FindOptionsWhere<PlanScheduleEntity>[] = [];
+
     if (planUserRoomId) {
-      findOptions.planUserRoomId = planUserRoomId;
+      whereConditions.push({
+        ...baseCondition,
+        planUserRoomId,
+      });
+    } else {
+      whereConditions.push(
+        {
+          ...baseCondition,
+          planUserRoomId: IsNull(),
+        },
+        {
+          ...baseCondition,
+          planUserRoom: { ownerId: planUserId },
+        },
+      );
     }
 
     return this.planScheduleRepository.findAndCount({
-      where: findOptions,
+      where: whereConditions,
       order: {
         [sortColumn]: sort,
       },

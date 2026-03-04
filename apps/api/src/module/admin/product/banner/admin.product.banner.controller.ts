@@ -48,6 +48,7 @@ export class AdminProductBannerController {
     await this.adminProductBannerService.postProductBanner(
       body.imageUrl,
       body.mobileImageUrl,
+      body.url,
     );
   }
 
@@ -69,6 +70,7 @@ export class AdminProductBannerController {
       id,
       body.imageUrl,
       body.mobileImageUrl,
+      body.url,
     );
   }
 
