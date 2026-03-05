@@ -8,6 +8,14 @@ import { ArticleSectionEntity } from './entity/article-section.entity';
 import { ArticleEntity } from './entity/article.entity';
 import { BrandBannerImageEntity } from './entity/brand-banner-image.entity';
 import { BrandMobileBannerImageEntity } from './entity/brand-mobile-banner-image.entity';
+import { BrandPromotionBannerEntity } from './entity/brand-promotion-banner.entity';
+import { BrandPromotionNoticeEntity } from './entity/brand-promotion-notice.entity';
+import { BrandPromotionPopupImageEntity } from './entity/brand-promotion-popup-image.entity';
+import { BrandPromotionPopupEntity } from './entity/brand-promotion-popup.entity';
+import { BrandPromotionSectionImageEntity } from './entity/brand-promotion-section-image.entity';
+import { BrandPromotionSectionTypeEntity } from './entity/brand-promotion-section-type.entity';
+import { BrandPromotionSectionEntity } from './entity/brand-promotion-section.entity';
+import { BrandPromotionEntity } from './entity/brand-promotion.entity';
 import { BrandSectionImageEntity } from './entity/brand-section-image.entity';
 import { BrandSectionEntity } from './entity/brand-section.entity';
 import { BrandEntity } from './entity/brand.entity';
@@ -48,6 +56,7 @@ import { SortOrderHelper } from './helper/sort-order.helper';
 import { AdminRoleRepositoryService } from './service/admin-role.repository.service';
 import { AdminRepositoryService } from './service/admin.repository.service';
 import { ArticleRepositoryService } from './service/article.repository.service';
+import { BrandPromotionRepositoryService } from './service/brand-promotion.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
 import { CategoryRepositoryService } from './service/category.repository.service';
 import { ChatRepositoryService } from './service/chat.repository.service';
@@ -110,6 +119,14 @@ import { ProductRepositoryService } from './service/product.repository.service';
       ChatMessageEntity,
       ChatRoomEntity,
       ChatRoomMemberEntity,
+      BrandPromotionEntity,
+      BrandPromotionBannerEntity,
+      BrandPromotionSectionEntity,
+      BrandPromotionSectionImageEntity,
+      BrandPromotionSectionTypeEntity,
+      BrandPromotionPopupEntity,
+      BrandPromotionPopupImageEntity,
+      BrandPromotionNoticeEntity,
     ]),
   ],
   providers: [
@@ -133,6 +150,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PlanUserRoomRepositoryService,
     PlanUserRoomMemberRepositoryService,
     ChatRepositoryService,
+    BrandPromotionRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -154,6 +172,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
     PlanUserRoomRepositoryService,
     PlanUserRoomMemberRepositoryService,
     ChatRepositoryService,
+    BrandPromotionRepositoryService,
   ],
 })
 export class RepositoryModule {}

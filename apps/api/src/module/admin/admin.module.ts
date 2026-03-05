@@ -6,6 +6,7 @@ import { RefreshTokenStrategy } from 'apps/api/src/strategy/refresh-token.strate
 import { AdminArticleModule } from './article/admin.article.module';
 import { AdminAuthModule } from './auth/admin.auth.module';
 import { AdminBrandModule } from './brand/admin.brand.module';
+import { AdminBrandPromotionModule } from './brand/promotion/admin.brand.promotion.module';
 import { AdminCategoryModule } from './category/admin.category.module';
 import { AdminHomeModule } from './home/admin.home.module';
 import { AdminImageModule } from './image/admin.image.module';
@@ -25,6 +26,7 @@ import { AdminUserModule } from './user/admin.user.module';
     AdminArticleModule,
     AdminProductModule,
     AdminUserModule,
+    AdminBrandPromotionModule,
   ],
   providers: [OneTimeTokenStrategy, RefreshTokenStrategy],
 })

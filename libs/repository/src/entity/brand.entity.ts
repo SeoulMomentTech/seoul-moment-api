@@ -5,12 +5,14 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
 import { ArticleEntity } from './article.entity';
 import { BrandBannerImageEntity } from './brand-banner-image.entity';
 import { BrandMobileBannerImageEntity } from './brand-mobile-banner-image.entity';
+import { BrandPromotionEntity } from './brand-promotion.entity';
 import { BrandSectionEntity } from './brand-section.entity';
 import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
@@ -104,6 +106,12 @@ export class BrandEntity extends CommonEntity {
   })
   @JoinColumn({ name: 'category_id' })
   category: CategoryEntity;
+
+  @OneToOne(() => BrandPromotionEntity, (promotion) => promotion.brand, {
+    cascade: true,
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  promotions: BrandPromotionEntity[];
 
   getProfileImage(): string {
     return this.profileImage

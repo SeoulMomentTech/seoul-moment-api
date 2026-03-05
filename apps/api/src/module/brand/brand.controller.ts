@@ -40,7 +40,7 @@ export class BrandController {
     return new ResponseListDto(result);
   }
 
-  @Get(':id')
+  @Get(':id(\\d+)')
   @ApiOperation({
     summary: 'Get Brand Introduce with Multilingual Support',
     description:

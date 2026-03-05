@@ -14,4 +14,8 @@ export enum EntityType {
   PARTNER = 'partner',
   PARTNER_CATEGORY = 'partner_category',
   PRODUCT_FILTER = 'product_filter',
+  BRAND_PROMOTION = 'brand_promotion',
+  BRAND_PROMOTION_BANNER = 'brand_promotion_banner',
+  BRAND_PROMOTION_POPUP = 'brand_promotion_popup',
+  BRAND_PROMOTION_NOTICE = 'brand_promotion_notice',
 }

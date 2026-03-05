@@ -18,6 +18,7 @@ import { AdminModule } from './admin/admin.module';
 import { ArticleModule } from './article/article.module';
 import { AuthModule } from './auth/auth.module';
 import { BrandModule } from './brand/brand.module';
+import { BrandPromotionModule } from './brand/promotion/brand-promotion.module';
 import { CategoryModule } from './category/category.module';
 import { GoogleModule } from './google/google.module';
 import { HomeModule } from './home/home.module';
@@ -64,6 +65,7 @@ import { ProductModule } from './product/product.module';
     SocketModule,
     ChatModule,
     PlanNotificationModule,
+    BrandPromotionModule,
   ],
   controllers: [HealthController],
   providers: [
