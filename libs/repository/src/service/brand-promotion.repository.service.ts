@@ -6,11 +6,13 @@ import { Repository } from 'typeorm';
 
 import {
   UpdateBrandPromotionBannerDto,
+  UpdateBrandPromotionBannerImageDto,
   UpdateBrandPromotionDto,
   UpdateBrandPromotionSectionDto,
   UpdateBrandPromotionSectionImageDto,
 } from '../dto/brand-promotion.dto';
 import { BrandPromotionBannerEntity } from '../entity/brand-promotion-banner.entity';
+import { BrandPromotionBannerImageEntity } from '../entity/brand-promotion-banner.image.entity';
 import { BrandPromotionNoticeEntity } from '../entity/brand-promotion-notice.entity';
 import { BrandPromotionPopupImageEntity } from '../entity/brand-promotion-popup-image.entity';
 import { BrandPromotionPopupEntity } from '../entity/brand-promotion-popup.entity';
@@ -27,6 +29,9 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
 
     @InjectRepository(BrandPromotionBannerEntity)
     private readonly brandPromotionBannerRepository: Repository<BrandPromotionBannerEntity>,
+
+    @InjectRepository(BrandPromotionBannerImageEntity)
+    private readonly brandPromotionBannerImageRepository: Repository<BrandPromotionBannerImageEntity>,
 
     @InjectRepository(BrandPromotionSectionEntity)
     private readonly brandPromotionSectionRepository: Repository<BrandPromotionSectionEntity>,
@@ -145,8 +150,28 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     return this.brandPromotionBannerRepository.save(dto);
   }
 
+  async updateBrandPromotionBannerImage(
+    dto: UpdateBrandPromotionBannerImageDto,
+  ): Promise<BrandPromotionBannerImageEntity> {
+    return this.brandPromotionBannerImageRepository.save(dto);
+  }
+
   async deleteBrandPromotionBanner(id: number): Promise<void> {
     await this.brandPromotionBannerRepository.delete(id);
+  }
+
+  async deleteBrandPromotionBannerImageByBrandPromotionBannerId(
+    brandPromotionBannerId: number,
+  ): Promise<void> {
+    await this.brandPromotionBannerImageRepository.delete({
+      brandPromotionBannerId,
+    });
+  }
+
+  async createBrandPromotionBannerImage(
+    image: BrandPromotionBannerImageEntity,
+  ): Promise<BrandPromotionBannerImageEntity> {
+    return this.brandPromotionBannerImageRepository.save(image);
   }
 
   async createBrandPromotionSection(
@@ -219,6 +244,37 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     if (!result) {
       throw new ServiceError(
         'Brand promotion section not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
+  async findBrandPromotionBannerListByPaging(
+    page: number,
+    count: number,
+  ): Promise<[BrandPromotionBannerEntity[], number]> {
+    const qb = this.brandPromotionBannerRepository.createQueryBuilder('bpb');
+    return qb
+      .skip((page - 1) * count)
+      .take(count)
+      .leftJoinAndSelect('bpb.images', 'images')
+      .orderBy('bpb.createDate', 'DESC')
+      .getManyAndCount();
+  }
+
+  async getBrandPromotionBannerById(
+    id: number,
+  ): Promise<BrandPromotionBannerEntity> {
+    const result = await this.brandPromotionBannerRepository.findOne({
+      where: { id },
+      relations: ['images'],
+    });
+
+    if (!result) {
+      throw new ServiceError(
+        'Brand promotion banner not found',
         ServiceErrorCode.NOT_FOUND_DATA,
       );
     }

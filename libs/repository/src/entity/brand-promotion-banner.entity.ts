@@ -7,10 +7,10 @@ import {
   OneToMany,
 } from 'typeorm';
 
+import { BrandPromotionBannerImageEntity } from './brand-promotion-banner.image.entity';
 import { BrandPromotionEntity } from './brand-promotion.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
-import { DeviceType } from '../dto/common.dto';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -24,27 +24,8 @@ export class BrandPromotionBannerEntity extends CommonEntity {
   @Column('int', { name: 'brand_promotion_id', nullable: false })
   brandPromotionId: number;
 
-  @Column('varchar', { length: 500, nullable: false })
-  imagePath: string;
-
   @Column('varchar', { length: 500, nullable: true })
   linkUrl: string;
-
-  @Column('enum', {
-    enum: DeviceType,
-    nullable: false,
-    default: DeviceType.DESKTOP,
-  })
-  deviceType: DeviceType;
-
-  @Column('timestamp', { nullable: false })
-  startDate: Date;
-
-  @Column('timestamp', { nullable: false })
-  endDate: Date;
-
-  @Column('int', { name: 'sort_order', default: 1, nullable: false })
-  sortOrder: number;
 
   @ManyToOne(
     () => BrandPromotionEntity,
@@ -56,6 +37,16 @@ export class BrandPromotionBannerEntity extends CommonEntity {
   )
   @JoinColumn({ name: 'brand_promotion_id' })
   brandPromotion: BrandPromotionEntity;
+
+  @OneToMany(
+    () => BrandPromotionBannerImageEntity,
+    (image) => image.brandPromotionBanner,
+    {
+      cascade: true,
+      createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+    },
+  )
+  images: BrandPromotionBannerImageEntity[];
 
   @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
     cascade: true,

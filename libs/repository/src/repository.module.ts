@@ -9,6 +9,7 @@ import { ArticleEntity } from './entity/article.entity';
 import { BrandBannerImageEntity } from './entity/brand-banner-image.entity';
 import { BrandMobileBannerImageEntity } from './entity/brand-mobile-banner-image.entity';
 import { BrandPromotionBannerEntity } from './entity/brand-promotion-banner.entity';
+import { BrandPromotionBannerImageEntity } from './entity/brand-promotion-banner.image.entity';
 import { BrandPromotionNoticeEntity } from './entity/brand-promotion-notice.entity';
 import { BrandPromotionPopupImageEntity } from './entity/brand-promotion-popup-image.entity';
 import { BrandPromotionPopupEntity } from './entity/brand-promotion-popup.entity';
@@ -121,6 +122,7 @@ import { ProductRepositoryService } from './service/product.repository.service';
       ChatRoomMemberEntity,
       BrandPromotionEntity,
       BrandPromotionBannerEntity,
+      BrandPromotionBannerImageEntity,
       BrandPromotionSectionEntity,
       BrandPromotionSectionImageEntity,
       BrandPromotionSectionTypeEntity,

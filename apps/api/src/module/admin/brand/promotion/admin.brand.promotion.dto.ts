@@ -145,11 +145,29 @@ export class GetAdminBrandPromotionResponse {
   @IsDefined()
   isActive: boolean;
 
+  @ApiProperty({
+    description: '생성일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  @IsString()
+  @IsDefined()
+  createDate: Date;
+
+  @ApiProperty({
+    description: '수정일',
+    example: '2025-01-01T12:00:00.000Z',
+  })
+  @IsString()
+  @IsDefined()
+  updateDate: Date;
+
   static from(entity: BrandPromotionEntity) {
     return plainToInstance(this, {
       id: entity.id,
       brandDto: GetAdminBrandPromotionDetailBrandDto.from(entity.brand),
       isActive: entity.isActive,
+      createDate: entity.createDate,
+      updateDate: entity.updateDate,
     });
   }
 }
