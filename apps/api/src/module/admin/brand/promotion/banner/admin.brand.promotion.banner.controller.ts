@@ -64,6 +64,10 @@ export class AdminBrandPromotionBannerController {
   @Get(':id(\\d+)')
   @ApiOperation({ summary: '브랜드 프로모션 배너 상세 조회' })
   @ResponseData(GetAdminBrandPromotionBannerDetailResponse)
+  @ResponseException(
+    HttpStatus.NOT_FOUND,
+    '브랜드 프로모션 배너를 찾을 수 없습니다',
+  )
   async getBrandPromotionBannerDetail(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<ResponseDataDto<GetAdminBrandPromotionBannerDetailResponse>> {

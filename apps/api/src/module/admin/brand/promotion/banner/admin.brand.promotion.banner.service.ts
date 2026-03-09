@@ -1,12 +1,16 @@
 import { DeviceType } from '@app/repository/dto/common.dto';
 import { BrandPromotionBannerEntity } from '@app/repository/entity/brand-promotion-banner.entity';
 import { BrandPromotionBannerImageEntity } from '@app/repository/entity/brand-promotion-banner.image.entity';
+import { EntityType } from '@app/repository/enum/entity.enum';
 import { BrandPromotionRepositoryService } from '@app/repository/service/brand-promotion.repository.service';
+import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
+import { MultilingualFieldDto } from 'apps/api/src/module/dto/multilingual.dto';
 import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
+  AdminBrandPromotionBannerLanguageDto,
   GetAdminBrandPromotionBannerDetailResponse,
   GetAdminBrandPromotionBannerRequest,
   GetAdminBrandPromotionBannerResponse,
@@ -18,6 +22,7 @@ import {
 export class AdminBrandPromotionBannerService {
   constructor(
     private readonly brandPromotionRepositoryService: BrandPromotionRepositoryService,
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
   @Transactional()
@@ -31,6 +36,18 @@ export class AdminBrandPromotionBannerService {
           linkUrl: request.linkUrl,
         }),
       );
+
+    await Promise.all(
+      request.language.map(async (language) => {
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND_PROMOTION_BANNER,
+          bannerEntity.id,
+          'title',
+          language.languageId,
+          language.title,
+        );
+      }),
+    );
 
     await this.createBrandPromotionBannerImage(
       bannerEntity.id,
@@ -48,12 +65,42 @@ export class AdminBrandPromotionBannerService {
         request.count,
       );
 
-    return [
-      brandPromotionBanners.map((brandPromotionBanner) =>
-        GetAdminBrandPromotionBannerResponse.from(brandPromotionBanner),
+    if (brandPromotionBanners.length === 0) {
+      return [[], total];
+    }
+
+    const [languages, multilingualTexts] = await Promise.all([
+      this.languageRepositoryService.findAllActiveLanguages(),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND_PROMOTION_BANNER,
+        brandPromotionBanners.map((b) => b.id),
       ),
-      total,
-    ];
+    ]);
+
+    const brandPromotionBannerList = brandPromotionBanners.map(
+      (brandPromotionBanner) => {
+        const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+          multilingualTexts.filter(
+            (v) => v.entityId === brandPromotionBanner.id,
+          ),
+          'title',
+        );
+
+        const nameDto = languages.map((language) =>
+          AdminBrandPromotionBannerLanguageDto.from(
+            language.code,
+            titleTextsByEntityAndLanguage.getContentByLanguage(language.code),
+          ),
+        );
+
+        return GetAdminBrandPromotionBannerResponse.from(
+          brandPromotionBanner,
+          nameDto,
+        );
+      },
+    );
+
+    return [brandPromotionBannerList, total];
   }
 
   async getBrandPromotionBannerDetail(
@@ -64,8 +111,31 @@ export class AdminBrandPromotionBannerService {
         id,
       );
 
+    const [languages, multilingualTexts] = await Promise.all([
+      this.languageRepositoryService.findAllActiveLanguages(),
+      this.languageRepositoryService.findMultilingualTexts(
+        EntityType.BRAND_PROMOTION_BANNER,
+        brandPromotionBanner.id,
+        undefined,
+        'title',
+      ),
+    ]);
+
+    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+      multilingualTexts,
+      'title',
+    );
+
+    const nameDto = languages.map((language) =>
+      AdminBrandPromotionBannerLanguageDto.from(
+        language.code,
+        titleTextsByEntityAndLanguage.getContentByLanguage(language.code),
+      ),
+    );
+
     return GetAdminBrandPromotionBannerDetailResponse.from(
       brandPromotionBanner,
+      nameDto,
     );
   }
 
@@ -79,6 +149,28 @@ export class AdminBrandPromotionBannerService {
       brandPromotionId: request.brandPromotionId,
       linkUrl: request.linkUrl,
     });
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_BANNER,
+      id,
+    );
+
+    await Promise.all(
+      request.language.map(async (language) => {
+        const languageId =
+          await this.languageRepositoryService.findLanguageByCode(
+            language.languageCode,
+          );
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND_PROMOTION_BANNER,
+          id,
+          'title',
+          languageId.id,
+          language.title,
+        );
+      }),
+    );
 
     await this.brandPromotionRepositoryService.deleteBrandPromotionBannerImageByBrandPromotionBannerId(
       id,

@@ -31,10 +31,10 @@ export class BrandPromotionPopupEntity extends CommonEntity {
   address: string;
 
   @Column('varchar', { length: 255, nullable: false })
-  latitude: string;
+  latitude: number;
 
   @Column('varchar', { length: 255, nullable: false })
-  longitude: string;
+  longitude: number;
 
   @Column('timestamp', { nullable: true })
   startDate: Date;

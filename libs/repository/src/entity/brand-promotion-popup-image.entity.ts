@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import {
   Column,
   Entity,
@@ -29,4 +30,10 @@ export class BrandPromotionPopupImageEntity extends CommonEntity {
   })
   @JoinColumn({ name: 'brand_promotion_popup_id' })
   popup: BrandPromotionPopupEntity;
+
+  getImageUrl(): string {
+    return this.imagePath
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imagePath}`
+      : null;
+  }
 }

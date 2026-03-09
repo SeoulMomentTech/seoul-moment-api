@@ -148,7 +148,10 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
   async updateBrandPromotionBanner(
     dto: UpdateBrandPromotionBannerDto,
   ): Promise<BrandPromotionBannerEntity> {
-    return this.brandPromotionBannerRepository.save(dto);
+    const entity = this.brandPromotionBannerRepository.create(dto);
+    return this.brandPromotionBannerRepository.save(
+      Object.assign(entity, { updateDate: new Date() }),
+    );
   }
 
   async updateBrandPromotionBannerImage(
@@ -321,6 +324,49 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     if (!result) {
       throw new ServiceError(
         'Brand promotion notice not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
+  async createBrandPromotionPopup(
+    entity: BrandPromotionPopupEntity,
+  ): Promise<BrandPromotionPopupEntity> {
+    return this.brandPromotionPopupRepository.save(entity);
+  }
+
+  async createBrandPromotionPopupImage(
+    image: BrandPromotionPopupImageEntity,
+  ): Promise<BrandPromotionPopupImageEntity> {
+    return this.brandPromotionPopupImageRepository.save(image);
+  }
+
+  async findBrandPromotionPopupListByPaging(
+    page: number,
+    count: number,
+  ): Promise<[BrandPromotionPopupEntity[], number]> {
+    const qb = this.brandPromotionPopupRepository.createQueryBuilder('bp');
+    return qb
+      .skip((page - 1) * count)
+      .take(count)
+      .leftJoinAndSelect('bp.images', 'images')
+      .orderBy('bp.createDate', 'DESC')
+      .getManyAndCount();
+  }
+
+  async getBrandPromotionPopupById(
+    id: number,
+  ): Promise<BrandPromotionPopupEntity> {
+    const result = await this.brandPromotionPopupRepository.findOne({
+      where: { id },
+      relations: ['images'],
+    });
+
+    if (!result) {
+      throw new ServiceError(
+        'Brand promotion popup not found',
         ServiceErrorCode.NOT_FOUND_DATA,
       );
     }
