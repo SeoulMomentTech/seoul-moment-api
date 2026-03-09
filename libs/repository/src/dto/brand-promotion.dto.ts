@@ -2,6 +2,7 @@ import { RequireKey } from '@app/common/type/require-key.type';
 
 import { BrandPromotionBannerEntity } from '../entity/brand-promotion-banner.entity';
 import { BrandPromotionBannerImageEntity } from '../entity/brand-promotion-banner.image.entity';
+import { BrandPromotionNoticeEntity } from '../entity/brand-promotion-notice.entity';
 import { BrandPromotionSectionImageEntity } from '../entity/brand-promotion-section-image.entity';
 import { BrandPromotionSectionEntity } from '../entity/brand-promotion-section.entity';
 import { BrandPromotionEntity } from '../entity/brand-promotion.entity';
@@ -25,5 +26,10 @@ export type UpdateBrandPromotionSectionDto = RequireKey<
 
 export type UpdateBrandPromotionSectionImageDto = RequireKey<
   BrandPromotionSectionImageEntity,
+  'id'
+>;
+
+export type UpdateBrandPromotionNoticsDto = RequireKey<
+  BrandPromotionNoticeEntity,
   'id'
 >;

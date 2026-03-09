@@ -5,6 +5,7 @@ import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -92,6 +93,17 @@ export class AdminBrandPromotionSectionController {
     await this.adminBrandPromotionSectionService.updateBrandPromotionSection(
       id,
       request,
+    );
+  }
+
+  @Delete(':id(\\d+)')
+  @ApiOperation({ summary: '브랜드 프로모션 섹션 삭제' })
+  @HttpCode(HttpStatus.OK)
+  async deleteBrandPromotionSection(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    await this.adminBrandPromotionSectionService.deleteBrandPromotionSection(
+      id,
     );
   }
 }

@@ -113,4 +113,8 @@ export class AdminBrandPromotionSectionService {
       ),
     );
   }
+
+  async deleteBrandPromotionSection(id: number) {
+    await this.brandPromotionRepositoryService.deleteBrandPromotionSection(id);
+  }
 }

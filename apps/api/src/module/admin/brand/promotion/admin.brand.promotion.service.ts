@@ -51,4 +51,8 @@ export class AdminBrandPromotionService {
 
     return GetAdminBrandPromotionDetailResponse.from(brandPromotion);
   }
+
+  async deleteBrandPromotion(id: number) {
+    await this.brandPromotionRepositoryService.deleteBrandPromotion(id);
+  }
 }

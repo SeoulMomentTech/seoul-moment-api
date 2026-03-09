@@ -8,6 +8,7 @@ import {
   UpdateBrandPromotionBannerDto,
   UpdateBrandPromotionBannerImageDto,
   UpdateBrandPromotionDto,
+  UpdateBrandPromotionNoticsDto,
   UpdateBrandPromotionSectionDto,
   UpdateBrandPromotionSectionImageDto,
 } from '../dto/brand-promotion.dto';
@@ -275,6 +276,51 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     if (!result) {
       throw new ServiceError(
         'Brand promotion banner not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
+  async createBrandPromotionNotics(
+    entity: BrandPromotionNoticeEntity,
+  ): Promise<BrandPromotionNoticeEntity> {
+    return this.brandPromotionNoticeRepository.save(entity);
+  }
+
+  async findBrandPromotionNoticsListByPaging(
+    page: number,
+    count: number,
+  ): Promise<[BrandPromotionNoticeEntity[], number]> {
+    const qb = this.brandPromotionNoticeRepository.createQueryBuilder('bpn');
+    return qb
+      .skip((page - 1) * count)
+      .take(count)
+      .orderBy('bpn.createDate', 'DESC')
+      .getManyAndCount();
+  }
+
+  async updateBrandPromotionNotics(
+    dto: UpdateBrandPromotionNoticsDto,
+  ): Promise<BrandPromotionNoticeEntity> {
+    return this.brandPromotionNoticeRepository.save(dto);
+  }
+
+  async deleteBrandPromotionNotics(id: number) {
+    await this.brandPromotionNoticeRepository.delete(id);
+  }
+
+  async getBrandPromotionNoticsById(
+    id: number,
+  ): Promise<BrandPromotionNoticeEntity> {
+    const result = await this.brandPromotionNoticeRepository.findOne({
+      where: { id },
+    });
+
+    if (!result) {
+      throw new ServiceError(
+        'Brand promotion notice not found',
         ServiceErrorCode.NOT_FOUND_DATA,
       );
     }

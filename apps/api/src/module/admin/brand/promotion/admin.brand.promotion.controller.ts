@@ -6,6 +6,7 @@ import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -66,5 +67,16 @@ export class AdminBrandPromotionController {
       await this.adminBrandPromotionService.getBrandPromotionDetail(id);
 
     return new ResponseDataDto(result);
+  }
+
+  @Delete(':id(\\d+)')
+  @ApiOperation({ summary: '브랜드 프로모션 삭제' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    '브랜드 프로모션 삭제 실패',
+  )
+  async deleteBrandPromotion(@Param('id', ParseIntPipe) id: number) {
+    await this.adminBrandPromotionService.deleteBrandPromotion(id);
   }
 }
