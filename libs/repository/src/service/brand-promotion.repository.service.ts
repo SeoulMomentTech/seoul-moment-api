@@ -53,10 +53,10 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
       const types = [
         { id: 'TYPE_1', description: '정가운데 이미지 하나', imageCount: 1 },
         { id: 'TYPE_2', description: '정가운데 이미지 두개', imageCount: 2 },
-        { id: 'TYPE_3', description: '정가운데 이미지 네개', imageCount: 4 },
-        { id: 'TYPE_3', description: '좌측 이미지 하나', imageCount: 1 },
+        { id: 'TYPE_4', description: '정가운데 이미지 네개', imageCount: 4 },
+        { id: 'TYPE_5', description: '좌측 이미지 하나', imageCount: 1 },
         {
-          id: 'TYPE_3',
+          id: 'TYPE_6',
           description: '정가운데 와이드 이미지 하나',
           imageCount: 1,
         },
@@ -179,5 +179,50 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
 
   async deleteBrandPromotionSectionImage(id: number): Promise<void> {
     await this.brandPromotionSectionImageRepository.delete(id);
+  }
+
+  async deleteBrandPromotionSectionImageByBrandPromotionSectionId(
+    brandPromotionSectionId: number,
+  ): Promise<void> {
+    await this.brandPromotionSectionImageRepository.delete({
+      brandPromotionSectionId,
+    });
+  }
+
+  async findBrandPromotionSectionTypeList(): Promise<
+    BrandPromotionSectionTypeEntity[]
+  > {
+    return this.brandPromotionSectionTypeRepository.find();
+  }
+
+  async findBrandPromotionSectionList(
+    page: number,
+    count: number,
+  ): Promise<[BrandPromotionSectionEntity[], number]> {
+    const qb = this.brandPromotionSectionRepository.createQueryBuilder('bps');
+    return qb
+      .skip((page - 1) * count)
+      .take(count)
+      .orderBy('bps.sortOrder', 'DESC')
+      .leftJoinAndSelect('bps.images', 'images')
+      .getManyAndCount();
+  }
+
+  async getBrandPromotionSectionById(
+    id: number,
+  ): Promise<BrandPromotionSectionEntity> {
+    const result = await this.brandPromotionSectionRepository.findOne({
+      where: { id },
+      relations: ['images'],
+    });
+
+    if (!result) {
+      throw new ServiceError(
+        'Brand promotion section not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
   }
 }

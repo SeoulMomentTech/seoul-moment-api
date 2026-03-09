@@ -8,7 +8,7 @@ export class BrandPromotionSectionTypeEntity extends CommonEntity {
   @PrimaryColumn('varchar', { length: 255, nullable: false })
   id: string;
 
-  @Column('varchar', { length: 255, nullable: false })
+  @Column('varchar', { length: 255, nullable: true })
   description: string;
 
   @Column('int', { default: 0, nullable: false })

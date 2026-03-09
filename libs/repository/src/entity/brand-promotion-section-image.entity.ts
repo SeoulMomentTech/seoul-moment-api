@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import {
   Column,
   Entity,
@@ -17,6 +18,9 @@ export class BrandPromotionSectionImageEntity extends CommonEntity {
   @Column('int', { name: 'brand_promotion_section_id', nullable: false })
   brandPromotionSectionId: number;
 
+  @Column('varchar', { length: 500, nullable: false })
+  imagePath: string;
+
   @ManyToOne(
     () => BrandPromotionSectionEntity,
     (brandPromotionSection) => brandPromotionSection.images,
@@ -27,4 +31,10 @@ export class BrandPromotionSectionImageEntity extends CommonEntity {
   )
   @JoinColumn({ name: 'brand_promotion_section_id' })
   brandPromotionSection: BrandPromotionSectionEntity;
+
+  getImageUrl(): string {
+    return this.imagePath
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imagePath}`
+      : null;
+  }
 }
