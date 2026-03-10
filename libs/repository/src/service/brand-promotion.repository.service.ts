@@ -9,6 +9,7 @@ import {
   UpdateBrandPromotionBannerImageDto,
   UpdateBrandPromotionDto,
   UpdateBrandPromotionNoticsDto,
+  UpdateBrandPromotionPopupDto,
   UpdateBrandPromotionSectionDto,
   UpdateBrandPromotionSectionImageDto,
 } from '../dto/brand-promotion.dto';
@@ -372,5 +373,26 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     }
 
     return result;
+  }
+
+  async updateBrandPromotionPopup(
+    dto: UpdateBrandPromotionPopupDto,
+  ): Promise<BrandPromotionPopupEntity> {
+    const entity = this.brandPromotionPopupRepository.create(dto);
+    return this.brandPromotionPopupRepository.save(
+      Object.assign(entity, { updateDate: new Date() }),
+    );
+  }
+
+  async deleteBrandPromotionPopup(id: number): Promise<void> {
+    await this.brandPromotionPopupRepository.delete(id);
+  }
+
+  async deleteBrandPromotionPopupImageByBrandPromotionPopupId(
+    brandPromotionPopupId: number,
+  ): Promise<void> {
+    await this.brandPromotionPopupImageRepository.delete({
+      brandPromotionPopupId,
+    });
   }
 }

@@ -1,10 +1,12 @@
 /* eslint-disable max-lines-per-function */
+import { Configuration } from '@app/config/configuration';
 import { BrandPromotionPopupImageEntity } from '@app/repository/entity/brand-promotion-popup-image.entity';
 import { BrandPromotionPopupEntity } from '@app/repository/entity/brand-promotion-popup.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { BrandPromotionRepositoryService } from '@app/repository/service/brand-promotion.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
+import { MultilingualFieldDto } from 'apps/api/src/module/dto/multilingual.dto';
 import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
@@ -13,6 +15,8 @@ import {
   GetAdminBrandPromotionPopupLanguageDto,
   GetAdminBrandPromotionPopupListRequest,
   GetAdminBrandPromotionPopupResponse,
+  PatchAdminBrandPromotionPopupRequest,
+  PostAdminBrandPromotionPopupLanguageDto,
   PostAdminBrandPromotionPopupRequest,
 } from './admin.brand.promotion.popup.dto';
 
@@ -27,6 +31,10 @@ export class AdminBrandPromotionPopupService {
   async createBrandPromotionPopup(
     request: PostAdminBrandPromotionPopupRequest,
   ) {
+    await this.brandPromotionRepositoryService.getBrandPromotionById(
+      request.brandPromotionId,
+    );
+
     const entity =
       await this.brandPromotionRepositoryService.createBrandPromotionPopup(
         plainToInstance(BrandPromotionPopupEntity, {
@@ -41,35 +49,14 @@ export class AdminBrandPromotionPopupService {
         }),
       );
 
-    await Promise.all(
-      request.language.map(async (language) => {
-        await this.languageRepositoryService.saveMultilingualText(
-          EntityType.BRAND_PROMOTION_POPUP,
-          entity.id,
-          'title',
-          language.languageId,
-          language.title,
-        );
-
-        await this.languageRepositoryService.saveMultilingualText(
-          EntityType.BRAND_PROMOTION_POPUP,
-          entity.id,
-          'description',
-          language.languageId,
-          language.description,
-        );
-      }),
+    await this.createBrandPromotionMultilingualText(
+      entity.id,
+      request.language,
     );
 
-    await Promise.all(
-      request.imagePathList.map((imagePath) =>
-        this.brandPromotionRepositoryService.createBrandPromotionPopupImage(
-          plainToInstance(BrandPromotionPopupImageEntity, {
-            brandPromotionPopupId: entity.id,
-            imagePath,
-          }),
-        ),
-      ),
+    await this.createBrandPromotionPopupImageList(
+      entity.id,
+      request.imagePathList,
     );
   }
 
@@ -82,47 +69,45 @@ export class AdminBrandPromotionPopupService {
         request.count,
       );
 
-    const languages =
-      await this.languageRepositoryService.findAllActiveLanguages();
+    if (brandPromotionPopups.length === 0) {
+      return [[], total];
+    }
 
-    const brandPromotionPopupList = await Promise.all(
-      brandPromotionPopups.map(async (brandPromotionPopup) => {
-        const nameDto = await Promise.all(
-          languages.map(async (language) => {
-            const multilingualTitleText =
-              await this.languageRepositoryService.findMultilingualTexts(
-                EntityType.BRAND_PROMOTION_POPUP,
-                brandPromotionPopup.id,
-                language.code,
-                'title',
-              );
+    const [languages, multilingualTexts] = await Promise.all([
+      this.languageRepositoryService.findAllActiveLanguages(),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND_PROMOTION_POPUP,
+        brandPromotionPopups.map((b) => b.id),
+      ),
+    ]);
 
-            const multilingualDescription =
-              await this.languageRepositoryService.findMultilingualTexts(
-                EntityType.BRAND_PROMOTION_POPUP,
-                brandPromotionPopup.id,
-                language.code,
-                'description',
-              );
-
-            if (
-              multilingualTitleText.length > 0 &&
-              multilingualDescription.length > 0
-            ) {
-              return GetAdminBrandPromotionPopupLanguageDto.from(
-                language.code,
-                multilingualTitleText[0].textContent,
-                multilingualDescription[0].textContent,
-              );
-            }
-            return null;
-          }),
+    const brandPromotionPopupList = brandPromotionPopups.map(
+      (brandPromotionPopup) => {
+        const titleByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+          multilingualTexts.filter(
+            (v) => v.entityId === brandPromotionPopup.id,
+          ),
+          'title',
+        );
+        const descriptionByEntityAndLanguage =
+          MultilingualFieldDto.fromByEntity(
+            multilingualTexts.filter(
+              (v) => v.entityId === brandPromotionPopup.id,
+            ),
+            'description',
+          );
+        const nameDto = languages.map((language) =>
+          GetAdminBrandPromotionPopupLanguageDto.from(
+            language.code,
+            titleByEntityAndLanguage.getContentByLanguage(language.code),
+            descriptionByEntityAndLanguage.getContentByLanguage(language.code),
+          ),
         );
         return GetAdminBrandPromotionPopupResponse.from(
           brandPromotionPopup,
           nameDto,
         );
-      }),
+      },
     );
 
     return [brandPromotionPopupList, total];
@@ -133,44 +118,133 @@ export class AdminBrandPromotionPopupService {
   ): Promise<GetAdminBrandPromotionPopupDetailResponse> {
     const brandPromotionPopup =
       await this.brandPromotionRepositoryService.getBrandPromotionPopupById(id);
-    const languages =
-      await this.languageRepositoryService.findAllActiveLanguages();
 
-    const nameDto = await Promise.all(
-      languages.map(async (language) => {
-        const multilingualTitleText =
-          await this.languageRepositoryService.findMultilingualTexts(
-            EntityType.BRAND_PROMOTION_POPUP,
-            brandPromotionPopup.id,
-            language.code,
-            'title',
-          );
+    const [languages, multilingualTexts] = await Promise.all([
+      this.languageRepositoryService.findAllActiveLanguages(),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND_PROMOTION_POPUP,
+        [brandPromotionPopup.id],
+      ),
+    ]);
 
-        const multilingualDescription =
-          await this.languageRepositoryService.findMultilingualTexts(
-            EntityType.BRAND_PROMOTION_POPUP,
-            brandPromotionPopup.id,
-            language.code,
-            'description',
-          );
+    const titleByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+      multilingualTexts,
+      'title',
+    );
+    const descriptionByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+      multilingualTexts,
+      'description',
+    );
 
-        if (
-          multilingualTitleText.length > 0 &&
-          multilingualDescription.length > 0
-        ) {
-          return GetAdminBrandPromotionPopupLanguageDto.from(
-            language.code,
-            multilingualTitleText[0].textContent,
-            multilingualDescription[0].textContent,
-          );
-        }
-        return null;
-      }),
+    const nameDto = languages.map((language) =>
+      GetAdminBrandPromotionPopupLanguageDto.from(
+        language.code,
+        titleByEntityAndLanguage.getContentByLanguage(language.code),
+        descriptionByEntityAndLanguage.getContentByLanguage(language.code),
+      ),
     );
 
     return GetAdminBrandPromotionPopupDetailResponse.from(
       brandPromotionPopup,
       nameDto,
+    );
+  }
+
+  @Transactional()
+  async patchBrandPromotionPopup(
+    id: number,
+    request: PatchAdminBrandPromotionPopupRequest,
+  ) {
+    await this.brandPromotionRepositoryService.getBrandPromotionPopupById(id);
+
+    await this.brandPromotionRepositoryService.updateBrandPromotionPopup({
+      id,
+      brandPromotionId: request.brandPromotionId,
+      place: request.place,
+      address: request.address,
+      latitude: request.latitude,
+      longitude: request.longitude,
+      startDate: new Date(request.startDate),
+      endDate: request.endDate ? new Date(request.endDate) : null,
+      isActive: request.isActive,
+    });
+
+    await this.createBrandPromotionMultilingualText(id, request.language);
+
+    await this.createBrandPromotionPopupImageList(id, request.imageUrlList);
+  }
+
+  async deleteBrandPromotionPopup(id: number) {
+    await this.brandPromotionRepositoryService.deleteBrandPromotionPopup(id);
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_POPUP,
+      id,
+    );
+  }
+
+  private async createBrandPromotionMultilingualText(
+    entityId: number,
+    language:
+      | GetAdminBrandPromotionPopupLanguageDto[]
+      | PostAdminBrandPromotionPopupLanguageDto[],
+  ) {
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_POPUP,
+      entityId,
+    );
+    await Promise.all(
+      language.map(async (language) => {
+        let languageId = language?.languageId;
+
+        const languageEntity = language?.languageCode
+          ? await this.languageRepositoryService.findLanguageByCode(
+              language.languageCode,
+            )
+          : null;
+
+        if (languageEntity) {
+          languageId = languageEntity.id;
+        }
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND_PROMOTION_POPUP,
+          entityId,
+          'title',
+          languageId,
+          language.title,
+        );
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND_PROMOTION_POPUP,
+          entityId,
+          'description',
+          languageId,
+          language.description,
+        );
+      }),
+    );
+  }
+
+  private async createBrandPromotionPopupImageList(
+    entityId: number,
+    imageList: string[],
+  ) {
+    await this.brandPromotionRepositoryService.deleteBrandPromotionPopupImageByBrandPromotionPopupId(
+      entityId,
+    );
+
+    await Promise.all(
+      imageList.map((image) =>
+        this.brandPromotionRepositoryService.createBrandPromotionPopupImage(
+          plainToInstance(BrandPromotionPopupImageEntity, {
+            brandPromotionPopupId: entityId,
+            imagePath: image.replace(
+              Configuration.getConfig().IMAGE_DOMAIN_NAME,
+              '',
+            ),
+          }),
+        ),
+      ),
     );
   }
 }

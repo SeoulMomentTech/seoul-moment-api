@@ -1,10 +1,11 @@
 import { BrandPromotionNoticeEntity } from '@app/repository/entity/brand-promotion-notice.entity';
-import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
+  IsEnum,
   IsNumber,
   IsString,
   ValidateNested,
@@ -12,7 +13,7 @@ import {
 
 import { ListFilterDto } from '../../../admin.dto';
 
-export class BrandPromotionNoticsLanguageDto {
+export class PostAdminBrandPromotionNoticsLanguageDto {
   @ApiProperty({
     description: '언어 ID',
     example: 1,
@@ -30,10 +31,36 @@ export class BrandPromotionNoticsLanguageDto {
   @IsDefined()
   content: string;
 
-  static from(multilingualText: MultilingualTextEntity) {
+  static from(languageId: number, content: string) {
     return plainToInstance(this, {
-      languageId: multilingualText.languageId,
-      content: multilingualText.textContent,
+      languageId,
+      content,
+    });
+  }
+}
+
+export class GetAdminBrandPromotionNoticsLanguageDto {
+  @ApiProperty({
+    description: '언어 코드',
+    example: LanguageCode.KOREAN,
+    enum: LanguageCode,
+  })
+  @IsEnum(LanguageCode)
+  @IsDefined()
+  languageCode: LanguageCode;
+
+  @ApiProperty({
+    description: '내용',
+    example: '내용',
+  })
+  @IsString()
+  @IsDefined()
+  content: string;
+
+  static from(languageCode: LanguageCode, content: string) {
+    return plainToInstance(this, {
+      languageCode,
+      content,
     });
   }
 }
@@ -50,7 +77,7 @@ export class PostAdminBrandPromotionNoticsRequest {
 
   @ApiProperty({
     description: '언어별 내용',
-    type: [BrandPromotionNoticsLanguageDto],
+    type: [PostAdminBrandPromotionNoticsLanguageDto],
     example: [
       {
         languageId: 1,
@@ -68,9 +95,9 @@ export class PostAdminBrandPromotionNoticsRequest {
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => BrandPromotionNoticsLanguageDto)
+  @Type(() => PostAdminBrandPromotionNoticsLanguageDto)
   @IsDefined()
-  language: BrandPromotionNoticsLanguageDto[];
+  language: PostAdminBrandPromotionNoticsLanguageDto[];
 }
 
 export class GetAdminBrandPromotionNoticsListRequest extends ListFilterDto {}
@@ -96,27 +123,27 @@ export class GetAdminBrandPromotionNoticsResponse {
 
   @ApiProperty({
     description: '언어별 내용',
-    type: [BrandPromotionNoticsLanguageDto],
+    type: [GetAdminBrandPromotionNoticsLanguageDto],
     example: [
       {
-        languageId: 1,
+        languageCode: LanguageCode.KOREAN,
         content: '내용',
       },
       {
-        languageId: 2,
+        languageCode: LanguageCode.ENGLISH,
         content: 'content',
       },
       {
-        languageId: 3,
+        languageCode: LanguageCode.TAIWAN,
         content: '内容',
       },
     ],
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => BrandPromotionNoticsLanguageDto)
+  @Type(() => GetAdminBrandPromotionNoticsLanguageDto)
   @IsDefined()
-  language: BrandPromotionNoticsLanguageDto[];
+  language: GetAdminBrandPromotionNoticsLanguageDto[];
 
   @ApiProperty({
     description: '생성일',
@@ -136,7 +163,7 @@ export class GetAdminBrandPromotionNoticsResponse {
 
   static from(
     entity: BrandPromotionNoticeEntity,
-    multilingualTexts: BrandPromotionNoticsLanguageDto[],
+    multilingualTexts: GetAdminBrandPromotionNoticsLanguageDto[],
   ) {
     return plainToInstance(this, {
       id: entity.id,
@@ -169,27 +196,27 @@ export class GetAdminBrandPromotionNoticsDetailResponse {
 
   @ApiProperty({
     description: '언어별 내용',
-    type: [BrandPromotionNoticsLanguageDto],
+    type: [GetAdminBrandPromotionNoticsLanguageDto],
     example: [
       {
-        languageId: 1,
+        languageCode: LanguageCode.KOREAN,
         content: '내용',
       },
       {
-        languageId: 2,
+        languageCode: LanguageCode.ENGLISH,
         content: 'content',
       },
       {
-        languageId: 3,
+        languageCode: LanguageCode.TAIWAN,
         content: '内容',
       },
     ],
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => BrandPromotionNoticsLanguageDto)
+  @Type(() => GetAdminBrandPromotionNoticsLanguageDto)
   @IsDefined()
-  language: BrandPromotionNoticsLanguageDto[];
+  language: GetAdminBrandPromotionNoticsLanguageDto[];
 
   @ApiProperty({
     description: '생성일',
@@ -209,7 +236,7 @@ export class GetAdminBrandPromotionNoticsDetailResponse {
 
   static from(
     entity: BrandPromotionNoticeEntity,
-    multilingualTexts: BrandPromotionNoticsLanguageDto[],
+    multilingualTexts: GetAdminBrandPromotionNoticsLanguageDto[],
   ) {
     return plainToInstance(this, {
       id: entity.id,
@@ -233,17 +260,17 @@ export class PatchAdminBrandPromotionNoticsRequest {
 
   @ApiProperty({
     description: '언어별 내용',
-    type: [BrandPromotionNoticsLanguageDto],
+    type: [GetAdminBrandPromotionNoticsLanguageDto],
     example: [
       {
-        languageId: 1,
+        languageCode: LanguageCode.KOREAN,
         content: '내용',
       },
     ],
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => BrandPromotionNoticsLanguageDto)
+  @Type(() => GetAdminBrandPromotionNoticsLanguageDto)
   @IsDefined()
-  language: BrandPromotionNoticsLanguageDto[];
+  language: GetAdminBrandPromotionNoticsLanguageDto[];
 }

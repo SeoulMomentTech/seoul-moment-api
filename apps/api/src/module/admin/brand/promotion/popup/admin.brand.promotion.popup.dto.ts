@@ -1,6 +1,6 @@
 import { BrandPromotionPopupEntity } from '@app/repository/entity/brand-promotion-popup.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
@@ -8,6 +8,7 @@ import {
   IsDefined,
   IsEnum,
   IsNumber,
+  IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
@@ -135,13 +136,13 @@ export class PostAdminBrandPromotionPopupRequest {
   @IsDefined()
   startDate: string;
 
-  @ApiProperty({
-    description: '종료일',
+  @ApiPropertyOptional({
+    description: '종료일, null일 경우 상시 진행',
     example: '2025-03-01',
   })
   @IsString()
-  @IsDefined()
-  endDate: string;
+  @IsOptional()
+  endDate?: string;
 
   @ApiProperty({
     description: '활성 여부',
@@ -255,13 +256,13 @@ export class GetAdminBrandPromotionPopupDetailResponse {
   @IsDefined()
   startDate: string;
 
-  @ApiProperty({
-    description: '종료일',
+  @ApiPropertyOptional({
+    description: '종료일, null일 경우 상시 진행',
     example: '2025-03-01',
   })
   @IsString()
-  @IsDefined()
-  endDate: string;
+  @IsOptional()
+  endDate?: string;
 
   @ApiProperty({
     description: '활성 여부',
@@ -304,6 +305,19 @@ export class GetAdminBrandPromotionPopupDetailResponse {
   @IsDefined()
   updateDate: string;
 
+  @ApiProperty({
+    description: '이미지 경로 리스트',
+    example: [
+      'https://image-dev.seoulmoment.com.tw/brand-promotion-popups/2025-09-16/popup-01.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-promotion-popups/2025-09-16/popup-02.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-promotion-popups/2025-09-16/popup-03.jpg',
+    ],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsDefined()
+  imageUrlList: string[];
+
   static from(
     entity: BrandPromotionPopupEntity,
     multilingualTexts: GetAdminBrandPromotionPopupLanguageDto[],
@@ -321,6 +335,7 @@ export class GetAdminBrandPromotionPopupDetailResponse {
       language: multilingualTexts,
       createDate: entity.createDate,
       updateDate: entity.updateDate,
+      imageUrlList: entity.images.map((image) => image.getImageUrl()),
     });
   }
 }
@@ -384,13 +399,13 @@ export class GetAdminBrandPromotionPopupResponse {
   @IsDefined()
   startDate: string;
 
-  @ApiProperty({
-    description: '종료일',
-    example: '종료일',
+  @ApiPropertyOptional({
+    description: '종료일, null일 경우 상시 진행',
+    example: '2025-03-01',
   })
   @IsString()
-  @IsDefined()
-  endDate: string;
+  @IsOptional()
+  endDate?: string;
 
   @ApiProperty({
     description: '활성 여부',
@@ -519,13 +534,13 @@ export class PatchAdminBrandPromotionPopupRequest {
   @IsDefined()
   startDate: string;
 
-  @ApiProperty({
-    description: '종료일',
+  @ApiPropertyOptional({
+    description: '종료일, null일 경우 상시 진행',
     example: '2025-03-01',
   })
   @IsString()
-  @IsDefined()
-  endDate: string;
+  @IsOptional()
+  endDate?: string;
 
   @ApiProperty({
     description: '활성 여부',

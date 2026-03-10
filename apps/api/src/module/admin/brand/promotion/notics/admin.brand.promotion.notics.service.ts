@@ -1,18 +1,21 @@
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { BrandPromotionNoticeEntity } from '@app/repository/entity/brand-promotion-notice.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { BrandPromotionRepositoryService } from '@app/repository/service/brand-promotion.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
+import { MultilingualFieldDto } from 'apps/api/src/module/dto/multilingual.dto';
 import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
-  BrandPromotionNoticsLanguageDto,
   GetAdminBrandPromotionNoticsDetailResponse,
   GetAdminBrandPromotionNoticsListRequest,
   GetAdminBrandPromotionNoticsResponse,
   PatchAdminBrandPromotionNoticsRequest,
   PostAdminBrandPromotionNoticsRequest,
+  GetAdminBrandPromotionNoticsLanguageDto,
 } from './admin.brand.promotion.notics.dto';
 
 @Injectable()
@@ -55,29 +58,39 @@ export class AdminBrandPromotionNoticsService {
         request.count,
       );
 
-    const languages =
-      await this.languageRepositoryService.findAllActiveLanguages();
+    if (brandPromotionNotics.length === 0) {
+      return [[], total];
+    }
 
-    const brandPromotionNoticsList = await Promise.all(
-      brandPromotionNotics.map(async (brandPromotionNotics) => {
-        const multilingualTexts = await Promise.all(
-          languages.map(async (language) =>
-            this.languageRepositoryService.findMultilingualTexts(
-              EntityType.BRAND_PROMOTION_NOTICE,
-              brandPromotionNotics.id,
-              language.code,
-              'content',
-            ),
+    const [languages, multilingualTexts] = await Promise.all([
+      this.languageRepositoryService.findAllActiveLanguages(),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND_PROMOTION_NOTICE,
+        brandPromotionNotics.map((b) => b.id),
+      ),
+    ]);
+
+    const brandPromotionNoticsList = brandPromotionNotics.map(
+      (brandPromotionNotics) => {
+        const contentByEntity = MultilingualFieldDto.fromByEntity(
+          multilingualTexts.filter(
+            (v) => v.entityId === brandPromotionNotics.id,
+          ),
+          'content',
+        );
+
+        const nameDto = languages.map((language) =>
+          GetAdminBrandPromotionNoticsLanguageDto.from(
+            language.code,
+            contentByEntity.getContentByLanguage(language.code),
           ),
         );
 
         return GetAdminBrandPromotionNoticsResponse.from(
           brandPromotionNotics,
-          multilingualTexts.map((text) =>
-            BrandPromotionNoticsLanguageDto.from(text[0]),
-          ),
+          nameDto,
         );
-      }),
+      },
     );
 
     return [brandPromotionNoticsList, total];
@@ -103,15 +116,27 @@ export class AdminBrandPromotionNoticsService {
     );
 
     await Promise.all(
-      request.language.map(async (language) =>
-        this.languageRepositoryService.saveMultilingualText(
+      request.language.map(async (language) => {
+        const languageEntity =
+          await this.languageRepositoryService.findLanguageByCode(
+            language.languageCode,
+          );
+
+        if (!languageEntity) {
+          throw new ServiceError(
+            'not found language',
+            ServiceErrorCode.NOT_FOUND_DATA,
+          );
+        }
+
+        await this.languageRepositoryService.saveMultilingualText(
           EntityType.BRAND_PROMOTION_NOTICE,
           id,
           'content',
-          language.languageId,
+          languageEntity.id,
           language.content,
-        ),
-      ),
+        );
+      }),
     );
   }
 
@@ -133,25 +158,29 @@ export class AdminBrandPromotionNoticsService {
         id,
       );
 
-    const languages =
-      await this.languageRepositoryService.findAllActiveLanguages();
+    const [languages, multilingualTexts] = await Promise.all([
+      this.languageRepositoryService.findAllActiveLanguages(),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND_PROMOTION_NOTICE,
+        [brandPromotionNotics.id],
+      ),
+    ]);
 
-    const multilingualTexts = await Promise.all(
-      languages.map(async (language) =>
-        this.languageRepositoryService.findMultilingualTexts(
-          EntityType.BRAND_PROMOTION_NOTICE,
-          brandPromotionNotics.id,
-          language.code,
-          'content',
-        ),
+    const contentByEntity = MultilingualFieldDto.fromByEntity(
+      multilingualTexts,
+      'content',
+    );
+
+    const contentDto = languages.map((language) =>
+      GetAdminBrandPromotionNoticsLanguageDto.from(
+        language.code,
+        contentByEntity.getContentByLanguage(language.code),
       ),
     );
 
     return GetAdminBrandPromotionNoticsDetailResponse.from(
       brandPromotionNotics,
-      multilingualTexts.map((text) =>
-        BrandPromotionNoticsLanguageDto.from(text[0]),
-      ),
+      contentDto,
     );
   }
 }

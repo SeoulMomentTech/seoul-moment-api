@@ -27,6 +27,7 @@ import {
 } from './admin.brand.promotion.notics.dto';
 import { AdminBrandPromotionNoticsService } from './admin.brand.promotion.notics.service';
 
+// TODO 여기 리펙터 할차례
 @Controller('admin/brand/promotion/notics')
 export class AdminBrandPromotionNoticsController {
   constructor(

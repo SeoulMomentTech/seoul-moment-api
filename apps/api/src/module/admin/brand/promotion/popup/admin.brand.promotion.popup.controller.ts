@@ -6,11 +6,13 @@ import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -20,6 +22,7 @@ import {
   GetAdminBrandPromotionPopupDetailResponse,
   GetAdminBrandPromotionPopupListRequest,
   GetAdminBrandPromotionPopupResponse,
+  PatchAdminBrandPromotionPopupRequest,
   PostAdminBrandPromotionPopupRequest,
 } from './admin.brand.promotion.popup.dto';
 import { AdminBrandPromotionPopupService } from './admin.brand.promotion.popup.service';
@@ -70,5 +73,33 @@ export class AdminBrandPromotionPopupController {
       );
 
     return new ResponseDataDto(result);
+  }
+
+  @Patch(':id(\\d+)')
+  @ApiOperation({ summary: '브랜드 프로모션 팝업 수정' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    '브랜드 프로모션 팝업 수정 실패',
+  )
+  async patchBrandPromotionPopup(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() request: PatchAdminBrandPromotionPopupRequest,
+  ) {
+    await this.adminBrandPromotionPopupService.patchBrandPromotionPopup(
+      id,
+      request,
+    );
+  }
+
+  @Delete(':id(\\d+)')
+  @ApiOperation({ summary: '브랜드 프로모션 팝업 삭제' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    '브랜드 프로모션 팝업 삭제 실패',
+  )
+  async deleteBrandPromotionPopup(@Param('id', ParseIntPipe) id: number) {
+    await this.adminBrandPromotionPopupService.deleteBrandPromotionPopup(id);
   }
 }
