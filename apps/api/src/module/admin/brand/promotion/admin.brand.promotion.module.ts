@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { AdminBrandPromotionController } from './admin.brand.promotion.controller';
 import { AdminBrandPromotionService } from './admin.brand.promotion.service';
 import { AdminBrandPromotionBannerModule } from './banner/admin.brand.promotion.banner.module';
+import { AdminBrandPromotionEventModule } from './event/admin.brand.promotion.event.module';
 import { AdminBrandPromotionNoticsModule } from './notics/admin.brand.promotion.notics.module';
 import { AdminBrandPromotionPopupModule } from './popup/admin.brand.promotion.popup.module';
 import { AdminBrandPromotionSectionModule } from './section/admin.brand.promotion.section.module';
@@ -15,6 +16,7 @@ import { AdminBrandPromotionSectionModule } from './section/admin.brand.promotio
     AdminBrandPromotionBannerModule,
     AdminBrandPromotionNoticsModule,
     AdminBrandPromotionPopupModule,
+    AdminBrandPromotionEventModule,
   ],
   controllers: [AdminBrandPromotionController],
   providers: [AdminBrandPromotionService],

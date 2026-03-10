@@ -20,6 +20,21 @@ import { initializeTransactionalContext } from 'typeorm-transactional';
 import { v4 as uuidV4 } from 'uuid';
 
 import { AdminModule } from './module/admin/admin.module';
+import { AdminArticleModule } from './module/admin/article/admin.article.module';
+import { AdminAuthModule } from './module/admin/auth/admin.auth.module';
+import { AdminBrandModule } from './module/admin/brand/admin.brand.module';
+import { AdminBrandPromotionModule } from './module/admin/brand/promotion/admin.brand.promotion.module';
+import { AdminBrandPromotionBannerModule } from './module/admin/brand/promotion/banner/admin.brand.promotion.banner.module';
+import { AdminBrandPromotionEventModule } from './module/admin/brand/promotion/event/admin.brand.promotion.event.module';
+import { AdminBrandPromotionNoticsModule } from './module/admin/brand/promotion/notics/admin.brand.promotion.notics.module';
+import { AdminBrandPromotionPopupModule } from './module/admin/brand/promotion/popup/admin.brand.promotion.popup.module';
+import { AdminBrandPromotionSectionModule } from './module/admin/brand/promotion/section/admin.brand.promotion.section.module';
+import { AdminCategoryModule } from './module/admin/category/admin.category.module';
+import { AdminHomeModule } from './module/admin/home/admin.home.module';
+import { AdminImageModule } from './module/admin/image/admin.image.module';
+import { AdminNewsModule } from './module/admin/news/admin.news.module';
+import { AdminProductModule } from './module/admin/product/admin.product.module';
+import { AdminUserModule } from './module/admin/user/admin.user.module';
 import { AppModule } from './module/api.module';
 import { ArticleModule } from './module/article/article.module';
 import { AuthModule } from './module/auth/auth.module';
@@ -68,6 +83,21 @@ async function bootstrap() {
     docsInclude: [
       AppModule,
       AdminModule,
+      AdminHomeModule,
+      AdminCategoryModule,
+      AdminBrandModule,
+      AdminImageModule,
+      AdminAuthModule,
+      AdminNewsModule,
+      AdminArticleModule,
+      AdminProductModule,
+      AdminUserModule,
+      AdminBrandPromotionModule,
+      AdminBrandPromotionSectionModule,
+      AdminBrandPromotionBannerModule,
+      AdminBrandPromotionNoticsModule,
+      AdminBrandPromotionPopupModule,
+      AdminBrandPromotionEventModule,
       ArticleModule,
       AuthModule,
       BrandModule,

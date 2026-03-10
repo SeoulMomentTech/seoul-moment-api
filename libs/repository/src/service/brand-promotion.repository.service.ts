@@ -8,6 +8,7 @@ import {
   UpdateBrandPromotionBannerDto,
   UpdateBrandPromotionBannerImageDto,
   UpdateBrandPromotionDto,
+  UpdateBrandPromotionEventDto,
   UpdateBrandPromotionNoticsDto,
   UpdateBrandPromotionPopupDto,
   UpdateBrandPromotionSectionDto,
@@ -15,6 +16,7 @@ import {
 } from '../dto/brand-promotion.dto';
 import { BrandPromotionBannerEntity } from '../entity/brand-promotion-banner.entity';
 import { BrandPromotionBannerImageEntity } from '../entity/brand-promotion-banner.image.entity';
+import { BrandPromotionEventEntity } from '../entity/brand-promotion-event.entity';
 import { BrandPromotionNoticeEntity } from '../entity/brand-promotion-notice.entity';
 import { BrandPromotionPopupImageEntity } from '../entity/brand-promotion-popup-image.entity';
 import { BrandPromotionPopupEntity } from '../entity/brand-promotion-popup.entity';
@@ -22,6 +24,7 @@ import { BrandPromotionSectionImageEntity } from '../entity/brand-promotion-sect
 import { BrandPromotionSectionTypeEntity } from '../entity/brand-promotion-section-type.entity';
 import { BrandPromotionSectionEntity } from '../entity/brand-promotion-section.entity';
 import { BrandPromotionEntity } from '../entity/brand-promotion.entity';
+import { BrandPromotionEventStatus } from '../enum/brand-promotion-event.enum';
 
 @Injectable()
 export class BrandPromotionRepositoryService implements OnModuleInit {
@@ -52,6 +55,9 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
 
     @InjectRepository(BrandPromotionNoticeEntity)
     private readonly brandPromotionNoticeRepository: Repository<BrandPromotionNoticeEntity>,
+
+    @InjectRepository(BrandPromotionEventEntity)
+    private readonly brandPromotionEventRepository: Repository<BrandPromotionEventEntity>,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -394,5 +400,61 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     await this.brandPromotionPopupImageRepository.delete({
       brandPromotionPopupId,
     });
+  }
+
+  async createBrandPromotionEvent(
+    entity: BrandPromotionEventEntity,
+  ): Promise<BrandPromotionEventEntity> {
+    return this.brandPromotionEventRepository.save(entity);
+  }
+
+  async findBrandPromotionEventListByPaging(
+    page: number,
+    count: number,
+    status?: BrandPromotionEventStatus,
+  ): Promise<[BrandPromotionEventEntity[], number]> {
+    const qb = this.brandPromotionEventRepository.createQueryBuilder('bpe');
+    if (status) {
+      qb.where('bpe.status = :status', { status });
+    }
+    return qb
+      .skip((page - 1) * count)
+      .take(count)
+      .orderBy('bpe.createDate', 'DESC')
+      .getManyAndCount();
+  }
+
+  async getBrandPromotionEventById(
+    id: number,
+    status?: BrandPromotionEventStatus,
+  ): Promise<BrandPromotionEventEntity> {
+    const qb = this.brandPromotionEventRepository.createQueryBuilder('bpe');
+    if (status) {
+      qb.where('bpe.status = :status', { status });
+    }
+    const result = await qb.where('bpe.id = :id', { id }).getOne();
+
+    if (!result) {
+      throw new ServiceError(
+        'Brand promotion event not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
+  async updateBrandPromotionEvent(
+    dto: UpdateBrandPromotionEventDto,
+  ): Promise<BrandPromotionEventEntity> {
+    const entity = this.brandPromotionEventRepository.create(dto);
+
+    return this.brandPromotionEventRepository.save(
+      Object.assign(entity, { updateDate: new Date() }),
+    );
+  }
+
+  async deleteBrandPromotionEvent(id: number): Promise<void> {
+    await this.brandPromotionEventRepository.delete(id);
   }
 }

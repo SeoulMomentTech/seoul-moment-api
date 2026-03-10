@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 
 import { BrandPromotionBannerEntity } from './brand-promotion-banner.entity';
+import { BrandPromotionEventEntity } from './brand-promotion-event.entity';
 import { BrandPromotionNoticeEntity } from './brand-promotion-notice.entity';
 import { BrandPromotionPopupEntity } from './brand-promotion-popup.entity';
 import { BrandPromotionSectionEntity } from './brand-promotion-section.entity';
@@ -78,4 +79,10 @@ export class BrandPromotionEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   multilingualTexts: MultilingualTextEntity[];
+
+  @OneToMany(() => BrandPromotionEventEntity, (event) => event.brandPromotion, {
+    cascade: true,
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  events: BrandPromotionEventEntity[];
 }

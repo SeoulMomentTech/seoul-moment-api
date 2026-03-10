@@ -1,0 +1,184 @@
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
+import { BrandPromotionEventEntity } from '@app/repository/entity/brand-promotion-event.entity';
+import { EntityType } from '@app/repository/enum/entity.enum';
+import { BrandPromotionRepositoryService } from '@app/repository/service/brand-promotion.repository.service';
+import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
+import { Injectable } from '@nestjs/common';
+import { MultilingualFieldDto } from 'apps/api/src/module/dto/multilingual.dto';
+import { plainToInstance } from 'class-transformer';
+import { Transactional } from 'typeorm-transactional';
+
+import {
+  GetAdminBrandPromotionEventDetailResponse,
+  GetAdminBrandPromotionEventLanguageDto,
+  GetAdminBrandPromotionEventListRequest,
+  GetAdminBrandPromotionEventResponse,
+  PatchAdminBrandPromotionEventRequest,
+  PostAdminBrandPromotionEventRequest,
+} from './admin.brand.promotion.event.dto';
+
+@Injectable()
+export class AdminBrandPromotionEventService {
+  constructor(
+    private readonly brandPromotionRepositoryService: BrandPromotionRepositoryService,
+    private readonly languageRepositoryService: LanguageRepositoryService,
+  ) {}
+
+  @Transactional()
+  async createBrandPromotionEvent(
+    request: PostAdminBrandPromotionEventRequest,
+  ) {
+    const entity =
+      await this.brandPromotionRepositoryService.createBrandPromotionEvent(
+        plainToInstance(BrandPromotionEventEntity, {
+          brandPromotionId: request.brandPromotionId,
+          status: request.status,
+        }),
+      );
+
+    await Promise.all(
+      request.language.map(async (language) => {
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND_PROMOTION_EVENT,
+          entity.id,
+          'title',
+          language.languageId,
+          language.title,
+        );
+      }),
+    );
+  }
+
+  async getBrandPromotionEventList(
+    request: GetAdminBrandPromotionEventListRequest,
+  ): Promise<[GetAdminBrandPromotionEventResponse[], number]> {
+    const [brandPromotionEvents, total] =
+      await this.brandPromotionRepositoryService.findBrandPromotionEventListByPaging(
+        request.page,
+        request.count,
+      );
+
+    if (brandPromotionEvents.length === 0) {
+      return [[], total];
+    }
+
+    const [languages, multilingualTexts] = await Promise.all([
+      this.languageRepositoryService.findAllActiveLanguages(),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND_PROMOTION_EVENT,
+        brandPromotionEvents.map((b) => b.id),
+      ),
+    ]);
+
+    const brandPromotionEventList = brandPromotionEvents.map(
+      (brandPromotionEvent) => {
+        const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+          multilingualTexts.filter(
+            (v) => v.entityId === brandPromotionEvent.id,
+          ),
+          'title',
+        );
+
+        const nameDto = languages.map((language) =>
+          GetAdminBrandPromotionEventLanguageDto.from(
+            language.code,
+            titleTextsByEntityAndLanguage.getContentByLanguage(language.code),
+          ),
+        );
+
+        return GetAdminBrandPromotionEventResponse.from(
+          brandPromotionEvent,
+          nameDto,
+        );
+      },
+    );
+
+    return [brandPromotionEventList, total];
+  }
+
+  async getBrandPromotionEventDetail(
+    id: number,
+  ): Promise<GetAdminBrandPromotionEventDetailResponse> {
+    const brandPromotionEvent =
+      await this.brandPromotionRepositoryService.getBrandPromotionEventById(id);
+
+    const [languages, multilingualTexts] = await Promise.all([
+      this.languageRepositoryService.findAllActiveLanguages(),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND_PROMOTION_EVENT,
+        [brandPromotionEvent.id],
+      ),
+    ]);
+
+    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+      multilingualTexts,
+      'title',
+    );
+
+    const nameDto = languages.map((language) =>
+      GetAdminBrandPromotionEventLanguageDto.from(
+        language.code,
+        titleTextsByEntityAndLanguage.getContentByLanguage(language.code),
+      ),
+    );
+
+    return GetAdminBrandPromotionEventDetailResponse.from(
+      brandPromotionEvent,
+      nameDto,
+    );
+  }
+
+  @Transactional()
+  async patchBrandPromotionEvent(
+    id: number,
+    request: PatchAdminBrandPromotionEventRequest,
+  ) {
+    await this.brandPromotionRepositoryService.getBrandPromotionEventById(id);
+
+    await this.brandPromotionRepositoryService.updateBrandPromotionEvent({
+      id,
+      brandPromotionId: request.brandPromotionId,
+      status: request.status,
+    });
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_EVENT,
+      id,
+    );
+
+    await Promise.all(
+      request.language.map(async (language) => {
+        const languageEntity =
+          await this.languageRepositoryService.findLanguageByCode(
+            language.languageCode,
+          );
+
+        if (!languageEntity) {
+          throw new ServiceError(
+            'not found language',
+            ServiceErrorCode.NOT_FOUND_DATA,
+          );
+        }
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND_PROMOTION_EVENT,
+          id,
+          'title',
+          languageEntity.id,
+          language.title,
+        );
+      }),
+    );
+  }
+
+  @Transactional()
+  async deleteBrandPromotionEvent(id: number) {
+    await this.brandPromotionRepositoryService.deleteBrandPromotionEvent(id);
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_EVENT,
+      id,
+    );
+  }
+}
