@@ -19,7 +19,18 @@ import moment from 'moment-timezone';
 import { initializeTransactionalContext } from 'typeorm-transactional';
 import { v4 as uuidV4 } from 'uuid';
 
+import { AdminModule } from './module/admin/admin.module';
 import { AppModule } from './module/api.module';
+import { ArticleModule } from './module/article/article.module';
+import { AuthModule } from './module/auth/auth.module';
+import { BrandModule } from './module/brand/brand.module';
+import { BrandPromotionModule } from './module/brand/promotion/brand-promotion.module';
+import { CategoryModule } from './module/category/category.module';
+import { GoogleModule } from './module/google/google.module';
+import { HomeModule } from './module/home/home.module';
+import { LanguageModule } from './module/language/language.module';
+import { NewsModule } from './module/news/news.module';
+import { PartnerModule } from './module/partner/partner.module';
 import { PlanAuthModule } from './module/plen/auth/plan.auth.module';
 import { PlanCategoryModule } from './module/plen/category/plan-category.module';
 import { ChatModule } from './module/plen/chat/chat.module';
@@ -28,6 +39,7 @@ import { PlanRoomModule } from './module/plen/room/plan-room.module';
 import { PlanScheduleModule } from './module/plen/schedule/plan-schedule.module';
 import { PlanSettingModule } from './module/plen/setting/plan-setting.module';
 import { PlanUserModule } from './module/plen/user/plan.user.module';
+import { ProductModule } from './module/product/product.module';
 
 async function bootstrap() {
   const config = Configuration.getConfig();
@@ -53,7 +65,21 @@ async function bootstrap() {
 
   morganSetting(app);
   swaggerSettring(app, {
-    docsExcludePaths: ['/plan'], // /plan으로 시작하는 경로는 /docs에서 제외
+    docsInclude: [
+      AppModule,
+      AdminModule,
+      ArticleModule,
+      AuthModule,
+      BrandModule,
+      BrandPromotionModule,
+      CategoryModule,
+      GoogleModule,
+      HomeModule,
+      LanguageModule,
+      NewsModule,
+      PartnerModule,
+      ProductModule,
+    ], // /docs, /docs-json에만 노출 (Plen 제외)
     plenInclude: [
       PlanModule,
       PlanAuthModule,
@@ -63,7 +89,7 @@ async function bootstrap() {
       PlanCategoryModule,
       PlanRoomModule,
       ChatModule,
-    ], // 이 모듈에 속한 컨트롤러만 /docs-plen에 표시
+    ], // 이 모듈에 속한 컨트롤러만 /docs-plen, /docs-plen-json에 표시
   });
 
   app.use(bodyParser.json({ limit: '100mb' }));

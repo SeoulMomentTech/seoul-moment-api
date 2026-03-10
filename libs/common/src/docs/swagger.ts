@@ -8,8 +8,8 @@ const SWAGGER_DOCS_PATH = 'docs';
 const SWAGGER_DOCS_PLEN_PATH = 'docs-plen';
 
 export interface SwaggerSettingOptions {
-  /** docs에서 제외할 경로 prefix 목록 (예: ['/plan']) */
-  docsExcludePaths?: string[];
+  /** docs에 포함할 모듈. 지정 시 이 모듈들만 /docs, /docs-json에 노출 (Plen 제외용) */
+  docsInclude?: Type[];
   /** docs-plen에 노출할 모듈. 이 모듈에 속한 컨트롤러만 문서에 표시 */
   plenInclude?: Type[];
 }
@@ -33,16 +33,9 @@ export function swaggerSettring(
     )
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-
-  if (options?.docsExcludePaths?.length) {
-    const excludePrefixes = options.docsExcludePaths;
-    Object.keys(document.paths).forEach((path) => {
-      if (excludePrefixes.some((prefix) => path.startsWith(prefix))) {
-        delete document.paths[path];
-      }
-    });
-  }
+  const document = SwaggerModule.createDocument(app, config, {
+    include: options?.docsInclude?.length ? options.docsInclude : undefined,
+  });
 
   SwaggerModule.setup(SWAGGER_DOCS_PATH, app, document);
 
