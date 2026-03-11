@@ -29,6 +29,10 @@ export class AdminBrandPromotionBannerService {
   async createBrandPromotionBanner(
     request: PostAdminBrandPromotionBannerRequest,
   ) {
+    await this.brandPromotionRepositoryService.getBrandPromotionById(
+      request.brandPromotionId,
+    );
+
     const bannerEntity =
       await this.brandPromotionRepositoryService.createBrandPromotionBanner(
         plainToInstance(BrandPromotionBannerEntity, {
@@ -63,6 +67,7 @@ export class AdminBrandPromotionBannerService {
       await this.brandPromotionRepositoryService.findBrandPromotionBannerListByPaging(
         request.page,
         request.count,
+        request.brandPromotionId,
       );
 
     if (brandPromotionBanners.length === 0) {
@@ -144,6 +149,8 @@ export class AdminBrandPromotionBannerService {
     id: number,
     request: PatchAdminBrandPromotionBannerRequest,
   ) {
+    await this.brandPromotionRepositoryService.getBrandPromotionBannerById(id);
+
     await this.brandPromotionRepositoryService.updateBrandPromotionBanner({
       id,
       brandPromotionId: request.brandPromotionId,

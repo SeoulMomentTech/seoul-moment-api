@@ -46,16 +46,7 @@ export class GetAdminBrandPromotionSectionTypeResponse {
   }
 }
 
-export class PostAdminBrandPromotionSectionRequest {
-  @ApiProperty({
-    description: '브랜드 프로모션 아이디',
-    example: 1,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsDefined()
-  promotionId: number;
-
+export class PostAdminBrandPromotionSectionBaseDto {
   @ApiProperty({
     description: '브랜드 프로모션 섹션 타입 아이디',
     example: 'TYPE_1',
@@ -78,6 +69,16 @@ export class PostAdminBrandPromotionSectionRequest {
   imagePathList: string[];
 }
 
+export class PostAdminBrandPromotionSectionRequest extends PostAdminBrandPromotionSectionBaseDto {
+  @ApiProperty({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandPromotionId: number;
+}
 export class GetAdminBrandPromotionSectionResponse {
   @ApiProperty({
     description: '브랜드 프로모션 섹션 아이디',
@@ -86,6 +87,14 @@ export class GetAdminBrandPromotionSectionResponse {
   @IsNumber()
   @IsDefined()
   id: number;
+
+  @ApiProperty({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  brandPromotionId: number;
 
   @ApiProperty({
     description: '브랜드 프로모션 섹션 타입 아이디',
@@ -111,13 +120,23 @@ export class GetAdminBrandPromotionSectionResponse {
   static from(entity: BrandPromotionSectionEntity) {
     return plainToInstance(this, {
       id: entity.id,
+      brandPromotionId: entity.brandPromotionId,
       typeId: entity.typeId,
       imageUrlList: entity.images.map((image) => image.getImageUrl()),
     });
   }
 }
 
-export class GetAdminBrandPromotionSectionListRequest extends ListFilterDto {}
+export class GetAdminBrandPromotionSectionListRequest extends ListFilterDto {
+  @ApiPropertyOptional({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  brandPromotionId?: number;
+}
 
 export class GetAdminBrandPromotionSectionDetailResponse {
   @ApiProperty({
@@ -129,6 +148,14 @@ export class GetAdminBrandPromotionSectionDetailResponse {
   id: number;
 
   @ApiProperty({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  brandPromotionId: number;
+
+  @ApiProperty({
     description: '브랜드 프로모션 섹션 타입 아이디',
     example: 'TYPE_1',
   })
@@ -152,6 +179,7 @@ export class GetAdminBrandPromotionSectionDetailResponse {
   static from(entity: BrandPromotionSectionEntity) {
     return plainToInstance(this, {
       id: entity.id,
+      brandPromotionId: entity.brandPromotionId,
       typeId: entity.typeId,
       imageUrlList: entity.images.map((image) => image.getImageUrl()),
     });
@@ -159,6 +187,15 @@ export class GetAdminBrandPromotionSectionDetailResponse {
 }
 
 export class PatchAdminBrandPromotionSectionRequest {
+  @ApiProperty({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandPromotionId: number;
+
   @ApiProperty({
     description: '브랜드 프로모션 섹션 타입 아이디',
     example: 'TYPE_1',

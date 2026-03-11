@@ -49,7 +49,7 @@ export class AdminBrandPromotionPopupService {
         }),
       );
 
-    await this.createBrandPromotionMultilingualText(
+    await this.createBrandPromotionPopupMultilingualText(
       entity.id,
       request.language,
     );
@@ -67,6 +67,7 @@ export class AdminBrandPromotionPopupService {
       await this.brandPromotionRepositoryService.findBrandPromotionPopupListByPaging(
         request.page,
         request.count,
+        request.brandPromotionId,
       );
 
     if (brandPromotionPopups.length === 0) {
@@ -169,7 +170,7 @@ export class AdminBrandPromotionPopupService {
       isActive: request.isActive,
     });
 
-    await this.createBrandPromotionMultilingualText(id, request.language);
+    await this.createBrandPromotionPopupMultilingualText(id, request.language);
 
     await this.createBrandPromotionPopupImageList(id, request.imageUrlList);
   }
@@ -182,7 +183,7 @@ export class AdminBrandPromotionPopupService {
     );
   }
 
-  private async createBrandPromotionMultilingualText(
+  private async createBrandPromotionPopupMultilingualText(
     entityId: number,
     language:
       | GetAdminBrandPromotionPopupLanguageDto[]

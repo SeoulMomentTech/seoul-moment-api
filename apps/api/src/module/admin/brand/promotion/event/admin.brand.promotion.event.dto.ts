@@ -68,16 +68,7 @@ export class GetAdminBrandPromotionEventLanguageDto {
   }
 }
 
-export class PostAdminBrandPromotionEventRequest {
-  @ApiProperty({
-    description: '브랜드 프로모션 아이디',
-    example: 1,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsDefined()
-  brandPromotionId: number;
-
+export class PostAdminBrandPromotionEventBaseDto {
   @ApiProperty({
     description: '언어별 내용',
     type: [PostAdminBrandPromotionEventLanguageDto],
@@ -112,7 +103,27 @@ export class PostAdminBrandPromotionEventRequest {
   status: BrandPromotionEventStatus;
 }
 
-export class GetAdminBrandPromotionEventListRequest extends ListFilterDto {}
+export class PostAdminBrandPromotionEventRequest extends PostAdminBrandPromotionEventBaseDto {
+  @ApiProperty({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandPromotionId: number;
+}
+
+export class GetAdminBrandPromotionEventListRequest extends ListFilterDto {
+  @ApiProperty({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandPromotionId: number;
+}
 
 export class GetAdminBrandPromotionEventResponse {
   @ApiProperty({
@@ -408,16 +419,7 @@ export class GetAdminBrandPromotionEventCouponLanguageDto {
   }
 }
 
-export class PostAdminBrandPromotionEventCouponRequest {
-  @ApiProperty({
-    description: '브랜드 프로모션 이벤트 아이디',
-    example: 1,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsDefined()
-  brandPromotionEventId: number;
-
+export class PostAdminBrandPromotionEventCouponBaseDto {
   @ApiProperty({
     description: '쿠폰 이미지 경로',
     example: '/brand-promotion-event-coupons/2025-09-16/coupon-01.jpg',
@@ -452,6 +454,17 @@ export class PostAdminBrandPromotionEventCouponRequest {
   @Type(() => PostAdminBrandPromotionEventCouponLanguageDto)
   @IsDefined()
   language: PostAdminBrandPromotionEventCouponLanguageDto[];
+}
+
+export class PostAdminBrandPromotionEventCouponRequest extends PostAdminBrandPromotionEventCouponBaseDto {
+  @ApiProperty({
+    description: '브랜드 프로모션 이벤트 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandPromotionEventId: number;
 }
 
 export class GetAdminBrandPromotionEventCouponResponse {
@@ -550,7 +563,16 @@ export class GetAdminBrandPromotionEventCouponResponse {
   }
 }
 
-export class GetAdminBrandPromotionEventCouponListRequest extends ListFilterDto {}
+export class GetAdminBrandPromotionEventCouponListRequest extends ListFilterDto {
+  @ApiProperty({
+    description: '브랜드 프로모션 이벤트 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandPromotionEventId: number;
+}
 
 export class GetAdminBrandPromotionEventCouponDetailResponse {
   @ApiProperty({

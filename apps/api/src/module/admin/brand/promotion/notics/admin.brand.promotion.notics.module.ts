@@ -8,5 +8,6 @@ import { AdminBrandPromotionNoticsService } from './admin.brand.promotion.notics
   imports: [RepositoryModule],
   controllers: [AdminBrandPromotionNoticsController],
   providers: [AdminBrandPromotionNoticsService],
+  exports: [AdminBrandPromotionNoticsService],
 })
 export class AdminBrandPromotionNoticsModule {}

@@ -8,5 +8,6 @@ import { AdminBrandPromotionPopupService } from './admin.brand.promotion.popup.s
   imports: [RepositoryModule],
   controllers: [AdminBrandPromotionPopupController],
   providers: [AdminBrandPromotionPopupService],
+  exports: [AdminBrandPromotionPopupService],
 })
 export class AdminBrandPromotionPopupModule {}

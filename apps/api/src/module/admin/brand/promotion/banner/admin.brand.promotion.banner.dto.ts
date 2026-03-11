@@ -2,13 +2,14 @@ import { Configuration } from '@app/config/configuration';
 import { DeviceType } from '@app/repository/dto/common.dto';
 import { BrandPromotionBannerEntity } from '@app/repository/entity/brand-promotion-banner.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
   IsEnum,
   IsNumber,
+  IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
@@ -67,16 +68,7 @@ export class AdminBrandPromotionBannerLanguageDto {
   }
 }
 
-export class PostAdminBrandPromotionBannerRequest {
-  @ApiProperty({
-    description: '브랜드 프로모션 아이디',
-    example: 1,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsDefined()
-  brandPromotionId: number;
-
+export class PostAdminBrandPromotionBannerBaseDto {
   @ApiProperty({
     description: '배너 이미지 경로',
     example: '/brand-promotion-banners/2025-09-16/banner-01.jpg',
@@ -126,7 +118,27 @@ export class PostAdminBrandPromotionBannerRequest {
   language: PostAdminBrandPromotionBannerLanguageDto[];
 }
 
-export class GetAdminBrandPromotionBannerRequest extends ListFilterDto {}
+export class PostAdminBrandPromotionBannerRequest extends PostAdminBrandPromotionBannerBaseDto {
+  @ApiProperty({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandPromotionId: number;
+}
+
+export class GetAdminBrandPromotionBannerRequest extends ListFilterDto {
+  @ApiPropertyOptional({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  brandPromotionId?: number;
+}
 
 export class GetAdminBrandPromotionBannerResponse {
   @ApiProperty({

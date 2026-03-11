@@ -1,4 +1,5 @@
 import { BrandPromotionRepositoryService } from '@app/repository/service/brand-promotion.repository.service';
+import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
 
 import { GetBrandPromotionResponse } from './brand-promotion.dto';
@@ -7,6 +8,7 @@ import { GetBrandPromotionResponse } from './brand-promotion.dto';
 export class BrandPromotionService {
   constructor(
     private readonly brandPromotionRepositoryService: BrandPromotionRepositoryService,
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
   async getBrandPromotionList(): Promise<GetBrandPromotionResponse[]> {

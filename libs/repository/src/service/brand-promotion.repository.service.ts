@@ -239,8 +239,14 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
   async findBrandPromotionSectionList(
     page: number,
     count: number,
+    brandPromotionId?: number,
   ): Promise<[BrandPromotionSectionEntity[], number]> {
     const qb = this.brandPromotionSectionRepository.createQueryBuilder('bps');
+    if (brandPromotionId) {
+      qb.where('bps.brandPromotionId = :brandPromotionId', {
+        brandPromotionId,
+      });
+    }
     return qb
       .skip((page - 1) * count)
       .take(count)
@@ -270,8 +276,16 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
   async findBrandPromotionBannerListByPaging(
     page: number,
     count: number,
+    brandPromotionId?: number,
   ): Promise<[BrandPromotionBannerEntity[], number]> {
     const qb = this.brandPromotionBannerRepository.createQueryBuilder('bpb');
+
+    if (brandPromotionId) {
+      qb.where('bpb.brandPromotionId = :brandPromotionId', {
+        brandPromotionId,
+      });
+    }
+
     return qb
       .skip((page - 1) * count)
       .take(count)
@@ -358,8 +372,16 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
   async findBrandPromotionPopupListByPaging(
     page: number,
     count: number,
+    brandPromotionId?: number,
   ): Promise<[BrandPromotionPopupEntity[], number]> {
     const qb = this.brandPromotionPopupRepository.createQueryBuilder('bp');
+
+    if (brandPromotionId) {
+      qb.where('bp.brandPromotionId = :brandPromotionId', {
+        brandPromotionId,
+      });
+    }
+
     return qb
       .skip((page - 1) * count)
       .take(count)
@@ -416,9 +438,15 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
   async findBrandPromotionEventListByPaging(
     page: number,
     count: number,
+    brandPromotionId?: number,
     status?: BrandPromotionEventStatus,
   ): Promise<[BrandPromotionEventEntity[], number]> {
     const qb = this.brandPromotionEventRepository.createQueryBuilder('bpe');
+    if (brandPromotionId) {
+      qb.where('bpe.brandPromotionId = :brandPromotionId', {
+        brandPromotionId,
+      });
+    }
     if (status) {
       qb.where('bpe.status = :status', { status });
     }
@@ -482,9 +510,17 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
   async findBrandPromotionEventCouponListByPaging(
     page: number,
     count: number,
+    brandPromotionEventId?: number,
   ): Promise<[BrandPromotionEventCouponEntity[], number]> {
     const qb =
       this.brandPromotionEventCouponRepository.createQueryBuilder('bpec');
+
+    if (brandPromotionEventId) {
+      qb.where('bpec.brandPromotionEventId = :brandPromotionEventId', {
+        brandPromotionEventId,
+      });
+    }
+
     return qb
       .skip((page - 1) * count)
       .take(count)

@@ -65,16 +65,7 @@ export class GetAdminBrandPromotionNoticsLanguageDto {
   }
 }
 
-export class PostAdminBrandPromotionNoticsRequest {
-  @ApiProperty({
-    description: '브랜드 프로모션 아이디',
-    example: 1,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsDefined()
-  brandPromotionId: number;
-
+export class PostAdminBrandPromotionNoticsBaseDto {
   @ApiProperty({
     description: '언어별 내용',
     type: [PostAdminBrandPromotionNoticsLanguageDto],
@@ -98,6 +89,17 @@ export class PostAdminBrandPromotionNoticsRequest {
   @Type(() => PostAdminBrandPromotionNoticsLanguageDto)
   @IsDefined()
   language: PostAdminBrandPromotionNoticsLanguageDto[];
+}
+
+export class PostAdminBrandPromotionNoticsRequest extends PostAdminBrandPromotionNoticsBaseDto {
+  @ApiProperty({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandPromotionId: number;
 }
 
 export class GetAdminBrandPromotionNoticsListRequest extends ListFilterDto {}

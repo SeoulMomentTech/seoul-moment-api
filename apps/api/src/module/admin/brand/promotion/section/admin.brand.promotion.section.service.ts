@@ -36,10 +36,14 @@ export class AdminBrandPromotionSectionService {
   async createBrandPromotionSection(
     request: PostAdminBrandPromotionSectionRequest,
   ): Promise<void> {
+    await this.brandPromotionRepositoryService.getBrandPromotionById(
+      request.brandPromotionId,
+    );
+
     const sectionEntity =
       await this.brandPromotionRepositoryService.createBrandPromotionSection(
         plainToInstance(BrandPromotionSectionEntity, {
-          brandPromotionId: request.promotionId,
+          brandPromotionId: request.brandPromotionId,
           typeId: request.typeId,
         }),
       );
@@ -63,6 +67,7 @@ export class AdminBrandPromotionSectionService {
       await this.brandPromotionRepositoryService.findBrandPromotionSectionList(
         request.page,
         request.count,
+        request.brandPromotionId,
       );
 
     return [
@@ -90,8 +95,11 @@ export class AdminBrandPromotionSectionService {
     id: number,
     request: PatchAdminBrandPromotionSectionRequest,
   ): Promise<void> {
+    await this.brandPromotionRepositoryService.getBrandPromotionSectionById(id);
+
     await this.brandPromotionRepositoryService.updateBrandPromotionSection({
       id,
+      brandPromotionId: request.brandPromotionId,
       typeId: request.typeId,
     });
 

@@ -8,5 +8,6 @@ import { AdminBrandPromotionBannerService } from './admin.brand.promotion.banner
   imports: [RepositoryModule],
   controllers: [AdminBrandPromotionBannerController],
   providers: [AdminBrandPromotionBannerService],
+  exports: [AdminBrandPromotionBannerService],
 })
 export class AdminBrandPromotionBannerModule {}

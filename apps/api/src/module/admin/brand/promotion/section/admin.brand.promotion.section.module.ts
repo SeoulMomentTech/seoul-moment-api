@@ -8,5 +8,6 @@ import { AdminBrandPromotionSectionService } from './admin.brand.promotion.secti
   imports: [RepositoryModule],
   controllers: [AdminBrandPromotionSectionController],
   providers: [AdminBrandPromotionSectionService],
+  exports: [AdminBrandPromotionSectionService],
 })
 export class AdminBrandPromotionSectionModule {}

@@ -8,5 +8,6 @@ import { AdminBrandPromotionEventService } from './admin.brand.promotion.event.s
   imports: [RepositoryModule],
   controllers: [AdminBrandPromotionEventController],
   providers: [AdminBrandPromotionEventService],
+  exports: [AdminBrandPromotionEventService],
 })
 export class AdminBrandPromotionEventModule {}

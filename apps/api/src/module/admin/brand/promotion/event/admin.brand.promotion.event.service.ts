@@ -38,7 +38,7 @@ export class AdminBrandPromotionEventService {
   @Transactional()
   async createBrandPromotionEvent(
     request: PostAdminBrandPromotionEventRequest,
-  ) {
+  ): Promise<BrandPromotionEventEntity> {
     const entity =
       await this.brandPromotionRepositoryService.createBrandPromotionEvent(
         plainToInstance(BrandPromotionEventEntity, {
@@ -58,6 +58,8 @@ export class AdminBrandPromotionEventService {
         );
       }),
     );
+
+    return entity;
   }
 
   async getBrandPromotionEventList(
@@ -67,6 +69,7 @@ export class AdminBrandPromotionEventService {
       await this.brandPromotionRepositoryService.findBrandPromotionEventListByPaging(
         request.page,
         request.count,
+        request.brandPromotionId,
       );
 
     if (brandPromotionEvents.length === 0) {
@@ -216,6 +219,7 @@ export class AdminBrandPromotionEventService {
       await this.brandPromotionRepositoryService.findBrandPromotionEventCouponListByPaging(
         request.page,
         request.count,
+        request.brandPromotionEventId,
       );
 
     if (brandPromotionEventCoupons.length === 0) {

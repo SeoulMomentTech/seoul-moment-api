@@ -84,16 +84,7 @@ export class PostAdminBrandPromotionPopupLanguageDto {
     });
   }
 }
-export class PostAdminBrandPromotionPopupRequest {
-  @ApiProperty({
-    description: '브랜드 프로모션 아이디',
-    example: 1,
-  })
-  @IsNumber()
-  @Type(() => Number)
-  @IsDefined()
-  brandPromotionId: number;
-
+export class PostAdminBrandPromotionPopupBaseDto {
   @ApiProperty({
     description: '장소',
     example: '장소',
@@ -193,7 +184,27 @@ export class PostAdminBrandPromotionPopupRequest {
   imagePathList: string[];
 }
 
-export class GetAdminBrandPromotionPopupListRequest extends ListFilterDto {}
+export class PostAdminBrandPromotionPopupRequest extends PostAdminBrandPromotionPopupBaseDto {
+  @ApiProperty({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandPromotionId: number;
+}
+
+export class GetAdminBrandPromotionPopupListRequest extends ListFilterDto {
+  @ApiPropertyOptional({
+    description: '브랜드 프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  brandPromotionId?: number;
+}
 
 export class GetAdminBrandPromotionPopupDetailResponse {
   @ApiProperty({
