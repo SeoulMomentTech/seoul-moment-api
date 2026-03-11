@@ -39,6 +39,10 @@ export class AdminBrandPromotionEventService {
   async createBrandPromotionEvent(
     request: PostAdminBrandPromotionEventRequest,
   ): Promise<BrandPromotionEventEntity> {
+    await this.brandPromotionRepositoryService.getBrandPromotionById(
+      request.brandPromotionId,
+    );
+
     const entity =
       await this.brandPromotionRepositoryService.createBrandPromotionEvent(
         plainToInstance(BrandPromotionEventEntity, {

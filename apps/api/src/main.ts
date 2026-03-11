@@ -39,7 +39,7 @@ import { AppModule } from './module/api.module';
 import { ArticleModule } from './module/article/article.module';
 import { AuthModule } from './module/auth/auth.module';
 import { BrandModule } from './module/brand/brand.module';
-import { BrandPromotionModule } from './module/brand/promotion/brand-promotion.module';
+import { BrandPromotionModule } from './module/brand/promotion/brand.promotion.module';
 import { CategoryModule } from './module/category/category.module';
 import { GoogleModule } from './module/google/google.module';
 import { HomeModule } from './module/home/home.module';

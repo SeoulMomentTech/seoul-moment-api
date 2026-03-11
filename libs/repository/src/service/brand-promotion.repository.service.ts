@@ -99,6 +99,32 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     await this.brandPromotionRepository.delete(id);
   }
 
+  async getBrandPromotionByBrandId(
+    brandId: number,
+  ): Promise<BrandPromotionEntity> {
+    const result = await this.brandPromotionRepository.findOne({
+      where: { brandId },
+      relations: [
+        'brand',
+        'banners',
+        'popups',
+        'popups.images',
+        'notices',
+        'sections',
+        'sections.images',
+      ],
+    });
+
+    if (!result) {
+      throw new ServiceError(
+        'Brand promotion not found or not in normal status',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
   async getBrandPromotionById(id: number): Promise<BrandPromotionEntity> {
     const result = await this.brandPromotionRepository.findOne({
       where: { id },
@@ -255,6 +281,15 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
       .getManyAndCount();
   }
 
+  async findBrandPromotionSectionListByBrandPromotionId(
+    brandPromotionId: number,
+  ): Promise<BrandPromotionSectionEntity[]> {
+    return this.brandPromotionSectionRepository.find({
+      where: { brandPromotionId },
+      relations: ['images'],
+    });
+  }
+
   async getBrandPromotionSectionById(
     id: number,
   ): Promise<BrandPromotionSectionEntity> {
@@ -271,6 +306,19 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     }
 
     return result;
+  }
+
+  async findBrandPromotionBannerListByBrandPromotionId(
+    brandPromotionId: number,
+  ): Promise<BrandPromotionBannerEntity[]> {
+    const qb = this.brandPromotionBannerRepository.createQueryBuilder('bpb');
+    return qb
+      .leftJoinAndSelect('bpb.images', 'images')
+      .where('bpb.brandPromotionId = :brandPromotionId', {
+        brandPromotionId,
+      })
+      .orderBy('bpb.createDate', 'DESC')
+      .getMany();
   }
 
   async findBrandPromotionBannerListByPaging(
@@ -321,8 +369,16 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
   async findBrandPromotionNoticsListByPaging(
     page: number,
     count: number,
+    brandPromotionId?: number,
   ): Promise<[BrandPromotionNoticeEntity[], number]> {
     const qb = this.brandPromotionNoticeRepository.createQueryBuilder('bpn');
+
+    if (brandPromotionId) {
+      qb.where('bpn.brandPromotionId = :brandPromotionId', {
+        brandPromotionId,
+      });
+    }
+
     return qb
       .skip((page - 1) * count)
       .take(count)
@@ -451,6 +507,7 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
       qb.where('bpe.status = :status', { status });
     }
     return qb
+      .leftJoinAndSelect('bpe.coupons', 'coupons')
       .skip((page - 1) * count)
       .take(count)
       .orderBy('bpe.createDate', 'DESC')
@@ -466,6 +523,28 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
       qb.where('bpe.status = :status', { status });
     }
     const result = await qb.where('bpe.id = :id', { id }).getOne();
+
+    if (!result) {
+      throw new ServiceError(
+        'Brand promotion event not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
+  async getBrandPromotionEventByBrandPromotionId(
+    brandPromotionId: number,
+    status?: BrandPromotionEventStatus,
+  ): Promise<BrandPromotionEventEntity> {
+    const qb = this.brandPromotionEventRepository.createQueryBuilder('bpe');
+    if (status) {
+      qb.where('bpe.status = :status', { status });
+    }
+    const result = await qb
+      .where('bpe.brandPromotionId = :brandPromotionId', { brandPromotionId })
+      .getOne();
 
     if (!result) {
       throw new ServiceError(
