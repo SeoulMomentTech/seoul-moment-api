@@ -1,5 +1,8 @@
+/* eslint-disable max-lines-per-function */
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
+import { Configuration } from '@app/config/configuration';
+import { BrandPromotionEventCouponEntity } from '@app/repository/entity/brand-promotion-event-coupon.entity';
 import { BrandPromotionEventEntity } from '@app/repository/entity/brand-promotion-event.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { BrandPromotionRepositoryService } from '@app/repository/service/brand-promotion.repository.service';
@@ -10,11 +13,18 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
+  GetAdminBrandPromotionEventCouponDetailResponse,
+  GetAdminBrandPromotionEventCouponLanguageDto,
+  GetAdminBrandPromotionEventCouponListRequest,
+  GetAdminBrandPromotionEventCouponResponse,
   GetAdminBrandPromotionEventDetailResponse,
   GetAdminBrandPromotionEventLanguageDto,
   GetAdminBrandPromotionEventListRequest,
   GetAdminBrandPromotionEventResponse,
+  PatchAdminBrandPromotionEventCouponRequest,
   PatchAdminBrandPromotionEventRequest,
+  PostAdminBrandPromotionEventCouponLanguageDto,
+  PostAdminBrandPromotionEventCouponRequest,
   PostAdminBrandPromotionEventRequest,
 } from './admin.brand.promotion.event.dto';
 
@@ -179,6 +189,198 @@ export class AdminBrandPromotionEventService {
     await this.languageRepositoryService.deleteMultilingualTexts(
       EntityType.BRAND_PROMOTION_EVENT,
       id,
+    );
+  }
+
+  async createBrandPromotionEventCoupon(
+    request: PostAdminBrandPromotionEventCouponRequest,
+  ) {
+    const entity =
+      await this.brandPromotionRepositoryService.createBrandPromotionEventCoupon(
+        plainToInstance(BrandPromotionEventCouponEntity, {
+          brandPromotionEventId: request.brandPromotionEventId,
+          imagePath: request.imagePath,
+        }),
+      );
+
+    await this.createBrandPromotionEventCouponMultilingualText(
+      entity.id,
+      request.language,
+    );
+  }
+
+  async getBrandPromotionEventCouponList(
+    request: GetAdminBrandPromotionEventCouponListRequest,
+  ): Promise<[GetAdminBrandPromotionEventCouponResponse[], number]> {
+    const [brandPromotionEventCoupons, total] =
+      await this.brandPromotionRepositoryService.findBrandPromotionEventCouponListByPaging(
+        request.page,
+        request.count,
+      );
+
+    if (brandPromotionEventCoupons.length === 0) {
+      return [[], total];
+    }
+
+    const [languages, multilingualTexts] = await Promise.all([
+      this.languageRepositoryService.findAllActiveLanguages(),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND_PROMOTION_EVENT_COUPON,
+        brandPromotionEventCoupons.map((b) => b.id),
+      ),
+    ]);
+
+    const brandPromotionEventCouponList = brandPromotionEventCoupons.map(
+      (brandPromotionEventCoupon) => {
+        const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+          multilingualTexts.filter(
+            (v) => v.entityId === brandPromotionEventCoupon.id,
+          ),
+          'title',
+        );
+
+        const descriptionTextsByEntityAndLanguage =
+          MultilingualFieldDto.fromByEntity(
+            multilingualTexts.filter(
+              (v) => v.entityId === brandPromotionEventCoupon.id,
+            ),
+            'description',
+          );
+
+        const nameDto = languages.map((language) =>
+          GetAdminBrandPromotionEventCouponLanguageDto.from(
+            language.code,
+            titleTextsByEntityAndLanguage.getContentByLanguage(language.code),
+            descriptionTextsByEntityAndLanguage.getContentByLanguage(
+              language.code,
+            ),
+          ),
+        );
+
+        return GetAdminBrandPromotionEventCouponResponse.from(
+          brandPromotionEventCoupon,
+          nameDto,
+        );
+      },
+    );
+
+    return [brandPromotionEventCouponList, total];
+  }
+
+  async getBrandPromotionEventCouponDetail(
+    id: number,
+  ): Promise<GetAdminBrandPromotionEventCouponDetailResponse> {
+    const brandPromotionEventCoupon =
+      await this.brandPromotionRepositoryService.getBrandPromotionEventCouponById(
+        id,
+      );
+
+    const [languages, multilingualTexts] = await Promise.all([
+      this.languageRepositoryService.findAllActiveLanguages(),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.BRAND_PROMOTION_EVENT_COUPON,
+        [brandPromotionEventCoupon.id],
+      ),
+    ]);
+
+    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+      multilingualTexts,
+      'title',
+    );
+
+    const descriptionTextsByEntityAndLanguage =
+      MultilingualFieldDto.fromByEntity(multilingualTexts, 'description');
+
+    const nameDto = languages.map((language) =>
+      GetAdminBrandPromotionEventCouponLanguageDto.from(
+        language.code,
+        titleTextsByEntityAndLanguage.getContentByLanguage(language.code),
+        descriptionTextsByEntityAndLanguage.getContentByLanguage(language.code),
+      ),
+    );
+
+    return GetAdminBrandPromotionEventCouponDetailResponse.from(
+      brandPromotionEventCoupon,
+      nameDto,
+    );
+  }
+
+  async patchBrandPromotionEventCoupon(
+    id: number,
+    request: PatchAdminBrandPromotionEventCouponRequest,
+  ) {
+    await this.brandPromotionRepositoryService.getBrandPromotionEventCouponById(
+      id,
+    );
+
+    await this.createBrandPromotionEventCouponMultilingualText(
+      id,
+      request.language,
+    );
+
+    await this.brandPromotionRepositoryService.updateBrandPromotionEventCoupon({
+      id,
+      brandPromotionEventId: request.brandPromotionEventId,
+      imagePath: request.imageUrl.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+      status: request.status,
+    });
+  }
+
+  @Transactional()
+  async deleteBrandPromotionEventCoupon(id: number) {
+    await this.brandPromotionRepositoryService.deleteBrandPromotionEventCoupon(
+      id,
+    );
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_EVENT_COUPON,
+      id,
+    );
+  }
+
+  private async createBrandPromotionEventCouponMultilingualText(
+    entityId: number,
+    language:
+      | GetAdminBrandPromotionEventCouponLanguageDto[]
+      | PostAdminBrandPromotionEventCouponLanguageDto[],
+  ) {
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_EVENT_COUPON,
+      entityId,
+    );
+    await Promise.all(
+      language.map(async (language) => {
+        let languageId = language?.languageId;
+
+        const languageEntity = language?.languageCode
+          ? await this.languageRepositoryService.findLanguageByCode(
+              language.languageCode,
+            )
+          : null;
+
+        if (languageEntity) {
+          languageId = languageEntity.id;
+        }
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND_PROMOTION_EVENT_COUPON,
+          entityId,
+          'title',
+          languageId,
+          language.title,
+        );
+
+        await this.languageRepositoryService.saveMultilingualText(
+          EntityType.BRAND_PROMOTION_EVENT_COUPON,
+          entityId,
+          'description',
+          languageId,
+          language.description,
+        );
+      }),
     );
   }
 }

@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import {
   Column,
   Entity,
@@ -42,4 +43,10 @@ export class BrandPromotionEventCouponEntity extends CommonEntity {
   )
   @JoinColumn({ name: 'brand_promotion_event_id' })
   brandPromotionEvent: BrandPromotionEventEntity;
+
+  getImageUrl(): string {
+    return this.imagePath
+      ? `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imagePath}`
+      : null;
+  }
 }

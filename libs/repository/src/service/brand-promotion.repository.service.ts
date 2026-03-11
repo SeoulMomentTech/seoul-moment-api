@@ -8,6 +8,7 @@ import {
   UpdateBrandPromotionBannerDto,
   UpdateBrandPromotionBannerImageDto,
   UpdateBrandPromotionDto,
+  UpdateBrandPromotionEventCouponDto,
   UpdateBrandPromotionEventDto,
   UpdateBrandPromotionNoticsDto,
   UpdateBrandPromotionPopupDto,
@@ -16,6 +17,7 @@ import {
 } from '../dto/brand-promotion.dto';
 import { BrandPromotionBannerEntity } from '../entity/brand-promotion-banner.entity';
 import { BrandPromotionBannerImageEntity } from '../entity/brand-promotion-banner.image.entity';
+import { BrandPromotionEventCouponEntity } from '../entity/brand-promotion-event-coupon.entity';
 import { BrandPromotionEventEntity } from '../entity/brand-promotion-event.entity';
 import { BrandPromotionNoticeEntity } from '../entity/brand-promotion-notice.entity';
 import { BrandPromotionPopupImageEntity } from '../entity/brand-promotion-popup-image.entity';
@@ -58,6 +60,9 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
 
     @InjectRepository(BrandPromotionEventEntity)
     private readonly brandPromotionEventRepository: Repository<BrandPromotionEventEntity>,
+
+    @InjectRepository(BrandPromotionEventCouponEntity)
+    private readonly brandPromotionEventCouponRepository: Repository<BrandPromotionEventCouponEntity>,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -456,5 +461,51 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
 
   async deleteBrandPromotionEvent(id: number): Promise<void> {
     await this.brandPromotionEventRepository.delete(id);
+  }
+
+  async createBrandPromotionEventCoupon(
+    entity: BrandPromotionEventCouponEntity,
+  ): Promise<BrandPromotionEventCouponEntity> {
+    return this.brandPromotionEventCouponRepository.save(entity);
+  }
+
+  async updateBrandPromotionEventCoupon(
+    dto: UpdateBrandPromotionEventCouponDto,
+  ): Promise<BrandPromotionEventCouponEntity> {
+    return this.brandPromotionEventCouponRepository.save(dto);
+  }
+
+  async deleteBrandPromotionEventCoupon(id: number): Promise<void> {
+    await this.brandPromotionEventCouponRepository.delete(id);
+  }
+
+  async findBrandPromotionEventCouponListByPaging(
+    page: number,
+    count: number,
+  ): Promise<[BrandPromotionEventCouponEntity[], number]> {
+    const qb =
+      this.brandPromotionEventCouponRepository.createQueryBuilder('bpec');
+    return qb
+      .skip((page - 1) * count)
+      .take(count)
+      .orderBy('bpec.createDate', 'DESC')
+      .getManyAndCount();
+  }
+
+  async getBrandPromotionEventCouponById(
+    id: number,
+  ): Promise<BrandPromotionEventCouponEntity> {
+    const result = await this.brandPromotionEventCouponRepository.findOne({
+      where: { id },
+    });
+
+    if (!result) {
+      throw new ServiceError(
+        'Brand promotion event coupon not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
   }
 }
