@@ -237,6 +237,14 @@ export class PostAdminBrandRequest {
   @IsString()
   @IsDefined()
   englishName: string;
+
+  @ApiPropertyOptional({
+    description: '색상 코드',
+    example: '#FF0000',
+  })
+  @IsString()
+  @IsOptional()
+  colorCode?: string;
 }
 
 export class GetAdminBrandInfoSection {
@@ -500,6 +508,12 @@ export class GetAdminBrandInfoResponse {
   })
   multilingualTextList: GetAdminBrandInfoText[];
 
+  @ApiProperty({
+    description: '색상 코드',
+    example: '#FF0000',
+  })
+  colorCode: string;
+
   static from(
     entity: BrandEntity,
     multilingualText: {
@@ -529,6 +543,7 @@ export class GetAdminBrandInfoResponse {
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((v) => v.getImage()),
       multilingualTextList,
+      colorCode: entity.colorCode,
     });
   }
 }
@@ -604,12 +619,19 @@ export class GetAdminBrandResponse {
   })
   updateDate: Date;
 
+  @ApiProperty({
+    description: '색상 코드',
+    example: '#FF0000',
+  })
+  colorCode: string;
+
   static from(entity: BrandEntity, nameDto: GetAdminBrandNameDto[]) {
     return plainToInstance(this, {
       id: entity.id,
       nameDto,
       createDate: entity.createDate,
       updateDate: entity.updateDate,
+      colorCode: entity.colorCode,
     });
   }
 }
@@ -934,6 +956,14 @@ export class UpdateAdminBrandRequest {
   @Type(() => UpdateAdminBrandSectionSortOrder)
   @IsOptional()
   sectionSortOrderList?: UpdateAdminBrandSectionSortOrder[];
+
+  @ApiPropertyOptional({
+    description: '색상 코드',
+    example: '#FF0000',
+  })
+  @IsOptional()
+  @IsString()
+  colorCode?: string;
 }
 
 export class V2UpdateAdminBrandRequest {
@@ -1050,4 +1080,12 @@ export class V2UpdateAdminBrandRequest {
   @Type(() => GetAdminBrandInfoText)
   @IsOptional()
   multilingualTextList?: GetAdminBrandInfoText[];
+
+  @ApiPropertyOptional({
+    description: '색상 코드',
+    example: '#FF0000',
+  })
+  @IsOptional()
+  @IsString()
+  colorCode?: string;
 }

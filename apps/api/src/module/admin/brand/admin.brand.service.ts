@@ -44,6 +44,7 @@ export class AdminBrandService {
         profileImage: dto.profileImageUrl ?? undefined,
         bannerImageUrl: dto.productBannerImageUrl,
         englishName: dto.englishName,
+        colorCode: dto.colorCode,
       }),
     );
 
@@ -222,6 +223,7 @@ export class AdminBrandService {
       englishName: dto.englishName,
       profileImage: dto.profileImageUrl,
       bannerImageUrl: dto.productBannerImage,
+      colorCode: dto.colorCode,
     };
 
     await this.brandRepositoryService.update(updateBrandDto);
@@ -501,6 +503,7 @@ export class AdminBrandService {
         Configuration.getConfig().IMAGE_DOMAIN_NAME,
         '',
       ),
+      colorCode: dto.colorCode,
     };
 
     await this.brandRepositoryService.update(updateBrandDto);

@@ -42,6 +42,9 @@ export class BrandEntity extends CommonEntity {
   @Column('varchar', { length: 255, nullable: true })
   bannerImageUrl: string;
 
+  @Column('varchar', { length: 7, nullable: true })
+  colorCode: string;
+
   @Column('enum', {
     enum: BrandStatus,
     default: BrandStatus.NORMAL,
