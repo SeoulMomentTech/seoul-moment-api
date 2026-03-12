@@ -71,10 +71,10 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
       const types = [
         { id: 'TYPE_1', description: '정가운데 이미지 하나', imageCount: 1 },
         { id: 'TYPE_2', description: '정가운데 이미지 두개', imageCount: 2 },
-        { id: 'TYPE_4', description: '정가운데 이미지 네개', imageCount: 4 },
-        { id: 'TYPE_5', description: '좌측 이미지 하나', imageCount: 1 },
+        { id: 'TYPE_3', description: '정가운데 이미지 다섯개', imageCount: 5 },
+        { id: 'TYPE_4', description: '좌측 이미지 하나', imageCount: 1 },
         {
-          id: 'TYPE_6',
+          id: 'TYPE_5',
           description: '정가운데 와이드 이미지 하나',
           imageCount: 1,
         },

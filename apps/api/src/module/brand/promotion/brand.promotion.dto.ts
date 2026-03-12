@@ -9,11 +9,13 @@ import { BrandPromotionSectionEntity } from '@app/repository/entity/brand-promot
 import { BrandPromotionEntity } from '@app/repository/entity/brand-promotion.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
+import { BrandPromotionEventCouponStatus } from '@app/repository/enum/brand-promotion-event-coupon.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
+  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
@@ -497,6 +499,15 @@ export class GetBrandPromotionEventCouponResponse {
   @IsDefined()
   description: string;
 
+  @ApiProperty({
+    description: '상태',
+    example: BrandPromotionEventCouponStatus.NORMAL,
+    enum: BrandPromotionEventCouponStatus,
+  })
+  @IsEnum(BrandPromotionEventCouponStatus)
+  @IsDefined()
+  status?: BrandPromotionEventCouponStatus;
+
   static from(
     entity: BrandPromotionEventCouponEntity,
     multilingualTexts: MultilingualTextEntity[],
@@ -512,6 +523,7 @@ export class GetBrandPromotionEventCouponResponse {
       imageUrl: entity.getImageUrl(),
       title: title.getContent(),
       description: description.getContent(),
+      status: entity.status,
     });
   }
 }
