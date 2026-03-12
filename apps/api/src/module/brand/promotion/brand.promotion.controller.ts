@@ -3,7 +3,6 @@ import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { ProductRepositoryService } from '@app/repository/service/product.repository.service';
 import { Controller, Get, Headers, Param, ParseIntPipe } from '@nestjs/common';
 import { ApiHeader, ApiOperation } from '@nestjs/swagger';
 
@@ -15,10 +14,7 @@ import { BrandPromotionService } from './brand.promotion.service';
 
 @Controller('brand/promotion')
 export class BrandPromotionController {
-  constructor(
-    private readonly brandPromotionService: BrandPromotionService,
-    private readonly productRepositoryService: ProductRepositoryService,
-  ) {}
+  constructor(private readonly brandPromotionService: BrandPromotionService) {}
 
   @Get('brand')
   @ApiOperation({ summary: '브랜드 프로모션 리스트 조회' })

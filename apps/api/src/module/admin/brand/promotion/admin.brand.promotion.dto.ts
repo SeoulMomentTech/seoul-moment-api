@@ -174,7 +174,7 @@ export class PostAdminBrandPromotionRequest {
   @ValidateNested({ each: true })
   @Type(() => PostAdminBrandPromotionLanguageDto)
   @IsDefined()
-  language: PostAdminBrandPromotionLanguageDto[];
+  brandDescriptionLanguage: PostAdminBrandPromotionLanguageDto[];
 
   @ApiPropertyOptional({
     description: '브랜드 프로모션 활성 여부',

@@ -77,7 +77,7 @@ export class AdminBrandPromotionService {
 
     await this.createBrandPromotionMultilingualText(
       brandPromotionEntity.id,
-      request.language,
+      request.brandDescriptionLanguage,
     );
 
     await Promise.all(

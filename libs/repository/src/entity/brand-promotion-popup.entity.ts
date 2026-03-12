@@ -42,6 +42,12 @@ export class BrandPromotionPopupEntity extends CommonEntity {
   @Column('timestamp', { nullable: true })
   endDate: Date;
 
+  @Column('varchar', { length: 255, nullable: true })
+  startTime: string;
+
+  @Column('varchar', { length: 255, nullable: true })
+  endTime: string;
+
   @Column('boolean', { default: true, nullable: false })
   isActive: boolean;
 

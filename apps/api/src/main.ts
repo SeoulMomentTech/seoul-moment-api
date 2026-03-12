@@ -171,6 +171,8 @@ async function bootstrap() {
 
   logger.info(`✅ Server is running on http://localhost:${config.PORT}`);
   logger.info(`📚 Environment configuration loaded successfully`);
+  logger.info('JWT_SECRET: ' + config.JWT_SECRET);
+  logger.info('JWT_EXPIRES_IN: ' + config.JWT_EXPIRES_IN);
 }
 
 bootstrap().catch((error) => {

@@ -127,6 +127,14 @@ export class PostAdminBrandPromotionPopupBaseDto {
   @IsDefined()
   startDate: string;
 
+  @ApiProperty({
+    description: '시작 시간',
+    example: '10:00',
+  })
+  @IsString()
+  @IsDefined()
+  startTime: string;
+
   @ApiPropertyOptional({
     description: '종료일, null일 경우 상시 진행',
     example: '2025-03-01',
@@ -134,6 +142,14 @@ export class PostAdminBrandPromotionPopupBaseDto {
   @IsString()
   @IsOptional()
   endDate?: string;
+
+  @ApiProperty({
+    description: '종료 시간',
+    example: '20:00',
+  })
+  @IsString()
+  @IsDefined()
+  endTime: string;
 
   @ApiProperty({
     description: '활성 여부',
@@ -342,6 +358,8 @@ export class GetAdminBrandPromotionPopupDetailResponse {
       longitude: entity.longitude,
       startDate: entity.startDate,
       endDate: entity.endDate,
+      startTime: entity.startTime,
+      endTime: entity.endTime,
       isActive: entity.isActive,
       language: multilingualTexts,
       createDate: entity.createDate,
@@ -410,6 +428,14 @@ export class GetAdminBrandPromotionPopupResponse {
   @IsDefined()
   startDate: string;
 
+  @ApiProperty({
+    description: '시작 시간',
+    example: '10:00',
+  })
+  @IsString()
+  @IsDefined()
+  startTime: string;
+
   @ApiPropertyOptional({
     description: '종료일, null일 경우 상시 진행',
     example: '2025-03-01',
@@ -417,6 +443,14 @@ export class GetAdminBrandPromotionPopupResponse {
   @IsString()
   @IsOptional()
   endDate?: string;
+
+  @ApiProperty({
+    description: '종료 시간',
+    example: '20:00',
+  })
+  @IsString()
+  @IsDefined()
+  endTime: string;
 
   @ApiProperty({
     description: '활성 여부',
@@ -484,6 +518,8 @@ export class GetAdminBrandPromotionPopupResponse {
       longitude: entity.longitude,
       startDate: entity.startDate,
       endDate: entity.endDate,
+      startTime: entity.startTime,
+      endTime: entity.endTime,
       isActive: entity.isActive,
       language: multilingualTexts,
       createDate: entity.createDate,
@@ -545,6 +581,14 @@ export class PatchAdminBrandPromotionPopupRequest {
   @IsDefined()
   startDate: string;
 
+  @ApiProperty({
+    description: '시작 시간',
+    example: '10:00',
+  })
+  @IsString()
+  @IsDefined()
+  startTime: string;
+
   @ApiPropertyOptional({
     description: '종료일, null일 경우 상시 진행',
     example: '2025-03-01',
@@ -552,6 +596,14 @@ export class PatchAdminBrandPromotionPopupRequest {
   @IsString()
   @IsOptional()
   endDate?: string;
+
+  @ApiProperty({
+    description: '종료 시간',
+    example: '20:00',
+  })
+  @IsString()
+  @IsDefined()
+  endTime: string;
 
   @ApiProperty({
     description: '활성 여부',

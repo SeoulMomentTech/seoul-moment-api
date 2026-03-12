@@ -377,6 +377,14 @@ export class GetBrandPromotionPopupResponse {
   @IsDefined()
   startDate: string;
 
+  @ApiProperty({
+    description: '시작 시간',
+    example: '10:00',
+  })
+  @IsString()
+  @IsDefined()
+  startTime: string;
+
   @ApiPropertyOptional({
     description: '종료일, null일 경우 상시 진행',
     example: '2025-03-01',
@@ -384,6 +392,14 @@ export class GetBrandPromotionPopupResponse {
   @IsString()
   @IsOptional()
   endDate?: string;
+
+  @ApiProperty({
+    description: '종료 시간',
+    example: '20:00',
+  })
+  @IsString()
+  @IsDefined()
+  endTime: string;
 
   @ApiProperty({
     description: '제목',
@@ -437,6 +453,8 @@ export class GetBrandPromotionPopupResponse {
       longitude: entity.longitude,
       startDate: entity.startDate,
       endDate: entity.endDate,
+      startTime: entity.startTime,
+      endTime: entity.endTime,
       title: title.getContent(),
       description: description.getContent(),
       imageUrlList: entity.images.map((image) => image.getImageUrl()),
