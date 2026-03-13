@@ -21,7 +21,6 @@ import {
   GetAdminBrandPromotionSectionDetailResponse,
   GetAdminBrandPromotionSectionListRequest,
   GetAdminBrandPromotionSectionResponse,
-  GetAdminBrandPromotionSectionTypeResponse,
   PatchAdminBrandPromotionSectionRequest,
   PostAdminBrandPromotionSectionRequest,
 } from './admin.brand.promotion.section.dto';
@@ -32,17 +31,6 @@ export class AdminBrandPromotionSectionController {
   constructor(
     private readonly adminBrandPromotionSectionService: AdminBrandPromotionSectionService,
   ) {}
-
-  @Get('type')
-  @ApiOperation({ summary: '브랜드 프로모션 섹션 타입 리스트 조회' })
-  @ResponseList(GetAdminBrandPromotionSectionTypeResponse)
-  async getBrandPromotionSectionTypeList(): Promise<
-    ResponseListDto<GetAdminBrandPromotionSectionTypeResponse>
-  > {
-    const result =
-      await this.adminBrandPromotionSectionService.getBrandPromotionSectionTypeList();
-    return new ResponseListDto(result);
-  }
 
   @Post()
   @ApiOperation({ summary: '브랜드 프로모션 섹션 등록' })

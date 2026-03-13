@@ -10,7 +10,6 @@ import {
   GetAdminBrandPromotionSectionDetailResponse,
   GetAdminBrandPromotionSectionListRequest,
   GetAdminBrandPromotionSectionResponse,
-  GetAdminBrandPromotionSectionTypeResponse,
   PatchAdminBrandPromotionSectionRequest,
   PostAdminBrandPromotionSectionRequest,
 } from './admin.brand.promotion.section.dto';
@@ -20,17 +19,6 @@ export class AdminBrandPromotionSectionService {
   constructor(
     private readonly brandPromotionRepositoryService: BrandPromotionRepositoryService,
   ) {}
-
-  async getBrandPromotionSectionTypeList(): Promise<
-    GetAdminBrandPromotionSectionTypeResponse[]
-  > {
-    const brandPromotionSectionTypes =
-      await this.brandPromotionRepositoryService.findBrandPromotionSectionTypeList();
-
-    return brandPromotionSectionTypes.map((brandPromotionSectionType) =>
-      GetAdminBrandPromotionSectionTypeResponse.from(brandPromotionSectionType),
-    );
-  }
 
   @Transactional()
   async createBrandPromotionSection(
@@ -44,7 +32,7 @@ export class AdminBrandPromotionSectionService {
       await this.brandPromotionRepositoryService.createBrandPromotionSection(
         plainToInstance(BrandPromotionSectionEntity, {
           brandPromotionId: request.brandPromotionId,
-          typeId: request.typeId,
+          type: request.type,
         }),
       );
 
@@ -100,7 +88,7 @@ export class AdminBrandPromotionSectionService {
     await this.brandPromotionRepositoryService.updateBrandPromotionSection({
       id,
       brandPromotionId: request.brandPromotionId,
-      typeId: request.typeId,
+      type: request.type,
     });
 
     await this.brandPromotionRepositoryService.deleteBrandPromotionSectionImageByBrandPromotionSectionId(

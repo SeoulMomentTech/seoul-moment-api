@@ -1,0 +1,7 @@
+export enum BrandPromotionSectionType {
+  TYPE_1 = 'TYPE_1',
+  TYPE_2 = 'TYPE_2',
+  TYPE_3 = 'TYPE_3',
+  TYPE_4 = 'TYPE_4',
+  TYPE_5 = 'TYPE_5',
+}

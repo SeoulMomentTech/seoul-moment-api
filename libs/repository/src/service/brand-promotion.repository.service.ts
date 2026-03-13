@@ -1,6 +1,6 @@
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -23,13 +23,12 @@ import { BrandPromotionNoticeEntity } from '../entity/brand-promotion-notice.ent
 import { BrandPromotionPopupImageEntity } from '../entity/brand-promotion-popup-image.entity';
 import { BrandPromotionPopupEntity } from '../entity/brand-promotion-popup.entity';
 import { BrandPromotionSectionImageEntity } from '../entity/brand-promotion-section-image.entity';
-import { BrandPromotionSectionTypeEntity } from '../entity/brand-promotion-section-type.entity';
 import { BrandPromotionSectionEntity } from '../entity/brand-promotion-section.entity';
 import { BrandPromotionEntity } from '../entity/brand-promotion.entity';
 import { BrandPromotionEventStatus } from '../enum/brand-promotion-event.enum';
 
 @Injectable()
-export class BrandPromotionRepositoryService implements OnModuleInit {
+export class BrandPromotionRepositoryService {
   constructor(
     @InjectRepository(BrandPromotionEntity)
     private readonly brandPromotionRepository: Repository<BrandPromotionEntity>,
@@ -46,9 +45,6 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     @InjectRepository(BrandPromotionSectionImageEntity)
     private readonly brandPromotionSectionImageRepository: Repository<BrandPromotionSectionImageEntity>,
 
-    @InjectRepository(BrandPromotionSectionTypeEntity)
-    private readonly brandPromotionSectionTypeRepository: Repository<BrandPromotionSectionTypeEntity>,
-
     @InjectRepository(BrandPromotionPopupEntity)
     private readonly brandPromotionPopupRepository: Repository<BrandPromotionPopupEntity>,
 
@@ -64,24 +60,6 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     @InjectRepository(BrandPromotionEventCouponEntity)
     private readonly brandPromotionEventCouponRepository: Repository<BrandPromotionEventCouponEntity>,
   ) {}
-
-  async onModuleInit(): Promise<void> {
-    const count = await this.brandPromotionSectionTypeRepository.count();
-    if (count === 0) {
-      const types = [
-        { id: 'TYPE_1', description: '정가운데 이미지 하나', imageCount: 1 },
-        { id: 'TYPE_2', description: '정가운데 이미지 두개', imageCount: 2 },
-        { id: 'TYPE_3', description: '정가운데 이미지 다섯개', imageCount: 5 },
-        { id: 'TYPE_4', description: '좌측 이미지 하나', imageCount: 1 },
-        {
-          id: 'TYPE_5',
-          description: '정가운데 와이드 이미지 하나',
-          imageCount: 1,
-        },
-      ];
-      await this.brandPromotionSectionTypeRepository.save(types);
-    }
-  }
 
   async createBrandPromotion(
     brandPromotion: BrandPromotionEntity,
@@ -254,12 +232,6 @@ export class BrandPromotionRepositoryService implements OnModuleInit {
     await this.brandPromotionSectionImageRepository.delete({
       brandPromotionSectionId,
     });
-  }
-
-  async findBrandPromotionSectionTypeList(): Promise<
-    BrandPromotionSectionTypeEntity[]
-  > {
-    return this.brandPromotionSectionTypeRepository.find();
   }
 
   async findBrandPromotionSectionList(

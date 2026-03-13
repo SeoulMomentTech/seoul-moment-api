@@ -8,9 +8,9 @@ import {
 } from 'typeorm';
 
 import { BrandPromotionSectionImageEntity } from './brand-promotion-section-image.entity';
-import { BrandPromotionSectionTypeEntity } from './brand-promotion-section-type.entity';
 import { BrandPromotionEntity } from './brand-promotion.entity';
 import { CommonEntity } from './common.entity';
+import { BrandPromotionSectionType } from '../enum/brand-promotion-section';
 
 @Entity('brand_promotion_section')
 export class BrandPromotionSectionEntity extends CommonEntity {
@@ -20,8 +20,12 @@ export class BrandPromotionSectionEntity extends CommonEntity {
   @Column('int', { name: 'brand_promotion_id', nullable: false })
   brandPromotionId: number;
 
-  @Column('varchar', { name: 'type_id', nullable: false })
-  typeId: string;
+  @Column('enum', {
+    enum: BrandPromotionSectionType,
+    default: BrandPromotionSectionType.TYPE_1,
+    nullable: false,
+  })
+  type: BrandPromotionSectionType;
 
   @Column('int', { name: 'sort_order', default: 1, nullable: false })
   sortOrder: number;
@@ -46,11 +50,4 @@ export class BrandPromotionSectionEntity extends CommonEntity {
     },
   )
   images: BrandPromotionSectionImageEntity[];
-
-  @ManyToOne(() => BrandPromotionSectionTypeEntity, (type) => type.sections, {
-    onDelete: 'CASCADE',
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  @JoinColumn({ name: 'type_id' })
-  type: BrandPromotionSectionTypeEntity;
 }

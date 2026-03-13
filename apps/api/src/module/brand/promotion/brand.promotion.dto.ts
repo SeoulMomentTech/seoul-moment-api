@@ -10,6 +10,7 @@ import { BrandPromotionEntity } from '@app/repository/entity/brand-promotion.ent
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { ProductItemEntity } from '@app/repository/entity/product-item.entity';
 import { BrandPromotionEventCouponStatus } from '@app/repository/enum/brand-promotion-event-coupon.enum';
+import { BrandPromotionSectionType } from '@app/repository/enum/brand-promotion-section';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
@@ -212,12 +213,13 @@ export class GetBrandPromotionSectionResponse {
   id: number;
 
   @ApiProperty({
-    description: '브랜드 프로모션 섹션 타입 아이디',
-    example: 'TYPE_1',
+    description: '브랜드 프로모션 섹션 타입',
+    example: BrandPromotionSectionType.TYPE_1,
+    enum: BrandPromotionSectionType,
   })
-  @IsString()
+  @IsEnum(BrandPromotionSectionType)
   @IsDefined()
-  typeId: string;
+  type: BrandPromotionSectionType;
 
   @ApiProperty({
     description: '브랜드 프로모션 섹션 이미지 경로 리스트',
@@ -235,7 +237,7 @@ export class GetBrandPromotionSectionResponse {
   static from(entity: BrandPromotionSectionEntity) {
     return plainToInstance(this, {
       id: entity.id,
-      typeId: entity.typeId,
+      type: entity.type,
       imageUrlList: entity.images.map((image) => image.getImageUrl()),
     });
   }

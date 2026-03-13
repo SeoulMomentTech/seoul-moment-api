@@ -16,7 +16,6 @@ import { BrandPromotionNoticeEntity } from './entity/brand-promotion-notice.enti
 import { BrandPromotionPopupImageEntity } from './entity/brand-promotion-popup-image.entity';
 import { BrandPromotionPopupEntity } from './entity/brand-promotion-popup.entity';
 import { BrandPromotionSectionImageEntity } from './entity/brand-promotion-section-image.entity';
-import { BrandPromotionSectionTypeEntity } from './entity/brand-promotion-section-type.entity';
 import { BrandPromotionSectionEntity } from './entity/brand-promotion-section.entity';
 import { BrandPromotionEntity } from './entity/brand-promotion.entity';
 import { BrandSectionImageEntity } from './entity/brand-section-image.entity';
@@ -127,7 +126,6 @@ import { ProductRepositoryService } from './service/product.repository.service';
       BrandPromotionBannerImageEntity,
       BrandPromotionSectionEntity,
       BrandPromotionSectionImageEntity,
-      BrandPromotionSectionTypeEntity,
       BrandPromotionPopupEntity,
       BrandPromotionPopupImageEntity,
       BrandPromotionNoticeEntity,
