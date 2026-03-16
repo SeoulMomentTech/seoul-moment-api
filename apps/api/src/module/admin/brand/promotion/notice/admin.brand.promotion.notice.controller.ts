@@ -19,18 +19,18 @@ import {
 import { ApiOperation } from '@nestjs/swagger';
 
 import {
-  GetAdminBrandPromotionNoticsDetailResponse,
-  GetAdminBrandPromotionNoticsListRequest,
-  GetAdminBrandPromotionNoticsResponse,
-  PatchAdminBrandPromotionNoticsRequest,
-  PostAdminBrandPromotionNoticsRequest,
-} from './admin.brand.promotion.notics.dto';
-import { AdminBrandPromotionNoticsService } from './admin.brand.promotion.notics.service';
+  GetAdminBrandPromotionNoticeDetailResponse,
+  GetAdminBrandPromotionNoticeListRequest,
+  GetAdminBrandPromotionNoticeResponse,
+  PatchAdminBrandPromotionNoticeRequest,
+  PostAdminBrandPromotionNoticeRequest,
+} from './admin.brand.promotion.notice.dto';
+import { AdminBrandPromotionNoticeService } from './admin.brand.promotion.notice.service';
 
-@Controller('admin/brand/promotion/notics')
-export class AdminBrandPromotionNoticsController {
+@Controller('admin/brand/promotion/notice')
+export class AdminBrandPromotionNoticeController {
   constructor(
-    private readonly adminBrandPromotionNoticsService: AdminBrandPromotionNoticsService,
+    private readonly adminBrandPromotionNoticeService: AdminBrandPromotionNoticeService,
   ) {}
 
   @Post()
@@ -40,22 +40,22 @@ export class AdminBrandPromotionNoticsController {
     HttpStatus.INTERNAL_SERVER_ERROR,
     '브랜드 프로모션 공지 등록 실패',
   )
-  async createBrandPromotionNotics(
-    @Body() request: PostAdminBrandPromotionNoticsRequest,
+  async createBrandPromotionNotice(
+    @Body() request: PostAdminBrandPromotionNoticeRequest,
   ) {
-    await this.adminBrandPromotionNoticsService.createBrandPromotionNotics(
+    await this.adminBrandPromotionNoticeService.createBrandPromotionNotice(
       request,
     );
   }
 
   @Get()
   @ApiOperation({ summary: '브랜드 프로모션 공지 리스트 조회' })
-  @ResponseList(GetAdminBrandPromotionNoticsResponse)
-  async getBrandPromotionNoticsList(
-    @Query() request: GetAdminBrandPromotionNoticsListRequest,
-  ): Promise<ResponseListDto<GetAdminBrandPromotionNoticsResponse>> {
+  @ResponseList(GetAdminBrandPromotionNoticeResponse)
+  async getBrandPromotionNoticeList(
+    @Query() request: GetAdminBrandPromotionNoticeListRequest,
+  ): Promise<ResponseListDto<GetAdminBrandPromotionNoticeResponse>> {
     const [result, total] =
-      await this.adminBrandPromotionNoticsService.getBrandPromotionNoticsList(
+      await this.adminBrandPromotionNoticeService.getBrandPromotionNoticeList(
         request,
       );
 
@@ -64,16 +64,16 @@ export class AdminBrandPromotionNoticsController {
 
   @Get(':id(\\d+)')
   @ApiOperation({ summary: '브랜드 프로모션 공지 상세 조회' })
-  @ResponseData(GetAdminBrandPromotionNoticsDetailResponse)
+  @ResponseData(GetAdminBrandPromotionNoticeDetailResponse)
   @ResponseException(
     HttpStatus.NOT_FOUND,
     '브랜드 프로모션 공지가 존재하지 않습니다.',
   )
-  async getBrandPromotionNoticsDetail(
+  async getBrandPromotionNoticeDetail(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<ResponseDataDto<GetAdminBrandPromotionNoticsDetailResponse>> {
+  ): Promise<ResponseDataDto<GetAdminBrandPromotionNoticeDetailResponse>> {
     const result =
-      await this.adminBrandPromotionNoticsService.getBrandPromotionNoticsDetail(
+      await this.adminBrandPromotionNoticeService.getBrandPromotionNoticeDetail(
         id,
       );
 
@@ -87,11 +87,11 @@ export class AdminBrandPromotionNoticsController {
     HttpStatus.INTERNAL_SERVER_ERROR,
     '브랜드 프로모션 공지 수정 실패',
   )
-  async updateBrandPromotionNotics(
+  async updateBrandPromotionNotice(
     @Param('id', ParseIntPipe) id: number,
-    @Body() request: PatchAdminBrandPromotionNoticsRequest,
+    @Body() request: PatchAdminBrandPromotionNoticeRequest,
   ) {
-    await this.adminBrandPromotionNoticsService.patchBrandPromotionNotics(
+    await this.adminBrandPromotionNoticeService.patchBrandPromotionNotice(
       id,
       request,
     );
@@ -104,7 +104,7 @@ export class AdminBrandPromotionNoticsController {
     HttpStatus.INTERNAL_SERVER_ERROR,
     '브랜드 프로모션 공지 삭제 실패',
   )
-  async deleteBrandPromotionNotics(@Param('id', ParseIntPipe) id: number) {
-    await this.adminBrandPromotionNoticsService.deleteBrandPromotionNotics(id);
+  async deleteBrandPromotionNotice(@Param('id', ParseIntPipe) id: number) {
+    await this.adminBrandPromotionNoticeService.deleteBrandPromotionNotice(id);
   }
 }

@@ -10,7 +10,7 @@ import {
   UpdateBrandPromotionDto,
   UpdateBrandPromotionEventCouponDto,
   UpdateBrandPromotionEventDto,
-  UpdateBrandPromotionNoticsDto,
+  UpdateBrandPromotionNoticeDto,
   UpdateBrandPromotionPopupDto,
   UpdateBrandPromotionSectionDto,
   UpdateBrandPromotionSectionImageDto,
@@ -332,13 +332,13 @@ export class BrandPromotionRepositoryService {
     return result;
   }
 
-  async createBrandPromotionNotics(
+  async createBrandPromotionNotice(
     entity: BrandPromotionNoticeEntity,
   ): Promise<BrandPromotionNoticeEntity> {
     return this.brandPromotionNoticeRepository.save(entity);
   }
 
-  async findBrandPromotionNoticsListByPaging(
+  async findBrandPromotionNoticeListByPaging(
     page: number,
     count: number,
     brandPromotionId?: number,
@@ -358,17 +358,17 @@ export class BrandPromotionRepositoryService {
       .getManyAndCount();
   }
 
-  async updateBrandPromotionNotics(
-    dto: UpdateBrandPromotionNoticsDto,
+  async updateBrandPromotionNotice(
+    dto: UpdateBrandPromotionNoticeDto,
   ): Promise<BrandPromotionNoticeEntity> {
     return this.brandPromotionNoticeRepository.save(dto);
   }
 
-  async deleteBrandPromotionNotics(id: number) {
+  async deleteBrandPromotionNotice(id: number) {
     await this.brandPromotionNoticeRepository.delete(id);
   }
 
-  async getBrandPromotionNoticsById(
+  async getBrandPromotionNoticeById(
     id: number,
   ): Promise<BrandPromotionNoticeEntity> {
     const result = await this.brandPromotionNoticeRepository.findOne({

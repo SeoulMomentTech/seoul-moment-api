@@ -577,7 +577,7 @@ export class GetBrandPromotionEventAndCouponResponse {
   }
 }
 
-export class GetBrandPromotionNoticsResponse {
+export class GetBrandPromotionNoticeResponse {
   @ApiProperty({
     description: '브랜드 프로모션 공지 아이디',
     example: 1,
@@ -677,13 +677,13 @@ export class GetBrandPromotionResponse {
 
   @ApiProperty({
     description: '브랜드 프로모션 공지 목록',
-    type: [GetBrandPromotionNoticsResponse],
+    type: [GetBrandPromotionNoticeResponse],
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => GetBrandPromotionNoticsResponse)
+  @Type(() => GetBrandPromotionNoticeResponse)
   @IsDefined()
-  noticsList: GetBrandPromotionNoticsResponse[];
+  noticeList: GetBrandPromotionNoticeResponse[];
 
   static from(
     bannerList: GetBrandPromotionBannerResponse[],
@@ -692,7 +692,7 @@ export class GetBrandPromotionResponse {
     productList: GetBrandPromotionProductResponse[],
     popupList: GetBrandPromotionPopupResponse[],
     eventList: GetBrandPromotionEventAndCouponResponse[],
-    noticsList: GetBrandPromotionNoticsResponse[],
+    noticeList: GetBrandPromotionNoticeResponse[],
   ) {
     return plainToInstance(this, {
       bannerList,
@@ -701,7 +701,7 @@ export class GetBrandPromotionResponse {
       productList,
       popupList,
       eventList,
-      noticsList,
+      noticeList,
     });
   }
 }

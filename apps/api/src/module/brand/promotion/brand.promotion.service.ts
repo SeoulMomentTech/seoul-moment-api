@@ -15,7 +15,7 @@ import {
   GetBrandPromotionBrandResponse,
   GetBrandPromotionEventAndCouponResponse,
   GetBrandPromotionEventCouponResponse,
-  GetBrandPromotionNoticsResponse,
+  GetBrandPromotionNoticeResponse,
   GetBrandPromotionPopupResponse,
   GetBrandPromotionProductResponse,
   GetBrandPromotionResponse,
@@ -55,7 +55,7 @@ export class BrandPromotionService {
       brandPromotionProductList,
       brandPromotionPopupList,
       brandPromotionEventList,
-      brandPromotionNoticsList,
+      brandPromotionNoticeList,
     ] = await Promise.all([
       this.getBrandPromotionBannerList(brandPromotion, language),
       this.getBrandPromotionBrandDetail(brandPromotion, language),
@@ -63,7 +63,7 @@ export class BrandPromotionService {
       this.getBrandPromotionProductList(brandId, language),
       this.getBrandPromotionPopupList(brandPromotion, language),
       this.getBrandPromotionEventList(brandPromotion, language),
-      this.getBrandPromotionNoticsList(brandPromotion, language),
+      this.getBrandPromotionNoticeList(brandPromotion, language),
     ]);
 
     return GetBrandPromotionResponse.from(
@@ -73,7 +73,7 @@ export class BrandPromotionService {
       brandPromotionProductList,
       brandPromotionPopupList,
       brandPromotionEventList,
-      brandPromotionNoticsList,
+      brandPromotionNoticeList,
     );
   }
 
@@ -277,33 +277,33 @@ export class BrandPromotionService {
     });
   }
 
-  private async getBrandPromotionNoticsList(
+  private async getBrandPromotionNoticeList(
     brandPromotion: BrandPromotionEntity,
     language: LanguageCode,
-  ): Promise<GetBrandPromotionNoticsResponse[]> {
-    const [brandPromotionNotics] =
-      await this.brandPromotionRepositoryService.findBrandPromotionNoticsListByPaging(
+  ): Promise<GetBrandPromotionNoticeResponse[]> {
+    const [brandPromotionNotice] =
+      await this.brandPromotionRepositoryService.findBrandPromotionNoticeListByPaging(
         1,
         1000,
         brandPromotion.id,
       );
 
-    if (brandPromotionNotics.length === 0) {
+    if (brandPromotionNotice.length === 0) {
       return [];
     }
 
     const multilingualTexts =
       await this.languageRepositoryService.findMultilingualTextsByEntities(
         EntityType.BRAND_PROMOTION_NOTICE,
-        brandPromotionNotics.map((v) => v.id),
+        brandPromotionNotice.map((v) => v.id),
         language,
       );
 
     const multilingualTextsByNoticeId =
       this.groupMultilingualTextsByEntityId(multilingualTexts);
 
-    return brandPromotionNotics.map((notice) =>
-      GetBrandPromotionNoticsResponse.from(
+    return brandPromotionNotice.map((notice) =>
+      GetBrandPromotionNoticeResponse.from(
         notice,
         multilingualTextsByNoticeId.get(notice.id) ?? [],
       ),

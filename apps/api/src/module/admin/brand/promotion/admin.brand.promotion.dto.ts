@@ -25,7 +25,10 @@ import {
   PostAdminBrandPromotionEventBaseDto,
   PostAdminBrandPromotionEventCouponBaseDto,
 } from './event/admin.brand.promotion.event.dto';
-import { PostAdminBrandPromotionNoticsBaseDto } from './notics/admin.brand.promotion.notics.dto';
+import {
+  GetAdminBrandPromotionNoticeResponse,
+  PostAdminBrandPromotionNoticeBaseDto,
+} from './notice/admin.brand.promotion.notice.dto';
 import {
   GetAdminBrandPromotionPopupResponse,
   PostAdminBrandPromotionPopupBaseDto,
@@ -225,14 +228,14 @@ export class PostAdminBrandPromotionRequest {
 
   @ApiPropertyOptional({
     description: '공지 목록',
-    type: () => PostAdminBrandPromotionNoticsBaseDto,
+    type: () => PostAdminBrandPromotionNoticeBaseDto,
     isArray: true,
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => PostAdminBrandPromotionNoticsBaseDto)
+  @Type(() => PostAdminBrandPromotionNoticeBaseDto)
   @IsOptional()
-  noticeList: PostAdminBrandPromotionNoticsBaseDto[];
+  noticeList: PostAdminBrandPromotionNoticeBaseDto[];
 
   @ApiPropertyOptional({
     description: '이벤트리스트와 이벤트별 쿠폰리스트',
@@ -385,6 +388,17 @@ export class GetAdminBrandPromotionDetailResponse {
   @IsOptional()
   eventAndCouponList?: GetAdminBrandPromotionEventAndCouponDto[];
 
+  @ApiPropertyOptional({
+    description: '공지 목록',
+    type: () => GetAdminBrandPromotionNoticeResponse,
+    isArray: true,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminBrandPromotionNoticeResponse)
+  @IsOptional()
+  noticeList?: GetAdminBrandPromotionNoticeResponse[];
+
   @ApiProperty({
     description: '브랜드 프로모션 활성 여부',
     example: true,
@@ -400,6 +414,7 @@ export class GetAdminBrandPromotionDetailResponse {
     sectionList: GetAdminBrandPromotionSectionResponse[],
     popupList: GetAdminBrandPromotionPopupResponse[],
     eventAndCouponList?: GetAdminBrandPromotionEventAndCouponDto[],
+    noticeList?: GetAdminBrandPromotionNoticeResponse[],
   ) {
     return plainToInstance(this, {
       id: entity.id,
@@ -412,6 +427,7 @@ export class GetAdminBrandPromotionDetailResponse {
       sectionList,
       popupList,
       eventAndCouponList,
+      noticeList,
     });
   }
 }

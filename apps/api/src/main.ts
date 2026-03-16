@@ -26,7 +26,7 @@ import { AdminBrandModule } from './module/admin/brand/admin.brand.module';
 import { AdminBrandPromotionModule } from './module/admin/brand/promotion/admin.brand.promotion.module';
 import { AdminBrandPromotionBannerModule } from './module/admin/brand/promotion/banner/admin.brand.promotion.banner.module';
 import { AdminBrandPromotionEventModule } from './module/admin/brand/promotion/event/admin.brand.promotion.event.module';
-import { AdminBrandPromotionNoticsModule } from './module/admin/brand/promotion/notics/admin.brand.promotion.notics.module';
+import { AdminBrandPromotionNoticeModule } from './module/admin/brand/promotion/notice/admin.brand.promotion.notice.module';
 import { AdminBrandPromotionPopupModule } from './module/admin/brand/promotion/popup/admin.brand.promotion.popup.module';
 import { AdminBrandPromotionSectionModule } from './module/admin/brand/promotion/section/admin.brand.promotion.section.module';
 import { AdminCategoryModule } from './module/admin/category/admin.category.module';
@@ -95,7 +95,7 @@ async function bootstrap() {
       AdminBrandPromotionModule,
       AdminBrandPromotionSectionModule,
       AdminBrandPromotionBannerModule,
-      AdminBrandPromotionNoticsModule,
+      AdminBrandPromotionNoticeModule,
       AdminBrandPromotionPopupModule,
       AdminBrandPromotionEventModule,
       ArticleModule,

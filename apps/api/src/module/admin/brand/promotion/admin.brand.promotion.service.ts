@@ -32,10 +32,11 @@ import {
 } from './event/admin.brand.promotion.event.dto';
 import { AdminBrandPromotionEventService } from './event/admin.brand.promotion.event.service';
 import {
-  PostAdminBrandPromotionNoticsBaseDto,
-  PostAdminBrandPromotionNoticsRequest,
-} from './notics/admin.brand.promotion.notics.dto';
-import { AdminBrandPromotionNoticsService } from './notics/admin.brand.promotion.notics.service';
+  GetAdminBrandPromotionNoticeListRequest,
+  PostAdminBrandPromotionNoticeBaseDto,
+  PostAdminBrandPromotionNoticeRequest,
+} from './notice/admin.brand.promotion.notice.dto';
+import { AdminBrandPromotionNoticeService } from './notice/admin.brand.promotion.notice.service';
 import {
   GetAdminBrandPromotionPopupListRequest,
   PostAdminBrandPromotionPopupBaseDto,
@@ -58,7 +59,7 @@ export class AdminBrandPromotionService {
     private readonly languageRepositoryService: LanguageRepositoryService,
     private readonly adminBrandPromotionBannerService: AdminBrandPromotionBannerService,
     private readonly adminBrandPromotionSectionService: AdminBrandPromotionSectionService,
-    private readonly adminBrandPromotionNoticsService: AdminBrandPromotionNoticsService,
+    private readonly adminBrandPromotionNoticeService: AdminBrandPromotionNoticeService,
     private readonly adminBrandPromotionPopupService: AdminBrandPromotionPopupService,
     private readonly adminBrandPromotionEventService: AdminBrandPromotionEventService,
   ) {}
@@ -101,7 +102,7 @@ export class AdminBrandPromotionService {
     if (request.noticeList && request.noticeList.length > 0) {
       await Promise.all(
         request.noticeList.map((notice) =>
-          this.createBrandPromotionNotics(brandPromotionEntity.id, notice),
+          this.createBrandPromotionNotice(brandPromotionEntity.id, notice),
         ),
       );
     }
@@ -142,12 +143,12 @@ export class AdminBrandPromotionService {
     );
   }
 
-  private async createBrandPromotionNotics(
+  private async createBrandPromotionNotice(
     brandPromotionId: number,
-    notice: PostAdminBrandPromotionNoticsBaseDto,
+    notice: PostAdminBrandPromotionNoticeBaseDto,
   ) {
-    await this.adminBrandPromotionNoticsService.createBrandPromotionNotics(
-      plainToInstance(PostAdminBrandPromotionNoticsRequest, {
+    await this.adminBrandPromotionNoticeService.createBrandPromotionNotice(
+      plainToInstance(PostAdminBrandPromotionNoticeRequest, {
         brandPromotionId,
         ...notice,
       }),
@@ -266,6 +267,14 @@ export class AdminBrandPromotionService {
       }),
     );
 
+    const [noticeList] =
+      await this.adminBrandPromotionNoticeService.getBrandPromotionNoticeList(
+        plainToInstance(GetAdminBrandPromotionNoticeListRequest, {
+          page: 1,
+          count: 1000,
+          brandPromotionId: id,
+        }),
+      );
     return GetAdminBrandPromotionDetailResponse.from(
       brandPromotion,
       bannerList,
@@ -273,6 +282,7 @@ export class AdminBrandPromotionService {
       sectionList,
       popupList,
       eventAndCouponList,
+      noticeList,
     );
   }
 

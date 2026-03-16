@@ -10,27 +10,27 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
-  GetAdminBrandPromotionNoticsDetailResponse,
-  GetAdminBrandPromotionNoticsListRequest,
-  GetAdminBrandPromotionNoticsResponse,
-  PatchAdminBrandPromotionNoticsRequest,
-  PostAdminBrandPromotionNoticsRequest,
-  GetAdminBrandPromotionNoticsLanguageDto,
-} from './admin.brand.promotion.notics.dto';
+  GetAdminBrandPromotionNoticeDetailResponse,
+  GetAdminBrandPromotionNoticeListRequest,
+  GetAdminBrandPromotionNoticeResponse,
+  PatchAdminBrandPromotionNoticeRequest,
+  PostAdminBrandPromotionNoticeRequest,
+  GetAdminBrandPromotionNoticeLanguageDto,
+} from './admin.brand.promotion.notice.dto';
 
 @Injectable()
-export class AdminBrandPromotionNoticsService {
+export class AdminBrandPromotionNoticeService {
   constructor(
     private readonly brandPromotionRepositoryService: BrandPromotionRepositoryService,
     private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
   @Transactional()
-  async createBrandPromotionNotics(
-    request: PostAdminBrandPromotionNoticsRequest,
+  async createBrandPromotionNotice(
+    request: PostAdminBrandPromotionNoticeRequest,
   ) {
     const entity =
-      await this.brandPromotionRepositoryService.createBrandPromotionNotics(
+      await this.brandPromotionRepositoryService.createBrandPromotionNotice(
         plainToInstance(BrandPromotionNoticeEntity, {
           brandPromotionId: request.brandPromotionId,
         }),
@@ -49,16 +49,16 @@ export class AdminBrandPromotionNoticsService {
     );
   }
 
-  async getBrandPromotionNoticsList(
-    request: GetAdminBrandPromotionNoticsListRequest,
-  ): Promise<[GetAdminBrandPromotionNoticsResponse[], number]> {
-    const [brandPromotionNotics, total] =
-      await this.brandPromotionRepositoryService.findBrandPromotionNoticsListByPaging(
+  async getBrandPromotionNoticeList(
+    request: GetAdminBrandPromotionNoticeListRequest,
+  ): Promise<[GetAdminBrandPromotionNoticeResponse[], number]> {
+    const [brandPromotionNotice, total] =
+      await this.brandPromotionRepositoryService.findBrandPromotionNoticeListByPaging(
         request.page,
         request.count,
       );
 
-    if (brandPromotionNotics.length === 0) {
+    if (brandPromotionNotice.length === 0) {
       return [[], total];
     }
 
@@ -66,46 +66,46 @@ export class AdminBrandPromotionNoticsService {
       this.languageRepositoryService.findAllActiveLanguages(),
       this.languageRepositoryService.findMultilingualTextsByEntities(
         EntityType.BRAND_PROMOTION_NOTICE,
-        brandPromotionNotics.map((b) => b.id),
+        brandPromotionNotice.map((b) => b.id),
       ),
     ]);
 
-    const brandPromotionNoticsList = brandPromotionNotics.map(
-      (brandPromotionNotics) => {
+    const brandPromotionNoticeList = brandPromotionNotice.map(
+      (brandPromotionNotice) => {
         const contentByEntity = MultilingualFieldDto.fromByEntity(
           multilingualTexts.filter(
-            (v) => v.entityId === brandPromotionNotics.id,
+            (v) => v.entityId === brandPromotionNotice.id,
           ),
           'content',
         );
 
         const nameDto = languages.map((language) =>
-          GetAdminBrandPromotionNoticsLanguageDto.from(
+          GetAdminBrandPromotionNoticeLanguageDto.from(
             language.code,
             contentByEntity.getContentByLanguage(language.code),
           ),
         );
 
-        return GetAdminBrandPromotionNoticsResponse.from(
-          brandPromotionNotics,
+        return GetAdminBrandPromotionNoticeResponse.from(
+          brandPromotionNotice,
           nameDto,
         );
       },
     );
 
-    return [brandPromotionNoticsList, total];
+    return [brandPromotionNoticeList, total];
   }
 
   @Transactional()
-  async patchBrandPromotionNotics(
+  async patchBrandPromotionNotice(
     id: number,
-    request: PatchAdminBrandPromotionNoticsRequest,
+    request: PatchAdminBrandPromotionNoticeRequest,
   ) {
     await this.brandPromotionRepositoryService.getBrandPromotionById(
       request.brandPromotionId,
     );
 
-    await this.brandPromotionRepositoryService.updateBrandPromotionNotics({
+    await this.brandPromotionRepositoryService.updateBrandPromotionNotice({
       id,
       brandPromotionId: request.brandPromotionId,
     });
@@ -141,8 +141,8 @@ export class AdminBrandPromotionNoticsService {
   }
 
   @Transactional()
-  async deleteBrandPromotionNotics(id: number) {
-    await this.brandPromotionRepositoryService.deleteBrandPromotionNotics(id);
+  async deleteBrandPromotionNotice(id: number) {
+    await this.brandPromotionRepositoryService.deleteBrandPromotionNotice(id);
 
     await this.languageRepositoryService.deleteMultilingualTexts(
       EntityType.BRAND_PROMOTION_NOTICE,
@@ -150,11 +150,11 @@ export class AdminBrandPromotionNoticsService {
     );
   }
 
-  async getBrandPromotionNoticsDetail(
+  async getBrandPromotionNoticeDetail(
     id: number,
-  ): Promise<GetAdminBrandPromotionNoticsDetailResponse> {
-    const brandPromotionNotics =
-      await this.brandPromotionRepositoryService.getBrandPromotionNoticsById(
+  ): Promise<GetAdminBrandPromotionNoticeDetailResponse> {
+    const brandPromotionNotice =
+      await this.brandPromotionRepositoryService.getBrandPromotionNoticeById(
         id,
       );
 
@@ -162,7 +162,7 @@ export class AdminBrandPromotionNoticsService {
       this.languageRepositoryService.findAllActiveLanguages(),
       this.languageRepositoryService.findMultilingualTextsByEntities(
         EntityType.BRAND_PROMOTION_NOTICE,
-        [brandPromotionNotics.id],
+        [brandPromotionNotice.id],
       ),
     ]);
 
@@ -172,14 +172,14 @@ export class AdminBrandPromotionNoticsService {
     );
 
     const contentDto = languages.map((language) =>
-      GetAdminBrandPromotionNoticsLanguageDto.from(
+      GetAdminBrandPromotionNoticeLanguageDto.from(
         language.code,
         contentByEntity.getContentByLanguage(language.code),
       ),
     );
 
-    return GetAdminBrandPromotionNoticsDetailResponse.from(
-      brandPromotionNotics,
+    return GetAdminBrandPromotionNoticeDetailResponse.from(
+      brandPromotionNotice,
       contentDto,
     );
   }

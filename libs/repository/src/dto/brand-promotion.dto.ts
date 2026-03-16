@@ -32,7 +32,7 @@ export type UpdateBrandPromotionSectionImageDto = RequireKey<
   'id'
 >;
 
-export type UpdateBrandPromotionNoticsDto = RequireKey<
+export type UpdateBrandPromotionNoticeDto = RequireKey<
   BrandPromotionNoticeEntity,
   'id'
 >;

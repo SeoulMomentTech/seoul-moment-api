@@ -44,7 +44,9 @@ export class AdminBrandPromotionPopupService {
           latitude: request.latitude,
           longitude: request.longitude,
           startDate: request.startDate,
+          startTime: request.startTime,
           endDate: request.endDate,
+          endTime: request.endTime,
           isActive: request.isActive,
         }),
       );
