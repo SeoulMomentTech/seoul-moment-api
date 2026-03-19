@@ -70,8 +70,8 @@ export class ProductIndexDocument {
 
       price: entity.getEffectivePrice(),
       like: Math.floor(Math.random() * 50001),
-      review: Math.floor(Math.random() * 10001),
-      reviewAverage: Math.round(Math.random() * 5 * 10) / 10,
+      review: Math.floor(Math.random() * 101),
+      reviewAverage: Math.round((Math.random() + 4) * 10) / 10,
 
       optionIdList: entity.variants.flatMap((v) =>
         v.variantOptions.map((v) => v.optionValue.id),
