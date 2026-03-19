@@ -3,8 +3,10 @@ import { HomeBannerImageEntity } from '@app/repository/entity/home-banner-image.
 import { HomeSectionEntity } from '@app/repository/entity/home-section.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
+import { PromotionEntity } from '@app/repository/entity/promotion.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { plainToInstance } from 'class-transformer';
+import { plainToInstance, Type } from 'class-transformer';
+import { IsArray, IsDefined, ValidateNested } from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
@@ -156,6 +158,44 @@ export class GetHomeArticle {
   }
 }
 
+export class GetHomePromotionResponse {
+  @ApiProperty({ description: '프로모션 ID', example: 1 })
+  id: number;
+
+  @ApiProperty({
+    description: '프로모션 썸네일 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/promotions/2025-09-16/promotion-01.jpg',
+  })
+  thumbnailImageUrl: string;
+
+  @ApiProperty({ description: '프로모션 제목', example: '프로모션 제목' })
+  title: string;
+
+  @ApiProperty({ description: '프로모션 내용', example: '프로모션 내용' })
+  description: string;
+
+  static from(
+    entity: PromotionEntity,
+    multilingualText: MultilingualTextEntity[],
+  ) {
+    multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
+
+    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
+    const description = MultilingualFieldDto.fromByEntity(
+      multilingualText,
+      'description',
+    );
+
+    return plainToInstance(this, {
+      id: entity.id,
+      thumbnailImageUrl: entity.getThumbnailImageUrl(),
+      title: title.getContent(),
+      description: description.getContent(),
+    });
+  }
+}
+
 export class GetHomeBanner {
   @ApiProperty({
     description: '배너 이미지 URL',
@@ -191,6 +231,25 @@ export class GetHomeResponse {
     type: [GetHomeBanner],
   })
   banner: GetHomeBanner[];
+
+  @ApiProperty({
+    description: '프로모션 리스트',
+    example: [
+      {
+        id: 1,
+        thumbnailImageUrl:
+          'https://image-dev.seoulmoment.com.tw/promotions/2025-09-16/promotion-01.jpg',
+        title: '프로모션 제목',
+        description: '프로모션 내용',
+      },
+    ],
+    type: [GetHomePromotionResponse],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetHomePromotionResponse)
+  @IsDefined()
+  promotionList: GetHomePromotionResponse[];
 
   @ApiProperty({
     description: '홈 섹션 리스트',
