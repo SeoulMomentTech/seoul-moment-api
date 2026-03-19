@@ -1,3 +1,5 @@
+/* eslint-disable unused-imports/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseException } from '@app/common/decorator/response-exception.decorator';
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
