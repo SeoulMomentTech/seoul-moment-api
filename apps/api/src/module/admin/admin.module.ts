@@ -12,6 +12,7 @@ import { AdminHomeModule } from './home/admin.home.module';
 import { AdminImageModule } from './image/admin.image.module';
 import { AdminNewsModule } from './news/admin.news.module';
 import { AdminProductModule } from './product/admin.product.module';
+import { AdminPromotionModule } from './promotion/promotion.module';
 import { AdminUserModule } from './user/admin.user.module';
 
 @Module({
@@ -27,6 +28,7 @@ import { AdminUserModule } from './user/admin.user.module';
     AdminProductModule,
     AdminUserModule,
     AdminBrandPromotionModule,
+    AdminPromotionModule,
   ],
   providers: [OneTimeTokenStrategy, RefreshTokenStrategy],
 })

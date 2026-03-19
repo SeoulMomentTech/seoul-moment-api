@@ -5,6 +5,7 @@ import {
   JoinColumn,
   OneToOne,
   OneToMany,
+  ManyToOne,
 } from 'typeorm';
 
 import { BrandPromotionBannerEntity } from './brand-promotion-banner.entity';
@@ -15,6 +16,7 @@ import { BrandPromotionSectionEntity } from './brand-promotion-section.entity';
 import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
+import { PromotionEntity } from './promotion.entity';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -24,6 +26,9 @@ import { EntityType } from '../enum/entity.enum';
 export class BrandPromotionEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
+
+  @Column('int', { name: 'promotion_id', nullable: true })
+  promotionId: number;
 
   @Column('int', { name: 'brand_id', nullable: false, unique: true })
   brandId: number;
@@ -85,4 +90,11 @@ export class BrandPromotionEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   events: BrandPromotionEventEntity[];
+
+  @ManyToOne(() => PromotionEntity, (promotion) => promotion.brandPromotions, {
+    onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  @JoinColumn({ name: 'promotion_id' })
+  promotion: PromotionEntity;
 }

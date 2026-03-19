@@ -25,11 +25,15 @@ import { BrandPromotionPopupEntity } from '../entity/brand-promotion-popup.entit
 import { BrandPromotionSectionImageEntity } from '../entity/brand-promotion-section-image.entity';
 import { BrandPromotionSectionEntity } from '../entity/brand-promotion-section.entity';
 import { BrandPromotionEntity } from '../entity/brand-promotion.entity';
+import { PromotionEntity } from '../entity/promotion.entity';
 import { BrandPromotionEventStatus } from '../enum/brand-promotion-event.enum';
 
 @Injectable()
 export class BrandPromotionRepositoryService {
   constructor(
+    @InjectRepository(PromotionEntity)
+    private readonly promotionRepository: Repository<PromotionEntity>,
+
     @InjectRepository(BrandPromotionEntity)
     private readonly brandPromotionRepository: Repository<BrandPromotionEntity>,
 

@@ -34,6 +34,7 @@ import { AdminHomeModule } from './module/admin/home/admin.home.module';
 import { AdminImageModule } from './module/admin/image/admin.image.module';
 import { AdminNewsModule } from './module/admin/news/admin.news.module';
 import { AdminProductModule } from './module/admin/product/admin.product.module';
+import { AdminPromotionModule } from './module/admin/promotion/promotion.module';
 import { AdminUserModule } from './module/admin/user/admin.user.module';
 import { AppModule } from './module/api.module';
 import { ArticleModule } from './module/article/article.module';
@@ -92,6 +93,7 @@ async function bootstrap() {
       AdminArticleModule,
       AdminProductModule,
       AdminUserModule,
+      AdminPromotionModule,
       AdminBrandPromotionModule,
       AdminBrandPromotionSectionModule,
       AdminBrandPromotionBannerModule,

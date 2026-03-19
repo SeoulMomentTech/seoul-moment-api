@@ -20,4 +20,5 @@ export enum EntityType {
   BRAND_PROMOTION_NOTICE = 'brand_promotion_notice',
   BRAND_PROMOTION_EVENT = 'brand_promotion_event',
   BRAND_PROMOTION_EVENT_COUPON = 'brand_promotion_event_coupon',
+  PROMOTION = 'promotion',
 }
