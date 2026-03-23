@@ -1,43 +1,50 @@
 import { ArticleEntity } from '@app/repository/entity/article.entity';
 import { HomeBannerImageEntity } from '@app/repository/entity/home-banner-image.entity';
-import { HomeSectionEntity } from '@app/repository/entity/home-section.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { PromotionEntity } from '@app/repository/entity/promotion.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
-import { IsArray, IsDefined, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsDefined,
+  IsNumber,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
-export class GetHomeSection {
+export class GetHomePromotion {
+  @ApiProperty({ description: '프로모션 ID', example: 1 })
+  @IsNumber()
+  @IsDefined()
+  promotionId: number;
+
   @ApiProperty({ description: '섹션 제목', example: '2025 S/S Vibes of Seoul' })
+  @IsString()
+  @IsDefined()
   title: string;
 
   @ApiProperty({
     description: '섹션 내용',
     example: '새로운 2025 S/S 상품으로 실용적인 제품을 만나보세요.',
   })
+  @IsString()
+  @IsDefined()
   description: string;
 
-  @ApiProperty({ description: 'link URL', example: '/production' })
-  url: string;
-
-  @ApiProperty({ description: 'link 버튼 이름', example: 'Product detail' })
-  urlName: string;
-
   @ApiProperty({
-    description: '섹션 이미지 URL 리스트',
-    example: [
-      'https://example.com/image1.jpg',
-      'https://example.com/image2.jpg',
-    ],
-    type: [String],
+    description: '섹션 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/home-sections/2025-09-16/home-section-01.jpg',
   })
-  image: string[];
+  @IsString()
+  @IsDefined()
+  imageUrl: string;
 
   static from(
-    entity: HomeSectionEntity,
+    entity: PromotionEntity,
     multilingualText: MultilingualTextEntity[],
   ) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
@@ -50,11 +57,10 @@ export class GetHomeSection {
     );
 
     return plainToInstance(this, {
+      promotionId: entity.id,
       title: title.getContent(),
       description: description.getContent(),
-      url: entity.url,
-      urlName: entity.urlName,
-      image: entity.sectionImage.map((v) => v.getImage()),
+      imageUrl: entity.getThumbnailImageUrl(),
     });
   }
 }
@@ -252,20 +258,20 @@ export class GetHomeResponse {
   promotionList: GetHomePromotionResponse[];
 
   @ApiProperty({
-    description: '홈 섹션 리스트',
-    type: [GetHomeSection],
+    description: '홈 프로모션 리스트',
+    type: [GetHomePromotion],
   })
-  section: GetHomeSection[];
+  promotion: GetHomePromotion[];
 
   static from(
     banner: HomeBannerImageEntity[],
-    section: HomeSectionEntity[],
-    sectionMultilingualTextEntity: MultilingualTextEntity[],
+    promotion: PromotionEntity[],
+    promotionMultilingualTextEntity: MultilingualTextEntity[],
   ) {
     return plainToInstance(this, {
       banner: banner.map((v) => GetHomeBanner.from(v)),
-      section: section.map((v) =>
-        GetHomeSection.from(v, sectionMultilingualTextEntity),
+      promotion: promotion.map((v) =>
+        GetHomePromotion.from(v, promotionMultilingualTextEntity),
       ),
     });
   }

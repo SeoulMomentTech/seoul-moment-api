@@ -30,9 +30,13 @@ export class BrandPromotionService {
     private readonly productRepositoryService: ProductRepositoryService,
   ) {}
 
-  async getBrandPromotionList(): Promise<GetBrandPromotionBrandResponse[]> {
+  async getBrandPromotionList(
+    promotionId: number,
+  ): Promise<GetBrandPromotionBrandResponse[]> {
     const brandPromotions =
-      await this.brandPromotionRepositoryService.findBrandPromotionList();
+      await this.brandPromotionRepositoryService.findBrandPromotionListByPromotionId(
+        promotionId,
+      );
 
     return brandPromotions.map((brandPromotion) =>
       GetBrandPromotionBrandResponse.from(brandPromotion),

@@ -16,13 +16,14 @@ import { BrandPromotionService } from './brand.promotion.service';
 export class BrandPromotionController {
   constructor(private readonly brandPromotionService: BrandPromotionService) {}
 
-  @Get('brand')
+  @Get(':promotionId(\\d+)/brand')
   @ApiOperation({ summary: '브랜드 프로모션 리스트 조회' })
   @ResponseList(GetBrandPromotionBrandResponse)
-  async getBrandPromotionList(): Promise<
-    ResponseListDto<GetBrandPromotionBrandResponse>
-  > {
-    const result = await this.brandPromotionService.getBrandPromotionList();
+  async getBrandPromotionList(
+    @Param('promotionId', ParseIntPipe) promotionId: number,
+  ): Promise<ResponseListDto<GetBrandPromotionBrandResponse>> {
+    const result =
+      await this.brandPromotionService.getBrandPromotionList(promotionId);
 
     return new ResponseListDto(result);
   }

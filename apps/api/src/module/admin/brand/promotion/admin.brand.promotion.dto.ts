@@ -146,6 +146,15 @@ export class GetAdminBrandPromotionLanguageDto {
 
 export class PostAdminBrandPromotionRequest {
   @ApiProperty({
+    description: '프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  promotionId: number;
+
+  @ApiProperty({
     description: '브랜드 아이디',
     example: 7,
   })
@@ -331,6 +340,14 @@ export class GetAdminBrandPromotionDetailResponse {
   id: number;
 
   @ApiProperty({
+    description: '프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  promotionId: number;
+
+  @ApiProperty({
     description: '브랜드 정보',
     type: GetAdminBrandPromotionDetailBrandDto,
     example: {
@@ -418,6 +435,7 @@ export class GetAdminBrandPromotionDetailResponse {
   ) {
     return plainToInstance(this, {
       id: entity.id,
+      promotionId: entity.promotionId,
       brandDto: GetAdminBrandPromotionDetailBrandDto.from(
         entity.brand,
         language,
@@ -442,6 +460,14 @@ export class GetAdminBrandPromotionResponse {
   @IsNumber()
   @IsDefined()
   id: number;
+
+  @ApiProperty({
+    description: '프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  promotionId: number;
 
   @ApiProperty({
     description: '브랜드 아이디',
@@ -478,6 +504,7 @@ export class GetAdminBrandPromotionResponse {
   static from(entity: BrandPromotionEntity) {
     return plainToInstance(this, {
       id: entity.id,
+      promotionId: entity.promotionId,
       brandId: entity.brandId,
       isActive: entity.isActive,
       createDate: entity.createDate,

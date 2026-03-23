@@ -66,11 +66,16 @@ export class AdminBrandPromotionService {
 
   @Transactional()
   async createBrandPromotion(request: PostAdminBrandPromotionRequest) {
+    await this.brandPromotionRepositoryService.getPromotionById(
+      request.promotionId,
+    );
+
     await this.brandRepositoryService.getBrandById(request.brandId);
 
     const brandPromotionEntity =
       await this.brandPromotionRepositoryService.createBrandPromotion(
         plainToInstance(BrandPromotionEntity, {
+          promotionId: request.promotionId,
           brandId: request.brandId,
           isActive: request.isActive,
         }),

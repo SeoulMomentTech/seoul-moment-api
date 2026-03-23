@@ -142,6 +142,15 @@ export class BrandPromotionRepositoryService {
     });
   }
 
+  async findBrandPromotionListByPromotionId(
+    promotionId: number,
+  ): Promise<BrandPromotionEntity[]> {
+    return this.brandPromotionRepository.find({
+      where: { isActive: true, promotionId },
+      relations: ['brand'],
+    });
+  }
+
   async findBrandPromotionListByPaging(
     page: number,
     count: number,
@@ -635,7 +644,10 @@ export class BrandPromotionRepositoryService {
         {
           now: nowStr,
         },
-      );
+      )
+      .andWhere('p.isActive = :isActive', {
+        isActive: true,
+      });
 
     if (search) {
       qb.andWhere('multilingualTexts.textContent LIKE :search', {
