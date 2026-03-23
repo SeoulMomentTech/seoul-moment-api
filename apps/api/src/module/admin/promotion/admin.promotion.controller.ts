@@ -23,12 +23,12 @@ import { ApiOperation } from '@nestjs/swagger';
 
 import {
   GetAdminPromotionDetailResponse,
+  GetAdminPromotionListRequest,
   GetAdminPromotionResponse,
   PatchAdminPromotionRequest,
   PostAdminPromotionRequest,
-} from './promotion.dto';
-import { AdminPromotionService } from './promotion.service';
-import { GetAdminBrandPromotionListRequest } from '../brand/promotion/admin.brand.promotion.dto';
+} from './admin.promotion.dto';
+import { AdminPromotionService } from './admin.promotion.service';
 
 @Controller('admin/promotion')
 export class AdminPromotionController {
@@ -84,18 +84,20 @@ export class AdminPromotionController {
   @ApiOperation({ summary: '프로모션 등록' })
   @HttpCode(HttpStatus.CREATED)
   @ResponseException(HttpStatus.INTERNAL_SERVER_ERROR, '프로모션 등록 실패')
-  async createPromotion(@Body() request: PostAdminPromotionRequest) {}
+  async createPromotion(@Body() request: PostAdminPromotionRequest) {
+    await this.adminPromotionService.createPromotion(request);
+  }
 
   @Get()
   @ApiOperation({ summary: '프로모션 리스트 조회' })
   @ResponseList(GetAdminPromotionResponse)
   async getPromotionList(
-    @Query() request: GetAdminBrandPromotionListRequest,
+    @Query() request: GetAdminPromotionListRequest,
   ): Promise<ResponseListDto<GetAdminPromotionResponse>> {
-    return new ResponseListDto(
-      this.MOCK_PROMOTION_LIST,
-      this.MOCK_PROMOTION_LIST.length,
-    );
+    const [result, total] =
+      await this.adminPromotionService.getPromotionList(request);
+
+    return new ResponseListDto(result, total);
   }
 
   @Get(':id(\\d+)')

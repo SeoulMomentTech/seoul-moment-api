@@ -23,10 +23,10 @@ export class PromotionEntity extends CommonEntity {
   @Column('varchar', { length: 255, nullable: false })
   thumbnailImagePath: string;
 
-  @Column('timestamp', { nullable: true })
+  @Column('timestamp', { nullable: false })
   startDate: Date;
 
-  @Column('timestamp', { nullable: true })
+  @Column('timestamp', { nullable: false })
   endDate: Date;
 
   @Column('boolean', { default: true, nullable: false })

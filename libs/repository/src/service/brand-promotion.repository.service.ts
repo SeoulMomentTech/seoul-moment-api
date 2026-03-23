@@ -2,6 +2,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import moment from 'moment-timezone';
 import { Repository } from 'typeorm';
 
 import {
@@ -25,8 +26,10 @@ import { BrandPromotionPopupEntity } from '../entity/brand-promotion-popup.entit
 import { BrandPromotionSectionImageEntity } from '../entity/brand-promotion-section-image.entity';
 import { BrandPromotionSectionEntity } from '../entity/brand-promotion-section.entity';
 import { BrandPromotionEntity } from '../entity/brand-promotion.entity';
+import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
 import { PromotionEntity } from '../entity/promotion.entity';
 import { BrandPromotionEventStatus } from '../enum/brand-promotion-event.enum';
+import { EntityType } from '../enum/entity.enum';
 
 @Injectable()
 export class BrandPromotionRepositoryService {
@@ -598,5 +601,51 @@ export class BrandPromotionRepositoryService {
     }
 
     return result;
+  }
+
+  async createPromotion(promotion: PromotionEntity): Promise<PromotionEntity> {
+    return this.promotionRepository.save(promotion);
+  }
+
+  async findPromotionListByPaging(
+    page: number,
+    count: number,
+    search?: string,
+  ): Promise<[PromotionEntity[], number]> {
+    // startDate/endDate는 UTC 기준으로 저장됨. 현재 UTC 시각으로 비교.
+    const nowStr = moment.utc().format('YYYY-MM-DD HH:mm:ss');
+    const qb = this.promotionRepository.createQueryBuilder('p');
+
+    qb.leftJoinAndSelect(
+      MultilingualTextEntity,
+      'multilingualTexts',
+      'multilingualTexts.entityId = p.id AND multilingualTexts.entityType = :promotionEntityType',
+      { promotionEntityType: EntityType.PROMOTION },
+    );
+
+    qb.where('multilingualTexts.fieldName = :fieldName', {
+      fieldName: 'title',
+    })
+      .andWhere('multilingualTexts.languageId = :languageId', {
+        languageId: 1,
+      })
+      .andWhere(
+        'p.startDate <= :now::timestamp AND p.endDate >= :now::timestamp',
+        {
+          now: nowStr,
+        },
+      );
+
+    if (search) {
+      qb.andWhere('multilingualTexts.textContent LIKE :search', {
+        search: `%${search}%`,
+      });
+    }
+
+    return qb
+      .skip((page - 1) * count)
+      .take(count)
+      .orderBy('p.createDate', 'DESC')
+      .getManyAndCount();
   }
 }

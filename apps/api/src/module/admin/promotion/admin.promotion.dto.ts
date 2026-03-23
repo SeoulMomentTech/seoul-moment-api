@@ -76,9 +76,9 @@ export class GetAdminPromotionLanguageDto {
   @IsDefined()
   description: string;
 
-  static from(languageId: number, title: string, description: string) {
+  static from(languageCode: LanguageCode, title: string, description: string) {
     return plainToInstance(this, {
-      languageId,
+      languageCode,
       title,
       description,
     });
@@ -111,16 +111,16 @@ export class PostAdminPromotionRequest {
   thumbnailImagePath: string;
 
   @ApiProperty({
-    description: '시작일',
-    example: '2025-01-01',
+    description: '시작일 대만 시간 UTC (예: 2025-01-01 12:00:00)',
+    example: '2025-01-01 12:00:00',
   })
   @IsString()
   @IsDefined()
   startDate: string;
 
   @ApiProperty({
-    description: '종료일',
-    example: '2025-09-16',
+    description: '종료일 대만 시간 UTC (예: 2025-09-16 23:59:59)',
+    example: '2025-09-16 23:59:59',
   })
   @IsString()
   @IsDefined()
@@ -464,3 +464,5 @@ export class PatchAdminPromotionRequest {
   @IsDefined()
   language: GetAdminPromotionLanguageDto[];
 }
+
+export class GetAdminPromotionListRequest extends ListFilterDto {}
