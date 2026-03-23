@@ -106,7 +106,9 @@ export class AdminPromotionController {
   async getPromotionDetail(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<ResponseDataDto<GetAdminPromotionDetailResponse>> {
-    return new ResponseDataDto(this.MOCK_PROMOTION_DETAIL);
+    const result = await this.adminPromotionService.getPromotionDetail(id);
+
+    return new ResponseDataDto(result);
   }
 
   @Patch(':id(\\d+)')
@@ -116,11 +118,15 @@ export class AdminPromotionController {
   async updatePromotion(
     @Param('id', ParseIntPipe) id: number,
     @Body() request: PatchAdminPromotionRequest,
-  ) {}
+  ) {
+    await this.adminPromotionService.updatePromotion(id, request);
+  }
 
   @Delete(':id(\\d+)')
   @ApiOperation({ summary: '프로모션 삭제' })
   @HttpCode(HttpStatus.OK)
   @ResponseException(HttpStatus.INTERNAL_SERVER_ERROR, '프로모션 삭제 실패')
-  async deletePromotion(@Param('id', ParseIntPipe) id: number) {}
+  async deletePromotion(@Param('id', ParseIntPipe) id: number) {
+    await this.adminPromotionService.deletePromotion(id);
+  }
 }

@@ -15,6 +15,7 @@ import {
   UpdateBrandPromotionPopupDto,
   UpdateBrandPromotionSectionDto,
   UpdateBrandPromotionSectionImageDto,
+  UpdatePromotionDto,
 } from '../dto/brand-promotion.dto';
 import { BrandPromotionBannerEntity } from '../entity/brand-promotion-banner.entity';
 import { BrandPromotionBannerImageEntity } from '../entity/brand-promotion-banner.image.entity';
@@ -647,5 +648,32 @@ export class BrandPromotionRepositoryService {
       .take(count)
       .orderBy('p.createDate', 'DESC')
       .getManyAndCount();
+  }
+
+  async getPromotionById(id: number): Promise<PromotionEntity> {
+    const result = await this.promotionRepository.findOne({
+      where: { id },
+    });
+
+    if (!result) {
+      throw new ServiceError(
+        'Promotion not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
+  async updatePromotion(dto: UpdatePromotionDto): Promise<PromotionEntity> {
+    const entity = this.promotionRepository.create(dto);
+
+    return this.promotionRepository.save(
+      Object.assign(entity, { updateDate: new Date() }),
+    );
+  }
+
+  async deletePromotion(id: number): Promise<void> {
+    await this.promotionRepository.delete(id);
   }
 }

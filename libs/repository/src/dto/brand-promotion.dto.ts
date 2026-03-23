@@ -9,6 +9,7 @@ import { BrandPromotionPopupEntity } from '../entity/brand-promotion-popup.entit
 import { BrandPromotionSectionImageEntity } from '../entity/brand-promotion-section-image.entity';
 import { BrandPromotionSectionEntity } from '../entity/brand-promotion-section.entity';
 import { BrandPromotionEntity } from '../entity/brand-promotion.entity';
+import { PromotionEntity } from '../entity/promotion.entity';
 
 export type UpdateBrandPromotionDto = RequireKey<BrandPromotionEntity, 'id'>;
 
@@ -51,3 +52,5 @@ export type UpdateBrandPromotionEventCouponDto = RequireKey<
   BrandPromotionEventCouponEntity,
   'id'
 >;
+
+export type UpdatePromotionDto = RequireKey<PromotionEntity, 'id'>;

@@ -56,7 +56,6 @@ export class GetAdminPromotionLanguageDto {
     enum: LanguageCode,
   })
   @IsEnum(LanguageCode)
-  @Type(() => Number)
   @IsDefined()
   languageCode: LanguageCode;
 
@@ -147,6 +146,11 @@ export class PostAdminPromotionRequest {
         languageId: 2,
         title: 'TITLE',
         description: 'DESCRIPTION',
+      },
+      {
+        languageId: 3,
+        title: '중국어 제목',
+        description: '중국어 설명',
       },
     ],
   })
