@@ -617,6 +617,15 @@ export class GetBrandPromotionNoticeResponse {
 
 export class GetBrandPromotionResponse {
   @ApiProperty({
+    description: '프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @IsDefined()
+  @Type(() => Number)
+  promotionId: number;
+
+  @ApiProperty({
     description: '브랜드 프로모션 배너 목록',
     type: [GetBrandPromotionBannerResponse],
   })
@@ -686,6 +695,7 @@ export class GetBrandPromotionResponse {
   noticeList: GetBrandPromotionNoticeResponse[];
 
   static from(
+    promotionId: number,
     bannerList: GetBrandPromotionBannerResponse[],
     brand: GetBrandPromotionBrandDetailResponse,
     sectionList: GetBrandPromotionSectionResponse[],
@@ -695,6 +705,7 @@ export class GetBrandPromotionResponse {
     noticeList: GetBrandPromotionNoticeResponse[],
   ) {
     return plainToInstance(this, {
+      promotionId,
       bannerList,
       brand,
       sectionList,

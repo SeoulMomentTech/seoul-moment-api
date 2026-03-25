@@ -71,6 +71,7 @@ export class BrandPromotionService {
     ]);
 
     return GetBrandPromotionResponse.from(
+      brandPromotion.promotionId,
       brandPromotionBannerList,
       brandPromotionBrandDetail,
       brandPromotionSectionList,
