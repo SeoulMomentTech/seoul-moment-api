@@ -44,7 +44,7 @@ export class AdminPromotionService {
     request: GetAdminPromotionListRequest,
   ): Promise<[GetAdminPromotionResponse[], number]> {
     const [promotionList, total] =
-      await this.brandPromotionRepositoryService.findPromotionListByPaging(
+      await this.brandPromotionRepositoryService.findPromotionListByPagingForAdmin(
         request.page,
         request.count,
         request.search,

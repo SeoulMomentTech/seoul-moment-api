@@ -3,7 +3,7 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import moment from 'moment-timezone';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 
 import {
   UpdateBrandPromotionBannerDto,
@@ -617,13 +617,9 @@ export class BrandPromotionRepositoryService {
     return this.promotionRepository.save(promotion);
   }
 
-  async findPromotionListByPaging(
-    page: number,
-    count: number,
+  private buildPromotionBaseQuery(
     search?: string,
-  ): Promise<[PromotionEntity[], number]> {
-    // startDate/endDate는 UTC 기준으로 저장됨. 현재 UTC 시각으로 비교.
-    const nowStr = moment.utc().format('YYYY-MM-DD HH:mm:ss');
+  ): SelectQueryBuilder<PromotionEntity> {
     const qb = this.promotionRepository.createQueryBuilder('p');
 
     qb.leftJoinAndSelect(
@@ -633,27 +629,48 @@ export class BrandPromotionRepositoryService {
       { promotionEntityType: EntityType.PROMOTION },
     );
 
-    qb.where('multilingualTexts.fieldName = :fieldName', {
-      fieldName: 'title',
-    })
-      .andWhere('multilingualTexts.languageId = :languageId', {
-        languageId: 1,
-      })
-      .andWhere(
-        'p.startDate <= :now::timestamp AND p.endDate >= :now::timestamp',
-        {
-          now: nowStr,
-        },
-      )
-      .andWhere('p.isActive = :isActive', {
-        isActive: true,
-      });
-
     if (search) {
       qb.andWhere('multilingualTexts.textContent LIKE :search', {
         search: `%${search}%`,
-      });
+      })
+        .andWhere('multilingualTexts.fieldName = :fieldName', {
+          fieldName: 'title',
+        })
+        .andWhere('multilingualTexts.languageId = :languageId', {
+          languageId: 1,
+        });
     }
+
+    return qb;
+  }
+
+  async findPromotionListByPaging(
+    page: number,
+    count: number,
+    search?: string,
+  ): Promise<[PromotionEntity[], number]> {
+    // startDate/endDate는 UTC 기준으로 저장됨. 현재 UTC 시각으로 비교.
+    const nowStr = moment.utc().format('YYYY-MM-DD HH:mm:ss');
+    const qb = this.buildPromotionBaseQuery(search);
+
+    qb.andWhere(
+      'p.startDate <= :now::timestamp AND p.endDate >= :now::timestamp',
+      { now: nowStr },
+    ).andWhere('p.isActive = :isActive', { isActive: true });
+
+    return qb
+      .skip((page - 1) * count)
+      .take(count)
+      .orderBy('p.createDate', 'DESC')
+      .getManyAndCount();
+  }
+
+  async findPromotionListByPagingForAdmin(
+    page: number,
+    count: number,
+    search?: string,
+  ): Promise<[PromotionEntity[], number]> {
+    const qb = this.buildPromotionBaseQuery(search);
 
     return qb
       .skip((page - 1) * count)
