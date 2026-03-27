@@ -9,6 +9,7 @@ If you do not know the answer, clearly state that you do not know. If you have a
 - Language: TypeScript
 - Runtime: Node.js
 - Testing: Jest, Supertest, Testcontainers, Faker.js
+- Documentation: Swagger (OpenAPI)
 - Code Quality: ESLint, Prettier
 
 # General Rules
@@ -21,7 +22,14 @@ If you do not know the answer, clearly state that you do not know. If you have a
 - Avoid the unnecessary use of the `any` type and define clear, explicit types.
 - Always consider modularity when writing code.
 - Do not propose only partial snippets of changed code; provide complete, fully functional code blocks that can be applied immediately.
-- After completing any coding task, always ensure the code passes linting checks (e.g., ESLint) and follows formatting rules before finalizing your response.
+- After completing any coding task, automatically fix any linting or formatting issues before providing the final code. Strictly refer to the project's `.eslintrc` (or `.eslintrc.js`) and `.prettierrc` files to apply the exact rules.
+
+# Documentation Rules
+
+- When writing Controllers and DTOs, comprehensively apply `@nestjs/swagger` decorators to generate professional and highly readable OpenAPI documentation.
+- Use `@ApiOperation` to provide a clear `summary` and detailed `description` for each endpoint.
+- For every property in DTOs, strictly apply `@ApiProperty` with a clear `description` and a realistic `example` value.
+- Explicitly document all expected success and error responses (e.g., 200, 201, 400, 404, 500) using decorators like `@ApiOkResponse`, `@ApiCreatedResponse`, and `@ApiBadRequestResponse`, including example schemas where applicable.
 
 # Testing Rules
 
