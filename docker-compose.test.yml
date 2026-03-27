@@ -9,13 +9,13 @@ services:
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
     ports:
-      - "5433:5432"  # 테스트용으로 다른 포트 사용
+      - '5433:5432'
     volumes:
       - test_db_data:/var/lib/postgresql/data
     networks:
       - test-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U test_user -d seoul_moment_test"]
+      test: ['CMD-SHELL', 'pg_isready -U test_user -d seoul_moment_test']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,11 +24,11 @@ services:
     image: redis:7-alpine
     container_name: seoul-moment-test-redis
     ports:
-      - "6380:6379"  # 테스트용으로 다른 포트 사용
+      - '6380:6379'
     networks:
       - test-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5

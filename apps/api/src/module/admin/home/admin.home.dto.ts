@@ -2,7 +2,13 @@ import { HomeBannerImageEntity } from '@app/repository/entity/home-banner-image.
 import { HomeBannerStatus } from '@app/repository/enum/home-banner-image.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class GetHomeBannerResponse {
   @ApiProperty({ description: '배너 이미지 ID', example: 1 })
@@ -60,6 +66,7 @@ export class PostHomeBannerRequest {
     example: '/banner/banner.jpg',
   })
   @IsString()
+  @MaxLength(500)
   image: string;
 
   @ApiProperty({
@@ -67,6 +74,7 @@ export class PostHomeBannerRequest {
     example: '/banner/mobile-banner.jpg',
   })
   @IsString()
+  @MaxLength(500)
   mobileImage: string;
 }
 
@@ -77,6 +85,7 @@ export class PatchHomeBannerRequest {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   image: string;
 
   @ApiPropertyOptional({
@@ -85,5 +94,6 @@ export class PatchHomeBannerRequest {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   mobileImage: string;
 }

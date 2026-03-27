@@ -22,17 +22,11 @@
     "start:debug": "nest start api --debug --watch",
     "start:batch:debug": "nest start batch --debug --watch",
     "lint": "eslint \"{apps,libs}/**/*.ts\" --fix",
-    "test": "cross-env NODE_ENV=test jest --selectProjects unit",
-    "test:watch": "cross-env NODE_ENV=test jest --watch --selectProjects unit",
-    "test:cov": "cross-env NODE_ENV=test jest --coverage --selectProjects unit",
-    "test:debug": "cross-env NODE_ENV=test node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --selectProjects unit",
-    "test:e2e": "cross-env NODE_ENV=test jest --config ./apps/api/test/jest-e2e.json",
     "test:integration": "cross-env NODE_ENV=test jest --selectProjects integration --runInBand",
     "test:integration:watch": "cross-env NODE_ENV=test jest --watch --selectProjects integration",
     "test:db:up": "docker-compose -f docker-compose.test.yml up -d",
     "test:db:down": "docker-compose -f docker-compose.test.yml down -v",
     "test:db:logs": "docker-compose -f docker-compose.test.yml logs -f test-db",
-    "test:db:cleanup": "npm run test:db:down && sleep 2 && npm run test:db:up",
     "test:full": "npm run test:db:down && sleep 2 && npm run test:db:up && sleep 5 && npm run test:integration && npm run test:db:down",
     "prepare": "husky || true"
   },
@@ -82,13 +76,14 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.4.0",
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
-    "@nestjs/testing": "^10.0.0",
+    "@nestjs/testing": "^10.4.22",
     "@types/express": "^5.0.0",
-    "@types/jest": "^29.5.2",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.3.1",
-    "@types/supertest": "^6.0.0",
+    "@types/supertest": "^6.0.3",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
@@ -100,74 +95,19 @@
     "eslint-plugin-spellcheck": "^0.0.20",
     "eslint-plugin-unused-imports": "^4.1.4",
     "husky": "^9.1.7",
-    "jest": "^29.5.0",
+    "jest": "^29.7.0",
     "prettier": "^3.0.0",
     "source-map-support": "^0.5.21",
-    "supertest": "^7.0.0",
-    "ts-jest": "^29.1.0",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.6",
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.1.3"
   },
   "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": ".",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "./coverage",
-    "testEnvironment": "node",
-    "roots": [
-      "<rootDir>/libs/",
-      "<rootDir>/apps/",
-      "<rootDir>/test/"
-    ],
-    "moduleNameMapper": {
-      "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
-      "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",
-      "^@app/repository(|/.*)$": "<rootDir>/libs/repository/src/$1",
-      "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
-      "^@app/external(|/.*)$": "<rootDir>/libs/external/src/$1",
-      "^@app/http(|/.*)$": "<rootDir>/libs/http/src/$1",
-      "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1",
-      "^@app/auth(|/.*)$": "<rootDir>/libs/auth/src/$1",
-      "^@app/socket(|/.*)$": "<rootDir>/libs/socket/src/$1"
-    },
+    "testTimeout": 60000,
     "projects": [
-      {
-        "displayName": "unit",
-        "testMatch": [
-          "<rootDir>/(libs|apps)/**/*.spec.ts"
-        ],
-        "testEnvironment": "node",
-        "moduleFileExtensions": [
-          "js",
-          "json",
-          "ts"
-        ],
-        "rootDir": ".",
-        "transform": {
-          "^.+\\.(t|j)s$": "ts-jest"
-        },
-        "moduleNameMapper": {
-          "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
-          "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",
-          "^@app/repository(|/.*)$": "<rootDir>/libs/repository/src/$1",
-          "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
-          "^@app/external(|/.*)$": "<rootDir>/libs/external/src/$1",
-          "^@app/http(|/.*)$": "<rootDir>/libs/http/src/$1",
-          "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1"
-        }
-      },
       {
         "displayName": "integration",
         "testMatch": [
@@ -181,8 +121,16 @@
         ],
         "rootDir": ".",
         "transform": {
-          "^.+\\.(t|j)s$": "ts-jest"
+          "^.+\\.(t|j)s$": [
+            "ts-jest",
+            {
+              "tsconfig": "tsconfig.json"
+            }
+          ]
         },
+        "transformIgnorePatterns": [
+          "node_modules/(?!(@faker-js/faker)/)"
+        ],
         "moduleNameMapper": {
           "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
           "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",
@@ -190,12 +138,11 @@
           "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
           "^@app/external(|/.*)$": "<rootDir>/libs/external/src/$1",
           "^@app/http(|/.*)$": "<rootDir>/libs/http/src/$1",
-          "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1"
-        },
-        "globals": {
-          "ts-jest": {
-            "tsconfig": "tsconfig.json"
-          }
+          "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1",
+          "^@app/auth(|/.*)$": "<rootDir>/libs/auth/src/$1",
+          "^@app/socket(|/.*)$": "<rootDir>/libs/socket/src/$1",
+          "^apps/(.*)$": "<rootDir>/apps/$1",
+          "^libs/(.*)$": "<rootDir>/libs/$1"
         }
       }
     ]

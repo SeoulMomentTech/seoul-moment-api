@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
@@ -59,7 +60,7 @@ export class AdminHomeController {
   @UseGuards(OneTimeTokenGuard)
   @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
   async patchHomeBanner(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() body: PatchHomeBannerRequest,
   ) {
     await this.adminHomeService.patchHomeBanner(
@@ -76,7 +77,7 @@ export class AdminHomeController {
   @ResponseException(HttpStatus.INTERNAL_SERVER_ERROR, '서버 에러')
   @UseGuards(OneTimeTokenGuard)
   @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
-  async deleteHomeBanner(@Param('id') id: number) {
+  async deleteHomeBanner(@Param('id', ParseIntPipe) id: number) {
     await this.adminHomeService.deleteHomeBanner(id);
   }
 }
