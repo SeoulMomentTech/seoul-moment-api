@@ -45,18 +45,26 @@ jobs:
           echo "IMAGE_URI_LATEST=$IMAGE_URI_LATEST" >> $GITHUB_OUTPUT
           echo "IMAGE_URI_PLAIN_LATEST=$IMAGE_URI_PLAIN_LATEST" >> $GITHUB_OUTPUT
 
-      - name: Build Docker image
-        run: |
-          docker build -t "${{ steps.vars.outputs.IMAGE_URI }}" -t "${{ steps.vars.outputs.IMAGE_URI_LATEST }}" -t "${{ steps.vars.outputs.IMAGE_URI_PLAIN_LATEST }}" \
-            --build-arg APP=api \
-            --build-arg PORT=3000 \
-            .
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Push Docker image
-        run: |
-          docker push "${{ steps.vars.outputs.IMAGE_URI }}"
-          docker push "${{ steps.vars.outputs.IMAGE_URI_LATEST }}"
-          docker push "${{ steps.vars.outputs.IMAGE_URI_PLAIN_LATEST }}"
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ steps.vars.outputs.IMAGE_URI }}
+            ${{ steps.vars.outputs.IMAGE_URI_LATEST }}
+            ${{ steps.vars.outputs.IMAGE_URI_PLAIN_LATEST }}
+          build-args: |
+            APP=api
+            PORT=3000
+
 
       # - name: Render task definition
       #   id: render
