@@ -650,15 +650,13 @@ export class BrandPromotionRepositoryService {
     search?: string,
   ): Promise<[PromotionEntity[], number]> {
     // startDate/endDate는 UTC 기준으로 저장됨. 현재 UTC 시각으로 비교.
-    const nowStr = moment.utc().format('YYYY-MM-DD HH:mm:ss');
-    const qb = this.buildPromotionBaseQuery(search);
+    const now = moment.utc().format('YYYY-MM-DD HH:mm:ss');
 
-    qb.andWhere(
-      'p.startDate <= :now::timestamp AND p.endDate >= :now::timestamp',
-      { now: nowStr },
-    ).andWhere('p.isActive = :isActive', { isActive: true });
-
-    return qb
+    return this.buildPromotionBaseQuery(search)
+      .innerJoinAndSelect('p.brandPromotions', 'brandPromotions')
+      .andWhere('p.startDate <= :now::timestamp', { now })
+      .andWhere('p.endDate >= :now::timestamp', { now })
+      .andWhere('p.isActive = :isActive', { isActive: true })
       .skip((page - 1) * count)
       .take(count)
       .orderBy('p.createDate', 'DESC')
