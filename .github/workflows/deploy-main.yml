@@ -15,6 +15,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: PROD
     permissions:
       contents: read
 
@@ -38,13 +39,15 @@ jobs:
           ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
           IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG_PREFIX}-${GITHUB_SHA}"
           IMAGE_URI_LATEST="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG_PREFIX}-latest"
+          IMAGE_URI_PLAIN_LATEST="${ECR_REGISTRY}/${ECR_REPOSITORY}:latest"
           echo "ECR_REGISTRY=$ECR_REGISTRY" >> $GITHUB_OUTPUT
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
           echo "IMAGE_URI_LATEST=$IMAGE_URI_LATEST" >> $GITHUB_OUTPUT
+          echo "IMAGE_URI_PLAIN_LATEST=$IMAGE_URI_PLAIN_LATEST" >> $GITHUB_OUTPUT
 
       - name: Build Docker image
         run: |
-          docker build -t "${{ steps.vars.outputs.IMAGE_URI }}" -t "${{ steps.vars.outputs.IMAGE_URI_LATEST }}" \
+          docker build -t "${{ steps.vars.outputs.IMAGE_URI }}" -t "${{ steps.vars.outputs.IMAGE_URI_LATEST }}" -t "${{ steps.vars.outputs.IMAGE_URI_PLAIN_LATEST }}" \
             --build-arg APP=api \
             --build-arg PORT=3000 \
             .
@@ -53,23 +56,24 @@ jobs:
         run: |
           docker push "${{ steps.vars.outputs.IMAGE_URI }}"
           docker push "${{ steps.vars.outputs.IMAGE_URI_LATEST }}"
+          docker push "${{ steps.vars.outputs.IMAGE_URI_PLAIN_LATEST }}"
 
-      - name: Render task definition
-        id: render
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: .github/ecs/taskdef.json
-          container-name: seoul-moment-api
-          image: ${{ steps.vars.outputs.IMAGE_URI }}
+      # - name: Render task definition
+      #   id: render
+      #   uses: aws-actions/amazon-ecs-render-task-definition@v1
+      #   with:
+      #     task-definition: .github/ecs/taskdef.json
+      #     container-name: seoul-moment-api
+      #     image: ${{ steps.vars.outputs.IMAGE_URI }}
 
-      - name: Deploy to Amazon ECS
-        id: deploy
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.render.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
-          deployment-configuration: |
-            minimumHealthyPercent: 0
-            maximumPercent: 100
+      # - name: Deploy to Amazon ECS
+      #   id: deploy
+      #   uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      #   with:
+      #     task-definition: ${{ steps.render.outputs.task-definition }}
+      #     service: ${{ env.ECS_SERVICE }}
+      #     cluster: ${{ env.ECS_CLUSTER }}
+      #     wait-for-service-stability: true
+      #     deployment-configuration: |
+      #       minimumHealthyPercent: 0
+      #       maximumPercent: 100
