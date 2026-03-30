@@ -449,3 +449,4 @@ NODE_ENV=development docker compose push batch
 - ECS 태스크 정의 분리로 독립적인 배포 관리
 
 배포 테스트
+배포 테스트
