@@ -65,23 +65,22 @@ jobs:
             APP=api
             PORT=3000
 
+      - name: Render task definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: .github/ecs/taskdef-prod.json
+          container-name: seoul-moment-api
+          image: ${{ steps.vars.outputs.IMAGE_URI }}
 
-      # - name: Render task definition
-      #   id: render
-      #   uses: aws-actions/amazon-ecs-render-task-definition@v1
-      #   with:
-      #     task-definition: .github/ecs/taskdef.json
-      #     container-name: seoul-moment-api
-      #     image: ${{ steps.vars.outputs.IMAGE_URI }}
-
-      # - name: Deploy to Amazon ECS
-      #   id: deploy
-      #   uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-      #   with:
-      #     task-definition: ${{ steps.render.outputs.task-definition }}
-      #     service: ${{ env.ECS_SERVICE }}
-      #     cluster: ${{ env.ECS_CLUSTER }}
-      #     wait-for-service-stability: true
-      #     deployment-configuration: |
-      #       minimumHealthyPercent: 0
-      #       maximumPercent: 100
+      - name: Deploy to Amazon ECS
+        id: deploy
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          deployment-configuration: |
+            minimumHealthyPercent: 0
+            maximumPercent: 100

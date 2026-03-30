@@ -1,0 +1,131 @@
+{
+  "family": "seoul-moment-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "runtimePlatform": {
+    "cpuArchitecture": "ARM64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "executionRoleArn": "arn:aws:iam::156321659479:role/seoul-moment-ecs-task-execution-role",
+  "taskRoleArn": "arn:aws:iam::156321659479:role/seoul-moment-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "seoul-moment-api",
+      "image": "IMAGE_PLACEHOLDER",
+      "essential": true,
+      "portMappings": [{ "containerPort": 3000, "protocol": "tcp" }],
+      "secrets": [
+        {
+          "name": "NODE_ENV",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:NODE_ENV::"
+        },
+        {
+          "name": "PORT",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:PORT::"
+        },
+        {
+          "name": "API_VERSION",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:API_VERSION::"
+        },
+        {
+          "name": "IMAGE_DOMAIN_NAME",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:IMAGE_DOMAIN_NAME::"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:DATABASE_HOST::"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:DATABASE_PORT::"
+        },
+        {
+          "name": "DATABASE_USERNAME",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:DATABASE_USERNAME::"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:DATABASE_PASSWORD::"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:DATABASE_NAME::"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:JWT_SECRET::"
+        },
+        {
+          "name": "JWT_EXPIRES_IN",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:JWT_EXPIRES_IN::"
+        },
+        {
+          "name": "REDIS_HOST",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:REDIS_HOST::"
+        },
+        {
+          "name": "REDIS_PORT",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:REDIS_PORT::"
+        },
+        {
+          "name": "REDIS_DB",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:REDIS_DB::"
+        },
+        {
+          "name": "GOOGLE_SHEET_SERVICE_EMAIL",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:GOOGLE_SHEET_SERVICE_EMAIL::"
+        },
+        {
+          "name": "GOOGLE_SHEET_SERVICE_PRIMARY",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:GOOGLE_SHEET_SERVICE_PRIMARY::"
+        },
+        {
+          "name": "SERPER_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:SERPER_URL::"
+        },
+        {
+          "name": "SERPER_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:SERPER_API_KEY::"
+        },
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:AWS_ACCESS_KEY_ID::"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:AWS_SECRET_ACCESS_KEY::"
+        },
+        {
+          "name": "AWS_REGION",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:AWS_REGION::"
+        },
+        {
+          "name": "AWS_S3_BUCKET_NAME",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:AWS_S3_BUCKET_NAME::"
+        },
+        {
+          "name": "RECAPTCHA_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:RECAPTCHA_SECRET_KEY::"
+        },
+        {
+          "name": "GOOGLE_APP_PASS",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:GOOGLE_APP_PASS::"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:OPENAI_API_KEY::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/seoul-moment/api",
+          "awslogs-region": "ap-east-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
