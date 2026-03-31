@@ -1,7 +1,7 @@
 /* eslint-disable max-lines-per-function */
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
-import { Configuration } from '@app/config/configuration';
+import { stripImageDomain } from '@app/common/util/image.util';
 import { UpdateBrandDto } from '@app/repository/dto/brand.dto';
 import { BrandBannerImageEntity } from '@app/repository/entity/brand-banner-image.entity';
 import { BrandMobileBannerImageEntity } from '@app/repository/entity/brand-mobile-banner-image.entity';
@@ -41,8 +41,10 @@ export class AdminBrandService {
     const brandEntity = await this.brandRepositoryService.insert(
       plainToInstance(BrandEntity, {
         categoryId: dto.categoryId,
-        profileImage: dto.profileImageUrl ?? undefined,
-        bannerImageUrl: dto.productBannerImageUrl,
+        profileImage: dto.profileImageUrl
+          ? stripImageDomain(dto.profileImageUrl)
+          : undefined,
+        bannerImageUrl: stripImageDomain(dto.productBannerImageUrl),
         englishName: dto.englishName,
         colorCode: dto.colorCode,
       }),
@@ -51,7 +53,7 @@ export class AdminBrandService {
     const bannerEntities = dto.bannerImageUrlList.map((bannerUrl, index) =>
       plainToInstance(BrandBannerImageEntity, {
         brandId: brandEntity.id,
-        imageUrl: bannerUrl,
+        imageUrl: stripImageDomain(bannerUrl),
         sortOrder: index + 1,
       }),
     );
@@ -66,7 +68,7 @@ export class AdminBrandService {
         (mobileBannerUrl, index) =>
           plainToInstance(BrandMobileBannerImageEntity, {
             brandId: brandEntity.id,
-            imageUrl: mobileBannerUrl,
+            imageUrl: stripImageDomain(mobileBannerUrl),
             sortOrder: index + 1,
           }),
       );
@@ -125,7 +127,7 @@ export class AdminBrandService {
       const brandSectionImages = v.imageUrlList.map((image, index) =>
         plainToInstance(BrandSectionImageEntity, {
           sectionId: brandSectionEntity.id,
-          imageUrl: image,
+          imageUrl: stripImageDomain(image),
           sortOrder: index + 1,
         }),
       );
@@ -478,10 +480,7 @@ export class AdminBrandService {
       await this.brandRepositoryService.insertSectionImage(
         plainToInstance(BrandSectionImageEntity, {
           sectionId,
-          imageUrl: image.replace(
-            Configuration.getConfig().IMAGE_DOMAIN_NAME,
-            '',
-          ),
+          imageUrl: stripImageDomain(image),
         }),
       );
     }
@@ -495,14 +494,8 @@ export class AdminBrandService {
       id: brandId,
       categoryId: dto.categoryId,
       englishName: dto.englishName,
-      profileImage: dto.profileImage?.replace(
-        Configuration.getConfig().IMAGE_DOMAIN_NAME,
-        '',
-      ),
-      bannerImageUrl: dto.productBannerImage?.replace(
-        Configuration.getConfig().IMAGE_DOMAIN_NAME,
-        '',
-      ),
+      profileImage: stripImageDomain(dto.profileImage),
+      bannerImageUrl: stripImageDomain(dto.productBannerImage),
       colorCode: dto.colorCode,
     };
 
@@ -515,10 +508,7 @@ export class AdminBrandService {
       const bannerEntities = dto.bannerList.map((bannerUrl, index) =>
         plainToInstance(BrandBannerImageEntity, {
           brandId,
-          imageUrl: bannerUrl.replace(
-            Configuration.getConfig().IMAGE_DOMAIN_NAME,
-            '',
-          ),
+          imageUrl: stripImageDomain(bannerUrl),
           sortOrder: index + 1,
         }),
       );
@@ -538,10 +528,7 @@ export class AdminBrandService {
         (mobileBannerUrl, index) =>
           plainToInstance(BrandMobileBannerImageEntity, {
             brandId,
-            imageUrl: mobileBannerUrl.replace(
-              Configuration.getConfig().IMAGE_DOMAIN_NAME,
-              '',
-            ),
+            imageUrl: stripImageDomain(mobileBannerUrl),
             sortOrder: index + 1,
           }),
       );
@@ -640,10 +627,7 @@ export class AdminBrandService {
         await this.brandRepositoryService.insertSectionImage(
           plainToInstance(BrandSectionImageEntity, {
             sectionId: sectionEntity.id,
-            imageUrl: image.replace(
-              Configuration.getConfig().IMAGE_DOMAIN_NAME,
-              '',
-            ),
+            imageUrl: stripImageDomain(image),
           }),
         );
       }

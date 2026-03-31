@@ -124,6 +124,33 @@ describe('AdminHomeController (E2E)', () => {
       expect(res.body.data.list[0].status).toBe('NORMAL');
     });
 
+    it('도메인이 포함된 URL로 배너를 생성하면 도메인이 제거되어 저장된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const domain = 'https://image.seoulmoment.com';
+      const path = '/banner/domain-test.jpg';
+      const mobilePath = '/m/domain-test.jpg';
+
+      await request(app.getHttpServer())
+        .post(BASE_URL)
+        .set('Authorization', auth)
+        .send({
+          imageUrl: `${domain}${path}`,
+          mobileImageUrl: `${domain}${mobilePath}`,
+        });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(BASE_URL)
+        .set('Authorization', auth);
+
+      // Then - IMAGE_DOMAIN_NAME이 비어 있으면 원본 그대로, 값이 있으면 도메인 제거
+      expect(res.body.data.list).toHaveLength(1);
+      const saved = res.body.data.list[0];
+      expect(saved.imageUrl).not.toContain(domain + domain);
+      expect(saved.mobileImageUrl).not.toContain(domain + domain);
+    });
+
     it('필수 필드 누락 시 400을 반환한다', async () => {
       // When
       const res = await request(app.getHttpServer())
