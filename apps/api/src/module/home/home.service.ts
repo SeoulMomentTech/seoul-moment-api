@@ -6,6 +6,7 @@ import { LanguageRepositoryService } from '@app/repository/service/language.repo
 import { Injectable } from '@nestjs/common';
 
 import { GetHomeResponse } from './home.dto';
+import { V1GetHomeResponse } from './v1/home.v1.dto';
 
 @Injectable()
 export class HomeService {
@@ -29,6 +30,26 @@ export class HomeService {
       );
 
     return GetHomeResponse.from(
+      homeEntity.banner,
+      promotionList,
+      promotionMultilingualTextEntity,
+    );
+  }
+
+  async v1GetHome(language: LanguageCode): Promise<V1GetHomeResponse> {
+    const homeEntity = await this.homeRepositoryService.findHome();
+
+    const [promotionList] =
+      await this.promotionRepositoryService.findPromotionListByPaging(1, 10);
+
+    const promotionMultilingualTextEntity =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.PROMOTION,
+        promotionList.map((promotion) => promotion.id),
+        language,
+      );
+
+    return V1GetHomeResponse.from(
       homeEntity.banner,
       promotionList,
       promotionMultilingualTextEntity,

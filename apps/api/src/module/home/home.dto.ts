@@ -65,6 +65,8 @@ export class GetHomePromotion {
   }
 }
 
+// ─── 기존 DTO (deprecated) ───
+
 export class GetHomeNews {
   @ApiProperty({ description: '뉴스 ID', example: 1 })
   id: number;
@@ -89,10 +91,9 @@ export class GetHomeNews {
 
   @ApiProperty({
     description: '이미지 URL',
-    example:
-      'https://image-dev.seoulmoment.com.tw/news/2025-09-16/news-banner.jpg',
+    example: 'https://example.com/banner.jpg',
   })
-  imageUrl: string;
+  image: string;
 
   static from(entity: NewsEntity, multilingualText: MultilingualTextEntity[]) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
@@ -109,7 +110,7 @@ export class GetHomeNews {
       content: content.getContent(),
       writer: entity.writer,
       createDate: entity.createDate,
-      imageUrl: entity.getBannerImage(),
+      image: entity.getBannerImage(),
     });
   }
 }
@@ -138,10 +139,9 @@ export class GetHomeArticle {
 
   @ApiProperty({
     description: '이미지 URL',
-    example:
-      'https://image-dev.seoulmoment.com.tw/articles/2025-09-16/article-banner.jpg',
+    example: 'https://example.com/banner.jpg',
   })
-  imageUrl: string;
+  image: string;
 
   static from(
     entity: ArticleEntity,
@@ -161,7 +161,7 @@ export class GetHomeArticle {
       content: content.getContent(),
       writer: entity.writer,
       createDate: entity.createDate,
-      imageUrl: entity.getBannerImage(),
+      image: entity.getBannerImage(),
     });
   }
 }
@@ -207,22 +207,20 @@ export class GetHomePromotionResponse {
 export class GetHomeBanner {
   @ApiProperty({
     description: '배너 이미지 URL',
-    example:
-      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01.jpg',
+    example: 'https://example.com/banner.jpg',
   })
-  imageUrl: string;
+  image: string;
 
   @ApiProperty({
     description: '모바일 배너 이미지 URL',
-    example:
-      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01-mobile.jpg',
+    example: 'https://example.com/mobile-banner.jpg',
   })
-  mobileImageUrl: string;
+  mobileImage: string;
 
   static from(entity: HomeBannerImageEntity) {
     return plainToInstance(this, {
-      imageUrl: entity.getImage(),
-      mobileImageUrl: entity.getMobileImage(),
+      image: entity.getImage(),
+      mobileImage: entity.getMobileImage(),
     });
   }
 }
@@ -232,9 +230,9 @@ export class GetHomeResponse {
     description: '홈 배너 이미지 URL 리스트',
     example: [
       {
-        imageUrl:
+        image:
           'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01.jpg',
-        mobileImageUrl:
+        mobileImage:
           'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01-mobile.jpg',
       },
     ],

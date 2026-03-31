@@ -7,6 +7,7 @@ import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { GetHomeBannerResponse } from './admin.home.dto';
+import { V1GetHomeBannerResponse } from './v1/admin.home.v1.dto';
 
 @Injectable()
 export class AdminHomeService {
@@ -16,6 +17,12 @@ export class AdminHomeService {
     const bannerList = await this.homeRepositoryService.findHomeBanner();
 
     return bannerList.map((banner) => GetHomeBannerResponse.from(banner));
+  }
+
+  async v1GetHomeBanner(): Promise<V1GetHomeBannerResponse[]> {
+    const bannerList = await this.homeRepositoryService.findHomeBanner();
+
+    return bannerList.map((banner) => V1GetHomeBannerResponse.from(banner));
   }
 
   async postHomeBanner(

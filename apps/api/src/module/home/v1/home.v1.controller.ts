@@ -4,19 +4,18 @@ import { LanguageCode } from '@app/repository/enum/language.enum';
 import { BadRequestException, Controller, Get, Headers } from '@nestjs/common';
 import { ApiHeader, ApiOperation } from '@nestjs/swagger';
 
-import { GetHomeResponse } from './home.dto';
-import { HomeService } from './home.service';
+import { HomeService } from '../home.service';
+import { V1GetHomeResponse } from './home.v1.dto';
 
-@Controller('home')
-export class HomeController {
+@Controller('home/v1')
+export class HomeV1Controller {
   constructor(private readonly homeService: HomeService) {}
 
   @Get()
   @ApiOperation({
-    summary: 'Get Home with Multilingual Support -- deprecated',
+    summary: 'Get Home with Multilingual Support V1',
     description:
       'Returns home information in the specified language. Supports Korean (ko), English (en), and Chinese (zh).',
-    deprecated: true,
   })
   @ApiHeader({
     name: 'Accept-language',
@@ -24,10 +23,10 @@ export class HomeController {
     description: 'Alternative way to specify language preference (ko, en, zh)',
     enum: LanguageCode,
   })
-  @ResponseData(GetHomeResponse)
-  async getBrandIntroduce(
+  @ResponseData(V1GetHomeResponse)
+  async v1GetHome(
     @Headers('Accept-language') acceptLanguage: LanguageCode,
-  ): Promise<ResponseDataDto<GetHomeResponse>> {
+  ): Promise<ResponseDataDto<V1GetHomeResponse>> {
     if (
       !acceptLanguage ||
       !Object.values(LanguageCode).includes(acceptLanguage)
@@ -37,7 +36,7 @@ export class HomeController {
       );
     }
 
-    const result = await this.homeService.getHome(acceptLanguage);
+    const result = await this.homeService.v1GetHome(acceptLanguage);
     return new ResponseDataDto(result);
   }
 }
