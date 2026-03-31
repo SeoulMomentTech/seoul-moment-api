@@ -14,7 +14,8 @@ export class RedisFactory implements RedisOptionsFactory {
         host: Configuration.getConfig().REDIS_HOST,
         db: Configuration.getConfig().REDIS_DB,
         port: Configuration.getConfig().REDIS_PORT,
-        ...(Configuration.getConfig().NODE_ENV === SupportEnv.DEV
+        ...(Configuration.getConfig().NODE_ENV === SupportEnv.DEV ||
+        Configuration.getConfig().NODE_ENV === SupportEnv.PROD
           ? { tls: {} }
           : {}),
       },

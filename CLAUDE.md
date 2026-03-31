@@ -40,17 +40,17 @@ NestJS monorepo with two applications and shared libraries.
 
 Path aliases defined in `tsconfig.json`:
 
-| Alias | Purpose |
-|-------|---------|
-| `@app/database` | TypeORM + PostgreSQL (SnakeNamingStrategy, auto-sync) |
-| `@app/config` | Environment config loader (`env/local.ts`, `dev.ts`, `test.ts`, `prod.ts`) |
-| `@app/repository` | Entities (50+), repository services, DTOs, enums |
-| `@app/common` | Swagger docs helpers, exception filters, Winston logger, email templates, utilities |
-| `@app/external` | External API clients: AWS S3, Google (Sheets/Drive/Gmail), Kakao, OpenAI, OpenSearch, Serper |
-| `@app/cache` | Redis caching service (`@liaoliaots/nestjs-redis`) |
-| `@app/auth` | JWT auth, Passport strategies, email verification |
-| `@app/socket` | Socket.IO gateway for real-time features (chat, plan rooms) |
-| `@app/http` | HTTP client utilities |
+| Alias             | Purpose                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| `@app/database`   | TypeORM + PostgreSQL (SnakeNamingStrategy, auto-sync)                                        |
+| `@app/config`     | Environment config loader (`env/local.ts`, `dev.ts`, `test.ts`, `prod.ts`)                   |
+| `@app/repository` | Entities (50+), repository services, DTOs, enums                                             |
+| `@app/common`     | Swagger docs helpers, exception filters, Winston logger, email templates, utilities          |
+| `@app/external`   | External API clients: AWS S3, Google (Sheets/Drive/Gmail), Kakao, OpenAI, OpenSearch, Serper |
+| `@app/cache`      | Redis caching service (`@liaoliaots/nestjs-redis`)                                           |
+| `@app/auth`       | JWT auth, Passport strategies, email verification                                            |
+| `@app/socket`     | Socket.IO gateway for real-time features (chat, plan rooms)                                  |
+| `@app/http`       | HTTP client utilities                                                                        |
 
 ### Key Patterns
 
@@ -88,4 +88,5 @@ Path aliases defined in `tsconfig.json`:
 
 - Docker multi-stage build (node:20). Build arg `APP` selects api or batch.
 - GitHub Actions → AWS ECR → ECS. Workflows: `deploy-main.yml` (prod), `deploy-dev.yml` (dev).
-- ECR region: ap-northeast-2.
+- DEV ECR region: ap-northeast-2.
+- PROD ECR region: ap-east-2.
