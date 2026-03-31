@@ -17,17 +17,19 @@ export class GetHomeBannerResponse {
 
   @ApiProperty({
     description: '배너 이미지 URL',
-    example: '/banner/banner.jpg',
+    example:
+      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01.jpg',
   })
   @IsString()
-  image: string;
+  imageUrl: string;
 
   @ApiProperty({
     description: '모바일 배너 이미지 URL',
-    example: '/banner/mobile-banner.jpg',
+    example:
+      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01-mobile.jpg',
   })
   @IsString()
-  mobileImage: string;
+  mobileImageUrl: string;
 
   @ApiProperty({
     description: '배너 상태',
@@ -51,8 +53,8 @@ export class GetHomeBannerResponse {
   static from(entity: HomeBannerImageEntity) {
     return plainToInstance(this, {
       id: entity.id,
-      image: entity.getImage(),
-      mobileImage: entity.getMobileImage(),
+      imageUrl: entity.getImage(),
+      mobileImageUrl: entity.getMobileImage(),
       status: entity.status,
       createDate: entity.createDate,
       updateDate: entity.updateDate,
@@ -63,37 +65,41 @@ export class GetHomeBannerResponse {
 export class PostHomeBannerRequest {
   @ApiProperty({
     description: '배너 이미지 URL',
-    example: '/banner/banner.jpg',
+    example:
+      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01.jpg',
   })
   @IsString()
   @MaxLength(500)
-  image: string;
+  imageUrl: string;
 
   @ApiProperty({
     description: '모바일 배너 이미지 URL',
-    example: '/banner/mobile-banner.jpg',
+    example:
+      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01-mobile.jpg',
   })
   @IsString()
   @MaxLength(500)
-  mobileImage: string;
+  mobileImageUrl: string;
 }
 
 export class PatchHomeBannerRequest {
   @ApiPropertyOptional({
     description: '배너 이미지 URL',
-    example: '/banner/banner.jpg',
+    example:
+      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01.jpg',
   })
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  image: string;
+  imageUrl: string;
 
   @ApiPropertyOptional({
     description: '모바일 배너 이미지 URL',
-    example: '/banner/mobile-banner.jpg',
+    example:
+      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01-mobile.jpg',
   })
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  mobileImage: string;
+  mobileImageUrl: string;
 }

@@ -1,3 +1,4 @@
+import { Configuration } from '@app/config/configuration';
 import { UpdateHomeBannerDto } from '@app/repository/dto/home.dto';
 import { HomeBannerImageEntity } from '@app/repository/entity/home-banner-image.entity';
 import { HomeBannerStatus } from '@app/repository/enum/home-banner-image.enum';
@@ -11,6 +12,11 @@ import { GetHomeBannerResponse } from './admin.home.dto';
 export class AdminHomeService {
   constructor(private readonly homeRepositoryService: HomeRepositoryService) {}
 
+  private stripImageDomain(url: string): string {
+    if (!url) return url;
+    return url.replace(Configuration.getConfig().IMAGE_DOMAIN_NAME, '');
+  }
+
   async getHomeBanner(): Promise<GetHomeBannerResponse[]> {
     const bannerList = await this.homeRepositoryService.findHomeBanner();
 
@@ -22,7 +28,10 @@ export class AdminHomeService {
     mobileImageUrl: string,
   ): Promise<void> {
     await this.homeRepositoryService.insertHomeBanner(
-      plainToInstance(HomeBannerImageEntity, { imageUrl, mobileImageUrl }),
+      plainToInstance(HomeBannerImageEntity, {
+        imageUrl: this.stripImageDomain(imageUrl),
+        mobileImageUrl: this.stripImageDomain(mobileImageUrl),
+      }),
     );
   }
 
@@ -35,8 +44,8 @@ export class AdminHomeService {
 
     const updateDto: UpdateHomeBannerDto = {
       id: banner.id,
-      imageUrl,
-      mobileImageUrl,
+      imageUrl: this.stripImageDomain(imageUrl),
+      mobileImageUrl: this.stripImageDomain(mobileImageUrl),
     };
 
     await this.homeRepositoryService.updateHomeBanner(updateDto);

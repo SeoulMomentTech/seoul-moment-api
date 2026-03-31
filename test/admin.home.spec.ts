@@ -50,11 +50,17 @@ describe('AdminHomeController (E2E)', () => {
       await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', auth)
-        .send({ image: '/banner/first.jpg', mobileImage: '/m/first.jpg' });
+        .send({
+          imageUrl: '/banner/first.jpg',
+          mobileImageUrl: '/m/first.jpg',
+        });
       await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', auth)
-        .send({ image: '/banner/second.jpg', mobileImage: '/m/second.jpg' });
+        .send({
+          imageUrl: '/banner/second.jpg',
+          mobileImageUrl: '/m/second.jpg',
+        });
 
       // When
       const res = await request(app.getHttpServer())
@@ -64,8 +70,8 @@ describe('AdminHomeController (E2E)', () => {
       // Then
       expect(res.status).toBe(200);
       expect(res.body.data.list).toHaveLength(2);
-      expect(res.body.data.list[0].image).toBe('/banner/first.jpg');
-      expect(res.body.data.list[1].image).toBe('/banner/second.jpg');
+      expect(res.body.data.list[0].imageUrl).toBe('/banner/first.jpg');
+      expect(res.body.data.list[1].imageUrl).toBe('/banner/second.jpg');
     });
 
     it('토큰 없이 요청하면 401을 반환한다', async () => {
@@ -84,8 +90,8 @@ describe('AdminHomeController (E2E)', () => {
     it('유효한 데이터로 배너를 생성하면 204를 반환한다', async () => {
       // Given
       const body = {
-        image: faker.image.url(),
-        mobileImage: faker.image.url(),
+        imageUrl: faker.image.url(),
+        mobileImageUrl: faker.image.url(),
       };
 
       // When
@@ -101,11 +107,11 @@ describe('AdminHomeController (E2E)', () => {
     it('생성 후 GET 목록에 추가된다', async () => {
       // Given
       const auth = await authHeader(app);
-      const image = '/banner/new.jpg';
+      const imageUrl = '/banner/new.jpg';
       await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', auth)
-        .send({ image, mobileImage: '/m/new.jpg' });
+        .send({ imageUrl, mobileImageUrl: '/m/new.jpg' });
 
       // When
       const res = await request(app.getHttpServer())
@@ -114,7 +120,7 @@ describe('AdminHomeController (E2E)', () => {
 
       // Then
       expect(res.body.data.list).toHaveLength(1);
-      expect(res.body.data.list[0].image).toBe(image);
+      expect(res.body.data.list[0].imageUrl).toBe(imageUrl);
       expect(res.body.data.list[0].status).toBe('NORMAL');
     });
 
@@ -123,7 +129,7 @@ describe('AdminHomeController (E2E)', () => {
       const res = await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', await authHeader(app))
-        .send({ image: '/banner/only-image.jpg' }); // mobileImage 누락
+        .send({ imageUrl: '/banner/only-image.jpg' }); // mobileImageUrl 누락
 
       // Then
       expect(res.status).toBe(400);
@@ -131,9 +137,10 @@ describe('AdminHomeController (E2E)', () => {
 
     it('토큰 없이 요청하면 401을 반환한다', async () => {
       // When
-      const res = await request(app.getHttpServer())
-        .post(BASE_URL)
-        .send({ image: '/banner/img.jpg', mobileImage: '/m/img.jpg' });
+      const res = await request(app.getHttpServer()).post(BASE_URL).send({
+        imageUrl: '/banner/img.jpg',
+        mobileImageUrl: '/m/img.jpg',
+      });
 
       // Then
       expect(res.status).toBe(401);
@@ -142,23 +149,23 @@ describe('AdminHomeController (E2E)', () => {
     // -------------------------------------------------------------------------
     // 500 방어
     // -------------------------------------------------------------------------
-    it('[500 방어] image가 500자를 초과하면 400을 반환한다', async () => {
+    it('[500 방어] imageUrl이 500자를 초과하면 400을 반환한다', async () => {
       // When
       const res = await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', await authHeader(app))
-        .send({ image: OVER_500, mobileImage: '/m/img.jpg' });
+        .send({ imageUrl: OVER_500, mobileImageUrl: '/m/img.jpg' });
 
       // Then
       expect(res.status).toBe(400);
     });
 
-    it('[500 방어] mobileImage가 500자를 초과하면 400을 반환한다', async () => {
+    it('[500 방어] mobileImageUrl이 500자를 초과하면 400을 반환한다', async () => {
       // When
       const res = await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', await authHeader(app))
-        .send({ image: '/banner/img.jpg', mobileImage: OVER_500 });
+        .send({ imageUrl: '/banner/img.jpg', mobileImageUrl: OVER_500 });
 
       // Then
       expect(res.status).toBe(400);
@@ -175,7 +182,10 @@ describe('AdminHomeController (E2E)', () => {
       await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', auth)
-        .send({ image: '/banner/old.jpg', mobileImage: '/m/old.jpg' });
+        .send({
+          imageUrl: '/banner/old.jpg',
+          mobileImageUrl: '/m/old.jpg',
+        });
       const listRes = await request(app.getHttpServer())
         .get(BASE_URL)
         .set('Authorization', auth);
@@ -185,7 +195,7 @@ describe('AdminHomeController (E2E)', () => {
       const res = await request(app.getHttpServer())
         .patch(`${BASE_URL}/${bannerId}`)
         .set('Authorization', auth)
-        .send({ image: '/banner/new.jpg' });
+        .send({ imageUrl: '/banner/new.jpg' });
 
       // Then
       expect(res.status).toBe(204);
@@ -197,7 +207,10 @@ describe('AdminHomeController (E2E)', () => {
       await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', auth)
-        .send({ image: '/banner/before.jpg', mobileImage: '/m/before.jpg' });
+        .send({
+          imageUrl: '/banner/before.jpg',
+          mobileImageUrl: '/m/before.jpg',
+        });
       const bannerId = (
         await request(app.getHttpServer())
           .get(BASE_URL)
@@ -208,13 +221,13 @@ describe('AdminHomeController (E2E)', () => {
       await request(app.getHttpServer())
         .patch(`${BASE_URL}/${bannerId}`)
         .set('Authorization', auth)
-        .send({ image: '/banner/after.jpg' });
+        .send({ imageUrl: '/banner/after.jpg' });
       const res = await request(app.getHttpServer())
         .get(BASE_URL)
         .set('Authorization', auth);
 
       // Then
-      expect(res.body.data.list[0].image).toBe('/banner/after.jpg');
+      expect(res.body.data.list[0].imageUrl).toBe('/banner/after.jpg');
     });
 
     it('존재하지 않는 id로 수정 시 404를 반환한다', async () => {
@@ -222,7 +235,7 @@ describe('AdminHomeController (E2E)', () => {
       const res = await request(app.getHttpServer())
         .patch(`${BASE_URL}/999999`)
         .set('Authorization', await authHeader(app))
-        .send({ image: '/banner/img.jpg' });
+        .send({ imageUrl: '/banner/img.jpg' });
 
       // Then
       expect(res.status).toBe(404);
@@ -232,7 +245,7 @@ describe('AdminHomeController (E2E)', () => {
       // When
       const res = await request(app.getHttpServer())
         .patch(`${BASE_URL}/1`)
-        .send({ image: '/banner/img.jpg' });
+        .send({ imageUrl: '/banner/img.jpg' });
 
       // Then
       expect(res.status).toBe(401);
@@ -246,19 +259,22 @@ describe('AdminHomeController (E2E)', () => {
       const res = await request(app.getHttpServer())
         .patch(`${BASE_URL}/abc`)
         .set('Authorization', await authHeader(app))
-        .send({ image: '/banner/img.jpg' });
+        .send({ imageUrl: '/banner/img.jpg' });
 
       // Then
       expect(res.status).toBe(400);
     });
 
-    it('[500 방어] image가 500자를 초과하면 400을 반환한다', async () => {
+    it('[500 방어] imageUrl이 500자를 초과하면 400을 반환한다', async () => {
       // Given - 배너 생성 후 id 획득
       const auth = await authHeader(app);
       await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', auth)
-        .send({ image: '/banner/img.jpg', mobileImage: '/m/img.jpg' });
+        .send({
+          imageUrl: '/banner/img.jpg',
+          mobileImageUrl: '/m/img.jpg',
+        });
       const bannerId = (
         await request(app.getHttpServer())
           .get(BASE_URL)
@@ -269,7 +285,7 @@ describe('AdminHomeController (E2E)', () => {
       const res = await request(app.getHttpServer())
         .patch(`${BASE_URL}/${bannerId}`)
         .set('Authorization', auth)
-        .send({ image: OVER_500 });
+        .send({ imageUrl: OVER_500 });
 
       // Then
       expect(res.status).toBe(400);
@@ -286,7 +302,10 @@ describe('AdminHomeController (E2E)', () => {
       await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', auth)
-        .send({ image: '/banner/img.jpg', mobileImage: '/m/img.jpg' });
+        .send({
+          imageUrl: '/banner/img.jpg',
+          mobileImageUrl: '/m/img.jpg',
+        });
       const bannerId = (
         await request(app.getHttpServer())
           .get(BASE_URL)
@@ -308,7 +327,10 @@ describe('AdminHomeController (E2E)', () => {
       await request(app.getHttpServer())
         .post(BASE_URL)
         .set('Authorization', auth)
-        .send({ image: '/banner/img.jpg', mobileImage: '/m/img.jpg' });
+        .send({
+          imageUrl: '/banner/img.jpg',
+          mobileImageUrl: '/m/img.jpg',
+        });
       const bannerId = (
         await request(app.getHttpServer())
           .get(BASE_URL)

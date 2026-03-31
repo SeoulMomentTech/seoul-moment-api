@@ -89,9 +89,10 @@ export class GetHomeNews {
 
   @ApiProperty({
     description: '이미지 URL',
-    example: 'https://example.com/banner.jpg',
+    example:
+      'https://image-dev.seoulmoment.com.tw/news/2025-09-16/news-banner.jpg',
   })
-  image: string;
+  imageUrl: string;
 
   static from(entity: NewsEntity, multilingualText: MultilingualTextEntity[]) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
@@ -108,7 +109,7 @@ export class GetHomeNews {
       content: content.getContent(),
       writer: entity.writer,
       createDate: entity.createDate,
-      image: entity.getBannerImage(),
+      imageUrl: entity.getBannerImage(),
     });
   }
 }
@@ -137,9 +138,10 @@ export class GetHomeArticle {
 
   @ApiProperty({
     description: '이미지 URL',
-    example: 'https://example.com/banner.jpg',
+    example:
+      'https://image-dev.seoulmoment.com.tw/articles/2025-09-16/article-banner.jpg',
   })
-  image: string;
+  imageUrl: string;
 
   static from(
     entity: ArticleEntity,
@@ -159,7 +161,7 @@ export class GetHomeArticle {
       content: content.getContent(),
       writer: entity.writer,
       createDate: entity.createDate,
-      image: entity.getBannerImage(),
+      imageUrl: entity.getBannerImage(),
     });
   }
 }
@@ -205,20 +207,22 @@ export class GetHomePromotionResponse {
 export class GetHomeBanner {
   @ApiProperty({
     description: '배너 이미지 URL',
-    example: 'https://example.com/banner.jpg',
+    example:
+      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01.jpg',
   })
-  image: string;
+  imageUrl: string;
 
   @ApiProperty({
     description: '모바일 배너 이미지 URL',
-    example: 'https://example.com/mobile-banner.jpg',
+    example:
+      'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01-mobile.jpg',
   })
-  mobileImage: string;
+  mobileImageUrl: string;
 
   static from(entity: HomeBannerImageEntity) {
     return plainToInstance(this, {
-      image: entity.getImage(),
-      mobileImage: entity.getMobileImage(),
+      imageUrl: entity.getImage(),
+      mobileImageUrl: entity.getMobileImage(),
     });
   }
 }
@@ -228,9 +232,9 @@ export class GetHomeResponse {
     description: '홈 배너 이미지 URL 리스트',
     example: [
       {
-        image:
+        imageUrl:
           'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01.jpg',
-        mobileImage:
+        mobileImageUrl:
           'https://image-dev.seoulmoment.com.tw/home-banners/2025-09-16/home-banner-01-mobile.jpg',
       },
     ],

@@ -49,7 +49,10 @@ export class AdminHomeController {
   @UseGuards(OneTimeTokenGuard)
   @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
   async postHomeBanner(@Body() body: PostHomeBannerRequest) {
-    await this.adminHomeService.postHomeBanner(body.image, body.mobileImage);
+    await this.adminHomeService.postHomeBanner(
+      body.imageUrl,
+      body.mobileImageUrl,
+    );
   }
 
   @Patch('banner/:id')
@@ -65,8 +68,8 @@ export class AdminHomeController {
   ) {
     await this.adminHomeService.patchHomeBanner(
       id,
-      body.image,
-      body.mobileImage,
+      body.imageUrl,
+      body.mobileImageUrl,
     );
   }
 
