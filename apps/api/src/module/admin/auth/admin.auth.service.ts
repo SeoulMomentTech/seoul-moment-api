@@ -40,12 +40,12 @@ export class AdminAuthService {
     await admin.verifyPassword(loginRequest.password);
 
     const accessToken = await this.commonAuthService.generateJwt(
-      { adminId: admin.id },
+      { id: admin.id },
       JwtType.ONE_TIME_TOKEN,
       Configuration.getConfig().JWT_EXPIRES_IN,
     );
     const refreshToken = await this.commonAuthService.generateJwt(
-      { adminId: admin.id },
+      { id: admin.id },
       JwtType.REFRESH_TOKEN,
       '14d',
     );
