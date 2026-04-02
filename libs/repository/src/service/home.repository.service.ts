@@ -2,12 +2,10 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindManyOptions, Repository } from 'typeorm';
 
-import { HomeDto, UpdateHomeBannerDto } from '../dto/home.dto';
+import { UpdateHomeBannerDto } from '../dto/home.dto';
 import { HomeBannerImageEntity } from '../entity/home-banner-image.entity';
-import { HomeSectionEntity } from '../entity/home-section.entity';
-import { HomeBannerStatus } from '../enum/home-banner-image.enum';
 import { SortOrderHelper } from '../helper/sort-order.helper';
 
 @Injectable()
@@ -16,36 +14,25 @@ export class HomeRepositoryService {
     @InjectRepository(HomeBannerImageEntity)
     private readonly homeBannerRepository: Repository<HomeBannerImageEntity>,
 
-    @InjectRepository(HomeSectionEntity)
-    private readonly homeSectionRepository: Repository<HomeSectionEntity>,
-
     private readonly sortOrderHelper: SortOrderHelper,
   ) {}
 
-  async findHome(): Promise<HomeDto> {
-    const bannerList = await this.homeBannerRepository.find({
-      where: {
-        status: HomeBannerStatus.NORMAL,
-      },
+  private findHomeBannerBaseQuery(): FindManyOptions<HomeBannerImageEntity> {
+    return {
       order: {
         sortOrder: 'ASC',
       },
-    });
+    };
+  }
 
-    const sectionList = await this.homeSectionRepository.find({
-      order: {
-        sortOrder: 'ASC',
-      },
-    });
-
-    return HomeDto.from(bannerList, sectionList);
+  async findHome(): Promise<HomeBannerImageEntity[]> {
+    return this.homeBannerRepository.find(this.findHomeBannerBaseQuery());
   }
 
   async findHomeBanner(): Promise<HomeBannerImageEntity[]> {
     return this.homeBannerRepository.find({
-      order: {
-        sortOrder: 'ASC',
-      },
+      ...this.findHomeBannerBaseQuery(),
+      withDeleted: true,
     });
   }
 
@@ -62,6 +49,10 @@ export class HomeRepositoryService {
 
   async updateHomeBanner(homeBanner: UpdateHomeBannerDto): Promise<void> {
     await this.homeBannerRepository.update(homeBanner.id, homeBanner);
+  }
+
+  async softDeleteHomeBanner(id: number): Promise<void> {
+    await this.homeBannerRepository.softDelete(id);
   }
 
   async getHomeBannerById(id: number): Promise<HomeBannerImageEntity> {

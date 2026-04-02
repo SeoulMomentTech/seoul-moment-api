@@ -1,7 +1,6 @@
 import { stripImageDomain } from '@app/common/util/image.util';
 import { UpdateHomeBannerDto } from '@app/repository/dto/home.dto';
 import { HomeBannerImageEntity } from '@app/repository/entity/home-banner-image.entity';
-import { HomeBannerStatus } from '@app/repository/enum/home-banner-image.enum';
 import { HomeRepositoryService } from '@app/repository/service/home.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -54,11 +53,6 @@ export class AdminHomeService {
   }
 
   async deleteHomeBanner(id: number): Promise<void> {
-    const updateDto: UpdateHomeBannerDto = {
-      id,
-      status: HomeBannerStatus.DELETE,
-    };
-
-    await this.homeRepositoryService.updateHomeBanner(updateDto);
+    await this.homeRepositoryService.softDeleteHomeBanner(id);
   }
 }

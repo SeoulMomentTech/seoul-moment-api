@@ -17,7 +17,8 @@ export class HomeService {
   ) {}
 
   async getHome(language: LanguageCode): Promise<GetHomeResponse> {
-    const homeEntity = await this.homeRepositoryService.findHome();
+    const homeBannerImageEntityList =
+      await this.homeRepositoryService.findHome();
 
     const [promotionList] =
       await this.promotionRepositoryService.findPromotionListByPaging(1, 10);
@@ -30,14 +31,15 @@ export class HomeService {
       );
 
     return GetHomeResponse.from(
-      homeEntity.banner,
+      homeBannerImageEntityList,
       promotionList,
       promotionMultilingualTextEntity,
     );
   }
 
   async v1GetHome(language: LanguageCode): Promise<V1GetHomeResponse> {
-    const homeEntity = await this.homeRepositoryService.findHome();
+    const homeBannerImageEntityList =
+      await this.homeRepositoryService.findHome();
 
     const [promotionList] =
       await this.promotionRepositoryService.findPromotionListByPaging(1, 10);
@@ -50,7 +52,7 @@ export class HomeService {
       );
 
     return V1GetHomeResponse.from(
-      homeEntity.banner,
+      homeBannerImageEntityList,
       promotionList,
       promotionMultilingualTextEntity,
     );

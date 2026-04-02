@@ -1,4 +1,5 @@
-export enum HomeBannerStatus {
+export enum HomeBannerImageStatus {
   NORMAL = 'NORMAL',
   DELETE = 'DELETE',
 }
+
