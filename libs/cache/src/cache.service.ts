@@ -1,15 +1,27 @@
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { RedisService } from '@liaoliaots/nestjs-redis';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Injectable()
-export class CacheService {
+export class CacheService implements OnModuleInit {
+  private readonly logger = new Logger(CacheService.name);
   private readonly client: Redis;
 
   constructor(private readonly redisService: RedisService) {
     this.client = redisService.getOrThrow();
+  }
+
+  async onModuleInit() {
+    try {
+      const info = await this.client.info('server');
+      const versionMatch = info.match(/redis_version:(\S+)/);
+      const version = versionMatch ? versionMatch[1] : 'unknown';
+      this.logger.log(`✅ [Redis] 연결 성공 (version: ${version})`);
+    } catch (error) {
+      this.logger.error(`❌ [Redis] 연결 실패: ${error.message}`);
+    }
   }
 
   async get(key: string): Promise<string> {

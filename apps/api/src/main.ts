@@ -3,6 +3,7 @@ import { swaggerSettring } from '@app/common/docs/swagger';
 import { LoggerService } from '@app/common/log/logger.service';
 import morganSetting from '@app/common/log/morgan';
 import { Configuration } from '@app/config/configuration';
+import { SupportEnv } from '@app/config/enum/config.enum';
 import { RedisIoAdapter } from '@app/socket/redis.adapter';
 import {
   BadRequestException,
@@ -142,37 +143,91 @@ async function bootstrap() {
     }),
   );
 
-  // 환경 정보 로깅
-  logger.info(`🚀 Starting Seoul Moment API Server`);
-  logger.info(`📦 Environment: ${config.NODE_ENV}`);
-  logger.info(`🔧 Port: ${config.PORT}`);
-  logger.info(`📊 API Version: ${config.API_VERSION}`);
-  logger.info(
-    `🗄️  Database: ${config.DATABASE_HOST}:${config.DATABASE_PORT}/${config.DATABASE_NAME}`,
-  );
+  // ── 환경 정보 ──
+  logger.info(`========================================`);
+  logger.info(`🚀 Seoul Moment API Server Bootstrap`);
+  logger.info(`========================================`);
+  logger.info(`📦 Environment : ${config.NODE_ENV}`);
+  logger.info(`🔧 Port        : ${config.PORT}`);
+  logger.info(`📊 API Version : ${config.API_VERSION}`);
 
+  // ── Database (PostgreSQL) ──
+  logger.info(`----------------------------------------`);
+  logger.info(`🗄️  [Database] PostgreSQL`);
+  logger.info(`   Host     : ${config.DATABASE_HOST}:${config.DATABASE_PORT}`);
+  logger.info(`   Database : ${config.DATABASE_NAME}`);
+  logger.info(`   Username : ${config.DATABASE_USERNAME}`);
+
+  // ── Redis ──
+  logger.info(`----------------------------------------`);
   if (config.REDIS_HOST) {
-    logger.info(`🔴 Redis: ${config.REDIS_HOST}:${config.REDIS_PORT}`);
+    logger.info(`🔴 [Redis] Connected`);
+    logger.info(`   Host : ${config.REDIS_HOST}:${config.REDIS_PORT ?? 6379}`);
+    logger.info(`   DB   : ${config.REDIS_DB ?? 0}`);
+  } else {
+    logger.info(`🔴 [Redis] Not configured (REDIS_HOST is empty)`);
   }
 
-  // Redis adapter 사용 시 연결 실패/재연결 반복 시 CPU 80% 폭주. 인스턴스 2개 이상일 때만 켜기.
-  if (config.REDIS_HOST) {
-    logger.info('[main] WebSocket: using Redis adapter (multi-instance)');
+  // ── OpenSearch ──
+  logger.info(`----------------------------------------`);
+  if (config.OPENSEARCH_HOST) {
+    logger.info(`🔍 [OpenSearch] Configured`);
+    logger.info(`   Host : ${config.OPENSEARCH_HOST}`);
+    logger.info(`   User : ${config.OPENSEARCH_NAME}`);
+  } else {
+    logger.info(`🔍 [OpenSearch] Not configured`);
+  }
+
+  // ── AWS ──
+  logger.info(`----------------------------------------`);
+  logger.info(`☁️  [AWS]`);
+  logger.info(`   Region    : ${config.AWS_REGION}`);
+  logger.info(`   S3 Bucket : ${config.AWS_S3_BUCKET_NAME}`);
+
+  // ── JWT ──
+  logger.info(`----------------------------------------`);
+  logger.info(`🔑 [JWT]`);
+  logger.info(`   Expires In : ${config.JWT_EXPIRES_IN}`);
+
+  // ── External APIs ──
+  logger.info(`----------------------------------------`);
+  logger.info(
+    `🤖 [OpenAI]  : ${config.OPENAI_API_KEY ? 'Configured' : 'Not configured'}`,
+  );
+  logger.info(
+    `🔎 [Serper]  : ${config.SERPER_API_KEY ? 'Configured' : 'Not configured'}`,
+  );
+  logger.info(
+    `📧 [Google]  : ${config.GOOGLE_APP_PASS ? 'Configured' : 'Not configured'}`,
+  );
+  logger.info(
+    `🛡️  [reCAPTCHA]: ${config.RECAPTCHA_SECRET_KEY ? 'Configured' : 'Not configured'}`,
+  );
+
+  // ── WebSocket Adapter ──
+  logger.info(`----------------------------------------`);
+  const useRedisAdapter =
+    config.REDIS_HOST && config.NODE_ENV === SupportEnv.DEV;
+
+  if (useRedisAdapter) {
+    logger.info(`🔌 [WebSocket] Redis adapter (multi-instance, DEV only)`);
     const redisIoAdapter = new RedisIoAdapter(app);
     await redisIoAdapter.connectToRedis();
     app.useWebSocketAdapter(redisIoAdapter);
   } else {
-    logger.info(
-      '[main] WebSocket: using in-memory adapter (single instance, no Redis Socket.IO)',
-    );
+    logger.info(`🔌 [WebSocket] In-memory adapter (single instance)`);
+    if (config.REDIS_HOST && config.NODE_ENV !== SupportEnv.DEV) {
+      logger.info(
+        `   ⚠️  Redis adapter disabled in ${config.NODE_ENV} (DEV only)`,
+      );
+    }
   }
 
-  await app.listen(config.PORT);
-
-  logger.info(`✅ Server is running on http://localhost:${config.PORT}`);
-  logger.info(`📚 Environment configuration loaded successfully`);
-  logger.info('JWT_SECRET: ' + config.JWT_SECRET);
-  logger.info('JWT_EXPIRES_IN: ' + config.JWT_EXPIRES_IN);
+  // ── Server Start ──
+  logger.info(`========================================`);
+  await app.listen(config.PORT, '0.0.0.0');
+  logger.info(`✅ Server is running on http://0.0.0.0:${config.PORT}`);
+  logger.info(`========================================`);
 }
 
 bootstrap().catch((error) => {
