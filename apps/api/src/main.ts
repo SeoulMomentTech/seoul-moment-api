@@ -167,7 +167,7 @@ async function bootstrap() {
     );
   }
 
-  await app.listen(config.PORT);
+  await app.listen(config.PORT, '0.0.0.0');
 
   logger.info(`✅ Server is running on http://localhost:${config.PORT}`);
   logger.info(`📚 Environment configuration loaded successfully`);
