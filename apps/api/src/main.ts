@@ -3,6 +3,7 @@ import { swaggerSettring } from '@app/common/docs/swagger';
 import { LoggerService } from '@app/common/log/logger.service';
 import morganSetting from '@app/common/log/morgan';
 import { Configuration } from '@app/config/configuration';
+import { SupportEnv } from '@app/config/enum/config.enum';
 import { RedisIoAdapter } from '@app/socket/redis.adapter';
 import {
   BadRequestException,
@@ -155,8 +156,11 @@ async function bootstrap() {
     logger.info(`🔴 Redis: ${config.REDIS_HOST}:${config.REDIS_PORT}`);
   }
 
-  // Redis adapter 사용 시 연결 실패/재연결 반복 시 CPU 80% 폭주. 인스턴스 2개 이상일 때만 켜기.
-  if (config.REDIS_HOST) {
+  // Redis adapter는 DEV 환경에서만 활성화 (PROD에서 연결 끊김/재연결 반복으로 CPU 폭주 이슈)
+  const useRedisAdapter =
+    config.REDIS_HOST && config.NODE_ENV === SupportEnv.DEV;
+
+  if (useRedisAdapter) {
     logger.info('[main] WebSocket: using Redis adapter (multi-instance)');
     const redisIoAdapter = new RedisIoAdapter(app);
     await redisIoAdapter.connectToRedis();
