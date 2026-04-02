@@ -55,7 +55,9 @@ export class V1GetHomeBannerResponse {
       id: entity.id,
       imageUrl: entity.getImage(),
       mobileImageUrl: entity.getMobileImage(),
-      status: entity.deleteDate ? HomeBannerImageStatus.DELETE : HomeBannerImageStatus.NORMAL,
+      status: entity.deleteDate
+        ? HomeBannerImageStatus.DELETE
+        : HomeBannerImageStatus.NORMAL,
       createDate: entity.createDate,
       updateDate: entity.updateDate,
     });
