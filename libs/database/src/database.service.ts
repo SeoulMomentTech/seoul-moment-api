@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
 import { types } from 'pg';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
@@ -7,6 +7,8 @@ const TIMESTAMP_WITHOUT_TIMEZONE_OID = 1114;
 
 @Injectable()
 export class DatabaseService implements TypeOrmOptionsFactory {
+  private readonly logger = new Logger(DatabaseService.name);
+
   constructor() {
     types.setTypeParser(
       TIMESTAMP_WITHOUT_TIMEZONE_OID,
@@ -16,13 +18,22 @@ export class DatabaseService implements TypeOrmOptionsFactory {
   }
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
+    const host = process.env.DATABASE_HOST;
+    const port = parseInt(process.env.DATABASE_PORT || '5432');
+    const database = process.env.DATABASE_NAME;
+    const username = process.env.DATABASE_USERNAME;
+
+    this.logger.log(
+      `🗄️  [PostgreSQL] 연결 시도: ${host}:${port}/${database} (user: ${username})`,
+    );
+
     return {
       type: 'postgres',
-      host: process.env.DATABASE_HOST,
-      port: parseInt(process.env.DATABASE_PORT || '5432'),
-      username: process.env.DATABASE_USERNAME,
+      host,
+      port,
+      username,
       password: process.env.DATABASE_PASSWORD,
-      database: process.env.DATABASE_NAME,
+      database,
       autoLoadEntities: true,
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
