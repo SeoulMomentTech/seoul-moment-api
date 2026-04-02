@@ -18,13 +18,9 @@ export class CacheService implements OnModuleInit {
       const info = await this.client.info('server');
       const versionMatch = info.match(/redis_version:(\S+)/);
       const version = versionMatch ? versionMatch[1] : 'unknown';
-      this.logger.log(
-        `✅ [Redis] 연결 성공 (version: ${version})`,
-      );
+      this.logger.log(`✅ [Redis] 연결 성공 (version: ${version})`);
     } catch (error) {
-      this.logger.error(
-        `❌ [Redis] 연결 실패: ${error.message}`,
-      );
+      this.logger.error(`❌ [Redis] 연결 실패: ${error.message}`);
     }
   }
 

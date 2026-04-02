@@ -13,8 +13,7 @@ export class RedisFactory implements RedisOptionsFactory {
   async createRedisOptions(): Promise<RedisModuleOptions> {
     const config = Configuration.getConfig();
     const useTls =
-      config.NODE_ENV === SupportEnv.DEV ||
-      config.NODE_ENV === SupportEnv.PROD;
+      config.NODE_ENV === SupportEnv.DEV || config.NODE_ENV === SupportEnv.PROD;
 
     this.logger.log(
       `🔴 [Redis] 연결 시도: ${config.REDIS_HOST}:${config.REDIS_PORT ?? 6379} (DB: ${config.REDIS_DB ?? 0}, TLS: ${useTls})`,
