@@ -8,6 +8,7 @@ import { getDataSource, truncateTables } from './setup/db.helper';
 import { closeTestApp, getTestApp } from './setup/test-app';
 
 const BASE_URL = '/admin/brand';
+const V1_BASE_URL = '/admin/brand/v1';
 
 describe('AdminBrandController (E2E)', () => {
   let app: INestApplication;
@@ -66,7 +67,7 @@ describe('AdminBrandController (E2E)', () => {
   });
 
   // -----------------------------------------------------------------------
-  // POST /admin/brand
+  // POST /admin/brand (deprecated - languageId 기반)
   // -----------------------------------------------------------------------
   describe('POST /admin/brand', () => {
     function buildPostBody(overrides?: Record<string, any>) {
@@ -256,6 +257,374 @@ describe('AdminBrandController (E2E)', () => {
 
       // Then
       expect(res.status).toBe(401);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // POST /admin/brand/v1 (V1 API - 언어코드 기반)
+  // -----------------------------------------------------------------------
+  describe('POST /admin/brand/v1', () => {
+    function buildV1PostBody(overrides?: Record<string, any>) {
+      return {
+        languageList: [
+          {
+            languageCode: 'ko',
+            name: faker.company.name(),
+            description: faker.company.catchPhrase(),
+          },
+          {
+            languageCode: 'en',
+            name: faker.company.name(),
+            description: faker.company.catchPhrase(),
+          },
+        ],
+        categoryId,
+        profileImageUrl: faker.image.url(),
+        sectionList: [
+          {
+            languageList: [
+              {
+                languageCode: 'ko',
+                title: faker.lorem.sentence(),
+                content: faker.lorem.paragraph(),
+              },
+              {
+                languageCode: 'en',
+                title: faker.lorem.sentence(),
+                content: faker.lorem.paragraph(),
+              },
+            ],
+            imageUrlList: [faker.image.url()],
+          },
+        ],
+        bannerImageUrlList: [faker.image.url()],
+        mobileBannerImageUrlList: [faker.image.url()],
+        productBannerImageUrl: faker.image.url(),
+        englishName: faker.company.name(),
+        ...overrides,
+      };
+    }
+
+    it('유효한 다국어 데이터로 브랜드를 등록하면 204를 반환한다', async () => {
+      // Given
+      const body = buildV1PostBody();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(V1_BASE_URL)
+        .set('Authorization', await authHeader(app))
+        .send(body);
+
+      // Then
+      expect(res.status).toBe(204);
+    });
+
+    it('언어코드 기반으로 다국어 브랜드를 저장하면 각 언어별로 multilingual_text가 생성된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const koName = `한국어브랜드-${Date.now()}`;
+      const enName = `English Brand-${Date.now()}`;
+      const koDesc = '한국어 브랜드 설명';
+      const enDesc = 'English brand description';
+
+      const body = buildV1PostBody({
+        englishName: 'TestBrand',
+        languageList: [
+          {
+            languageCode: 'ko',
+            name: koName,
+            description: koDesc,
+          },
+          {
+            languageCode: 'en',
+            name: enName,
+            description: enDesc,
+          },
+        ],
+      });
+
+      // When - v1 엔드포인트로 브랜드 생성
+      const createRes = await request(app.getHttpServer())
+        .post(V1_BASE_URL)
+        .set('Authorization', auth)
+        .send(body);
+
+      // Then
+      expect(createRes.status).toBe(204);
+
+      // When - 목록에서 조회
+      const listRes = await request(app.getHttpServer())
+        .get(BASE_URL)
+        .set('Authorization', auth);
+
+      const brandId = listRes.body.data.list[0].id;
+
+      // Then - DB에서 다국어 텍스트 확인
+      const koTexts = await dataSource.query(
+        `SELECT * FROM multilingual_text
+         WHERE entity_type = 'brand' AND entity_id = $1
+         AND field_name IN ('name', 'description')
+         AND language_id = (SELECT id FROM language WHERE code = 'ko')`,
+        [brandId],
+      );
+
+      const enTexts = await dataSource.query(
+        `SELECT * FROM multilingual_text
+         WHERE entity_type = 'brand' AND entity_id = $1
+         AND field_name IN ('name', 'description')
+         AND language_id = (SELECT id FROM language WHERE code = 'en')`,
+        [brandId],
+      );
+
+      expect(koTexts.length).toBe(2); // name, description
+      expect(enTexts.length).toBe(2);
+
+      const koNameText = koTexts.find((t: any) => t.field_name === 'name');
+      const enNameText = enTexts.find((t: any) => t.field_name === 'name');
+
+      expect(koNameText.text_content).toBe(koName);
+      expect(enNameText.text_content).toBe(enName);
+    });
+
+    it('섹션의 다국어 데이터가 languageCode 기반으로 저장된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const koSectionTitle = '브랜드 스토리-한국';
+      const enSectionTitle = 'Brand Story-English';
+      const koSectionContent = '한국 브랜드 스토리 내용';
+      const enSectionContent = 'English brand story content';
+
+      const body = buildV1PostBody({
+        sectionList: [
+          {
+            languageList: [
+              {
+                languageCode: 'ko',
+                title: koSectionTitle,
+                content: koSectionContent,
+              },
+              {
+                languageCode: 'en',
+                title: enSectionTitle,
+                content: enSectionContent,
+              },
+            ],
+            imageUrlList: [faker.image.url()],
+          },
+        ],
+      });
+
+      // When
+      const createRes = await request(app.getHttpServer())
+        .post(V1_BASE_URL)
+        .set('Authorization', auth)
+        .send(body);
+
+      expect(createRes.status).toBe(204);
+
+      // When - 목록에서 조회
+      const listRes = await request(app.getHttpServer())
+        .get(BASE_URL)
+        .set('Authorization', auth);
+
+      const brandId = listRes.body.data.list[0].id;
+
+      // Then - DB에서 섹션 다국어 텍스트 확인
+      const sectionId = await dataSource.query(
+        `SELECT id FROM brand_section WHERE brand_id = $1 LIMIT 1`,
+        [brandId],
+      );
+
+      const koSectionTexts = await dataSource.query(
+        `SELECT * FROM multilingual_text
+         WHERE entity_type = 'brand_section' AND entity_id = $1
+         AND language_id = (SELECT id FROM language WHERE code = 'ko')`,
+        [sectionId[0].id],
+      );
+
+      const enSectionTexts = await dataSource.query(
+        `SELECT * FROM multilingual_text
+         WHERE entity_type = 'brand_section' AND entity_id = $1
+         AND language_id = (SELECT id FROM language WHERE code = 'en')`,
+        [sectionId[0].id],
+      );
+
+      expect(koSectionTexts.length).toBe(2); // title, content
+      expect(enSectionTexts.length).toBe(2);
+
+      const koTitle = koSectionTexts.find((t: any) => t.field_name === 'title');
+      expect(koTitle.text_content).toBe(koSectionTitle);
+    });
+
+    it('토큰 없이 요청하면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(V1_BASE_URL)
+        .send({
+          languageList: [
+            {
+              languageCode: 'ko',
+              name: 'Test',
+              description: 'Test',
+            },
+          ],
+          categoryId,
+          bannerImageUrlList: [faker.image.url()],
+          mobileBannerImageUrlList: [faker.image.url()],
+          productBannerImageUrl: faker.image.url(),
+          englishName: 'Test',
+          sectionList: [],
+        });
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+
+    it('필수 필드(languageList) 누락 시 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(V1_BASE_URL)
+        .set('Authorization', await authHeader(app))
+        .send({
+          categoryId,
+          bannerImageUrlList: [faker.image.url()],
+          mobileBannerImageUrlList: [faker.image.url()],
+          productBannerImageUrl: faker.image.url(),
+          englishName: 'Test',
+          sectionList: [],
+        });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('유효하지 않은 언어 코드는 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(V1_BASE_URL)
+        .set('Authorization', await authHeader(app))
+        .send({
+          languageList: [
+            {
+              languageCode: 'invalid',
+              name: 'Test',
+              description: 'Test',
+            },
+          ],
+          categoryId,
+          bannerImageUrlList: [faker.image.url()],
+          mobileBannerImageUrlList: [faker.image.url()],
+          productBannerImageUrl: faker.image.url(),
+          englishName: 'Test',
+          sectionList: [],
+        });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('여러 섹션을 저장할 수 있다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const body = buildV1PostBody({
+        sectionList: [
+          {
+            languageList: [
+              {
+                languageCode: 'ko',
+                title: '첫 번째 섹션',
+                content: '첫 번째 섹션 내용',
+              },
+              {
+                languageCode: 'en',
+                title: 'First Section',
+                content: 'First section content',
+              },
+            ],
+            imageUrlList: [faker.image.url()],
+          },
+          {
+            languageList: [
+              {
+                languageCode: 'ko',
+                title: '두 번째 섹션',
+                content: '두 번째 섹션 내용',
+              },
+              {
+                languageCode: 'en',
+                title: 'Second Section',
+                content: 'Second section content',
+              },
+            ],
+            imageUrlList: [faker.image.url(), faker.image.url()],
+          },
+        ],
+      });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(V1_BASE_URL)
+        .set('Authorization', auth)
+        .send(body);
+
+      expect(res.status).toBe(204);
+
+      // When - 목록 조회
+      const listRes = await request(app.getHttpServer())
+        .get(BASE_URL)
+        .set('Authorization', auth);
+
+      const brandId = listRes.body.data.list[0].id;
+
+      // Then - DB에서 섹션 개수 확인
+      const sections = await dataSource.query(
+        `SELECT id FROM brand_section WHERE brand_id = $1 ORDER BY id`,
+        [brandId],
+      );
+
+      expect(sections.length).toBe(2);
+    });
+
+    it('배너 이미지와 모바일 배너 이미지가 저장된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const bannerUrl1 = faker.image.url();
+      const bannerUrl2 = faker.image.url();
+      const mobileBannerUrl = faker.image.url();
+
+      const body = buildV1PostBody({
+        bannerImageUrlList: [bannerUrl1, bannerUrl2],
+        mobileBannerImageUrlList: [mobileBannerUrl],
+      });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(V1_BASE_URL)
+        .set('Authorization', auth)
+        .send(body);
+
+      expect(res.status).toBe(204);
+
+      // When - 목록 조회
+      const listRes = await request(app.getHttpServer())
+        .get(BASE_URL)
+        .set('Authorization', auth);
+
+      const brandId = listRes.body.data.list[0].id;
+
+      // Then - DB에서 배너 이미지 확인
+      const bannerImages = await dataSource.query(
+        `SELECT * FROM brand_banner_image WHERE brand_id = $1 ORDER BY sort_order`,
+        [brandId],
+      );
+
+      const mobileBannerImages = await dataSource.query(
+        `SELECT * FROM brand_mobile_banner_image WHERE brand_id = $1`,
+        [brandId],
+      );
+
+      expect(bannerImages.length).toBe(2);
+      expect(mobileBannerImages.length).toBe(1);
     });
   });
 });

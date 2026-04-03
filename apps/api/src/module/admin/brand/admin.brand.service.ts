@@ -27,6 +27,7 @@ import {
   UpdateAdminBrandRequest,
   V2UpdateAdminBrandRequest,
 } from './admin.brand.dto';
+import { V1PostAdminBrandRequest } from './v1/v1.admin.brand.dto';
 
 @Injectable()
 export class AdminBrandService {
@@ -119,6 +120,108 @@ export class AdminBrandService {
             brandSectionEntity.id,
             'content',
             text.languageId,
+            text.content,
+          ),
+        ]),
+      );
+
+      const brandSectionImages = v.imageUrlList.map((image, index) =>
+        plainToInstance(BrandSectionImageEntity, {
+          sectionId: brandSectionEntity.id,
+          imageUrl: stripImageDomain(image),
+          sortOrder: index + 1,
+        }),
+      );
+
+      await this.brandRepositoryService.bulkInsertInitSectionImage(
+        brandSectionImages,
+      );
+    }
+  }
+
+  @Transactional()
+  async v1PostAdminBrand(dto: V1PostAdminBrandRequest) {
+    const brandEntity = await this.brandRepositoryService.insert(
+      plainToInstance(BrandEntity, {
+        categoryId: dto.categoryId,
+        profileImage: dto.profileImageUrl
+          ? stripImageDomain(dto.profileImageUrl)
+          : undefined,
+        bannerImageUrl: stripImageDomain(dto.productBannerImageUrl),
+        englishName: dto.englishName,
+        colorCode: dto.colorCode,
+      }),
+    );
+
+    const bannerEntities = dto.bannerImageUrlList.map((bannerUrl, index) =>
+      plainToInstance(BrandBannerImageEntity, {
+        brandId: brandEntity.id,
+        imageUrl: stripImageDomain(bannerUrl),
+        sortOrder: index + 1,
+      }),
+    );
+
+    await this.brandRepositoryService.bulkInsertInitBannerImage(bannerEntities);
+
+    if (
+      dto.mobileBannerImageUrlList &&
+      dto.mobileBannerImageUrlList.length > 0
+    ) {
+      const mobileBannerEntities = dto.mobileBannerImageUrlList.map(
+        (mobileBannerUrl, index) =>
+          plainToInstance(BrandMobileBannerImageEntity, {
+            brandId: brandEntity.id,
+            imageUrl: stripImageDomain(mobileBannerUrl),
+            sortOrder: index + 1,
+          }),
+      );
+
+      await this.brandRepositoryService.bulkInsertInitMobileBannerImage(
+        mobileBannerEntities,
+      );
+    }
+
+    await Promise.all(
+      dto.languageList.flatMap((v) => [
+        this.languageRepositoryService.saveMultilingualTextByLanguageCode(
+          EntityType.BRAND,
+          brandEntity.id,
+          'name',
+          v.languageCode,
+          v.name,
+        ),
+        this.languageRepositoryService.saveMultilingualTextByLanguageCode(
+          EntityType.BRAND,
+          brandEntity.id,
+          'description',
+          v.languageCode,
+          v.description,
+        ),
+      ]),
+    );
+
+    for (const v of dto.sectionList) {
+      const brandSectionEntity =
+        await this.brandRepositoryService.insertSection(
+          plainToInstance(BrandSectionEntity, {
+            brandId: brandEntity.id,
+          }),
+        );
+
+      await Promise.all(
+        v.languageList.flatMap((text) => [
+          this.languageRepositoryService.saveMultilingualTextByLanguageCode(
+            EntityType.BRAND_SECTION,
+            brandSectionEntity.id,
+            'title',
+            text.languageCode,
+            text.title,
+          ),
+          this.languageRepositoryService.saveMultilingualTextByLanguageCode(
+            EntityType.BRAND_SECTION,
+            brandSectionEntity.id,
+            'content',
+            text.languageCode,
             text.content,
           ),
         ]),

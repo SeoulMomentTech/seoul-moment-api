@@ -1,3 +1,5 @@
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -116,6 +118,31 @@ export class LanguageRepositoryService implements OnModuleInit {
       .addOrderBy('lang.sortOrder', 'ASC')
       .addOrderBy('mt.fieldName', 'ASC')
       .getMany();
+  }
+
+  async saveMultilingualTextByLanguageCode(
+    entityType: EntityType,
+    entityId: number,
+    fieldName: string,
+    languageCode: LanguageCode,
+    textContent: string,
+  ): Promise<MultilingualTextEntity> {
+    const language = await this.languageRepository.findOneBy({
+      code: languageCode,
+    });
+    if (!language) {
+      throw new ServiceError(
+        'Language not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+    return this.saveMultilingualText(
+      entityType,
+      entityId,
+      fieldName,
+      language.id,
+      textContent,
+    );
   }
 
   async saveMultilingualText(
