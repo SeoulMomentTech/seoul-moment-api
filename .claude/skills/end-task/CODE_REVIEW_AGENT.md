@@ -26,6 +26,8 @@
 - 요청 DTO 필드명/타입 변경 여부
 - 엔드포인트 URL 변경 여부
 - 프론트엔드에 영향을 주는 변경인지 판단
+- Worktree 브랜치인 경우: 기존 코드가 `@deprecated` 처리되었는지 확인
+- Worktree 브랜치인 경우: v1 폴더에 새 코드가 추가되었는지 확인
 
 ### 3. 보안
 
@@ -57,6 +59,11 @@
 - 함수 50줄 제한 (ESLint max-lines-per-function)
 - console.log 사용 여부 (console.warn/error만 허용)
 - 미사용 import 여부
+
+### 8. Worktree 파일 범위
+
+- 변경된 파일이 모두 worktree 폴더 내에 있는지 확인
+- worktree 폴더 외부 파일이 수정되었으면 🔴 심각으로 보고
 
 ## 리포트 반환 형식
 

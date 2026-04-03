@@ -129,6 +129,7 @@ export class LanguageRepositoryService implements OnModuleInit {
   ): Promise<MultilingualTextEntity> {
     const language = await this.languageRepository.findOneBy({
       code: languageCode,
+      isActive: true,
     });
     if (!language) {
       throw new ServiceError(

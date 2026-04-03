@@ -38,7 +38,8 @@ export class AdminBrandController {
 
   @Post()
   @ApiOperation({
-    summary: '브랜드 다국어 등록',
+    summary: '브랜드 다국어 등록 -- deprecated',
+    deprecated: true,
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(OneTimeTokenGuard)

@@ -153,9 +153,18 @@ export class AdminBrandService {
       }),
     );
 
+    await this.v1SaveBrandBannerImages(brandEntity.id, dto);
+    await this.v1SaveBrandLanguages(brandEntity.id, dto);
+    await this.v1SaveBrandSections(brandEntity.id, dto);
+  }
+
+  private async v1SaveBrandBannerImages(
+    brandId: number,
+    dto: V1PostAdminBrandRequest,
+  ) {
     const bannerEntities = dto.bannerImageUrlList.map((bannerUrl, index) =>
       plainToInstance(BrandBannerImageEntity, {
-        brandId: brandEntity.id,
+        brandId,
         imageUrl: stripImageDomain(bannerUrl),
         sortOrder: index + 1,
       }),
@@ -170,7 +179,7 @@ export class AdminBrandService {
       const mobileBannerEntities = dto.mobileBannerImageUrlList.map(
         (mobileBannerUrl, index) =>
           plainToInstance(BrandMobileBannerImageEntity, {
-            brandId: brandEntity.id,
+            brandId,
             imageUrl: stripImageDomain(mobileBannerUrl),
             sortOrder: index + 1,
           }),
@@ -180,31 +189,41 @@ export class AdminBrandService {
         mobileBannerEntities,
       );
     }
+  }
 
+  private async v1SaveBrandLanguages(
+    brandId: number,
+    dto: V1PostAdminBrandRequest,
+  ) {
     await Promise.all(
       dto.languageList.flatMap((v) => [
         this.languageRepositoryService.saveMultilingualTextByLanguageCode(
           EntityType.BRAND,
-          brandEntity.id,
+          brandId,
           'name',
           v.languageCode,
           v.name,
         ),
         this.languageRepositoryService.saveMultilingualTextByLanguageCode(
           EntityType.BRAND,
-          brandEntity.id,
+          brandId,
           'description',
           v.languageCode,
           v.description,
         ),
       ]),
     );
+  }
 
+  private async v1SaveBrandSections(
+    brandId: number,
+    dto: V1PostAdminBrandRequest,
+  ) {
     for (const v of dto.sectionList) {
       const brandSectionEntity =
         await this.brandRepositoryService.insertSection(
           plainToInstance(BrandSectionEntity, {
-            brandId: brandEntity.id,
+            brandId,
           }),
         );
 
