@@ -1,0 +1,1 @@
+- [Seoul Moment API 코드 패턴](project_patterns.md) — NestJS monorepo, 함수 50줄 제한, Service 계층 비즈니스 로직, Worktree breaking change 처리 규칙
