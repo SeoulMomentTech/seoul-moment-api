@@ -6,7 +6,8 @@
       "mcp__jira__jira_get",
       "Bash(npm run:*)",
       "Bash(npx jest:*)",
-      "Bash(curl -s http://localhost:5433)"
+      "Bash(curl -s http://localhost:5433)",
+      "Bash(docker-compose -f docker-compose.test.yml down)"
     ]
   },
   "enableAllProjectMcpServers": true,

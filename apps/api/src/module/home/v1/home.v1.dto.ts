@@ -4,11 +4,10 @@ import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { PromotionEntity } from '@app/repository/entity/promotion.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { plainToInstance, Type } from 'class-transformer';
-import { IsArray, IsDefined, ValidateNested } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 
 import { MultilingualFieldDto } from '../../dto/multilingual.dto';
-import { GetHomePromotion, GetHomePromotionResponse } from '../home.dto';
+import { GetHomePromotion } from '../home.dto';
 
 export class V1GetHomeBanner {
   @ApiProperty({
@@ -146,16 +145,6 @@ export class V1GetHomeResponse {
     type: [V1GetHomeBanner],
   })
   banner: V1GetHomeBanner[];
-
-  @ApiProperty({
-    description: '프로모션 리스트',
-    type: [GetHomePromotionResponse],
-  })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => GetHomePromotionResponse)
-  @IsDefined()
-  promotionList: GetHomePromotionResponse[];
 
   @ApiProperty({
     description: '홈 프로모션 리스트',

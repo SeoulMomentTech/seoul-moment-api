@@ -4,14 +4,8 @@ import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { PromotionEntity } from '@app/repository/entity/promotion.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { plainToInstance, Type } from 'class-transformer';
-import {
-  IsArray,
-  IsDefined,
-  IsNumber,
-  IsString,
-  ValidateNested,
-} from 'class-validator';
+import { plainToInstance } from 'class-transformer';
+import { IsDefined, IsNumber, IsString } from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
@@ -239,25 +233,6 @@ export class GetHomeResponse {
     type: [GetHomeBanner],
   })
   banner: GetHomeBanner[];
-
-  @ApiProperty({
-    description: '프로모션 리스트',
-    example: [
-      {
-        id: 1,
-        thumbnailImageUrl:
-          'https://image-dev.seoulmoment.com.tw/promotions/2025-09-16/promotion-01.jpg',
-        title: '프로모션 제목',
-        description: '프로모션 내용',
-      },
-    ],
-    type: [GetHomePromotionResponse],
-  })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => GetHomePromotionResponse)
-  @IsDefined()
-  promotionList: GetHomePromotionResponse[];
 
   @ApiProperty({
     description: '홈 프로모션 리스트',
