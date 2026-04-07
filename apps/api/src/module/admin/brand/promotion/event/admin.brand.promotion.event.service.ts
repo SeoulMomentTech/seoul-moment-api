@@ -90,12 +90,13 @@ export class AdminBrandPromotionEventService {
 
     const brandPromotionEventList = brandPromotionEvents.map(
       (brandPromotionEvent) => {
-        const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
-          multilingualTexts.filter(
-            (v) => v.entityId === brandPromotionEvent.id,
-          ),
-          'title',
-        );
+        const titleTextsByEntityAndLanguage =
+          MultilingualFieldDto.fromByEntityList(
+            multilingualTexts.filter(
+              (v) => v.entityId === brandPromotionEvent.id,
+            ),
+            'title',
+          );
 
         const nameDto = languages.map((language) =>
           GetAdminBrandPromotionEventLanguageDto.from(
@@ -128,7 +129,7 @@ export class AdminBrandPromotionEventService {
       ),
     ]);
 
-    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntityList(
       multilingualTexts,
       'title',
     );
@@ -240,15 +241,16 @@ export class AdminBrandPromotionEventService {
 
     const brandPromotionEventCouponList = brandPromotionEventCoupons.map(
       (brandPromotionEventCoupon) => {
-        const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
-          multilingualTexts.filter(
-            (v) => v.entityId === brandPromotionEventCoupon.id,
-          ),
-          'title',
-        );
+        const titleTextsByEntityAndLanguage =
+          MultilingualFieldDto.fromByEntityList(
+            multilingualTexts.filter(
+              (v) => v.entityId === brandPromotionEventCoupon.id,
+            ),
+            'title',
+          );
 
         const descriptionTextsByEntityAndLanguage =
-          MultilingualFieldDto.fromByEntity(
+          MultilingualFieldDto.fromByEntityList(
             multilingualTexts.filter(
               (v) => v.entityId === brandPromotionEventCoupon.id,
             ),
@@ -291,13 +293,13 @@ export class AdminBrandPromotionEventService {
       ),
     ]);
 
-    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntityList(
       multilingualTexts,
       'title',
     );
 
     const descriptionTextsByEntityAndLanguage =
-      MultilingualFieldDto.fromByEntity(multilingualTexts, 'description');
+      MultilingualFieldDto.fromByEntityList(multilingualTexts, 'description');
 
     const nameDto = languages.map((language) =>
       GetAdminBrandPromotionEventCouponLanguageDto.from(

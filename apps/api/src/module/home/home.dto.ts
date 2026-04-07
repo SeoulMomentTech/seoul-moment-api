@@ -43,9 +43,12 @@ export class GetHomePromotion {
   ) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'title',
+    );
 
-    const description = MultilingualFieldDto.fromByEntity(
+    const description = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'description',
     );
@@ -92,8 +95,11 @@ export class GetHomeNews {
   static from(entity: NewsEntity, multilingualText: MultilingualTextEntity[]) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
-    const content = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'title',
+    );
+    const content = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'content',
     );
@@ -143,8 +149,11 @@ export class GetHomeArticle {
   ) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
-    const content = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'title',
+    );
+    const content = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'content',
     );
@@ -183,8 +192,11 @@ export class GetHomePromotionResponse {
   ) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
-    const description = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'title',
+    );
+    const description = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'description',
     );

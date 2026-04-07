@@ -306,10 +306,8 @@ export class AdminBrandPromotionService {
       ),
     ]);
 
-    const descriptionByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
-      multilingualTexts,
-      'description',
-    );
+    const descriptionByEntityAndLanguage =
+      MultilingualFieldDto.fromByEntityList(multilingualTexts, 'description');
 
     return languages.map((language) =>
       GetAdminBrandPromotionLanguageDto.from(

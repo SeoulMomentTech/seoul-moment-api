@@ -24,7 +24,10 @@ export class GetCategoryResponse {
   ) {
     multilingualText = multilingualText.filter((v) => v.entityId === entity.id);
 
-    const name = MultilingualFieldDto.fromByEntity(multilingualText, 'name');
+    const name = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'name',
+    );
 
     return plainToInstance(this, {
       id: entity.id,

@@ -67,8 +67,11 @@ export class V1GetHomeNews {
   static from(entity: NewsEntity, multilingualText: MultilingualTextEntity[]) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
-    const content = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'title',
+    );
+    const content = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'content',
     );
@@ -122,8 +125,11 @@ export class V1GetHomeArticle {
   ) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
-    const content = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'title',
+    );
+    const content = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'content',
     );

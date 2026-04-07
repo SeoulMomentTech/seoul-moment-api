@@ -33,7 +33,7 @@ export class BrandSectionImageEntity extends CommonEntity {
   @JoinColumn({ name: 'section_id' })
   section: BrandSectionEntity;
 
-  getImage(): string {
+  getImageUrl(): string {
     return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imageUrl}`;
   }
 }

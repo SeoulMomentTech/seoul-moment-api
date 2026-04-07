@@ -86,14 +86,14 @@ export class AdminBrandPromotionPopupService {
 
     const brandPromotionPopupList = brandPromotionPopups.map(
       (brandPromotionPopup) => {
-        const titleByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+        const titleByEntityAndLanguage = MultilingualFieldDto.fromByEntityList(
           multilingualTexts.filter(
             (v) => v.entityId === brandPromotionPopup.id,
           ),
           'title',
         );
         const descriptionByEntityAndLanguage =
-          MultilingualFieldDto.fromByEntity(
+          MultilingualFieldDto.fromByEntityList(
             multilingualTexts.filter(
               (v) => v.entityId === brandPromotionPopup.id,
             ),
@@ -130,14 +130,12 @@ export class AdminBrandPromotionPopupService {
       ),
     ]);
 
-    const titleByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+    const titleByEntityAndLanguage = MultilingualFieldDto.fromByEntityList(
       multilingualTexts,
       'title',
     );
-    const descriptionByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
-      multilingualTexts,
-      'description',
-    );
+    const descriptionByEntityAndLanguage =
+      MultilingualFieldDto.fromByEntityList(multilingualTexts, 'description');
 
     const nameDto = languages.map((language) =>
       GetAdminBrandPromotionPopupLanguageDto.from(

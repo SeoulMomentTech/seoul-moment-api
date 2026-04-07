@@ -33,7 +33,7 @@ export class BrandMobileBannerImageEntity extends CommonEntity {
   @JoinColumn({ name: 'brand_id' })
   brand: BrandEntity;
 
-  getImage(): string {
+  getImageUrl(): string {
     return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imageUrl}`;
   }
 }

@@ -322,7 +322,7 @@ export class GetAdminBrandInfoSection {
       content: contentField.getContent(),
       imageList: entity.sectionImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((v) => v.getImage()),
+        .map((v) => v.getImageUrl()),
     });
   }
 }
@@ -539,11 +539,11 @@ export class GetAdminBrandInfoResponse {
       bannerList: entity.bannerImage
         .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((v) => v.getImage()),
+        .map((v) => v.getImageUrl()),
       mobileBannerList: entity.mobileBannerImage
         .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((v) => v.getImage()),
+        .map((v) => v.getImageUrl()),
       multilingualTextList,
       colorCode: entity.colorCode,
     });
