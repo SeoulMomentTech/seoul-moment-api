@@ -19,7 +19,6 @@ import { CommonEntity } from './common.entity';
 import { MultilingualTextEntity } from './multilingual-text.entity';
 import { NewsEntity } from './news.entity';
 import { ProductEntity } from './product.entity';
-import { BrandStatus } from '../enum/brand.enum';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -44,13 +43,6 @@ export class BrandEntity extends CommonEntity {
 
   @Column('varchar', { length: 7, nullable: true })
   colorCode: string;
-
-  @Column('enum', {
-    enum: BrandStatus,
-    default: BrandStatus.NORMAL,
-    nullable: false,
-  })
-  status: BrandStatus;
 
   @OneToMany(
     () => BrandBannerImageEntity,

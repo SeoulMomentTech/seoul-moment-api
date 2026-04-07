@@ -62,3 +62,12 @@ git diff HEAD
 ```
 
 🔴 심각 지적이 있으면 사용자에게 명확히 전달하고 수정 여부를 확인한다.
+
+## Step 5: Lint & Prettier
+
+리뷰 완료 후 반드시 실행한다.
+
+```bash
+NODE_ENV=local npm run lint
+NODE_ENV=local npm run format
+```

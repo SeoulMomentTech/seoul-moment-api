@@ -10,6 +10,7 @@ import { BrandSectionEntity } from '@app/repository/entity/brand-section.entity'
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
+import { LanguageCode } from '@app/repository/enum/language.enum';
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
@@ -27,7 +28,14 @@ import {
   UpdateAdminBrandRequest,
   V2UpdateAdminBrandRequest,
 } from './admin.brand.dto';
-import { V1PostAdminBrandRequest } from './v1/v1.admin.brand.dto';
+import {
+  V1GetAdminBrandInfoResponse,
+  V1GetAdminBrandInfoSection,
+  V1GetAdminBrandInfoText,
+  V1GetAdminBrandResponse,
+  V1PostAdminBrandRequest,
+  V1UpdateAdminBrandRequest,
+} from './v1/v1.admin.brand.dto';
 
 @Injectable()
 export class AdminBrandService {
@@ -296,6 +304,42 @@ export class AdminBrandService {
     return GetAdminBrandInfoResponse.from(brandEntity, brandMultilingualList);
   }
 
+  async v1GetAdminBrandInfo(id: number): Promise<V1GetAdminBrandInfoResponse> {
+    const brandEntity = await this.brandRepositoryService.getBrandById(id);
+
+    const languageArray =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const brandMultilingualList: {
+      languageCode: LanguageCode;
+      brandText: MultilingualTextEntity[];
+      sectionText: MultilingualTextEntity[];
+    }[] = [];
+
+    for (const languageEntity of languageArray) {
+      const [brandTexts, sectionTexts] = await Promise.all([
+        this.languageRepositoryService.findMultilingualTexts(
+          EntityType.BRAND,
+          brandEntity.id,
+          languageEntity.code,
+        ),
+        this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.BRAND_SECTION,
+          brandEntity.section.map((section) => section.id),
+          languageEntity.code,
+        ),
+      ]);
+
+      brandMultilingualList.push({
+        languageCode: languageEntity.code,
+        brandText: brandTexts,
+        sectionText: sectionTexts,
+      });
+    }
+
+    return V1GetAdminBrandInfoResponse.from(brandEntity, brandMultilingualList);
+  }
+
   async getAdminBrandList(
     request: AdminBrandListRequest,
   ): Promise<[GetAdminBrandResponse[], number]> {
@@ -336,6 +380,41 @@ export class AdminBrandService {
     );
 
     return [brandList, total];
+  }
+
+  async v1GetAdminBrandList(
+    request: AdminBrandListRequest,
+  ): Promise<[V1GetAdminBrandResponse[], number]> {
+    const [brandEntityList, total] =
+      await this.brandRepositoryService.findBrandByFilter(
+        request.page,
+        request.count,
+        request.search,
+        request.searchColumn,
+        request.sort,
+      );
+
+    const languageArray =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const brandList: MultilingualTextEntity[] = [];
+
+    for (const languageEntity of languageArray) {
+      const multilingualText =
+        await this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.BRAND,
+          brandEntityList.map((brand) => brand.id),
+          languageEntity.code,
+        );
+      brandList.push(...multilingualText);
+    }
+
+    return [
+      brandEntityList.map((brand) =>
+        V1GetAdminBrandResponse.from(brand, brandList),
+      ),
+      total,
+    ];
   }
 
   @Transactional()
@@ -667,6 +746,66 @@ export class AdminBrandService {
       dto.multilingualTextList,
     );
   }
+  @Transactional()
+  async v1UpdateAdminBrand(brandId: number, dto: V1UpdateAdminBrandRequest) {
+    if (dto.categoryId) {
+      await this.categoryRepositoryService.getCategoryById(dto.categoryId);
+    }
+
+    const brandEntity = await this.brandRepositoryService.getBrandById(brandId);
+
+    const updateBrandDto: UpdateBrandDto = {
+      id: brandId,
+      categoryId: dto.categoryId,
+      englishName: dto.englishName,
+      profileImage: stripImageDomain(dto.profileImageUrl),
+      bannerImageUrl: stripImageDomain(dto.productBannerImageUrl),
+      colorCode: dto.colorCode,
+    };
+
+    await this.brandRepositoryService.update(updateBrandDto);
+
+    // Banner 이미지 전체 교체 (각각 독립적으로 처리)
+    if (dto.bannerImageUrlList) {
+      await this.brandRepositoryService.deleteAllBannerImages(brandId);
+
+      const bannerEntities = dto.bannerImageUrlList.map((bannerUrl, index) =>
+        plainToInstance(BrandBannerImageEntity, {
+          brandId,
+          imageUrl: stripImageDomain(bannerUrl),
+          sortOrder: index + 1,
+        }),
+      );
+
+      if (bannerEntities.length > 0) {
+        await this.brandRepositoryService.bulkInsertInitBannerImage(
+          bannerEntities,
+        );
+      }
+    }
+
+    // Mobile Banner 이미지 전체 교체 (각각 독립적으로 처리)
+    if (dto.mobileBannerImageUrlList) {
+      await this.brandRepositoryService.deleteAllMobileBannerImages(brandId);
+
+      const mobileBannerEntities = dto.mobileBannerImageUrlList.map(
+        (mobileBannerUrl, index) =>
+          plainToInstance(BrandMobileBannerImageEntity, {
+            brandId,
+            imageUrl: stripImageDomain(mobileBannerUrl),
+            sortOrder: index + 1,
+          }),
+      );
+
+      if (mobileBannerEntities.length > 0) {
+        await this.brandRepositoryService.bulkInsertInitMobileBannerImage(
+          mobileBannerEntities,
+        );
+      }
+    }
+
+    await this.v1BrandMultilingualUpdate(brandEntity.id, dto.languageList);
+  }
 
   @Transactional()
   async V2brandMultilingualUpdate(
@@ -753,6 +892,115 @@ export class AdminBrandService {
           }),
         );
       }
+    }
+  }
+  @Transactional()
+  async v1BrandMultilingualUpdate(
+    brandId: number,
+    list: V1GetAdminBrandInfoText[],
+  ) {
+    await this.deleteBrandMultilingual(brandId);
+
+    if (!list || list.length === 0) {
+      return;
+    }
+
+    const sectionEntities = await this.v1CreateSectionEntities(
+      brandId,
+      list[0],
+    );
+
+    for (const content of list) {
+      await this.v1SaveBrandTexts(brandId, content);
+    }
+
+    await this.v1SaveSectionData(sectionEntities, list);
+  }
+
+  private async v1CreateSectionEntities(
+    brandId: number,
+    firstContent: V1GetAdminBrandInfoText,
+  ): Promise<BrandSectionEntity[]> {
+    const sectionEntities: BrandSectionEntity[] = [];
+
+    for (let i = 0; i < firstContent.section.length; i++) {
+      const sectionEntity = await this.brandRepositoryService.insertSection(
+        plainToInstance(BrandSectionEntity, { brandId }),
+      );
+      sectionEntities.push(sectionEntity);
+    }
+
+    return sectionEntities;
+  }
+
+  private async v1SaveBrandTexts(
+    brandId: number,
+    content: V1GetAdminBrandInfoText,
+  ) {
+    await this.languageRepositoryService.saveMultilingualTextByLanguageCode(
+      EntityType.BRAND,
+      brandId,
+      'name',
+      content.languageCode,
+      content.name,
+    );
+    await this.languageRepositoryService.saveMultilingualTextByLanguageCode(
+      EntityType.BRAND,
+      brandId,
+      'description',
+      content.languageCode,
+      content.description,
+    );
+  }
+
+  private async v1SaveSectionData(
+    sectionEntities: BrandSectionEntity[],
+    list: V1GetAdminBrandInfoText[],
+  ) {
+    for (let i = 0; i < sectionEntities.length; i++) {
+      const sectionEntity = sectionEntities[i];
+
+      for (const content of list) {
+        const sectionData = content.section[i];
+        if (!sectionData) continue;
+
+        await this.v1SaveSectionTexts(sectionEntity.id, content, sectionData);
+      }
+
+      const imageList = list[0]?.section[i]?.imageUrlList || [];
+      await this.v1SaveSectionImages(sectionEntity.id, imageList);
+    }
+  }
+
+  private async v1SaveSectionTexts(
+    sectionId: number,
+    content: V1GetAdminBrandInfoText,
+    sectionData: V1GetAdminBrandInfoSection,
+  ) {
+    await this.languageRepositoryService.saveMultilingualTextByLanguageCode(
+      EntityType.BRAND_SECTION,
+      sectionId,
+      'title',
+      content.languageCode,
+      sectionData.title,
+    );
+    await this.languageRepositoryService.saveMultilingualTextByLanguageCode(
+      EntityType.BRAND_SECTION,
+      sectionId,
+      'content',
+      content.languageCode,
+      sectionData.content,
+    );
+  }
+
+  private async v1SaveSectionImages(sectionId: number, imageList: string[]) {
+    for (const image of imageList) {
+      await this.brandRepositoryService.insertSectionImage(
+        plainToInstance(BrandSectionImageEntity, {
+          sectionId,
+          imageUrl: stripImageDomain(image),
+        }),
+      );
     }
   }
 

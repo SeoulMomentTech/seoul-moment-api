@@ -25,7 +25,6 @@ import { ProductItemEntity } from '../entity/product-item.entity';
 import { ProductVariantEntity } from '../entity/product-variant.entity';
 import { ProductEntity } from '../entity/product.entity';
 import { VariantOptionEntity } from '../entity/variant-option.entity';
-import { BrandStatus } from '../enum/brand.enum';
 import { EntityType } from '../enum/entity.enum';
 import { LanguageCode } from '../enum/language.enum';
 import {
@@ -245,9 +244,7 @@ export class ProductRepositoryService implements OnModuleInit {
         .andWhere('p.status = :productStatus', {
           productStatus: ProductStatus.NORMAL,
         })
-        .andWhere('b.status = :brandStatus', {
-          brandStatus: BrandStatus.NORMAL,
-        });
+        .andWhere('b.deleteDate IS NULL');
 
       if (mainView !== undefined) {
         console.log('mainView', mainView);

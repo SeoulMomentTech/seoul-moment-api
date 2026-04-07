@@ -464,6 +464,27 @@ describe('AdminBrandController (E2E)', () => {
       expect(sections.length).toBe(2);
     });
 
+    it('colorCode가 저장된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const body = buildV1PostBody({ colorCode: '#FF0000' });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(V1_BASE_URL)
+        .set('Authorization', auth)
+        .send(body);
+
+      // Then
+      expect(res.status).toBe(204);
+
+      const listRes = await request(app.getHttpServer())
+        .get(V1_BASE_URL)
+        .set('Authorization', auth);
+
+      expect(listRes.body.data.list[0].colorCode).toBe('#FF0000');
+    });
+
     it('배너 이미지와 모바일 배너 이미지가 저장된다', async () => {
       // Given
       const auth = await authHeader(app);
@@ -504,6 +525,356 @@ describe('AdminBrandController (E2E)', () => {
 
       expect(bannerImages.length).toBe(2);
       expect(mobileBannerImages.length).toBe(1);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Helper: V1 브랜드 생성 후 ID 반환
+  // -----------------------------------------------------------------------
+  async function createV1Brand(
+    auth: string,
+    overrides?: Record<string, any>,
+  ): Promise<number> {
+    const body = {
+      languageList: [
+        {
+          languageCode: 'ko',
+          name: faker.company.name(),
+          description: faker.company.catchPhrase(),
+        },
+        {
+          languageCode: 'en',
+          name: faker.company.name(),
+          description: faker.company.catchPhrase(),
+        },
+      ],
+      categoryId,
+      profileImageUrl: faker.image.url(),
+      sectionList: [
+        {
+          languageList: [
+            {
+              languageCode: 'ko',
+              title: faker.lorem.sentence(),
+              content: faker.lorem.paragraph(),
+            },
+            {
+              languageCode: 'en',
+              title: faker.lorem.sentence(),
+              content: faker.lorem.paragraph(),
+            },
+          ],
+          imageUrlList: [faker.image.url()],
+        },
+      ],
+      bannerImageUrlList: [faker.image.url()],
+      mobileBannerImageUrlList: [faker.image.url()],
+      productBannerImageUrl: faker.image.url(),
+      englishName: faker.company.name(),
+      colorCode: '#ABCDEF',
+      ...overrides,
+    };
+
+    await request(app.getHttpServer())
+      .post(V1_BASE_URL)
+      .set('Authorization', auth)
+      .send(body);
+
+    const listRes = await request(app.getHttpServer())
+      .get(V1_BASE_URL)
+      .set('Authorization', auth);
+
+    return listRes.body.data.list[0].id;
+  }
+
+  // -----------------------------------------------------------------------
+  // GET /admin/brand/v1
+  // -----------------------------------------------------------------------
+  describe('GET /admin/brand/v1', () => {
+    it('브랜드가 없을 때 빈 배열을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .get(V1_BASE_URL)
+        .set('Authorization', await authHeader(app));
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.list).toEqual([]);
+    });
+
+    it('브랜드 리스트에 다국어 이름이 포함된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const koName = `한국어-${Date.now()}`;
+      const enName = `English-${Date.now()}`;
+
+      await createV1Brand(auth, {
+        languageList: [
+          { languageCode: 'ko', name: koName, description: '설명' },
+          { languageCode: 'en', name: enName, description: 'desc' },
+        ],
+      });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(V1_BASE_URL)
+        .set('Authorization', auth);
+
+      // Then
+      expect(res.status).toBe(200);
+      const brand = res.body.data.list[0];
+      expect(brand.nameList).toBeDefined();
+      expect(brand.nameList.length).toBeGreaterThanOrEqual(2);
+
+      const koEntry = brand.nameList.find((n: any) => n.languageCode === 'ko');
+      const enEntry = brand.nameList.find((n: any) => n.languageCode === 'en');
+      expect(koEntry.name).toBe(koName);
+      expect(enEntry.name).toBe(enName);
+    });
+
+    it('colorCode가 리스트에 포함된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      await createV1Brand(auth, { colorCode: '#123456' });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(V1_BASE_URL)
+        .set('Authorization', auth);
+
+      // Then
+      expect(res.body.data.list[0].colorCode).toBe('#123456');
+    });
+
+    it('토큰 없이 요청하면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer()).get(V1_BASE_URL);
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // GET /admin/brand/v1/:id
+  // -----------------------------------------------------------------------
+  describe('GET /admin/brand/v1/:id', () => {
+    it('브랜드 상세 조회 시 다국어 정보가 포함된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const koName = `상세조회-${Date.now()}`;
+      const enName = `Detail-${Date.now()}`;
+      const brandId = await createV1Brand(auth, {
+        languageList: [
+          { languageCode: 'ko', name: koName, description: '한국어설명' },
+          { languageCode: 'en', name: enName, description: 'English desc' },
+        ],
+      });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth);
+
+      // Then
+      expect(res.status).toBe(200);
+      const data = res.body.data;
+      expect(data.id).toBe(brandId);
+      expect(data.languageList).toBeDefined();
+      expect(data.languageList.length).toBeGreaterThanOrEqual(2);
+
+      const ko = data.languageList.find((l: any) => l.languageCode === 'ko');
+      const en = data.languageList.find((l: any) => l.languageCode === 'en');
+      expect(ko.name).toBe(koName);
+      expect(en.name).toBe(enName);
+    });
+
+    it('섹션 정보가 상세 조회에 포함된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const koTitle = '섹션제목-한국어';
+      const brandId = await createV1Brand(auth, {
+        sectionList: [
+          {
+            languageList: [
+              {
+                languageCode: 'ko',
+                title: koTitle,
+                content: '섹션내용',
+              },
+              {
+                languageCode: 'en',
+                title: 'Section Title',
+                content: 'Section content',
+              },
+            ],
+            imageUrlList: [faker.image.url()],
+          },
+        ],
+      });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth);
+
+      // Then
+      expect(res.status).toBe(200);
+      const ko = res.body.data.languageList.find(
+        (l: any) => l.languageCode === 'ko',
+      );
+      expect(ko.section).toBeDefined();
+      expect(ko.section.length).toBe(1);
+      expect(ko.section[0].title).toBe(koTitle);
+    });
+
+    it('배너/모바일배너 이미지 URL 리스트가 포함된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const brandId = await createV1Brand(auth, {
+        bannerImageUrlList: [faker.image.url(), faker.image.url()],
+        mobileBannerImageUrlList: [faker.image.url()],
+      });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.bannerImageUrlList.length).toBe(2);
+      expect(res.body.data.mobileBannerImageUrlList.length).toBe(1);
+    });
+
+    it('존재하지 않는 브랜드 조회 시 에러를 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/999999`)
+        .set('Authorization', await authHeader(app));
+
+      // Then
+      expect(res.status).not.toBe(200);
+    });
+
+    it('토큰 없이 요청하면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer()).get(`${V1_BASE_URL}/1`);
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // PATCH /admin/brand/v1/:id
+  // -----------------------------------------------------------------------
+  describe('PATCH /admin/brand/v1/:id', () => {
+    it('브랜드 이름을 수정하면 변경된 값이 조회된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const brandId = await createV1Brand(auth);
+      const updatedKoName = `수정됨-${Date.now()}`;
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth)
+        .send({
+          languageList: [
+            {
+              languageCode: 'ko',
+              name: updatedKoName,
+              description: '수정된 설명',
+              section: [],
+            },
+            {
+              languageCode: 'en',
+              name: 'Updated Name',
+              description: 'Updated desc',
+              section: [],
+            },
+          ],
+        });
+
+      // Then
+      expect(res.status).toBe(202);
+
+      // When - 상세 조회
+      const detailRes = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth);
+
+      const ko = detailRes.body.data.languageList.find(
+        (l: any) => l.languageCode === 'ko',
+      );
+      expect(ko.name).toBe(updatedKoName);
+    });
+
+    it('colorCode를 수정하면 변경된 값이 조회된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const brandId = await createV1Brand(auth, {
+        colorCode: '#000000',
+      });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth)
+        .send({ colorCode: '#FFFFFF' });
+
+      // Then
+      expect(res.status).toBe(202);
+
+      const detailRes = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth);
+
+      expect(detailRes.body.data.colorCode).toBe('#FFFFFF');
+    });
+
+    it('배너 이미지를 교체하면 새 값이 조회된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const brandId = await createV1Brand(auth);
+      const newBanner = faker.image.url();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth)
+        .send({ bannerImageUrlList: [newBanner] });
+
+      // Then
+      expect(res.status).toBe(202);
+
+      const detailRes = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth);
+
+      expect(detailRes.body.data.bannerImageUrlList.length).toBe(1);
+    });
+
+    it('존재하지 않는 브랜드 수정 시 에러를 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${V1_BASE_URL}/999999`)
+        .set('Authorization', await authHeader(app))
+        .send({ colorCode: '#111111' });
+
+      // Then
+      expect(res.status).not.toBe(202);
+    });
+
+    it('토큰 없이 요청하면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${V1_BASE_URL}/1`)
+        .send({ colorCode: '#111111' });
+
+      // Then
+      expect(res.status).toBe(401);
     });
   });
 });
