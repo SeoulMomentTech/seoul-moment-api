@@ -99,7 +99,8 @@ export class AdminBrandController {
 
   @Patch(':id(\\d+)/v2')
   @ApiOperation({
-    summary: '브랜드 수정 V2',
+    summary: '브랜드 수정 V2 -- deprecated',
+    deprecated: true,
     description:
       '전체 데이터를 교체하는 방식의 브랜드 수정 API입니다. News/Article V2와 동일한 패턴을 따릅니다.',
   })
