@@ -27,17 +27,21 @@ export class AdminCategoryListRequest extends ListFilterDto {
   searchColumn: CategorySearchEnum;
 }
 
-export class GetAdminCategoryNameDto {
+export class AdminCategoryLanguageDto {
   @ApiProperty({
     description: '언어 코드',
     example: LanguageCode.KOREAN,
   })
+  @IsEnum(LanguageCode)
+  @IsDefined()
   languageCode: LanguageCode;
 
   @ApiProperty({
     description: '카테고리 이름',
     example: '뷰티',
   })
+  @IsString()
+  @IsDefined()
   name: string;
 
   static from(languageCode: LanguageCode, name: string) {
@@ -71,9 +75,9 @@ export class GetAdminCategoryResponse {
         name: '時尚',
       },
     ],
-    type: [GetAdminCategoryNameDto],
+    type: [AdminCategoryLanguageDto],
   })
-  nameDto: GetAdminCategoryNameDto[];
+  nameDto: AdminCategoryLanguageDto[];
 
   @ApiProperty({
     description: '생성일',
@@ -87,7 +91,7 @@ export class GetAdminCategoryResponse {
   })
   updateDate: Date;
 
-  static from(entity: CategoryEntity, nameDto: GetAdminCategoryNameDto[]) {
+  static from(entity: CategoryEntity, nameDto: AdminCategoryLanguageDto[]) {
     return plainToInstance(this, {
       id: entity.id,
       nameDto,

@@ -36,6 +36,7 @@ export class AdminCategoryController {
   @Get()
   @ApiOperation({
     summary: '카테고리 목록 조회',
+    deprecated: true,
   })
   @ResponseList(GetAdminCategoryResponse)
   @UseGuards(OneTimeTokenGuard)
@@ -48,7 +49,7 @@ export class AdminCategoryController {
     return new ResponseListDto(result, total);
   }
 
-  @Get(':id')
+  @Get(':id(\\d+)')
   @ApiOperation({
     summary: '카테고리 정보 조회',
   })
@@ -75,7 +76,7 @@ export class AdminCategoryController {
     await this.adminCategoryService.postAdminCategory(body);
   }
 
-  @Delete(':id')
+  @Delete(':id(\\d+)')
   @ApiOperation({
     summary: '카테고리 삭제',
   })
@@ -91,9 +92,10 @@ export class AdminCategoryController {
     await this.adminCategoryService.deleteAdminCategory(id);
   }
 
-  @Patch(':id')
+  @Patch(':id(\\d+)')
   @ApiOperation({
     summary: '카테고리 수정',
+    deprecated: true,
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ResponseException(HttpStatus.NOT_FOUND, '존재하는 카테고리가 없습니다.')
