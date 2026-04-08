@@ -267,7 +267,6 @@ export class S3Service {
    * @returns JPEG 버퍼
    */
   private async convertHeicToJpeg(buffer: Buffer): Promise<Buffer> {
-    this.logger.info('Converting HEIC/HEIF image to JPEG');
     const result = await heicConvert({
       buffer,
       format: 'JPEG',
@@ -282,7 +281,6 @@ export class S3Service {
    * @returns JPEG 버퍼
    */
   private async convertAvifToJpeg(buffer: Buffer): Promise<Buffer> {
-    this.logger.info('Converting AVIF image to JPEG');
     const fs = await import('fs');
     const path = await import('path');
     const wasmPath = path.resolve(
