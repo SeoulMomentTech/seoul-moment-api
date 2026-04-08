@@ -223,4 +223,76 @@ describe('AdminCategoryController (E2E)', () => {
       expect(res.status).toBe(401);
     });
   });
+
+  // -----------------------------------------------------------------------
+  // GET /admin/category/v1/:id
+  // -----------------------------------------------------------------------
+  describe('GET /admin/category/v1/:id', () => {
+    it('카테고리 정보를 조회하면 200과 함께 카테고리 데이터를 반환한다', async () => {
+      // Given
+      const categoryId = await createCategoryWithLanguages({
+        ko: '테스트카테고리',
+        en: 'TestCategory',
+      });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/${categoryId}`)
+        .set('Authorization', await authHeader(app));
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.id).toBe(categoryId);
+      expect(Array.isArray(res.body.data.languageList)).toBe(true);
+      expect(res.body.data.languageList.length).toBeGreaterThan(0);
+      expect(res.body.data).toHaveProperty('createDate');
+      expect(res.body.data).toHaveProperty('updateDate');
+    });
+
+    it('조회된 카테고리의 다국어 정보가 올바르게 반영된다', async () => {
+      // Given
+      const koName = '뷰티';
+      const enName = 'Beauty';
+      const categoryId = await createCategoryWithLanguages({
+        ko: koName,
+        en: enName,
+      });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/${categoryId}`)
+        .set('Authorization', await authHeader(app));
+
+      // Then
+      expect(res.status).toBe(200);
+      const languageList = res.body.data.languageList;
+
+      const koLang = languageList.find((l: any) => l.languageCode === 'ko');
+      expect(koLang).toBeDefined();
+      expect(koLang.name).toBe(koName);
+
+      const enLang = languageList.find((l: any) => l.languageCode === 'en');
+      expect(enLang).toBeDefined();
+      expect(enLang.name).toBe(enName);
+    });
+
+    it('존재하지 않는 카테고리 조회 시 404를 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/999999`)
+        .set('Authorization', await authHeader(app));
+
+      // Then
+      expect(res.status).toBe(404);
+    });
+
+    it('토큰 없이 요청하면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer()).get(`${V1_BASE_URL}/1`);
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+  });
 });

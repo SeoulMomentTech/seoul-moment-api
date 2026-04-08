@@ -227,4 +227,35 @@ export class AdminCategoryService {
     );
     return GetAdminCategoryResponse.from(categoryEntity, nameDto);
   }
+
+  async v1GetAdminCategoryInfo(
+    id: number,
+  ): Promise<V1GetAdminCategoryResponse> {
+    const categoryEntity =
+      await this.categoryRepositoryService.getCategoryById(id);
+
+    const languageList =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const multilingualTextList: MultilingualTextEntity[] = [];
+
+    await Promise.all(
+      languageList.map(async (languageEntity) => {
+        const multilingualText =
+          await this.languageRepositoryService.findMultilingualTexts(
+            EntityType.CATEGORY,
+            categoryEntity.id,
+            languageEntity.code,
+            'name',
+          );
+
+        multilingualTextList.push(...multilingualText);
+      }),
+    );
+
+    return V1GetAdminCategoryResponse.from(
+      categoryEntity,
+      multilingualTextList,
+    );
+  }
 }
