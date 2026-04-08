@@ -52,6 +52,7 @@ export class AdminCategoryController {
   @Get(':id(\\d+)')
   @ApiOperation({
     summary: '카테고리 정보 조회',
+    deprecated: true,
   })
   @ResponseData(GetAdminCategoryResponse)
   @UseGuards(OneTimeTokenGuard)
