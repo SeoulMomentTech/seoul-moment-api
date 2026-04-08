@@ -131,12 +131,14 @@ export class LanguageRepositoryService implements OnModuleInit {
       code: languageCode,
       isActive: true,
     });
+
     if (!language) {
       throw new ServiceError(
         'Language not found',
         ServiceErrorCode.NOT_FOUND_DATA,
       );
     }
+
     return this.saveMultilingualText(
       entityType,
       entityId,
