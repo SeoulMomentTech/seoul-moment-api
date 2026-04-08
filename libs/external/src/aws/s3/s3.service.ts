@@ -7,6 +7,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { Injectable } from '@nestjs/common';
+import heicConvert from 'heic-convert';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -41,7 +42,7 @@ export class S3Service {
 
   constructor(private readonly logger: LoggerService) {
     this.bucketName = Configuration.getConfig().AWS_S3_BUCKET_NAME;
-    this.region = Configuration.getConfig().AWS_REGION;
+    this.region = 'ap-northeast-2';
     this.accessKeyId = Configuration.getConfig().AWS_ACCESS_KEY_ID;
     this.secretAccessKey = Configuration.getConfig().AWS_SECRET_ACCESS_KEY;
 
@@ -140,8 +141,11 @@ export class S3Service {
         imageBuffer = imageBufferOrBase64;
       }
 
+      // HEIC/AVIF 이미지인 경우 JPEG로 선변환
+      const processableBuffer = await this.preProcessImage(imageBuffer);
+
       // 이미지를 webp로 변환
-      const convertedBuffer = await sharp(imageBuffer)
+      const convertedBuffer = await sharp(processableBuffer)
         .webp({ quality })
         .toBuffer();
 
@@ -207,6 +211,114 @@ export class S3Service {
         error.stack,
       );
       throw new Error(`파일 존재 확인 실패: ${error.message}`);
+    }
+  }
+
+  /**
+   * HEIC/AVIF 이미지를 sharp가 처리 가능한 포맷으로 선변환
+   * @param buffer 이미지 버퍼
+   * @returns 처리 가능한 버퍼
+   */
+  private async preProcessImage(buffer: Buffer): Promise<Buffer> {
+    if (this.isHeic(buffer)) {
+      return this.convertHeicToJpeg(buffer);
+    }
+    if (this.isAvif(buffer)) {
+      return this.convertAvifToJpeg(buffer);
+    }
+    return buffer;
+  }
+
+  /**
+   * HEIC/HEIF 포맷 여부를 매직 바이트로 감지
+   * @param buffer 이미지 버퍼
+   * @returns HEIC/HEIF 여부
+   */
+  private isHeic(buffer: Buffer): boolean {
+    if (buffer.length < 12) return false;
+    const ftyp = buffer.toString('ascii', 4, 8);
+    if (ftyp !== 'ftyp') return false;
+    const brand = buffer.toString('ascii', 8, 12);
+    // HEIF 계열: hei*(heic,heix,heim,heis), hev*(hevc,hevx,hevm,hevs), mif1, msf1
+    return (
+      brand.startsWith('hei') ||
+      brand.startsWith('hev') ||
+      brand === 'mif1' ||
+      brand === 'msf1'
+    );
+  }
+
+  /**
+   * AVIF 포맷 여부를 매직 바이트로 감지
+   * @param buffer 이미지 버퍼
+   * @returns AVIF 여부
+   */
+  private isAvif(buffer: Buffer): boolean {
+    if (buffer.length < 12) return false;
+    const ftyp = buffer.toString('ascii', 4, 8);
+    if (ftyp !== 'ftyp') return false;
+    const brand = buffer.toString('ascii', 8, 12);
+    return brand === 'avif' || brand === 'avis';
+  }
+
+  /**
+   * HEIC/HEIF 이미지를 JPEG 버퍼로 변환
+   * @param buffer HEIC 이미지 버퍼
+   * @returns JPEG 버퍼
+   */
+  private async convertHeicToJpeg(buffer: Buffer): Promise<Buffer> {
+    this.logger.info('Converting HEIC/HEIF image to JPEG');
+    const result = await heicConvert({
+      buffer,
+      format: 'JPEG',
+      quality: 1,
+    });
+    return Buffer.from(result);
+  }
+
+  /**
+   * AVIF 이미지를 JPEG 버퍼로 변환 (libheif-js 직접 사용)
+   * @param buffer AVIF 이미지 버퍼
+   * @returns JPEG 버퍼
+   */
+  private async convertAvifToJpeg(buffer: Buffer): Promise<Buffer> {
+    this.logger.info('Converting AVIF image to JPEG');
+    const fs = await import('fs');
+    const path = await import('path');
+    const wasmPath = path.resolve(
+      process.cwd(),
+      'node_modules/@saschazar/wasm-avif/wasm_avif.wasm',
+    );
+    const wasmBinary = fs.readFileSync(wasmPath);
+    const initAvifModule = (await import('@saschazar/wasm-avif')).default;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const avifModule = await initAvifModule({ wasmBinary } as any);
+
+    try {
+      const decoded = avifModule.decode(
+        new Uint8Array(buffer),
+        buffer.length,
+        true,
+      );
+
+      if ('error' in decoded) {
+        throw new Error(`AVIF decode error: ${decoded.error}`);
+      }
+
+      const dims = avifModule.dimensions();
+      const rawBuffer = Buffer.from(decoded as ArrayBuffer);
+
+      return sharp(rawBuffer, {
+        raw: {
+          width: dims.width,
+          height: dims.height,
+          channels: dims.channels as 1 | 2 | 3 | 4,
+        },
+      })
+        .jpeg({ quality: 100 })
+        .toBuffer();
+    } finally {
+      avifModule.free();
     }
   }
 
