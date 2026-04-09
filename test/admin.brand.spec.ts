@@ -781,6 +781,12 @@ describe('AdminBrandController (E2E)', () => {
         .patch(`${V1_BASE_URL}/${brandId}`)
         .set('Authorization', auth)
         .send({
+          categoryId,
+          englishName: faker.company.name(),
+          profileImageUrl: faker.image.url(),
+          productBannerImageUrl: faker.image.url(),
+          bannerImageUrlList: [faker.image.url()],
+          mobileBannerImageUrlList: [faker.image.url()],
           languageList: [
             {
               languageCode: 'ko',
@@ -822,7 +828,29 @@ describe('AdminBrandController (E2E)', () => {
       const res = await request(app.getHttpServer())
         .patch(`${V1_BASE_URL}/${brandId}`)
         .set('Authorization', auth)
-        .send({ colorCode: '#FFFFFF' });
+        .send({
+          categoryId,
+          englishName: faker.company.name(),
+          profileImageUrl: faker.image.url(),
+          productBannerImageUrl: faker.image.url(),
+          bannerImageUrlList: [faker.image.url()],
+          mobileBannerImageUrlList: [faker.image.url()],
+          languageList: [
+            {
+              languageCode: 'ko',
+              name: faker.company.name(),
+              description: faker.company.catchPhrase(),
+              section: [],
+            },
+            {
+              languageCode: 'en',
+              name: faker.company.name(),
+              description: faker.company.catchPhrase(),
+              section: [],
+            },
+          ],
+          colorCode: '#FFFFFF',
+        });
 
       // Then
       expect(res.status).toBe(202);
@@ -844,7 +872,28 @@ describe('AdminBrandController (E2E)', () => {
       const res = await request(app.getHttpServer())
         .patch(`${V1_BASE_URL}/${brandId}`)
         .set('Authorization', auth)
-        .send({ bannerImageUrlList: [newBanner] });
+        .send({
+          categoryId,
+          englishName: faker.company.name(),
+          profileImageUrl: faker.image.url(),
+          productBannerImageUrl: faker.image.url(),
+          bannerImageUrlList: [newBanner],
+          mobileBannerImageUrlList: [faker.image.url()],
+          languageList: [
+            {
+              languageCode: 'ko',
+              name: faker.company.name(),
+              description: faker.company.catchPhrase(),
+              section: [],
+            },
+            {
+              languageCode: 'en',
+              name: faker.company.name(),
+              description: faker.company.catchPhrase(),
+              section: [],
+            },
+          ],
+        });
 
       // Then
       expect(res.status).toBe(202);
@@ -854,6 +903,7 @@ describe('AdminBrandController (E2E)', () => {
         .set('Authorization', auth);
 
       expect(detailRes.body.data.bannerImageUrlList.length).toBe(1);
+      expect(detailRes.body.data.bannerImageUrlList[0]).toBe(newBanner);
     });
 
     it('존재하지 않는 브랜드 수정 시 에러를 반환한다', async () => {
@@ -861,7 +911,23 @@ describe('AdminBrandController (E2E)', () => {
       const res = await request(app.getHttpServer())
         .patch(`${V1_BASE_URL}/999999`)
         .set('Authorization', await authHeader(app))
-        .send({ colorCode: '#111111' });
+        .send({
+          categoryId,
+          englishName: faker.company.name(),
+          profileImageUrl: faker.image.url(),
+          productBannerImageUrl: faker.image.url(),
+          bannerImageUrlList: [faker.image.url()],
+          mobileBannerImageUrlList: [faker.image.url()],
+          languageList: [
+            {
+              languageCode: 'ko',
+              name: faker.company.name(),
+              description: faker.company.catchPhrase(),
+              section: [],
+            },
+          ],
+          colorCode: '#111111',
+        });
 
       // Then
       expect(res.status).not.toBe(202);
@@ -875,6 +941,107 @@ describe('AdminBrandController (E2E)', () => {
 
       // Then
       expect(res.status).toBe(401);
+    });
+
+    it('다국어 정보와 필수 필드를 모두 포함하여 수정하면 변경된 값이 조회된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const brandId = await createV1Brand(auth);
+      const updatedKoName = `한글명-수정-${Date.now()}`;
+
+      // When - PATCH 요청 시 필수 필드 모두 포함
+      const res = await request(app.getHttpServer())
+        .patch(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth)
+        .send({
+          languageList: [
+            {
+              languageCode: 'ko',
+              name: updatedKoName,
+              description: '수정된 한글 설명',
+              section: [],
+            },
+            {
+              languageCode: 'en',
+              name: 'Updated English Name',
+              description: 'Updated English description',
+              section: [],
+            },
+          ],
+          categoryId,
+          englishName: 'Updated English Name',
+          profileImageUrl: faker.image.url(),
+          productBannerImageUrl: faker.image.url(),
+          bannerImageUrlList: [faker.image.url()],
+          mobileBannerImageUrlList: [faker.image.url()],
+        });
+
+      // Then
+      expect(res.status).toBe(202);
+
+      // When - 상세 조회
+      const detailRes = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth);
+
+      expect(detailRes.status).toBe(200);
+      const koLang = detailRes.body.data.languageList.find(
+        (l: any) => l.languageCode === 'ko',
+      );
+      expect(koLang).toBeDefined();
+      expect(koLang.name).toBe(updatedKoName);
+      expect(koLang.description).toBe('수정된 한글 설명');
+    });
+
+    it('모든 필수 필드를 수정하면 변경된 값들이 조회된다', async () => {
+      // Given
+      const auth = await authHeader(app);
+      const brandId = await createV1Brand(auth);
+      const newEnglishName = `English-${Date.now()}`;
+      const newProductBanner = faker.image.url();
+      const newBanner = faker.image.url();
+      const newMobileBanner = faker.image.url();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth)
+        .send({
+          languageList: [
+            {
+              languageCode: 'ko',
+              name: '한글명',
+              description: '한글 설명',
+              section: [],
+            },
+            {
+              languageCode: 'en',
+              name: 'English Name',
+              description: 'English description',
+              section: [],
+            },
+          ],
+          categoryId,
+          englishName: newEnglishName,
+          profileImageUrl: faker.image.url(),
+          productBannerImageUrl: newProductBanner,
+          bannerImageUrlList: [newBanner],
+          mobileBannerImageUrlList: [newMobileBanner],
+        });
+
+      // Then
+      expect(res.status).toBe(202);
+
+      // When - 상세 조회
+      const detailRes = await request(app.getHttpServer())
+        .get(`${V1_BASE_URL}/${brandId}`)
+        .set('Authorization', auth);
+
+      expect(detailRes.status).toBe(200);
+      expect(detailRes.body.data.englishName).toBe(newEnglishName);
+      expect(detailRes.body.data.productBannerImageUrl).toBe(newProductBanner);
+      expect(detailRes.body.data.bannerImageUrlList).toContain(newBanner);
+      expect(detailRes.body.data.mobileBannerImageUrlList).toContain(newMobileBanner);
     });
   });
 });

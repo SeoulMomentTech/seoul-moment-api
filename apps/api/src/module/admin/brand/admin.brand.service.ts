@@ -29,11 +29,12 @@ import {
   V2UpdateAdminBrandRequest,
 } from './admin.brand.dto';
 import {
+  AdminBrandInfoSectionBase,
   V1GetAdminBrandInfoResponse,
-  V1GetAdminBrandInfoSection,
   V1GetAdminBrandInfoText,
   V1GetAdminBrandResponse,
   V1PostAdminBrandRequest,
+  V1UpdateAdminBrandInfoText,
   V1UpdateAdminBrandRequest,
 } from './v1/v1.admin.brand.dto';
 
@@ -897,7 +898,7 @@ export class AdminBrandService {
   @Transactional()
   async v1BrandMultilingualUpdate(
     brandId: number,
-    list: V1GetAdminBrandInfoText[],
+    list: V1GetAdminBrandInfoText[] | V1UpdateAdminBrandInfoText[],
   ) {
     await this.deleteBrandMultilingual(brandId);
 
@@ -907,11 +908,16 @@ export class AdminBrandService {
 
     const sectionEntities = await this.v1CreateSectionEntities(
       brandId,
-      list[0],
+      list[0].section,
     );
 
     for (const content of list) {
-      await this.v1SaveBrandTexts(brandId, content);
+      await this.v1SaveBrandTexts(
+        brandId,
+        content.languageCode,
+        content.name,
+        content.description,
+      );
     }
 
     await this.v1SaveSectionData(sectionEntities, list);
@@ -919,11 +925,11 @@ export class AdminBrandService {
 
   private async v1CreateSectionEntities(
     brandId: number,
-    firstContent: V1GetAdminBrandInfoText,
+    sectionList: AdminBrandInfoSectionBase[],
   ): Promise<BrandSectionEntity[]> {
     const sectionEntities: BrandSectionEntity[] = [];
 
-    for (let i = 0; i < firstContent.section.length; i++) {
+    for (let i = 0; i < sectionList.length; i++) {
       const sectionEntity = await this.brandRepositoryService.insertSection(
         plainToInstance(BrandSectionEntity, { brandId }),
       );
@@ -935,27 +941,29 @@ export class AdminBrandService {
 
   private async v1SaveBrandTexts(
     brandId: number,
-    content: V1GetAdminBrandInfoText,
+    languageCode: LanguageCode,
+    name: string,
+    description: string,
   ) {
     await this.languageRepositoryService.saveMultilingualTextByLanguageCode(
       EntityType.BRAND,
       brandId,
       'name',
-      content.languageCode,
-      content.name,
+      languageCode,
+      name,
     );
     await this.languageRepositoryService.saveMultilingualTextByLanguageCode(
       EntityType.BRAND,
       brandId,
       'description',
-      content.languageCode,
-      content.description,
+      languageCode,
+      description,
     );
   }
 
   private async v1SaveSectionData(
     sectionEntities: BrandSectionEntity[],
-    list: V1GetAdminBrandInfoText[],
+    list: V1GetAdminBrandInfoText[] | V1UpdateAdminBrandInfoText[],
   ) {
     for (let i = 0; i < sectionEntities.length; i++) {
       const sectionEntity = sectionEntities[i];
@@ -964,7 +972,12 @@ export class AdminBrandService {
         const sectionData = content.section[i];
         if (!sectionData) continue;
 
-        await this.v1SaveSectionTexts(sectionEntity.id, content, sectionData);
+        await this.v1SaveSectionTexts(
+          sectionEntity.id,
+          content.languageCode,
+          sectionData.title,
+          sectionData.content,
+        );
       }
 
       const imageList = list[0]?.section[i]?.imageUrlList || [];
@@ -974,22 +987,23 @@ export class AdminBrandService {
 
   private async v1SaveSectionTexts(
     sectionId: number,
-    content: V1GetAdminBrandInfoText,
-    sectionData: V1GetAdminBrandInfoSection,
+    languageCode: LanguageCode,
+    title: string,
+    content: string,
   ) {
     await this.languageRepositoryService.saveMultilingualTextByLanguageCode(
       EntityType.BRAND_SECTION,
       sectionId,
       'title',
-      content.languageCode,
-      sectionData.title,
+      languageCode,
+      title,
     );
     await this.languageRepositoryService.saveMultilingualTextByLanguageCode(
       EntityType.BRAND_SECTION,
       sectionId,
       'content',
-      content.languageCode,
-      sectionData.content,
+      languageCode,
+      content,
     );
   }
 

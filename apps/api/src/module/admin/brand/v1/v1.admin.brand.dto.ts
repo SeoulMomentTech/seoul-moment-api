@@ -247,14 +247,7 @@ export class V1PostAdminBrandRequest {
 }
 
 // ── Response DTOs ──
-
-export class V1GetAdminBrandInfoSection {
-  @ApiProperty({
-    description: '섹션 ID',
-    example: 1,
-  })
-  id: number;
-
+export class AdminBrandInfoSectionBase {
   @ApiProperty({
     description: '섹션 제목',
     example: '브랜드 스토리',
@@ -302,34 +295,29 @@ export class V1GetAdminBrandInfoSection {
   }
 }
 
-export class V1GetAdminBrandInfoText {
+export class V1GetAdminBrandInfoSection extends AdminBrandInfoSectionBase {
   @ApiProperty({
-    description: '언어 코드',
-    example: LanguageCode.KOREAN,
-    enum: LanguageCode,
+    description: '섹션 ID',
+    example: 1,
   })
-  @IsEnum(LanguageCode)
-  @IsDefined()
-  languageCode: LanguageCode;
+  id: number;
+}
 
-  @ApiProperty({
-    description: '브랜드 이름',
-    example: '서울모먼트',
-  })
-  @IsString()
-  @IsDefined()
-  name: string;
-
-  @ApiProperty({
-    description: '브랜드 설명',
-    example: '서울의 특별한 순간들을 담은 라이프스타일 브랜드입니다.',
-  })
-  @IsString()
-  @IsDefined()
-  description: string;
-
+export class V1GetAdminBrandInfoText extends AdminBrandLanguageDto {
   @ApiProperty({
     description: '브랜드 정보 섹션 리스트',
+    example: [
+      {
+        id: 1,
+        title: '브랜드 스토리',
+        content:
+          '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
+        imageUrlList: [
+          'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
+          'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
+        ],
+      },
+    ],
     type: [V1GetAdminBrandInfoSection],
   })
   @IsArray()
@@ -337,6 +325,57 @@ export class V1GetAdminBrandInfoText {
   @Type(() => V1GetAdminBrandInfoSection)
   @IsDefined()
   section: V1GetAdminBrandInfoSection[];
+
+  // eslint-disable-next-line max-lines-per-function
+  static from(
+    entity: BrandEntity,
+    multilingualText: {
+      languageCode: LanguageCode;
+      brandText: MultilingualTextEntity[];
+      sectionText: MultilingualTextEntity[];
+    },
+  ) {
+    const name =
+      multilingualText.brandText.find((t) => t.fieldName === 'name')
+        ?.textContent ?? '';
+    const description =
+      multilingualText.brandText.find((t) => t.fieldName === 'description')
+        ?.textContent ?? '';
+
+    return plainToInstance(this, {
+      languageCode: multilingualText.languageCode,
+      name,
+      description,
+      section: entity.section.map((section) =>
+        V1GetAdminBrandInfoSection.from(section, multilingualText.sectionText),
+      ),
+    });
+  }
+}
+
+export class V1UpdateAdminBrandInfoSection extends AdminBrandInfoSectionBase {}
+
+export class V1UpdateAdminBrandInfoText extends AdminBrandLanguageDto {
+  @ApiProperty({
+    description: '브랜드 정보 섹션 리스트',
+    example: [
+      {
+        title: '브랜드 스토리',
+        content:
+          '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
+        imageUrlList: [
+          'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
+          'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
+        ],
+      },
+    ],
+    type: [V1UpdateAdminBrandInfoSection],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => V1UpdateAdminBrandInfoSection)
+  @IsDefined()
+  section: V1UpdateAdminBrandInfoSection[];
 
   // eslint-disable-next-line max-lines-per-function
   static from(
@@ -554,22 +593,22 @@ export class V1GetAdminBrandResponse {
 // ── Update Request DTO ──
 
 export class V1UpdateAdminBrandRequest {
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: '카테고리 ID',
     example: 1,
   })
   @IsNumber()
   @Type(() => Number)
-  @IsOptional()
-  categoryId?: number;
+  @IsDefined()
+  categoryId: number;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: '영어 브랜드 이름',
     example: 'Seoul Moment',
   })
-  @IsOptional()
+  @IsDefined()
   @IsString()
-  englishName?: string;
+  englishName: string;
 
   @ApiPropertyOptional({
     description: '프로필 이미지 URL (도메인 포함)',
@@ -580,16 +619,16 @@ export class V1UpdateAdminBrandRequest {
   @IsOptional()
   profileImageUrl?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: '상품 배너 이미지 URL (도메인 포함)',
     example:
       'https://image-dev.seoulmoment.com.tw/brand-products/2025-09-16/seoul-moment-product-banner.jpg',
   })
   @IsString()
-  @IsOptional()
-  productBannerImageUrl?: string;
+  @IsDefined()
+  productBannerImageUrl: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: '배너 이미지 URL 리스트 (전체 교체)',
     example: [
       'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
@@ -597,10 +636,10 @@ export class V1UpdateAdminBrandRequest {
     ],
   })
   @IsArray()
-  @IsOptional()
-  bannerImageUrlList?: string[];
+  @IsDefined()
+  bannerImageUrlList: string[];
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: '모바일 배너 이미지 URL 리스트 (전체 교체)',
     example: [
       'https://image-dev.seoulmoment.com.tw/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-01.jpg',
@@ -608,18 +647,36 @@ export class V1UpdateAdminBrandRequest {
     ],
   })
   @IsArray()
-  @IsOptional()
-  mobileBannerImageUrlList?: string[];
+  @IsDefined()
+  mobileBannerImageUrlList: string[];
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: '다국어 브랜드 정보 리스트 (전체 교체, 한국어/영어/중국어)',
-    type: [V1GetAdminBrandInfoText],
+    example: [
+      {
+        languageCode: LanguageCode.KOREAN,
+        name: '서울모먼트',
+        description: '서울의 특별한 순간들을 담은 라이프스타일 브랜드입니다.',
+        section: [
+          {
+            title: '브랜드 스토리',
+            content:
+              '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
+            imageUrlList: [
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-01.jpg',
+              'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-story-02.jpg',
+            ],
+          },
+        ],
+      },
+    ],
+    type: [V1UpdateAdminBrandInfoText],
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => V1GetAdminBrandInfoText)
-  @IsOptional()
-  languageList?: V1GetAdminBrandInfoText[];
+  @Type(() => V1UpdateAdminBrandInfoText)
+  @IsDefined()
+  languageList: V1UpdateAdminBrandInfoText[];
 
   @ApiPropertyOptional({
     description: '색상 코드',
