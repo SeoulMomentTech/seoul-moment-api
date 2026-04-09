@@ -80,8 +80,11 @@ export class GetProductBannerByBrandResponse {
   like: number;
 
   static from(entity: BrandEntity, multilingualText: MultilingualTextEntity[]) {
-    const name = MultilingualFieldDto.fromByEntity(multilingualText, 'name');
-    const description = MultilingualFieldDto.fromByEntity(
+    const name = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'name',
+    );
+    const description = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'description',
     );
@@ -150,7 +153,10 @@ export class GetProductCategoryResponse {
   ) {
     multilingualText = multilingualText.filter((v) => v.entityId === entity.id);
 
-    const name = MultilingualFieldDto.fromByEntity(multilingualText, 'name');
+    const name = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'name',
+    );
 
     return plainToInstance(this, {
       id: entity.id,
@@ -380,15 +386,15 @@ export class GetProductResponse {
         .includes(text.entityId),
     );
 
-    const brandName = MultilingualFieldDto.fromByEntity(
+    const brandName = MultilingualFieldDto.fromByEntityList(
       multilingualText.brand,
       'name',
     );
-    const productName = MultilingualFieldDto.fromByEntity(
+    const productName = MultilingualFieldDto.fromByEntityList(
       multilingualText.product,
       'name',
     );
-    const optionValue = MultilingualFieldDto.fromByEntity(
+    const optionValue = MultilingualFieldDto.fromByEntityList(
       multilingualText.optionValue,
       'value',
     );
@@ -654,17 +660,17 @@ export class GetProductDetailResponse {
     option: Record<string, any>,
     relate: GetProductResponse[],
   ) {
-    const name = MultilingualFieldDto.fromByEntity(
+    const name = MultilingualFieldDto.fromByEntityList(
       multilingualText.product,
       'name',
     );
 
-    const origin = MultilingualFieldDto.fromByEntity(
+    const origin = MultilingualFieldDto.fromByEntityList(
       multilingualText.product,
       'origin',
     );
 
-    const brandName = MultilingualFieldDto.fromByEntity(
+    const brandName = MultilingualFieldDto.fromByEntityList(
       multilingualText.brand,
       'name',
     );
@@ -816,7 +822,7 @@ export class GetProductOptionValueResponse {
     entity: OptionValueEntity,
     multilingual: MultilingualTextEntity[],
   ) {
-    const value = MultilingualFieldDto.fromByEntity(multilingual, 'value');
+    const value = MultilingualFieldDto.fromByEntityList(multilingual, 'value');
 
     return plainToInstance(this, {
       id: entity.id,
@@ -957,7 +963,7 @@ export class GetProductSortFilterResponse {
   ) {
     multilingual = multilingual.filter((v) => v.entityId === entity.id);
 
-    const name = MultilingualFieldDto.fromByEntity(multilingual, 'name');
+    const name = MultilingualFieldDto.fromByEntityList(multilingual, 'name');
     return plainToInstance(this, {
       id: entity.id,
       name: name.getContent(),

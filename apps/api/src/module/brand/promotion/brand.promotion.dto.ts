@@ -122,7 +122,7 @@ export class GetBrandPromotionBrandDetailResponse {
     multilingualTexts: MultilingualTextEntity[],
   ) {
     const descriptionTextsByEntityAndLanguage =
-      MultilingualFieldDto.fromByEntity(multilingualTexts, 'description');
+      MultilingualFieldDto.fromByEntityList(multilingualTexts, 'description');
 
     return {
       id: entity.brand.id,
@@ -184,7 +184,7 @@ export class GetBrandPromotionBannerResponse {
     entity: BrandPromotionBannerEntity,
     multilingualTexts: MultilingualTextEntity[],
   ) {
-    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntityList(
       multilingualTexts,
       'title',
     );
@@ -309,11 +309,11 @@ export class GetBrandPromotionProductResponse {
       (v) => v.entityId === entity.product.id,
     );
 
-    const brandName = MultilingualFieldDto.fromByEntity(
+    const brandName = MultilingualFieldDto.fromByEntityList(
       multilingualText.brand,
       'name',
     );
-    const productName = MultilingualFieldDto.fromByEntity(
+    const productName = MultilingualFieldDto.fromByEntityList(
       multilingualText.product,
       'name',
     );
@@ -442,8 +442,11 @@ export class GetBrandPromotionPopupResponse {
       (v) => v.entityId === entity.id,
     );
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualTexts, 'title');
-    const description = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualTexts,
+      'title',
+    );
+    const description = MultilingualFieldDto.fromByEntityList(
       multilingualTexts,
       'description',
     );
@@ -514,8 +517,11 @@ export class GetBrandPromotionEventCouponResponse {
     entity: BrandPromotionEventCouponEntity,
     multilingualTexts: MultilingualTextEntity[],
   ) {
-    const title = MultilingualFieldDto.fromByEntity(multilingualTexts, 'title');
-    const description = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualTexts,
+      'title',
+    );
+    const description = MultilingualFieldDto.fromByEntityList(
       multilingualTexts,
       'description',
     );
@@ -567,7 +573,10 @@ export class GetBrandPromotionEventAndCouponResponse {
       (v) => v.entityId === entity.id,
     );
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualTexts, 'title');
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualTexts,
+      'title',
+    );
 
     return plainToInstance(this, {
       id: entity.id,
@@ -603,7 +612,7 @@ export class GetBrandPromotionNoticeResponse {
       (v) => v.entityId === entity.id,
     );
 
-    const content = MultilingualFieldDto.fromByEntity(
+    const content = MultilingualFieldDto.fromByEntityList(
       multilingualTexts,
       'content',
     );

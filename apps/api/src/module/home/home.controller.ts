@@ -13,9 +13,10 @@ export class HomeController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get Home with Multilingual Support',
+    summary: 'Get Home with Multilingual Support -- deprecated',
     description:
       'Returns home information in the specified language. Supports Korean (ko), English (en), and Chinese (zh).',
+    deprecated: true,
   })
   @ApiHeader({
     name: 'Accept-language',

@@ -38,7 +38,8 @@ export class AdminBrandController {
 
   @Post()
   @ApiOperation({
-    summary: '브랜드 다국어 등록',
+    summary: '브랜드 다국어 등록 -- deprecated',
+    deprecated: true,
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(OneTimeTokenGuard)
@@ -49,7 +50,8 @@ export class AdminBrandController {
 
   @Get(':id(\\d+)')
   @ApiOperation({
-    summary: '브랜드 다국어 조회',
+    summary: '브랜드 다국어 조회 -- deprecated',
+    deprecated: true,
   })
   @ResponseData(GetAdminBrandInfoResponse)
   @UseGuards(OneTimeTokenGuard)
@@ -63,7 +65,8 @@ export class AdminBrandController {
 
   @Get()
   @ApiOperation({
-    summary: '브랜드 리스트 조회',
+    summary: '브랜드 리스트 조회 -- deprecated',
+    deprecated: true,
   })
   @ResponseList(GetAdminBrandResponse)
   @UseGuards(OneTimeTokenGuard)
@@ -80,6 +83,7 @@ export class AdminBrandController {
   @Patch(':id(\\d+)')
   @ApiOperation({
     summary: '브랜드 수정 브랜드 수정값 -- deprecated',
+    deprecated: true,
     description:
       '이미지 수정시 이미지 URL 은 도메인을 제외한 경로만 입력해주세요. ex) /brand-profiles/2025-09-16/seoul-moment-profile.jpg',
   })
@@ -95,7 +99,8 @@ export class AdminBrandController {
 
   @Patch(':id(\\d+)/v2')
   @ApiOperation({
-    summary: '브랜드 수정 V2',
+    summary: '브랜드 수정 V2 -- deprecated',
+    deprecated: true,
     description:
       '전체 데이터를 교체하는 방식의 브랜드 수정 API입니다. News/Article V2와 동일한 패턴을 따릅니다.',
   })

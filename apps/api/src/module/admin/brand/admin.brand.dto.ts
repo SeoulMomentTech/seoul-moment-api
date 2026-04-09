@@ -101,11 +101,11 @@ export class PostAdminBrandSection {
   textList: PostAdminBrandSectionInfo[];
 
   @ApiProperty({
-    description: 'S3 업로드 후 섹션 이미지 이미지 경로',
+    description: 'S3 업로드 후 섹션 이미지 URL (도메인 포함)',
     example: [
-      '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
-      '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
-      '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-01.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-02.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-03.jpg',
     ],
   })
   @IsArray()
@@ -152,8 +152,9 @@ export class PostAdminBrandRequest {
   categoryId: number;
 
   @ApiPropertyOptional({
-    description: 'S3 업로드 후 브랜드 프로필 이미지 경로',
-    example: '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
+    description: 'S3 업로드 후 브랜드 프로필 이미지 URL (도메인 포함)',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
   })
   @IsString()
   @IsOptional()
@@ -185,9 +186,9 @@ export class PostAdminBrandRequest {
           },
         ],
         imageUrlList: [
-          '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
-          '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
-          '/brand-profiles/2025-09-16/seoul-moment-profile.jpg',
+          'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-01.jpg',
+          'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-02.jpg',
+          'https://image-dev.seoulmoment.com.tw/brand-sections/2025-09-16/section-03.jpg',
         ],
       },
     ],
@@ -199,11 +200,11 @@ export class PostAdminBrandRequest {
   sectionList: PostAdminBrandSection[];
 
   @ApiProperty({
-    description: 'S3 업로드 후 배너 이미지 경로',
+    description: 'S3 업로드 후 배너 이미지 URL (도메인 포함)',
     example: [
-      '/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
-      '/brand-banners/2025-09-16/seoul-moment-banner-02.jpg',
-      '/brand-banners/2025-09-16/seoul-moment-banner-03.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-banner-01.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-banner-02.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-banners/2025-09-16/seoul-moment-banner-03.jpg',
     ],
   })
   @IsArray()
@@ -211,11 +212,11 @@ export class PostAdminBrandRequest {
   bannerImageUrlList: string[];
 
   @ApiProperty({
-    description: 'S3 업로드 후 모바일 배너 이미지 경로',
+    description: 'S3 업로드 후 모바일 배너 이미지 URL (도메인 포함)',
     example: [
-      '/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-01.jpg',
-      '/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-02.jpg',
-      '/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-03.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-01.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-02.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-mobile-banners/2025-09-16/seoul-moment-mobile-banner-03.jpg',
     ],
   })
   @IsArray()
@@ -223,8 +224,9 @@ export class PostAdminBrandRequest {
   mobileBannerImageUrlList: string[];
 
   @ApiProperty({
-    description: 'S3 업로드 후 상품 배너 이미지 경로',
-    example: '/brand-products/2025-09-16/seoul-moment-product-banner.jpg',
+    description: 'S3 업로드 후 상품 배너 이미지 URL (도메인 포함)',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-products/2025-09-16/seoul-moment-product-banner.jpg',
   })
   @IsString()
   @IsDefined()
@@ -320,7 +322,7 @@ export class GetAdminBrandInfoSection {
       content: contentField.getContent(),
       imageList: entity.sectionImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((v) => v.getImage()),
+        .map((v) => v.getImageUrl()),
     });
   }
 }
@@ -537,11 +539,11 @@ export class GetAdminBrandInfoResponse {
       bannerList: entity.bannerImage
         .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((v) => v.getImage()),
+        .map((v) => v.getImageUrl()),
       mobileBannerList: entity.mobileBannerImage
         .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((v) => v.getImage()),
+        .map((v) => v.getImageUrl()),
       multilingualTextList,
       colorCode: entity.colorCode,
     });

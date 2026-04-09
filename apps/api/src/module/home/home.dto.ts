@@ -4,14 +4,8 @@ import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { PromotionEntity } from '@app/repository/entity/promotion.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { plainToInstance, Type } from 'class-transformer';
-import {
-  IsArray,
-  IsDefined,
-  IsNumber,
-  IsString,
-  ValidateNested,
-} from 'class-validator';
+import { plainToInstance } from 'class-transformer';
+import { IsDefined, IsNumber, IsString } from 'class-validator';
 
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
@@ -49,9 +43,12 @@ export class GetHomePromotion {
   ) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'title',
+    );
 
-    const description = MultilingualFieldDto.fromByEntity(
+    const description = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'description',
     );
@@ -64,6 +61,8 @@ export class GetHomePromotion {
     });
   }
 }
+
+// ─── 기존 DTO (deprecated) ───
 
 export class GetHomeNews {
   @ApiProperty({ description: '뉴스 ID', example: 1 })
@@ -96,8 +95,11 @@ export class GetHomeNews {
   static from(entity: NewsEntity, multilingualText: MultilingualTextEntity[]) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
-    const content = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'title',
+    );
+    const content = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'content',
     );
@@ -147,8 +149,11 @@ export class GetHomeArticle {
   ) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
-    const content = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'title',
+    );
+    const content = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'content',
     );
@@ -187,8 +192,11 @@ export class GetHomePromotionResponse {
   ) {
     multilingualText = multilingualText.filter((v) => entity.id === v.entityId);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingualText, 'title');
-    const description = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'title',
+    );
+    const description = MultilingualFieldDto.fromByEntityList(
       multilingualText,
       'description',
     );
@@ -237,25 +245,6 @@ export class GetHomeResponse {
     type: [GetHomeBanner],
   })
   banner: GetHomeBanner[];
-
-  @ApiProperty({
-    description: '프로모션 리스트',
-    example: [
-      {
-        id: 1,
-        thumbnailImageUrl:
-          'https://image-dev.seoulmoment.com.tw/promotions/2025-09-16/promotion-01.jpg',
-        title: '프로모션 제목',
-        description: '프로모션 내용',
-      },
-    ],
-    type: [GetHomePromotionResponse],
-  })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => GetHomePromotionResponse)
-  @IsDefined()
-  promotionList: GetHomePromotionResponse[];
 
   @ApiProperty({
     description: '홈 프로모션 리스트',

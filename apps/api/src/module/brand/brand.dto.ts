@@ -69,7 +69,7 @@ export class GetBrandIntroduceSection {
       content: contentField.getContentByLanguageWithFallback(language) || '',
       imageList: entity.sectionImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((v) => v.getImage()),
+        .map((v) => v.getImageUrl()),
     });
   }
 }
@@ -154,11 +154,11 @@ export class GetBrandIntroduceResponse {
       bannerList: entity.bannerImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
-        .map((v) => v.getImage()),
+        .map((v) => v.getImageUrl()),
       mobileBannerList: entity.mobileBannerImage
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .filter((v) => v.imageUrl !== null && v.imageUrl !== '')
-        .map((v) => v.getImage()),
+        .map((v) => v.getImageUrl()),
       name: nameField.getContentByLanguageWithFallback(language) || '',
       description:
         descriptionField.getContentByLanguageWithFallback(language) || '',
@@ -201,7 +201,10 @@ export class GetBrandListByName {
   static from(entity: BrandEntity, multilingualText: MultilingualTextEntity[]) {
     multilingualText = multilingualText.filter((v) => v.entityId === entity.id);
 
-    const name = MultilingualFieldDto.fromByEntity(multilingualText, 'name');
+    const name = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'name',
+    );
 
     return plainToInstance(this, {
       id: entity.id,

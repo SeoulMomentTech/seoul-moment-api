@@ -1,5 +1,10 @@
-import moment from 'moment';
-import { BaseEntity, CreateDateColumn, Index, UpdateDateColumn } from 'typeorm';
+import {
+  BaseEntity,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Index,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export abstract class CommonEntity extends BaseEntity {
   @Index()
@@ -15,11 +20,9 @@ export abstract class CommonEntity extends BaseEntity {
   })
   updateDate: Date;
 
-  createDateToString(): string {
-    return moment(this.createDate).format('YYYY-MM-DD hh:mm:ss');
-  }
-
-  updateDateToString(): string {
-    return moment(this.updateDate).format('YYYY-MM-DD hh:mm:ss');
-  }
+  @DeleteDateColumn({
+    type: 'timestamp with time zone',
+    nullable: true,
+  })
+  deleteDate?: Date;
 }

@@ -3,7 +3,7 @@ import { SupportEnv } from '../enum/config.enum';
 
 const getConfig = (): ConfigImpl => ({
   NODE_ENV: SupportEnv.LOCAL,
-  PORT: 3111,
+  PORT: parseInt(process.env.PORT || '3111'),
   API_VERSION: 'v1',
 
   IMAGE_DOMAIN_NAME: process.env.IMAGE_DOMAIN_NAME || '',
@@ -13,18 +13,18 @@ const getConfig = (): ConfigImpl => ({
   AWS_REGION: process.env.AWS_REGION || '',
   AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME || '',
 
-  DATABASE_HOST: process.env.DATABASE_HOST,
-  DATABASE_PORT: parseInt(process.env.DATABASE_PORT),
-  DATABASE_USERNAME: process.env.DATABASE_USERNAME,
-  DATABASE_PASSWORD: process.env.DATABASE_PASSWORD,
-  DATABASE_NAME: process.env.DATABASE_NAME,
+  DATABASE_HOST: process.env.DATABASE_HOST || '',
+  DATABASE_PORT: parseInt(process.env.DATABASE_PORT || '5432'),
+  DATABASE_USERNAME: process.env.DATABASE_USERNAME || '',
+  DATABASE_PASSWORD: process.env.DATABASE_PASSWORD || '',
+  DATABASE_NAME: process.env.DATABASE_NAME || '',
 
-  JWT_SECRET: process.env.JWT_SECRET,
-  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN,
+  JWT_SECRET: process.env.JWT_SECRET || '',
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
 
-  REDIS_HOST: process.env.REDIS_HOST,
-  REDIS_PORT: parseInt(process.env.REDIS_PORT),
-  REDIS_DB: parseInt(process.env.REDIS_DB),
+  REDIS_HOST: process.env.REDIS_HOST || '',
+  REDIS_PORT: parseInt(process.env.REDIS_PORT || '6379'),
+  REDIS_DB: parseInt(process.env.REDIS_DB || '1'),
 
   GOOGLE_SHEET_SERVICE_EMAIL: process.env.GOOGLE_SHEET_SERVICE_EMAIL || '',
   GOOGLE_SHEET_SERVICE_PRIMARY: process.env.GOOGLE_SHEET_SERVICE_PRIMARY || '',

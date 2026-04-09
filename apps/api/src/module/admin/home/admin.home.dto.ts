@@ -1,5 +1,5 @@
 import { HomeBannerImageEntity } from '@app/repository/entity/home-banner-image.entity';
-import { HomeBannerStatus } from '@app/repository/enum/home-banner-image.enum';
+import { HomeBannerImageStatus } from '@app/repository/enum/home-banner-image.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 import {
@@ -31,10 +31,10 @@ export class GetHomeBannerResponse {
 
   @ApiProperty({
     description: '배너 상태',
-    example: HomeBannerStatus.NORMAL,
+    example: HomeBannerImageStatus.NORMAL,
   })
-  @IsEnum(HomeBannerStatus)
-  status: HomeBannerStatus;
+  @IsEnum(HomeBannerImageStatus)
+  status: HomeBannerImageStatus;
 
   @ApiProperty({
     description: '생성일',
@@ -53,7 +53,9 @@ export class GetHomeBannerResponse {
       id: entity.id,
       image: entity.getImage(),
       mobileImage: entity.getMobileImage(),
-      status: entity.status,
+      status: entity.deleteDate
+        ? HomeBannerImageStatus.DELETE
+        : HomeBannerImageStatus.NORMAL,
       createDate: entity.createDate,
       updateDate: entity.updateDate,
     });

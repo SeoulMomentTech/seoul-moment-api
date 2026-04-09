@@ -72,7 +72,7 @@ export class AdminBrandPromotionNoticeService {
 
     const brandPromotionNoticeList = brandPromotionNotice.map(
       (brandPromotionNotice) => {
-        const contentByEntity = MultilingualFieldDto.fromByEntity(
+        const contentByEntity = MultilingualFieldDto.fromByEntityList(
           multilingualTexts.filter(
             (v) => v.entityId === brandPromotionNotice.id,
           ),
@@ -166,7 +166,7 @@ export class AdminBrandPromotionNoticeService {
       ),
     ]);
 
-    const contentByEntity = MultilingualFieldDto.fromByEntity(
+    const contentByEntity = MultilingualFieldDto.fromByEntityList(
       multilingualTexts,
       'content',
     );

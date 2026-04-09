@@ -31,7 +31,10 @@ export class AdminHomeController {
   constructor(private readonly adminHomeService: AdminHomeService) {}
 
   @Get('banner')
-  @ApiOperation({ summary: '홈 배너 이미지 리스트 조회' })
+  @ApiOperation({
+    summary: '홈 배너 이미지 리스트 조회 -- deprecated',
+    deprecated: true,
+  })
   @ResponseList(GetHomeBannerResponse)
   @UseGuards(OneTimeTokenGuard)
   @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
@@ -44,7 +47,10 @@ export class AdminHomeController {
 
   @Post('banner')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: '홈 배너 이미지 추가' })
+  @ApiOperation({
+    summary: '홈 배너 이미지 추가 -- deprecated',
+    deprecated: true,
+  })
   @ResponseException(HttpStatus.INTERNAL_SERVER_ERROR, '서버 에러')
   @UseGuards(OneTimeTokenGuard)
   @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
@@ -54,7 +60,10 @@ export class AdminHomeController {
 
   @Patch('banner/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: '홈 배너 이미지 수정' })
+  @ApiOperation({
+    summary: '홈 배너 이미지 수정 -- deprecated',
+    deprecated: true,
+  })
   @ResponseException(HttpStatus.NOT_FOUND, '존재하는 홈 배너 이미지가 없음')
   @ResponseException(HttpStatus.INTERNAL_SERVER_ERROR, '서버 에러')
   @UseGuards(OneTimeTokenGuard)

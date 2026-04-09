@@ -32,7 +32,10 @@ export class MultilingualFieldDto {
     this.texts = texts;
   }
 
-  static fromByEntity(enitity: MultilingualTextEntity[], fieldName: string) {
+  static fromByEntityList(
+    enitity: MultilingualTextEntity[],
+    fieldName: string,
+  ) {
     return new MultilingualFieldDto(
       enitity
         .filter((v) => v.fieldName === fieldName)
@@ -43,8 +46,19 @@ export class MultilingualFieldDto {
     );
   }
 
+  static fromByEntity(enitity: MultilingualTextEntity): MultilingualTextDto {
+    return {
+      language: enitity.language.code,
+      content: enitity.textContent,
+    };
+  }
+
   getContent(): string | null {
     return this.texts[0]?.content ? this.texts[0].content : null;
+  }
+
+  getLanguageCode(): LanguageCode | null {
+    return this.texts[0]?.language ? this.texts[0].language : null;
   }
 
   getContentByLanguage(language: LanguageCode): string | null {

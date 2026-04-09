@@ -53,8 +53,8 @@ export class GetPartnerResponse {
   static from(entity: PartnerEntity, multilingual: MultilingualTextEntity[]) {
     multilingual = multilingual.filter((v) => v.entityId === entity.id);
 
-    const title = MultilingualFieldDto.fromByEntity(multilingual, 'title');
-    const description = MultilingualFieldDto.fromByEntity(
+    const title = MultilingualFieldDto.fromByEntityList(multilingual, 'title');
+    const description = MultilingualFieldDto.fromByEntityList(
       multilingual,
       'description',
     );
@@ -88,7 +88,7 @@ export class GetPartnerCategoryResponse {
   ) {
     multilingual = multilingual.filter((v) => v.entityId === entity.id);
 
-    const name = MultilingualFieldDto.fromByEntity(multilingual, 'name');
+    const name = MultilingualFieldDto.fromByEntityList(multilingual, 'name');
 
     return plainToInstance(this, {
       id: entity.id,

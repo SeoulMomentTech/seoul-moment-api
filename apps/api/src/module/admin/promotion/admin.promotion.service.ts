@@ -64,15 +64,16 @@ export class AdminPromotionService {
       );
 
     const promotionListResponse = promotionList.map((promotion) => {
-      const titleByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+      const titleByEntityAndLanguage = MultilingualFieldDto.fromByEntityList(
         multilingualTexts.filter((v) => v.entityId === promotion.id),
         'title',
       );
 
-      const descriptionByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
-        multilingualTexts.filter((v) => v.entityId === promotion.id),
-        'description',
-      );
+      const descriptionByEntityAndLanguage =
+        MultilingualFieldDto.fromByEntityList(
+          multilingualTexts.filter((v) => v.entityId === promotion.id),
+          'description',
+        );
 
       return GetAdminPromotionResponse.from(
         promotion,
@@ -103,15 +104,13 @@ export class AdminPromotionService {
         id,
       );
 
-    const titleByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+    const titleByEntityAndLanguage = MultilingualFieldDto.fromByEntityList(
       multilingualTexts,
       'title',
     );
 
-    const descriptionByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
-      multilingualTexts,
-      'description',
-    );
+    const descriptionByEntityAndLanguage =
+      MultilingualFieldDto.fromByEntityList(multilingualTexts, 'description');
 
     return GetAdminPromotionDetailResponse.from(
       promotion,

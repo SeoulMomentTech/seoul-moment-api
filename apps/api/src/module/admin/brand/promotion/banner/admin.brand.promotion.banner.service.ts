@@ -84,12 +84,13 @@ export class AdminBrandPromotionBannerService {
 
     const brandPromotionBannerList = brandPromotionBanners.map(
       (brandPromotionBanner) => {
-        const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
-          multilingualTexts.filter(
-            (v) => v.entityId === brandPromotionBanner.id,
-          ),
-          'title',
-        );
+        const titleTextsByEntityAndLanguage =
+          MultilingualFieldDto.fromByEntityList(
+            multilingualTexts.filter(
+              (v) => v.entityId === brandPromotionBanner.id,
+            ),
+            'title',
+          );
 
         const nameDto = languages.map((language) =>
           AdminBrandPromotionBannerLanguageDto.from(
@@ -126,7 +127,7 @@ export class AdminBrandPromotionBannerService {
       ),
     ]);
 
-    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntity(
+    const titleTextsByEntityAndLanguage = MultilingualFieldDto.fromByEntityList(
       multilingualTexts,
       'title',
     );

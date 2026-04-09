@@ -17,7 +17,7 @@ import { BrandSectionImageEntity } from '../entity/brand-section-image.entity';
 import { BrandSectionEntity } from '../entity/brand-section.entity';
 import { BrandEntity } from '../entity/brand.entity';
 import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
-import { BrandStatus, BrandNameFilter } from '../enum/brand.enum';
+import { BrandNameFilter } from '../enum/brand.enum';
 import { BrandSearchEnum } from '../enum/brand.repository.enum';
 import { EntityType } from '../enum/entity.enum';
 import { SortOrderHelper } from '../helper/sort-order.helper';
@@ -47,27 +47,19 @@ export class BrandRepositoryService {
   ) {}
 
   async findAllNormalBrandList(): Promise<BrandEntity[]> {
-    return this.brandRepository.findBy({
-      status: BrandStatus.NORMAL,
-    });
+    return this.brandRepository.find();
   }
 
   async findBrandById(id: number): Promise<BrandEntity | null> {
-    return this.brandRepository.findOneBy({
-      id,
-      status: BrandStatus.NORMAL,
-    });
+    return this.brandRepository.findOneBy({ id });
   }
 
   async getBrandById(id: number): Promise<BrandEntity> {
-    const result = await this.brandRepository.findOneBy({
-      id,
-      status: BrandStatus.NORMAL,
-    });
+    const result = await this.brandRepository.findOneBy({ id });
 
     if (!result) {
       throw new ServiceError(
-        'Brand not found or not in normal status',
+        'Brand not found',
         ServiceErrorCode.NOT_FOUND_DATA,
       );
     }
@@ -92,7 +84,7 @@ export class BrandRepositoryService {
           languageId: 2, // 영어 ID
         },
       )
-      .where('brand.status = :status', { status: BrandStatus.NORMAL });
+      .where('brand.deleteDate IS NULL');
 
     const firstLetterCondition = this.getFirstLetterCondition(type);
     query.andWhere(firstLetterCondition);

@@ -1,6 +1,7 @@
 import { OpenaiService } from '@app/external/openai/openai.service';
 import { UpdateCategoryDto } from '@app/repository/dto/category.dto';
 import { CategoryEntity } from '@app/repository/entity/category.entity';
+import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { LanguageName } from '@app/repository/enum/language.enum';
 import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
@@ -12,10 +13,14 @@ import { Transactional } from 'typeorm-transactional';
 import {
   AdminCategoryListRequest,
   GetAdminCategoryResponse,
-  GetAdminCategoryNameDto,
+  AdminCategoryLanguageDto,
   PostAdminCategoryRequest,
   UpdateAdminCategoryRequest,
 } from './admin.category.dto';
+import {
+  V1GetAdminCategoryResponse,
+  V1UpdateAdminCategoryRequest,
+} from './v1/v1.admin.category.dto';
 
 @Injectable()
 export class AdminCategoryService {
@@ -52,7 +57,7 @@ export class AdminCategoryService {
                 'name',
               );
             if (multilingualText.length > 0) {
-              return GetAdminCategoryNameDto.from(
+              return AdminCategoryLanguageDto.from(
                 languageEntity.code,
                 multilingualText[0].textContent,
               );
@@ -65,6 +70,44 @@ export class AdminCategoryService {
     );
 
     return [categoryList, total];
+  }
+
+  async v1GetAdminCategoryList(
+    request: AdminCategoryListRequest,
+  ): Promise<[V1GetAdminCategoryResponse[], number]> {
+    const [categoryEntityList, total] =
+      await this.categoryRepositoryService.findCategoryByFilter(
+        request.page,
+        request.count,
+        request.search,
+        request.searchColumn,
+        request.sort,
+      );
+
+    const languageList =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const multilingualTextList: MultilingualTextEntity[] = [];
+
+    await Promise.all(
+      languageList.map(async (languageEntity) => {
+        const multilingualText =
+          await this.languageRepositoryService.findMultilingualTextsByEntities(
+            EntityType.CATEGORY,
+            categoryEntityList.map((v) => v.id),
+            languageEntity.code,
+          );
+
+        multilingualTextList.push(...multilingualText);
+      }),
+    );
+
+    return [
+      categoryEntityList.map((v) =>
+        V1GetAdminCategoryResponse.from(v, multilingualTextList),
+      ),
+      total,
+    ];
   }
 
   @Transactional()
@@ -133,6 +176,30 @@ export class AdminCategoryService {
     }
   }
 
+  @Transactional()
+  async v1UpdateAdminCategory(id: number, dto: V1UpdateAdminCategoryRequest) {
+    await this.categoryRepositoryService.getCategoryById(id);
+
+    const updateDto: UpdateCategoryDto = {
+      id,
+      sortOrder: dto.sortOrder,
+    };
+
+    await this.categoryRepositoryService.updateCategory(updateDto);
+
+    await Promise.all(
+      dto.languageList.flatMap((v) => [
+        this.languageRepositoryService.saveMultilingualTextByLanguageCode(
+          EntityType.CATEGORY,
+          id,
+          'name',
+          v.languageCode,
+          v.name,
+        ),
+      ]),
+    );
+  }
+
   async getAdminCategoryInfo(id: number): Promise<GetAdminCategoryResponse> {
     const categoryEntity =
       await this.categoryRepositoryService.getCategoryById(id);
@@ -150,7 +217,7 @@ export class AdminCategoryService {
             'name',
           );
         if (multilingualText.length > 0) {
-          return GetAdminCategoryNameDto.from(
+          return AdminCategoryLanguageDto.from(
             languageEntity.code,
             multilingualText[0].textContent,
           );
@@ -159,5 +226,36 @@ export class AdminCategoryService {
       }),
     );
     return GetAdminCategoryResponse.from(categoryEntity, nameDto);
+  }
+
+  async v1GetAdminCategoryInfo(
+    id: number,
+  ): Promise<V1GetAdminCategoryResponse> {
+    const categoryEntity =
+      await this.categoryRepositoryService.getCategoryById(id);
+
+    const languageList =
+      await this.languageRepositoryService.findAllActiveLanguages();
+
+    const multilingualTextList: MultilingualTextEntity[] = [];
+
+    await Promise.all(
+      languageList.map(async (languageEntity) => {
+        const multilingualText =
+          await this.languageRepositoryService.findMultilingualTexts(
+            EntityType.CATEGORY,
+            categoryEntity.id,
+            languageEntity.code,
+            'name',
+          );
+
+        multilingualTextList.push(...multilingualText);
+      }),
+    );
+
+    return V1GetAdminCategoryResponse.from(
+      categoryEntity,
+      multilingualTextList,
+    );
   }
 }
