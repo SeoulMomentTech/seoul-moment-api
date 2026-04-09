@@ -35,6 +35,7 @@ git diff HEAD
 - **타입 안전성**: `any` 사용, null/undefined 처리 누락
 - **NestJS 패턴**: Controller에 비즈니스 로직 없는지, `ServiceError` 사용 여부
 - **데코레이터**: class-validator, @nestjs/swagger (@ApiProperty에 description/example)
+- **Swagger 데코레이터 누락**: DTO 프로퍼티에 @ApiProperty 또는 @ApiPropertyOptional이 빠져 있으면 직접 채워넣는다
 - **코드 스타일**: 함수 50줄 제한, console.log 사용, 미사용 import
 
 ## Step 4: 리뷰 결과 보고

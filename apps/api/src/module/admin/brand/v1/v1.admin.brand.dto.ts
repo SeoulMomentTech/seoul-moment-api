@@ -252,6 +252,8 @@ export class AdminBrandInfoSectionBase {
     description: '섹션 제목',
     example: '브랜드 스토리',
   })
+  @IsString()
+  @IsDefined()
   title: string;
 
   @ApiProperty({
@@ -259,6 +261,8 @@ export class AdminBrandInfoSectionBase {
     example:
       '서울모먼트는 2020년 설립된 라이프스타일 브랜드로, 서울의 특별한 순간들을 제품에 담아내고 있습니다.',
   })
+  @IsString()
+  @IsDefined()
   content: string;
 
   @ApiProperty({
@@ -269,6 +273,9 @@ export class AdminBrandInfoSectionBase {
     ],
     type: [String],
   })
+  @IsArray()
+  @IsString({ each: true })
+  @IsDefined()
   imageUrlList: string[];
 
   // eslint-disable-next-line max-lines-per-function
@@ -300,6 +307,9 @@ export class V1GetAdminBrandInfoSection extends AdminBrandInfoSectionBase {
     description: '섹션 ID',
     example: 1,
   })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
   id: number;
 }
 
@@ -510,12 +520,16 @@ export class V1GetAdminBrandNameDto {
     example: LanguageCode.KOREAN,
     enum: LanguageCode,
   })
+  @IsEnum(LanguageCode)
+  @IsDefined()
   languageCode: LanguageCode;
 
   @ApiProperty({
     description: '브랜드 이름',
     example: '서울모먼트',
   })
+  @IsString()
+  @IsDefined()
   name: string;
 }
 
@@ -524,6 +538,9 @@ export class V1GetAdminBrandResponse {
     description: '브랜드 ID',
     example: 1,
   })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
   id: number;
 
   @ApiProperty({
@@ -544,24 +561,34 @@ export class V1GetAdminBrandResponse {
     ],
     type: [V1GetAdminBrandNameDto],
   })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => V1GetAdminBrandNameDto)
+  @IsDefined()
   nameList: V1GetAdminBrandNameDto[];
 
   @ApiProperty({
     description: '생성일',
     example: '2025-01-01T12:00:00.000Z',
   })
+  @IsString()
+  @IsDefined()
   createDate: Date;
 
   @ApiProperty({
     description: '수정일',
     example: '2025-01-01T12:00:00.000Z',
   })
+  @IsString()
+  @IsDefined()
   updateDate: Date;
 
   @ApiProperty({
     description: '색상 코드',
     example: '#FF0000',
   })
+  @IsString()
+  @IsDefined()
   colorCode: string;
 
   // eslint-disable-next-line max-lines-per-function
