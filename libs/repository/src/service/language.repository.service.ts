@@ -74,7 +74,8 @@ export class LanguageRepositoryService implements OnModuleInit {
   ): Promise<MultilingualTextEntity[]> {
     const queryBuilder = this.multilingualTextRepository
       .createQueryBuilder('mt')
-      .leftJoinAndSelect('mt.language', 'lang')
+      .leftJoin('mt.language', 'lang')
+      .addSelect(['lang.id', 'lang.code', 'lang.sortOrder'])
       .where('mt.entityType = :entityType', { entityType })
       .andWhere('mt.entityId = :entityId', { entityId })
       .andWhere('lang.isActive = true');
@@ -104,7 +105,8 @@ export class LanguageRepositoryService implements OnModuleInit {
 
     const queryBuilder = this.multilingualTextRepository
       .createQueryBuilder('mt')
-      .leftJoinAndSelect('mt.language', 'lang')
+      .leftJoin('mt.language', 'lang')
+      .addSelect(['lang.id', 'lang.code', 'lang.sortOrder'])
       .where('mt.entityType = :entityType', { entityType })
       .andWhere('mt.entityId IN (:...entityIds)', { entityIds })
       .andWhere('lang.isActive = true');
