@@ -21,6 +21,9 @@ describe('AdminCategoryController (E2E)', () => {
 
     // Given - 언어 시드 데이터 준비
     await ensureLanguageSeed();
+
+    // Given - 선행 spec이 남긴 category/multilingual_text 정리
+    await truncateTables(dataSource, ['multilingual_text', 'category']);
   }, 60_000);
 
   async function ensureLanguageSeed() {
