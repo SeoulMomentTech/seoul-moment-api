@@ -5,7 +5,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateAdminNewsImage } from 'apps/api/src/module/admin/news/admin.news.dto';
 import { In, Like, Not, Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 
+import { LanguageRepositoryService } from './language.repository.service';
 import { UpdateNewsDto } from '../dto/news.dto';
 import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
 import { NewsSectionImageEntity } from '../entity/news-section-image.entity';
@@ -32,6 +34,7 @@ export class NewsRepositoryService {
     private readonly multilingualTextRepository: Repository<MultilingualTextEntity>,
 
     private readonly sortOrderHelper: SortOrderHelper,
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
   async findAllNormalNewsList(): Promise<NewsEntity[]> {
@@ -167,6 +170,28 @@ export class NewsRepositoryService {
 
   async delete(id: number) {
     await this.newsRepository.delete(id);
+  }
+
+  @Transactional()
+  async deleteWithMultilingual(id: number): Promise<void> {
+    const news = await this.newsRepository.findOne({ where: { id } });
+    if (!news) return;
+
+    const sectionIds = (news.section ?? []).map((s) => s.id);
+
+    await this.newsRepository.delete(id);
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.NEWS,
+      id,
+    );
+
+    for (const sectionId of sectionIds) {
+      await this.languageRepositoryService.deleteMultilingualTexts(
+        EntityType.NEWS_SECTION,
+        sectionId,
+      );
+    }
   }
 
   async findNewsSectionByNewsId(newsId: number): Promise<NewsSectionEntity[]> {

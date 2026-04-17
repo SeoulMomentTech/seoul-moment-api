@@ -5,7 +5,9 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Like, Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 
+import { LanguageRepositoryService } from './language.repository.service';
 import {
   OptionSortDto,
   UpdateOptionDto,
@@ -35,6 +37,7 @@ export class OptionRepositoryService {
     private readonly multilingualTextRepository: Repository<MultilingualTextEntity>,
 
     private readonly sortOrderHelper: SortOrderHelper,
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
   async getOption(): Promise<OptionEntity[]> {
@@ -141,6 +144,24 @@ export class OptionRepositoryService {
 
   async deleteOptionValue(id: number) {
     return this.optionValueRepository.delete(id);
+  }
+
+  @Transactional()
+  async deleteOptionWithMultilingual(id: number): Promise<void> {
+    await this.optionRepository.delete(id);
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.OPTION,
+      id,
+    );
+  }
+
+  @Transactional()
+  async deleteOptionValueWithMultilingual(id: number): Promise<void> {
+    await this.optionValueRepository.delete(id);
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.OPTION_VALUE,
+      id,
+    );
   }
 
   async updateOption(dto: UpdateOptionDto) {

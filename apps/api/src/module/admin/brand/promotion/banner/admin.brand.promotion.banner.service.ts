@@ -192,7 +192,9 @@ export class AdminBrandPromotionBannerService {
   }
 
   async deleteBrandPromotionBanner(id: number) {
-    await this.brandPromotionRepositoryService.deleteBrandPromotionBanner(id);
+    await this.brandPromotionRepositoryService.deleteBrandPromotionBannerWithMultilingual(
+      id,
+    );
   }
 
   private async createBrandPromotionBannerImage(

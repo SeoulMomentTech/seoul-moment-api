@@ -93,10 +93,7 @@ export class AdminProductCategoryService {
 
   @Transactional()
   async deleteAdminProductCategory(id: number) {
-    await this.categoryRepositoryService.deleteProductCategory(id);
-
-    await this.languageRepositoryService.deleteMultilingualTexts(
-      EntityType.PRODUCT_CATEGORY,
+    await this.categoryRepositoryService.deleteProductCategoryWithMultilingual(
       id,
     );
   }

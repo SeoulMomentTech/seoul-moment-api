@@ -142,10 +142,7 @@ export class AdminBrandPromotionNoticeService {
 
   @Transactional()
   async deleteBrandPromotionNotice(id: number) {
-    await this.brandPromotionRepositoryService.deleteBrandPromotionNotice(id);
-
-    await this.languageRepositoryService.deleteMultilingualTexts(
-      EntityType.BRAND_PROMOTION_NOTICE,
+    await this.brandPromotionRepositoryService.deleteBrandPromotionNoticeWithMultilingual(
       id,
     );
   }

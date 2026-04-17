@@ -1,14 +1,7 @@
 import { DatabaseSort } from '@app/common/enum/global.enum';
-import {
-  Column,
-  Entity,
-  Index,
-  OneToMany,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -35,10 +28,4 @@ export class ProductFilterEntity extends CommonEntity {
 
   @Column('boolean', { default: true, nullable: false })
   isActive: boolean;
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 }

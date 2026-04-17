@@ -119,22 +119,12 @@ export class AdminProductOptionService {
 
   @Transactional()
   async deleteAdminProductOption(id: number) {
-    await this.optionRepositoryService.deleteOption(id);
-
-    await this.languageRepositoryService.deleteMultilingualTexts(
-      EntityType.OPTION,
-      id,
-    );
+    await this.optionRepositoryService.deleteOptionWithMultilingual(id);
   }
 
   @Transactional()
   async deleteAdminProductOptionValue(id: number) {
-    await this.optionRepositoryService.deleteOptionValue(id);
-
-    await this.languageRepositoryService.deleteMultilingualTexts(
-      EntityType.OPTION_VALUE,
-      id,
-    );
+    await this.optionRepositoryService.deleteOptionValueWithMultilingual(id);
   }
 
   @Transactional()

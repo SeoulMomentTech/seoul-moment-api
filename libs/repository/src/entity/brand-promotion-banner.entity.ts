@@ -10,7 +10,6 @@ import {
 import { BrandPromotionBannerImageEntity } from './brand-promotion-banner.image.entity';
 import { BrandPromotionEntity } from './brand-promotion.entity';
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -47,10 +46,4 @@ export class BrandPromotionBannerEntity extends CommonEntity {
     },
   )
   images: BrandPromotionBannerImageEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 }

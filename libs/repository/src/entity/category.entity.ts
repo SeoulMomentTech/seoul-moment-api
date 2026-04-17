@@ -3,7 +3,6 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { ArticleEntity } from './article.entity';
 import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { NewsEntity } from './news.entity';
 import { ProductCategoryEntity } from './product-category.entity';
 import { ProductEntity } from './product.entity';
@@ -48,10 +47,4 @@ export class CategoryEntity extends CommonEntity {
     },
   )
   productCategory: ProductCategoryEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 }

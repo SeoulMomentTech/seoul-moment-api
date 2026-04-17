@@ -4,7 +4,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import moment from 'moment-timezone';
 import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 
+import { LanguageRepositoryService } from './language.repository.service';
 import {
   UpdateBrandPromotionBannerDto,
   UpdateBrandPromotionBannerImageDto,
@@ -67,7 +69,63 @@ export class BrandPromotionRepositoryService {
 
     @InjectRepository(BrandPromotionEventCouponEntity)
     private readonly brandPromotionEventCouponRepository: Repository<BrandPromotionEventCouponEntity>,
+
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
+
+  @Transactional()
+  async deletePromotionWithMultilingual(id: number): Promise<void> {
+    await this.deletePromotion(id);
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.PROMOTION,
+      id,
+    );
+  }
+
+  @Transactional()
+  async deleteBrandPromotionWithMultilingual(id: number): Promise<void> {
+    await this.deleteBrandPromotion(id);
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION,
+      id,
+    );
+  }
+
+  @Transactional()
+  async deleteBrandPromotionBannerWithMultilingual(id: number): Promise<void> {
+    await this.deleteBrandPromotionBanner(id);
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_BANNER,
+      id,
+    );
+  }
+
+  @Transactional()
+  async deleteBrandPromotionNoticeWithMultilingual(id: number): Promise<void> {
+    await this.deleteBrandPromotionNotice(id);
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_NOTICE,
+      id,
+    );
+  }
+
+  @Transactional()
+  async deleteBrandPromotionPopupWithMultilingual(id: number): Promise<void> {
+    await this.deleteBrandPromotionPopup(id);
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_POPUP,
+      id,
+    );
+  }
+
+  @Transactional()
+  async deleteBrandPromotionEventWithMultilingual(id: number): Promise<void> {
+    await this.deleteBrandPromotionEvent(id);
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND_PROMOTION_EVENT,
+      id,
+    );
+  }
 
   async createBrandPromotion(
     brandPromotion: BrandPromotionEntity,

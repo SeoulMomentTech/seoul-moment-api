@@ -7,6 +7,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GetProductDetailOptionValue } from 'apps/api/src/module/product/product.dto';
 import { Not, Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 
 import { LanguageRepositoryService } from './language.repository.service';
 import {
@@ -697,6 +698,15 @@ export class ProductRepositoryService implements OnModuleInit {
 
   async delete(id: number) {
     return this.productRepository.delete(id);
+  }
+
+  @Transactional()
+  async deleteWithMultilingual(id: number): Promise<void> {
+    await this.productRepository.delete(id);
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.PRODUCT,
+      id,
+    );
   }
 
   async update(entity: UpdateProductDto) {

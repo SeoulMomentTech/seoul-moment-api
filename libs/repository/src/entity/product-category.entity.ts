@@ -10,7 +10,6 @@ import {
 
 import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { ProductEntity } from './product.entity';
 import { EntityType } from '../enum/entity.enum';
 
@@ -42,12 +41,6 @@ export class ProductCategoryEntity extends CommonEntity {
   })
   @JoinColumn({ name: 'category_id' })
   category: CategoryEntity;
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 
   getImage(): string {
     return `${Configuration.getConfig().IMAGE_DOMAIN_NAME}${this.imageUrl}`;

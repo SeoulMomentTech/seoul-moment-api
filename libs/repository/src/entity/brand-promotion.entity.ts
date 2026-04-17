@@ -15,7 +15,6 @@ import { BrandPromotionPopupEntity } from './brand-promotion-popup.entity';
 import { BrandPromotionSectionEntity } from './brand-promotion-section.entity';
 import { BrandEntity } from './brand.entity';
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { PromotionEntity } from './promotion.entity';
 import { EntityType } from '../enum/entity.enum';
 
@@ -78,12 +77,6 @@ export class BrandPromotionEntity extends CommonEntity {
     },
   )
   notices: BrandPromotionNoticeEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 
   @OneToMany(() => BrandPromotionEventEntity, (event) => event.brandPromotion, {
     cascade: true,

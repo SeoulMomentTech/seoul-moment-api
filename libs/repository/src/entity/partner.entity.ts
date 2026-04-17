@@ -4,12 +4,10 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { PartnerCategoryEntity } from './partner-category.entity';
 import { EntityType } from '../enum/entity.enum';
 
@@ -36,12 +34,6 @@ export class PartnerEntity extends CommonEntity {
   })
   @JoinColumn({ name: 'partner_category_id' })
   partnerCategory: PartnerCategoryEntity;
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 
   getImage(): string {
     return this.image

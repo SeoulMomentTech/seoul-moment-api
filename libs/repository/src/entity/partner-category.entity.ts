@@ -1,7 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { PartnerEntity } from './partner.entity';
 import { EntityType } from '../enum/entity.enum';
 
@@ -25,10 +24,4 @@ export class PartnerCategoryEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   partner: PartnerEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 }

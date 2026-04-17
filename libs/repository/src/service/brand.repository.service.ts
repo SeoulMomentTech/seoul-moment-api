@@ -9,7 +9,9 @@ import {
   UpdateAdminBrandSectionSortOrder,
 } from 'apps/api/src/module/admin/brand/admin.brand.dto';
 import { In, Like, Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 
+import { LanguageRepositoryService } from './language.repository.service';
 import { UpdateBrandDto } from '../dto/brand.dto';
 import { BrandBannerImageEntity } from '../entity/brand-banner-image.entity';
 import { BrandMobileBannerImageEntity } from '../entity/brand-mobile-banner-image.entity';
@@ -44,6 +46,7 @@ export class BrandRepositoryService {
     private readonly multilingualTextRepository: Repository<MultilingualTextEntity>,
 
     private readonly sortOrderHelper: SortOrderHelper,
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
   async findAllNormalBrandList(): Promise<BrandEntity[]> {
@@ -240,6 +243,28 @@ export class BrandRepositoryService {
 
   async delete(id: number) {
     await this.brandRepository.delete(id);
+  }
+
+  @Transactional()
+  async deleteWithMultilingual(id: number): Promise<void> {
+    const brand = await this.brandRepository.findOne({ where: { id } });
+    if (!brand) return;
+
+    const sectionIds = (brand.section ?? []).map((s) => s.id);
+
+    await this.brandRepository.delete(id);
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.BRAND,
+      id,
+    );
+
+    for (const sectionId of sectionIds) {
+      await this.languageRepositoryService.deleteMultilingualTexts(
+        EntityType.BRAND_SECTION,
+        sectionId,
+      );
+    }
   }
 
   async deleteSectionImageBySectionId(sectionId: number) {

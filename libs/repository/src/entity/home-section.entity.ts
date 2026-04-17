@@ -2,7 +2,6 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
 import { HomeSectionImageEntity } from './home-section-image.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -31,10 +30,4 @@ export class HomeSectionEntity extends CommonEntity {
     },
   )
   sectionImage: HomeSectionImageEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 }

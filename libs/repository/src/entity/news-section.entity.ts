@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { NewsSectionImageEntity } from './news-section-image.entity';
 import { NewsEntity } from './news.entity';
 import { EntityType } from '../enum/entity.enum';
@@ -45,10 +44,4 @@ export class NewsSectionEntity extends CommonEntity {
     },
   )
   sectionImage: NewsSectionImageEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 }

@@ -10,7 +10,6 @@ import {
 import { BrandPromotionPopupImageEntity } from './brand-promotion-popup-image.entity';
 import { BrandPromotionEntity } from './brand-promotion.entity';
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -67,10 +66,4 @@ export class BrandPromotionPopupEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   images: BrandPromotionPopupImageEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 }

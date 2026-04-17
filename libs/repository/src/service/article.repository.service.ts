@@ -5,7 +5,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateAdminArticleImage } from 'apps/api/src/module/admin/article/admin.article.dto';
 import { In, Like, Not, Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 
+import { LanguageRepositoryService } from './language.repository.service';
 import { UpdateArticleDto } from '../dto/article.dto';
 import { ArticleSectionImageEntity } from '../entity/article-section-image.entity';
 import { ArticleSectionEntity } from '../entity/article-section.entity';
@@ -32,6 +34,7 @@ export class ArticleRepositoryService {
     private readonly multilingualTextRepository: Repository<MultilingualTextEntity>,
 
     private readonly sortOrderHelper: SortOrderHelper,
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
   async findAllNormalArticleList(): Promise<ArticleEntity[]> {
@@ -175,5 +178,32 @@ export class ArticleRepositoryService {
 
   async deleteSectionById(id: number) {
     await this.articleSectionRepository.delete(id);
+  }
+
+  @Transactional()
+  async deleteWithMultilingual(id: number): Promise<void> {
+    const article = await this.articleRepository.findOne({ where: { id } });
+    if (!article) return;
+
+    const sectionIds = (article.section ?? []).map((s) => s.id);
+
+    for (const sectionId of sectionIds) {
+      await this.articleSectionImageRepository.delete({ sectionId });
+      await this.articleSectionRepository.delete(sectionId);
+    }
+
+    await this.articleRepository.delete(id);
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.ARTICLE,
+      id,
+    );
+
+    for (const sectionId of sectionIds) {
+      await this.languageRepositoryService.deleteMultilingualTexts(
+        EntityType.ARTICLE_SECTION,
+        sectionId,
+      );
+    }
   }
 }

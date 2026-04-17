@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Like, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 
+import { LanguageRepositoryService } from './language.repository.service';
 import { UpdateCategoryDto } from '../dto/category.dto';
 import { UpdateProductCategoryDto } from '../dto/product.dto';
 import { CategoryEntity } from '../entity/category.entity';
@@ -28,6 +29,7 @@ export class CategoryRepositoryService {
     private readonly multilingualTextRepository: Repository<MultilingualTextEntity>,
 
     private readonly sortOrderHelper: SortOrderHelper,
+    private readonly languageRepositoryService: LanguageRepositoryService,
   ) {}
 
   async getCategoryById(id: number): Promise<CategoryEntity> {
@@ -154,6 +156,15 @@ export class CategoryRepositoryService {
 
   async deleteProductCategory(id: number): Promise<void> {
     await this.productCategoryRepository.delete({ id });
+  }
+
+  @Transactional()
+  async deleteProductCategoryWithMultilingual(id: number): Promise<void> {
+    await this.productCategoryRepository.delete({ id });
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.PRODUCT_CATEGORY,
+      id,
+    );
   }
 
   async updateProductCategory(

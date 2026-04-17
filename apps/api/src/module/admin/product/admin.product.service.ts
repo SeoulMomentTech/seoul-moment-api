@@ -124,15 +124,10 @@ export class AdminProductService {
     }
   }
 
+  @Transactional()
   async deleteAdminProduct(id: number) {
     await this.productRepositoryService.getProductByProductId(id);
-
-    await this.productRepositoryService.delete(id);
-
-    await this.languageRepositoryService.deleteMultilingualTexts(
-      EntityType.PRODUCT,
-      id,
-    );
+    await this.productRepositoryService.deleteWithMultilingual(id);
   }
 
   @Transactional()

@@ -152,10 +152,7 @@ export class AdminPromotionService {
 
   @Transactional()
   async deletePromotion(id: number) {
-    await this.brandPromotionRepositoryService.deletePromotion(id);
-
-    await this.languageRepositoryService.deleteMultilingualTexts(
-      EntityType.PROMOTION,
+    await this.brandPromotionRepositoryService.deletePromotionWithMultilingual(
       id,
     );
   }

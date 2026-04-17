@@ -326,19 +326,8 @@ export class AdminArticleService {
 
   @Transactional()
   async deleteAdminArticle(articleId: number) {
-    const articleEntity =
-      await this.articleRepositoryService.getArticleById(articleId);
-
-    await this.articleRepositoryService.delete(articleId);
-
-    await Promise.all(
-      articleEntity.section.map((section) =>
-        this.languageRepositoryService.deleteMultilingualTexts(
-          EntityType.ARTICLE_SECTION,
-          section.id,
-        ),
-      ),
-    );
+    await this.articleRepositoryService.getArticleById(articleId);
+    await this.articleRepositoryService.deleteWithMultilingual(articleId);
   }
 
   @Transactional()

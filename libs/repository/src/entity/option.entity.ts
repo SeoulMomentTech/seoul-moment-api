@@ -7,7 +7,6 @@ import {
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { OptionValueEntity } from './option-value.entity';
 import { EntityType } from '../enum/entity.enum';
 import { OptionUiType } from '../enum/option.enum';
@@ -55,10 +54,4 @@ export class OptionEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   values: OptionValueEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 }

@@ -292,7 +292,9 @@ export class AdminBrandPromotionService {
   }
 
   async deleteBrandPromotion(id: number) {
-    await this.brandPromotionRepositoryService.deleteBrandPromotion(id);
+    await this.brandPromotionRepositoryService.deleteBrandPromotionWithMultilingual(
+      id,
+    );
   }
 
   private async getBrandPromotionMultilingualText(

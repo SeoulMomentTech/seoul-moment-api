@@ -461,7 +461,6 @@ export class AdminNewsService {
 
   @Transactional()
   async deleteAdminNews(newsId: number) {
-    await this.deleteNewsMultilingual(newsId);
-    await this.newsRepositoryService.delete(newsId);
+    await this.newsRepositoryService.deleteWithMultilingual(newsId);
   }
 }

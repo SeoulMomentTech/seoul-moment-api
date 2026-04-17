@@ -12,7 +12,6 @@ import {
 import { BrandEntity } from './brand.entity';
 import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { ProductCategoryEntity } from './product-category.entity';
 import { ProductImageEntity } from './product-image.entity';
 import { ProductItemEntity } from './product-item.entity';
@@ -105,12 +104,6 @@ export class ProductEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   images: ProductImageEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 
   @OneToMany(() => ProductItemEntity, (productItem) => productItem.product, {
     cascade: true,

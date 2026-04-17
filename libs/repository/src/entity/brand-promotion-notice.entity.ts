@@ -3,13 +3,11 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
 import { BrandPromotionEntity } from './brand-promotion.entity';
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -33,10 +31,4 @@ export class BrandPromotionNoticeEntity extends CommonEntity {
   )
   @JoinColumn({ name: 'brand_promotion_id' })
   brandPromotion: BrandPromotionEntity;
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 }

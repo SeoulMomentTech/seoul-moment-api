@@ -11,7 +11,6 @@ import {
 import { ArticleSectionImageEntity } from './article-section-image.entity';
 import { ArticleEntity } from './article.entity';
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -45,10 +44,4 @@ export class ArticleSectionEntity extends CommonEntity {
     },
   )
   sectionImage: ArticleSectionImageEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 }

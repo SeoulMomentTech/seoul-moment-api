@@ -192,10 +192,7 @@ export class AdminBrandPromotionEventService {
 
   @Transactional()
   async deleteBrandPromotionEvent(id: number) {
-    await this.brandPromotionRepositoryService.deleteBrandPromotionEvent(id);
-
-    await this.languageRepositoryService.deleteMultilingualTexts(
-      EntityType.BRAND_PROMOTION_EVENT,
+    await this.brandPromotionRepositoryService.deleteBrandPromotionEventWithMultilingual(
       id,
     );
   }

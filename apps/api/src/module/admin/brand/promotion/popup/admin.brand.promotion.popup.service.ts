@@ -176,9 +176,7 @@ export class AdminBrandPromotionPopupService {
   }
 
   async deleteBrandPromotionPopup(id: number) {
-    await this.brandPromotionRepositoryService.deleteBrandPromotionPopup(id);
-    await this.languageRepositoryService.deleteMultilingualTexts(
-      EntityType.BRAND_PROMOTION_POPUP,
+    await this.brandPromotionRepositoryService.deleteBrandPromotionPopupWithMultilingual(
       id,
     );
   }

@@ -3,7 +3,6 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { BrandPromotionEntity } from './brand-promotion.entity';
 import { CommonEntity } from './common.entity';
-import { MultilingualTextEntity } from './multilingual-text.entity';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -41,12 +40,6 @@ export class PromotionEntity extends CommonEntity {
     },
   )
   brandPromotions: BrandPromotionEntity[];
-
-  @OneToMany(() => MultilingualTextEntity, (text) => text.entityId, {
-    cascade: true,
-    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
-  })
-  multilingualTexts: MultilingualTextEntity[];
 
   getBannerImageUrl(): string {
     return this.bannerImagePath

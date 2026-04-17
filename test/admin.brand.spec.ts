@@ -1041,7 +1041,9 @@ describe('AdminBrandController (E2E)', () => {
       expect(detailRes.body.data.englishName).toBe(newEnglishName);
       expect(detailRes.body.data.productBannerImageUrl).toBe(newProductBanner);
       expect(detailRes.body.data.bannerImageUrlList).toContain(newBanner);
-      expect(detailRes.body.data.mobileBannerImageUrlList).toContain(newMobileBanner);
+      expect(detailRes.body.data.mobileBannerImageUrlList).toContain(
+        newMobileBanner,
+      );
     });
   });
 });
