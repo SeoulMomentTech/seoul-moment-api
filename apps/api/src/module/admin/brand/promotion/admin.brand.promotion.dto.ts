@@ -1,5 +1,7 @@
 import { BrandPromotionEntity } from '@app/repository/entity/brand-promotion.entity';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
+import { BrandPromotionEventStatus } from '@app/repository/enum/brand-promotion-event.enum';
+import { BrandPromotionSectionType } from '@app/repository/enum/brand-promotion-section';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Transform, Type } from 'class-transformer';
@@ -16,20 +18,25 @@ import {
 
 import { ListFilterDto } from '../../admin.dto';
 import {
+  AdminBrandPromotionBannerLanguageDto,
   GetAdminBrandPromotionBannerResponse,
   PostAdminBrandPromotionBannerBaseDto,
 } from './banner/admin.brand.promotion.banner.dto';
 import {
+  GetAdminBrandPromotionEventCouponLanguageDto,
   GetAdminBrandPromotionEventCouponResponse,
+  GetAdminBrandPromotionEventLanguageDto,
   GetAdminBrandPromotionEventResponse,
   PostAdminBrandPromotionEventBaseDto,
   PostAdminBrandPromotionEventCouponBaseDto,
 } from './event/admin.brand.promotion.event.dto';
 import {
+  GetAdminBrandPromotionNoticeLanguageDto,
   GetAdminBrandPromotionNoticeResponse,
   PostAdminBrandPromotionNoticeBaseDto,
 } from './notice/admin.brand.promotion.notice.dto';
 import {
+  GetAdminBrandPromotionPopupLanguageDto,
   GetAdminBrandPromotionPopupResponse,
   PostAdminBrandPromotionPopupBaseDto,
 } from './popup/admin.brand.promotion.popup.dto';
@@ -448,6 +455,359 @@ export class GetAdminBrandPromotionDetailResponse {
       noticeList,
     });
   }
+}
+
+export class PatchAdminBrandPromotionBannerDto {
+  @ApiProperty({
+    description: '배너 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-promotion-banners/2025-09-16/banner-01.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  imageUrl: string;
+
+  @ApiProperty({
+    description: '모바일 배너 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-promotion-banners/2025-09-16/banner-01.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  mobileImageUrl: string;
+
+  @ApiProperty({
+    description: '배너 링크 URL',
+    example: 'https://example.com',
+  })
+  @IsString()
+  @IsDefined()
+  linkUrl: string;
+
+  @ApiProperty({
+    description: '언어별 내용',
+    type: [AdminBrandPromotionBannerLanguageDto],
+    example: [
+      { languageCode: LanguageCode.KOREAN, title: '제목' },
+      { languageCode: LanguageCode.ENGLISH, title: 'TITLE' },
+      { languageCode: LanguageCode.TAIWAN, title: '중국어 제목' },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AdminBrandPromotionBannerLanguageDto)
+  @IsDefined()
+  language: AdminBrandPromotionBannerLanguageDto[];
+}
+
+export class PatchAdminBrandPromotionSectionDto {
+  @ApiProperty({
+    description: '브랜드 프로모션 섹션 타입',
+    example: BrandPromotionSectionType.TYPE_1,
+    enum: BrandPromotionSectionType,
+  })
+  @IsEnum(BrandPromotionSectionType)
+  @IsDefined()
+  type: BrandPromotionSectionType;
+
+  @ApiProperty({
+    description: '브랜드 프로모션 섹션 이미지 URL 리스트',
+    example: [
+      'https://image-dev.seoulmoment.com.tw/brand-promotion-sections/2025-09-16/section-01.jpg',
+      'https://image-dev.seoulmoment.com.tw/brand-promotion-sections/2025-09-16/section-02.jpg',
+    ],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsDefined()
+  imageUrlList: string[];
+}
+
+export class PatchAdminBrandPromotionPopupDto {
+  @ApiProperty({ description: '장소', example: '장소' })
+  @IsString()
+  @IsDefined()
+  place: string;
+
+  @ApiProperty({ description: '주소', example: '주소' })
+  @IsString()
+  @IsDefined()
+  address: string;
+
+  @ApiProperty({ description: '위도', example: 37.5665 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  latitude: number;
+
+  @ApiProperty({ description: '경도', example: 127.036344 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  longitude: number;
+
+  @ApiProperty({ description: '시작일', example: '2025-01-01' })
+  @IsString()
+  @IsDefined()
+  startDate: string;
+
+  @ApiProperty({ description: '시작 시간', example: '10:00' })
+  @IsString()
+  @IsDefined()
+  startTime: string;
+
+  @ApiPropertyOptional({
+    description: '종료일, null일 경우 상시 진행',
+    example: '2025-03-01',
+  })
+  @IsString()
+  @IsOptional()
+  endDate?: string;
+
+  @ApiProperty({ description: '종료 시간', example: '20:00' })
+  @IsString()
+  @IsDefined()
+  endTime: string;
+
+  @ApiProperty({ description: '활성 여부', example: true })
+  @IsBoolean()
+  @IsDefined()
+  isActive: boolean;
+
+  @ApiProperty({
+    description: '언어별 내용',
+    type: [GetAdminBrandPromotionPopupLanguageDto],
+    example: [
+      {
+        languageCode: LanguageCode.KOREAN,
+        title: '타이틀',
+        description: '설명',
+      },
+      {
+        languageCode: LanguageCode.ENGLISH,
+        title: 'TITLE',
+        description: 'DESCRIPTION',
+      },
+      {
+        languageCode: LanguageCode.TAIWAN,
+        title: '중국어 타이틀',
+        description: '중국어 설명',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminBrandPromotionPopupLanguageDto)
+  @IsDefined()
+  language: GetAdminBrandPromotionPopupLanguageDto[];
+
+  @ApiProperty({
+    description: '이미지 URL 리스트',
+    example: [
+      'https://image-dev.seoulmoment.com.tw/brand-promotion-popups/2025-09-16/popup-01.jpg',
+    ],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsDefined()
+  imageUrlList: string[];
+}
+
+export class PatchAdminBrandPromotionNoticeDto {
+  @ApiProperty({
+    description: '언어별 내용',
+    type: [GetAdminBrandPromotionNoticeLanguageDto],
+    example: [
+      { languageCode: LanguageCode.KOREAN, content: '내용' },
+      { languageCode: LanguageCode.ENGLISH, content: 'content' },
+      { languageCode: LanguageCode.TAIWAN, content: '内容' },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminBrandPromotionNoticeLanguageDto)
+  @IsDefined()
+  language: GetAdminBrandPromotionNoticeLanguageDto[];
+}
+
+export class PatchAdminBrandPromotionEventDto {
+  @ApiProperty({
+    description: '상태',
+    example: BrandPromotionEventStatus.NORMAL,
+    enum: BrandPromotionEventStatus,
+  })
+  @IsEnum(BrandPromotionEventStatus)
+  @IsDefined()
+  status: BrandPromotionEventStatus;
+
+  @ApiProperty({
+    description: '언어별 내용',
+    type: [GetAdminBrandPromotionEventLanguageDto],
+    example: [
+      { languageCode: LanguageCode.KOREAN, title: '제목' },
+      { languageCode: LanguageCode.ENGLISH, title: 'Title' },
+      { languageCode: LanguageCode.TAIWAN, title: '标题' },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminBrandPromotionEventLanguageDto)
+  @IsDefined()
+  language: GetAdminBrandPromotionEventLanguageDto[];
+}
+
+export class PatchAdminBrandPromotionEventCouponDto {
+  @ApiProperty({
+    description: '쿠폰 이미지 URL',
+    example:
+      'https://image-dev.seoulmoment.com.tw/brand-promotion-event-coupons/2025-09-16/coupon-01.jpg',
+  })
+  @IsString()
+  @IsDefined()
+  imageUrl: string;
+
+  @ApiProperty({
+    description: '언어별 내용',
+    type: [GetAdminBrandPromotionEventCouponLanguageDto],
+    example: [
+      {
+        languageCode: LanguageCode.KOREAN,
+        title: '쿠폰 제목',
+        description: '쿠폰 설명',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminBrandPromotionEventCouponLanguageDto)
+  @IsDefined()
+  language: GetAdminBrandPromotionEventCouponLanguageDto[];
+}
+
+export class PatchAdminBrandPromotionEventAndCouponDto {
+  @ApiProperty({
+    description: '이벤트',
+    type: () => PatchAdminBrandPromotionEventDto,
+  })
+  @ValidateNested()
+  @Type(() => PatchAdminBrandPromotionEventDto)
+  @IsDefined()
+  event: PatchAdminBrandPromotionEventDto;
+
+  @ApiProperty({
+    description: '쿠폰',
+    type: () => PatchAdminBrandPromotionEventCouponDto,
+    isArray: true,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PatchAdminBrandPromotionEventCouponDto)
+  @IsDefined()
+  coupon: PatchAdminBrandPromotionEventCouponDto[];
+}
+
+export class PatchAdminBrandPromotionRequest {
+  @ApiProperty({
+    description: '프로모션 아이디',
+    example: 1,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  promotionId: number;
+
+  @ApiProperty({
+    description: '브랜드 아이디',
+    example: 7,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsDefined()
+  brandId: number;
+
+  @ApiProperty({
+    description: '언어별 내용',
+    type: () => GetAdminBrandPromotionLanguageDto,
+    example: [
+      { languageCode: LanguageCode.KOREAN, description: '설명' },
+      { languageCode: LanguageCode.ENGLISH, description: 'DESCRIPTION' },
+      { languageCode: LanguageCode.TAIWAN, description: '중국어중국어' },
+    ],
+    isArray: true,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetAdminBrandPromotionLanguageDto)
+  @IsDefined()
+  brandDescriptionLanguage: GetAdminBrandPromotionLanguageDto[];
+
+  @ApiProperty({
+    description: '브랜드 프로모션 활성 여부',
+    example: true,
+  })
+  @Transform(({ value }) =>
+    value === undefined || value === null
+      ? true
+      : value === 'true' || value === true,
+  )
+  @IsBoolean()
+  @IsDefined()
+  isActive: boolean;
+
+  @ApiProperty({
+    description: '배너 목록',
+    type: () => PatchAdminBrandPromotionBannerDto,
+    isArray: true,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PatchAdminBrandPromotionBannerDto)
+  @IsDefined()
+  bannerList: PatchAdminBrandPromotionBannerDto[];
+
+  @ApiProperty({
+    description: '섹션 목록',
+    type: () => PatchAdminBrandPromotionSectionDto,
+    isArray: true,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PatchAdminBrandPromotionSectionDto)
+  @IsDefined()
+  sectionList: PatchAdminBrandPromotionSectionDto[];
+
+  @ApiProperty({
+    description: '팝업 목록',
+    type: () => PatchAdminBrandPromotionPopupDto,
+    isArray: true,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PatchAdminBrandPromotionPopupDto)
+  @IsDefined()
+  popupList: PatchAdminBrandPromotionPopupDto[];
+
+  @ApiPropertyOptional({
+    description: '공지 목록',
+    type: () => PatchAdminBrandPromotionNoticeDto,
+    isArray: true,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PatchAdminBrandPromotionNoticeDto)
+  @IsOptional()
+  noticeList?: PatchAdminBrandPromotionNoticeDto[];
+
+  @ApiPropertyOptional({
+    description: '이벤트리스트와 이벤트별 쿠폰리스트',
+    type: () => PatchAdminBrandPromotionEventAndCouponDto,
+    isArray: true,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PatchAdminBrandPromotionEventAndCouponDto)
+  @IsOptional()
+  eventAndCouponList?: PatchAdminBrandPromotionEventAndCouponDto[];
 }
 
 export class GetAdminBrandPromotionListRequest extends ListFilterDto {}

@@ -12,6 +12,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -21,6 +22,7 @@ import {
   GetAdminBrandPromotionDetailResponse,
   GetAdminBrandPromotionListRequest,
   GetAdminBrandPromotionResponse,
+  PatchAdminBrandPromotionRequest,
   PostAdminBrandPromotionRequest,
 } from './admin.brand.promotion.dto';
 import { AdminBrandPromotionService } from './admin.brand.promotion.service';
@@ -67,6 +69,20 @@ export class AdminBrandPromotionController {
       await this.adminBrandPromotionService.getBrandPromotionDetail(id);
 
     return new ResponseDataDto(result);
+  }
+
+  @Patch(':id(\\d+)')
+  @ApiOperation({ summary: '브랜드 프로모션 수정' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    '브랜드 프로모션 수정 실패',
+  )
+  async updateBrandPromotion(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() request: PatchAdminBrandPromotionRequest,
+  ) {
+    await this.adminBrandPromotionService.updateBrandPromotion(id, request);
   }
 
   @Delete(':id(\\d+)')

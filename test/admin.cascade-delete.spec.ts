@@ -2,15 +2,18 @@ import { faker } from '@faker-js/faker';
 import { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import { ArticleEntity } from '../libs/repository/src/entity/article.entity';
+import { getAdminToken } from './setup/auth.helper';
+import { getDataSource, truncateTables } from './setup/db.helper';
+import { closeTestApp, getTestApp } from './setup/test-app';
 import { ArticleSectionEntity } from '../libs/repository/src/entity/article-section.entity';
+import { ArticleEntity } from '../libs/repository/src/entity/article.entity';
 import { BrandSectionEntity } from '../libs/repository/src/entity/brand-section.entity';
 import { BrandEntity } from '../libs/repository/src/entity/brand.entity';
 import { CategoryEntity } from '../libs/repository/src/entity/category.entity';
-import { NewsEntity } from '../libs/repository/src/entity/news.entity';
 import { NewsSectionEntity } from '../libs/repository/src/entity/news-section.entity';
-import { OptionEntity } from '../libs/repository/src/entity/option.entity';
+import { NewsEntity } from '../libs/repository/src/entity/news.entity';
 import { OptionValueEntity } from '../libs/repository/src/entity/option-value.entity';
+import { OptionEntity } from '../libs/repository/src/entity/option.entity';
 import { ProductEntity } from '../libs/repository/src/entity/product.entity';
 import { EntityType } from '../libs/repository/src/enum/entity.enum';
 import { LanguageCode } from '../libs/repository/src/enum/language.enum';
@@ -20,9 +23,6 @@ import { LanguageRepositoryService } from '../libs/repository/src/service/langua
 import { NewsRepositoryService } from '../libs/repository/src/service/news.repository.service';
 import { OptionRepositoryService } from '../libs/repository/src/service/option.repository.service';
 import { ProductRepositoryService } from '../libs/repository/src/service/product.repository.service';
-import { getAdminToken } from './setup/auth.helper';
-import { getDataSource, truncateTables } from './setup/db.helper';
-import { closeTestApp, getTestApp } from './setup/test-app';
 
 describe('Cascade Delete (multilingual_text)', () => {
   let app: INestApplication;

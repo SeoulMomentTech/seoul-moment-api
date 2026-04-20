@@ -120,6 +120,20 @@ export class BrandPromotionRepositoryService {
 
   @Transactional()
   async deleteBrandPromotionEventWithMultilingual(id: number): Promise<void> {
+    const coupons = await this.brandPromotionEventCouponRepository.find({
+      where: { brandPromotionEventId: id },
+      select: ['id'],
+    });
+
+    await Promise.all(
+      coupons.map((coupon) =>
+        this.languageRepositoryService.deleteMultilingualTexts(
+          EntityType.BRAND_PROMOTION_EVENT_COUPON,
+          coupon.id,
+        ),
+      ),
+    );
+
     await this.deleteBrandPromotionEvent(id);
     await this.languageRepositoryService.deleteMultilingualTexts(
       EntityType.BRAND_PROMOTION_EVENT,

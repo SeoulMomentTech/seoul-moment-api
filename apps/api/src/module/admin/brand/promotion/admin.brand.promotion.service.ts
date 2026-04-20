@@ -1,4 +1,5 @@
 /* eslint-disable max-lines-per-function */
+import { Configuration } from '@app/config/configuration';
 import { BrandPromotionEntity } from '@app/repository/entity/brand-promotion.entity';
 import { EntityType } from '@app/repository/enum/entity.enum';
 import { BrandPromotionRepositoryService } from '@app/repository/service/brand-promotion.repository.service';
@@ -14,6 +15,12 @@ import {
   GetAdminBrandPromotionLanguageDto,
   GetAdminBrandPromotionListRequest,
   GetAdminBrandPromotionResponse,
+  PatchAdminBrandPromotionBannerDto,
+  PatchAdminBrandPromotionEventAndCouponDto,
+  PatchAdminBrandPromotionNoticeDto,
+  PatchAdminBrandPromotionPopupDto,
+  PatchAdminBrandPromotionRequest,
+  PatchAdminBrandPromotionSectionDto,
   PostAdminBrandPromotionEventAndCouponDto,
   PostAdminBrandPromotionLanguageDto,
   PostAdminBrandPromotionRequest,
@@ -288,6 +295,253 @@ export class AdminBrandPromotionService {
       popupList,
       eventAndCouponList,
       noticeList,
+    );
+  }
+
+  @Transactional()
+  async updateBrandPromotion(
+    id: number,
+    request: PatchAdminBrandPromotionRequest,
+  ) {
+    await this.brandPromotionRepositoryService.getBrandPromotionById(id);
+    await this.brandPromotionRepositoryService.getPromotionById(
+      request.promotionId,
+    );
+    await this.brandRepositoryService.getBrandById(request.brandId);
+
+    await this.brandPromotionRepositoryService.updateBrandPromotion({
+      id,
+      promotionId: request.promotionId,
+      brandId: request.brandId,
+      isActive: request.isActive,
+    });
+
+    await this.createBrandPromotionMultilingualText(
+      id,
+      request.brandDescriptionLanguage,
+    );
+
+    await this.deleteBrandPromotionSubResources(id);
+
+    const languages =
+      await this.languageRepositoryService.findAllActiveLanguages();
+    const codeToId = new Map<string, number>(
+      languages.map((l) => [l.code, l.id]),
+    );
+    const imageDomain = Configuration.getConfig().IMAGE_DOMAIN_NAME;
+
+    await Promise.all(
+      request.bannerList.map((banner) =>
+        this.createBrandPromotionBanner(
+          id,
+          this.toBannerBaseDto(banner, codeToId, imageDomain),
+        ),
+      ),
+    );
+
+    await Promise.all(
+      request.sectionList.map((section) =>
+        this.createBrandPromotionSection(
+          id,
+          this.toSectionBaseDto(section, imageDomain),
+        ),
+      ),
+    );
+
+    await Promise.all(
+      request.popupList.map((popup) =>
+        this.createBrandPromotionPopup(
+          id,
+          this.toPopupBaseDto(popup, codeToId, imageDomain),
+        ),
+      ),
+    );
+
+    if (request.noticeList && request.noticeList.length > 0) {
+      await Promise.all(
+        request.noticeList.map((notice) =>
+          this.createBrandPromotionNotice(
+            id,
+            this.toNoticeBaseDto(notice, codeToId),
+          ),
+        ),
+      );
+    }
+
+    if (request.eventAndCouponList && request.eventAndCouponList.length > 0) {
+      await Promise.all(
+        request.eventAndCouponList.map((eventAndCoupon) =>
+          this.createBrandPromotionEventAndCoupon(
+            id,
+            this.toEventAndCouponBaseDto(eventAndCoupon, codeToId, imageDomain),
+          ),
+        ),
+      );
+    }
+  }
+
+  private toBannerBaseDto(
+    banner: PatchAdminBrandPromotionBannerDto,
+    codeToId: Map<string, number>,
+    imageDomain: string,
+  ) {
+    return {
+      imagePath: banner.imageUrl.replace(imageDomain, ''),
+      mobileImagePath: banner.mobileImageUrl.replace(imageDomain, ''),
+      linkUrl: banner.linkUrl,
+      language: banner.language.map((l) => ({
+        languageId: codeToId.get(l.languageCode),
+        title: l.title,
+      })),
+    };
+  }
+
+  private toSectionBaseDto(
+    section: PatchAdminBrandPromotionSectionDto,
+    imageDomain: string,
+  ) {
+    return {
+      type: section.type,
+      imagePathList: section.imageUrlList.map((url) =>
+        url.replace(imageDomain, ''),
+      ),
+    };
+  }
+
+  private toPopupBaseDto(
+    popup: PatchAdminBrandPromotionPopupDto,
+    codeToId: Map<string, number>,
+    imageDomain: string,
+  ) {
+    return {
+      place: popup.place,
+      address: popup.address,
+      latitude: popup.latitude,
+      longitude: popup.longitude,
+      startDate: popup.startDate,
+      startTime: popup.startTime,
+      endDate: popup.endDate,
+      endTime: popup.endTime,
+      isActive: popup.isActive,
+      language: popup.language.map((l) => ({
+        languageId: codeToId.get(l.languageCode),
+        title: l.title,
+        description: l.description,
+      })),
+      imagePathList: popup.imageUrlList.map((url) =>
+        url.replace(imageDomain, ''),
+      ),
+    };
+  }
+
+  private toNoticeBaseDto(
+    notice: PatchAdminBrandPromotionNoticeDto,
+    codeToId: Map<string, number>,
+  ) {
+    return {
+      language: notice.language.map((l) => ({
+        languageId: codeToId.get(l.languageCode),
+        content: l.content,
+      })),
+    };
+  }
+
+  private toEventAndCouponBaseDto(
+    eventAndCoupon: PatchAdminBrandPromotionEventAndCouponDto,
+    codeToId: Map<string, number>,
+    imageDomain: string,
+  ): PostAdminBrandPromotionEventAndCouponDto {
+    return plainToInstance(PostAdminBrandPromotionEventAndCouponDto, {
+      event: {
+        status: eventAndCoupon.event.status,
+        language: eventAndCoupon.event.language.map((l) => ({
+          languageId: codeToId.get(l.languageCode),
+          title: l.title,
+        })),
+      },
+      coupon: eventAndCoupon.coupon.map((c) => ({
+        imagePath: c.imageUrl.replace(imageDomain, ''),
+        language: c.language.map((l) => ({
+          languageId: codeToId.get(l.languageCode),
+          title: l.title,
+          description: l.description,
+        })),
+      })),
+    });
+  }
+
+  private async deleteBrandPromotionSubResources(brandPromotionId: number) {
+    const [bannerList] =
+      await this.brandPromotionRepositoryService.findBrandPromotionBannerListByPaging(
+        1,
+        1000,
+        brandPromotionId,
+      );
+
+    await Promise.all(
+      bannerList.map((banner) =>
+        this.brandPromotionRepositoryService.deleteBrandPromotionBannerWithMultilingual(
+          banner.id,
+        ),
+      ),
+    );
+
+    const [sectionList] =
+      await this.brandPromotionRepositoryService.findBrandPromotionSectionList(
+        1,
+        1000,
+        brandPromotionId,
+      );
+
+    await Promise.all(
+      sectionList.map((section) =>
+        this.brandPromotionRepositoryService.deleteBrandPromotionSection(
+          section.id,
+        ),
+      ),
+    );
+
+    const [popupList] =
+      await this.brandPromotionRepositoryService.findBrandPromotionPopupListByPaging(
+        1,
+        1000,
+        brandPromotionId,
+      );
+
+    await Promise.all(
+      popupList.map((popup) =>
+        this.brandPromotionRepositoryService.deleteBrandPromotionPopupWithMultilingual(
+          popup.id,
+        ),
+      ),
+    );
+
+    const [noticeList] =
+      await this.brandPromotionRepositoryService.findBrandPromotionNoticeListByPaging(
+        1,
+        1000,
+        brandPromotionId,
+      );
+    await Promise.all(
+      noticeList.map((notice) =>
+        this.brandPromotionRepositoryService.deleteBrandPromotionNoticeWithMultilingual(
+          notice.id,
+        ),
+      ),
+    );
+
+    const [eventList] =
+      await this.brandPromotionRepositoryService.findBrandPromotionEventListByPaging(
+        1,
+        1000,
+        brandPromotionId,
+      );
+    await Promise.all(
+      eventList.map((event) =>
+        this.brandPromotionRepositoryService.deleteBrandPromotionEventWithMultilingual(
+          event.id,
+        ),
+      ),
     );
   }
 

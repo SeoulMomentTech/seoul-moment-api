@@ -3,24 +3,24 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 
-import { ArticleEntity } from '../libs/repository/src/entity/article.entity';
+import { getAdminToken } from './setup/auth.helper';
+import { getDataSource, truncateTables } from './setup/db.helper';
+import { closeTestApp, getTestApp } from './setup/test-app';
 import { ArticleSectionEntity } from '../libs/repository/src/entity/article-section.entity';
-import { BrandEntity } from '../libs/repository/src/entity/brand.entity';
+import { ArticleEntity } from '../libs/repository/src/entity/article.entity';
 import { BrandSectionEntity } from '../libs/repository/src/entity/brand-section.entity';
+import { BrandEntity } from '../libs/repository/src/entity/brand.entity';
 import { CategoryEntity } from '../libs/repository/src/entity/category.entity';
-import { NewsEntity } from '../libs/repository/src/entity/news.entity';
 import { NewsSectionEntity } from '../libs/repository/src/entity/news-section.entity';
-import { PartnerEntity } from '../libs/repository/src/entity/partner.entity';
+import { NewsEntity } from '../libs/repository/src/entity/news.entity';
 import { PartnerCategoryEntity } from '../libs/repository/src/entity/partner-category.entity';
+import { PartnerEntity } from '../libs/repository/src/entity/partner.entity';
 import { EntityType } from '../libs/repository/src/enum/entity.enum';
 import { LanguageCode } from '../libs/repository/src/enum/language.enum';
 import { ArticleRepositoryService } from '../libs/repository/src/service/article.repository.service';
 import { BrandRepositoryService } from '../libs/repository/src/service/brand.repository.service';
 import { LanguageRepositoryService } from '../libs/repository/src/service/language.repository.service';
 import { NewsRepositoryService } from '../libs/repository/src/service/news.repository.service';
-import { getAdminToken } from './setup/auth.helper';
-import { getDataSource, truncateTables } from './setup/db.helper';
-import { closeTestApp, getTestApp } from './setup/test-app';
 
 describe('Client multilingual smoke (Phase 2 regression)', () => {
   let app: INestApplication;

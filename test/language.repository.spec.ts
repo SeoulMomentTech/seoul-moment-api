@@ -1,12 +1,12 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import { EntityType } from '../libs/repository/src/enum/entity.enum';
-import { LanguageCode } from '../libs/repository/src/enum/language.enum';
-import { LanguageRepositoryService } from '../libs/repository/src/service/language.repository.service';
 import { getAdminToken } from './setup/auth.helper';
 import { getDataSource, truncateTables } from './setup/db.helper';
 import { closeTestApp, getTestApp } from './setup/test-app';
+import { EntityType } from '../libs/repository/src/enum/entity.enum';
+import { LanguageCode } from '../libs/repository/src/enum/language.enum';
+import { LanguageRepositoryService } from '../libs/repository/src/service/language.repository.service';
 
 describe('LanguageRepositoryService.findMultilingualTexts* (Phase 2 projection)', () => {
   let app: INestApplication;

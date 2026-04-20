@@ -32,52 +32,6 @@ import { AdminPromotionService } from './admin.promotion.service';
 
 @Controller('admin/promotion')
 export class AdminPromotionController {
-  private readonly MOCK_PROMOTION_LIST: GetAdminPromotionResponse[] = [
-    {
-      id: 1,
-      startDate: new Date(),
-      endDate: new Date(),
-      isActive: true,
-      language: [
-        {
-          languageCode: LanguageCode.KOREAN,
-          title: '제목',
-          description: '설명',
-        },
-      ],
-      createDate: new Date(),
-      updateDate: new Date(),
-      bannerImageUrl:
-        'https://image-dev.seoulmoment.com.tw/promotions/2025-09-16/promotion-01.jpg',
-      bannerMobileImageUrl:
-        'https://image-dev.seoulmoment.com.tw/promotions/2025-09-16/promotion-01.jpg',
-      thumbnailImageUrl:
-        'https://image-dev.seoulmoment.com.tw/promotions/2025-09-16/promotion-01.jpg',
-    },
-  ];
-
-  private readonly MOCK_PROMOTION_DETAIL: GetAdminPromotionDetailResponse = {
-    id: 1,
-    startDate: new Date(),
-    endDate: new Date(),
-    isActive: true,
-    language: [
-      {
-        languageCode: LanguageCode.KOREAN,
-        title: '제목',
-        description: '설명',
-      },
-    ],
-    createDate: new Date(),
-    updateDate: new Date(),
-    bannerImageUrl:
-      'https://image-dev.seoulmoment.com.tw/promotions/2025-09-16/promotion-01.jpg',
-    bannerMobileImageUrl:
-      'https://image-dev.seoulmoment.com.tw/promotions/2025-09-16/promotion-01.jpg',
-    thumbnailImageUrl:
-      'https://image-dev.seoulmoment.com.tw/promotions/2025-09-16/promotion-01.jpg',
-  };
-
   constructor(private readonly adminPromotionService: AdminPromotionService) {}
 
   @Post()
