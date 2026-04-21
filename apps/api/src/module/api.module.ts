@@ -71,7 +71,7 @@ import { ProductModule } from './product/product.module';
   providers: [
     {
       provide: APP_FILTER,
-      useClass: HttpExceptionFilter,
+      useClass: InternalExceptionFilter,
     },
     {
       provide: APP_FILTER,
@@ -79,7 +79,7 @@ import { ProductModule } from './product/product.module';
     },
     {
       provide: APP_FILTER,
-      useClass: InternalExceptionFilter,
+      useClass: HttpExceptionFilter,
     },
   ],
 })

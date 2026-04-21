@@ -94,7 +94,7 @@ export class BrandEntity extends CommonEntity {
   @JoinColumn({ name: 'category_id' })
   category: CategoryEntity;
 
-  @ManyToOne(() => BrandPromotionEntity, (promotion) => promotion.brand, {
+  @OneToMany(() => BrandPromotionEntity, (promotion) => promotion.brand, {
     cascade: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })

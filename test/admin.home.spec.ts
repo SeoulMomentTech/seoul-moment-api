@@ -323,7 +323,7 @@ describe('AdminHomeController (E2E)', () => {
       expect(res.status).toBe(204);
     });
 
-    it('삭제 후 V1 GET 목록에서 status가 DELETE로 변경된다', async () => {
+    it('삭제 후 V1 GET 목록에서 제외된다', async () => {
       // Given
       const auth = await authHeader(app);
       await request(app.getHttpServer())
@@ -348,7 +348,9 @@ describe('AdminHomeController (E2E)', () => {
         .set('Authorization', auth);
 
       // Then
-      expect(listRes.body.data.list[0].status).toBe('DELETE');
+      expect(
+        listRes.body.data.list.find((b: { id: number }) => b.id === bannerId),
+      ).toBeUndefined();
     });
 
     it('토큰 없이 요청하면 401을 반환한다', async () => {

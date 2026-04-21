@@ -34,7 +34,7 @@ export class BrandPromotionEntity extends CommonEntity {
   @Column('boolean', { default: true, nullable: false })
   isActive: boolean;
 
-  @OneToMany(() => BrandEntity, (brand) => brand.promotions, {
+  @ManyToOne(() => BrandEntity, (brand) => brand.promotions, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
