@@ -162,15 +162,7 @@ export class BrandPromotionRepositoryService {
   ): Promise<BrandPromotionEntity> {
     const result = await this.brandPromotionRepository.findOne({
       where: { brandId },
-      relations: [
-        'brand',
-        'banners',
-        'popups',
-        'popups.images',
-        'notices',
-        'sections',
-        'sections.images',
-      ],
+      relations: ['brand'],
     });
 
     if (!result) {
@@ -186,15 +178,7 @@ export class BrandPromotionRepositoryService {
   async getBrandPromotionById(id: number): Promise<BrandPromotionEntity> {
     const result = await this.brandPromotionRepository.findOne({
       where: { id },
-      relations: [
-        'brand',
-        'banners',
-        'popups',
-        'popups.images',
-        'notices',
-        'sections',
-        'sections.images',
-      ],
+      relations: ['brand'],
     });
 
     if (!result) {
