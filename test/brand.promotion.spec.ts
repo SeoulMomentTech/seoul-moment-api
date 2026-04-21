@@ -5,6 +5,7 @@ import { DataSource } from 'typeorm';
 
 import { getDataSource, truncateTables } from './setup/db.helper';
 import { closeTestApp, getTestApp } from './setup/test-app';
+import { BrandPromotionPopupEntity } from '../libs/repository/src/entity/brand-promotion-popup.entity';
 import { BrandPromotionEntity } from '../libs/repository/src/entity/brand-promotion.entity';
 import { BrandEntity } from '../libs/repository/src/entity/brand.entity';
 import { PromotionEntity } from '../libs/repository/src/entity/promotion.entity';
@@ -262,6 +263,74 @@ describe('BrandPromotionController (E2E)', () => {
       // Then
       expect(res.status).toBe(200);
       expect(res.body.data.brand.description).toBe('한국어 설명');
+    });
+
+    it('popupList는 startDate 오름차순으로 정렬되어 응답된다', async () => {
+      // Given - 프로모션 + 브랜드 + 브랜드 프로모션
+      const promotion = await createPromotion();
+      const brand = await createBrand();
+      const brandPromotion = await createBrandPromotion(
+        promotion.id,
+        brand.id,
+        true,
+      );
+
+      // Given - 정렬되지 않은 순서로 팝업 3개 생성 (createDate DESC라 삽입순서와 startDate 순서가 모두 다르도록)
+      const popupRepo = dataSource.getRepository(BrandPromotionPopupEntity);
+      const popupLate = await popupRepo.save({
+        brandPromotionId: brandPromotion.id,
+        place: 'late',
+        address: 'late-addr',
+        latitude: '0' as unknown as number,
+        longitude: '0' as unknown as number,
+        startDate: new Date('2025-05-01T00:00:00Z'),
+        endDate: new Date('2025-05-31T00:00:00Z'),
+        startTime: '10:00',
+        endTime: '20:00',
+        isActive: true,
+      } as Partial<BrandPromotionPopupEntity>);
+      const popupEarly = await popupRepo.save({
+        brandPromotionId: brandPromotion.id,
+        place: 'early',
+        address: 'early-addr',
+        latitude: '0' as unknown as number,
+        longitude: '0' as unknown as number,
+        startDate: new Date('2025-01-01T00:00:00Z'),
+        endDate: new Date('2025-01-31T00:00:00Z'),
+        startTime: '10:00',
+        endTime: '20:00',
+        isActive: true,
+      } as Partial<BrandPromotionPopupEntity>);
+      const popupMiddle = await popupRepo.save({
+        brandPromotionId: brandPromotion.id,
+        place: 'middle',
+        address: 'middle-addr',
+        latitude: '0' as unknown as number,
+        longitude: '0' as unknown as number,
+        startDate: new Date('2025-03-01T00:00:00Z'),
+        endDate: new Date('2025-03-31T00:00:00Z'),
+        startTime: '10:00',
+        endTime: '20:00',
+        isActive: true,
+      } as Partial<BrandPromotionPopupEntity>);
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`/brand/promotion/${brand.id}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then - startDate 오름차순: early → middle → late
+      expect(res.status).toBe(200);
+      expect(res.body.data.popupList).toHaveLength(3);
+
+      const ids = res.body.data.popupList.map((p: { id: number }) => p.id);
+      expect(ids).toEqual([popupEarly.id, popupMiddle.id, popupLate.id]);
+
+      const startDates: string[] = res.body.data.popupList.map(
+        (p: { startDate: string }) => p.startDate,
+      );
+      const sorted = [...startDates].sort((a, b) => a.localeCompare(b));
+      expect(startDates).toEqual(sorted);
     });
 
     it('Accept-Language에 따른 브랜드 description을 반환한다 (en)', async () => {

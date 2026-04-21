@@ -458,8 +458,8 @@ export class GetBrandPromotionPopupResponse {
       address: entity.address,
       latitude: entity.latitude,
       longitude: entity.longitude,
-      startDate: entity.startDate,
-      endDate: entity.endDate,
+      startDate: entity.startDate?.toISOString(),
+      endDate: entity.endDate?.toISOString(),
       startTime: entity.startTime,
       endTime: entity.endTime,
       title: title.getContent(),
@@ -719,7 +719,9 @@ export class GetBrandPromotionResponse {
       brand,
       sectionList,
       productList,
-      popupList,
+      popupList: popupList.sort((a, b) =>
+        a.startDate.localeCompare(b.startDate),
+      ),
       eventList,
       noticeList,
     });
