@@ -32,7 +32,6 @@ export class HomeRepositoryService {
   async findHomeBanner(): Promise<HomeBannerImageEntity[]> {
     return this.homeBannerRepository.find({
       ...this.findHomeBannerBaseQuery(),
-      withDeleted: true,
     });
   }
 
