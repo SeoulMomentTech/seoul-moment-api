@@ -28,8 +28,11 @@ export class BrandPromotionController {
     return new ResponseListDto(result);
   }
 
+  /**
+   * @deprecated `GET /brand/promotion/v1/:brandPromotionId` 사용
+   */
   @Get(':brandId(\\d+)')
-  @ApiOperation({ summary: '브랜드 프로모션 상세 조회' })
+  @ApiOperation({ summary: '브랜드 프로모션 상세 조회', deprecated: true })
   @ApiHeader({
     name: 'Accept-language',
     required: true,

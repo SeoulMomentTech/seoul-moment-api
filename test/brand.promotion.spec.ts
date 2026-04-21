@@ -184,13 +184,13 @@ describe('BrandPromotionController (E2E)', () => {
   });
 
   // -----------------------------------------------------------------------
-  // GET /brand/promotion/:brandId
+  // GET /brand/promotion/v1/:brandPromotionId
   // -----------------------------------------------------------------------
-  describe('GET /brand/promotion/:brandId', () => {
-    it('존재하지 않는 brandId로 조회 시 404를 반환한다', async () => {
+  describe('GET /brand/promotion/v1/:brandPromotionId', () => {
+    it('존재하지 않는 brandPromotionId로 조회 시 404를 반환한다', async () => {
       // When
       const res = await request(app.getHttpServer())
-        .get('/brand/promotion/99999999')
+        .get('/brand/promotion/v1/99999999')
         .set('Accept-language', LanguageCode.KOREAN);
 
       // Then
@@ -201,11 +201,15 @@ describe('BrandPromotionController (E2E)', () => {
       // Given - 프로모션 + 브랜드 + 브랜드 프로모션
       const promotion = await createPromotion();
       const brand = await createBrand();
-      await createBrandPromotion(promotion.id, brand.id, true);
+      const brandPromotion = await createBrandPromotion(
+        promotion.id,
+        brand.id,
+        true,
+      );
 
       // When
       const res = await request(app.getHttpServer())
-        .get(`/brand/promotion/${brand.id}`)
+        .get(`/brand/promotion/v1/${brandPromotion.id}`)
         .set('Accept-language', LanguageCode.KOREAN);
 
       // Then
@@ -257,12 +261,47 @@ describe('BrandPromotionController (E2E)', () => {
 
       // When
       const res = await request(app.getHttpServer())
-        .get(`/brand/promotion/${brand.id}`)
+        .get(`/brand/promotion/v1/${brandPromotion.id}`)
         .set('Accept-language', LanguageCode.KOREAN);
 
       // Then
       expect(res.status).toBe(200);
       expect(res.body.data.brand.description).toBe('한국어 설명');
+    });
+
+    it('Accept-Language에 따른 브랜드 description을 반환한다 (en)', async () => {
+      // Given
+      const promotion = await createPromotion();
+      const brand = await createBrand();
+      const brandPromotion = await createBrandPromotion(
+        promotion.id,
+        brand.id,
+        true,
+      );
+
+      await languageRepositoryService.saveMultilingualTextByLanguageCode(
+        EntityType.BRAND_PROMOTION,
+        brandPromotion.id,
+        'description',
+        LanguageCode.KOREAN,
+        '한국어 설명',
+      );
+      await languageRepositoryService.saveMultilingualTextByLanguageCode(
+        EntityType.BRAND_PROMOTION,
+        brandPromotion.id,
+        'description',
+        LanguageCode.ENGLISH,
+        'English description',
+      );
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`/brand/promotion/v1/${brandPromotion.id}`)
+        .set('Accept-language', LanguageCode.ENGLISH);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.brand.description).toBe('English description');
     });
 
     it('popupList는 startDate 오름차순으로 정렬되어 응답된다', async () => {
@@ -275,7 +314,7 @@ describe('BrandPromotionController (E2E)', () => {
         true,
       );
 
-      // Given - 정렬되지 않은 순서로 팝업 3개 생성 (createDate DESC라 삽입순서와 startDate 순서가 모두 다르도록)
+      // Given - 정렬되지 않은 순서로 팝업 3개 생성
       const popupRepo = dataSource.getRepository(BrandPromotionPopupEntity);
       const popupLate = await popupRepo.save({
         brandPromotionId: brandPromotion.id,
@@ -316,7 +355,7 @@ describe('BrandPromotionController (E2E)', () => {
 
       // When
       const res = await request(app.getHttpServer())
-        .get(`/brand/promotion/${brand.id}`)
+        .get(`/brand/promotion/v1/${brandPromotion.id}`)
         .set('Accept-language', LanguageCode.KOREAN);
 
       // Then - startDate 오름차순: early → middle → late
@@ -333,39 +372,32 @@ describe('BrandPromotionController (E2E)', () => {
       expect(startDates).toEqual(sorted);
     });
 
-    it('Accept-Language에 따른 브랜드 description을 반환한다 (en)', async () => {
-      // Given
-      const promotion = await createPromotion();
+    it('동일 brandId를 가진 다른 브랜드 프로모션을 brandPromotionId로 정확히 구분한다', async () => {
+      // Given - 같은 brand에 두 개의 브랜드 프로모션 (서로 다른 promotion)
+      const promotionA = await createPromotion();
+      const promotionB = await createPromotion();
       const brand = await createBrand();
-      const brandPromotion = await createBrandPromotion(
-        promotion.id,
+      const brandPromotionA = await createBrandPromotion(
+        promotionA.id,
+        brand.id,
+        true,
+      );
+      const brandPromotionB = await createBrandPromotion(
+        promotionB.id,
         brand.id,
         true,
       );
 
-      await languageRepositoryService.saveMultilingualTextByLanguageCode(
-        EntityType.BRAND_PROMOTION,
-        brandPromotion.id,
-        'description',
-        LanguageCode.KOREAN,
-        '한국어 설명',
-      );
-      await languageRepositoryService.saveMultilingualTextByLanguageCode(
-        EntityType.BRAND_PROMOTION,
-        brandPromotion.id,
-        'description',
-        LanguageCode.ENGLISH,
-        'English description',
-      );
-
-      // When
+      // When - brandPromotionB 조회
       const res = await request(app.getHttpServer())
-        .get(`/brand/promotion/${brand.id}`)
-        .set('Accept-language', LanguageCode.ENGLISH);
+        .get(`/brand/promotion/v1/${brandPromotionB.id}`)
+        .set('Accept-language', LanguageCode.KOREAN);
 
-      // Then
+      // Then - brandPromotionB가 속한 promotionB가 응답되어야 한다
       expect(res.status).toBe(200);
-      expect(res.body.data.brand.description).toBe('English description');
+      expect(res.body.data.promotionId).toBe(promotionB.id);
+      expect(res.body.data.promotionId).not.toBe(promotionA.id);
+      expect(brandPromotionA.id).not.toBe(brandPromotionB.id);
     });
   });
 });

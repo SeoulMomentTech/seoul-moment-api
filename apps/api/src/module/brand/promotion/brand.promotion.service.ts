@@ -82,6 +82,45 @@ export class BrandPromotionService {
     );
   }
 
+  async v1GetBrandPromotionDetail(
+    brandPromotionId: number,
+    language: LanguageCode,
+  ): Promise<GetBrandPromotionResponse> {
+    const brandPromotion =
+      await this.brandPromotionRepositoryService.getBrandPromotionById(
+        brandPromotionId,
+      );
+
+    const [
+      brandPromotionBannerList,
+      brandPromotionBrandDetail,
+      brandPromotionSectionList,
+      brandPromotionProductList,
+      brandPromotionPopupList,
+      brandPromotionEventList,
+      brandPromotionNoticeList,
+    ] = await Promise.all([
+      this.getBrandPromotionBannerList(brandPromotion, language),
+      this.getBrandPromotionBrandDetail(brandPromotion, language),
+      this.getBrandPromotionSectionList(brandPromotion),
+      this.getBrandPromotionProductList(brandPromotion.brandId, language),
+      this.getBrandPromotionPopupList(brandPromotion, language),
+      this.getBrandPromotionEventList(brandPromotion, language),
+      this.getBrandPromotionNoticeList(brandPromotion, language),
+    ]);
+
+    return GetBrandPromotionResponse.from(
+      brandPromotion.promotionId,
+      brandPromotionBannerList,
+      brandPromotionBrandDetail,
+      brandPromotionSectionList,
+      brandPromotionProductList,
+      brandPromotionPopupList,
+      brandPromotionEventList,
+      brandPromotionNoticeList,
+    );
+  }
+
   private async getBrandPromotionBannerList(
     brandPromotion: BrandPromotionEntity,
     language: LanguageCode,
