@@ -68,6 +68,65 @@ describe('InternalExceptionFilter (단위 테스트)', () => {
       message: 'db down',
       code: 'INTERNAL_SERVER_ERROR',
       traceId: 'trace-abc',
+      error: { name: 'InternalServerErrorException' },
+    });
+  });
+
+  it('QueryFailedError 스타일 예외의 detail/constraint/code 를 dev 응답에 포함한다', () => {
+    // Given
+    mockEnv(SupportEnv.DEV);
+    const { host, status, json } = buildHost();
+    const exception = Object.assign(
+      new Error(
+        'duplicate key value violates unique constraint "UQ_c1fe5a3ad39aedca56925a894dc"',
+      ),
+      {
+        name: 'QueryFailedError',
+        code: '23505',
+        constraint: 'UQ_c1fe5a3ad39aedca56925a894dc',
+        detail: 'Key (brand_id)=(7) already exists.',
+        table: 'brand_promotion',
+      },
+    );
+
+    // When
+    logger.scope('trace-dup', () => filter.catch(exception, host));
+
+    // Then
+    expect(status).toHaveBeenCalledWith(500);
+    expect(json).toHaveBeenCalledWith({
+      message:
+        'duplicate key value violates unique constraint "UQ_c1fe5a3ad39aedca56925a894dc"',
+      code: 'INTERNAL_SERVER_ERROR',
+      traceId: 'trace-dup',
+      error: {
+        name: 'QueryFailedError',
+        code: '23505',
+        detail: 'Key (brand_id)=(7) already exists.',
+        constraint: 'UQ_c1fe5a3ad39aedca56925a894dc',
+        table: 'brand_promotion',
+      },
+    });
+  });
+
+  it('prod 환경에서는 QueryFailedError 의 detail 도 응답에 포함하지 않는다', () => {
+    // Given
+    mockEnv(SupportEnv.PROD);
+    const { host, json } = buildHost();
+    const exception = Object.assign(new Error('duplicate key'), {
+      name: 'QueryFailedError',
+      code: '23505',
+      detail: 'Key (brand_id)=(7) already exists.',
+    });
+
+    // When
+    logger.scope('trace-prod-db', () => filter.catch(exception, host));
+
+    // Then
+    expect(json).toHaveBeenCalledWith({
+      message: 'Internal server error',
+      code: 'INTERNAL_SERVER_ERROR',
+      traceId: 'trace-prod-db',
     });
   });
 

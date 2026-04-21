@@ -5,7 +5,6 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -95,7 +94,7 @@ export class BrandEntity extends CommonEntity {
   @JoinColumn({ name: 'category_id' })
   category: CategoryEntity;
 
-  @OneToOne(() => BrandPromotionEntity, (promotion) => promotion.brand, {
+  @ManyToOne(() => BrandPromotionEntity, (promotion) => promotion.brand, {
     cascade: true,
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })

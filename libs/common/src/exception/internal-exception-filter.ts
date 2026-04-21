@@ -32,10 +32,48 @@ export class InternalExceptionFilter implements ExceptionFilter {
       ? 'Internal server error'
       : exception?.message || 'internal service error';
 
-    response.status(status).json({
+    const body: Record<string, any> = {
       message,
       code: HttpStatus[status],
       traceId: this.logger.getTraceId(),
-    });
+    };
+
+    if (!isProd) {
+      const error = this.extractErrorDetail(exception);
+      if (error) {
+        body.error = error;
+      }
+    }
+
+    response.status(status).json(body);
+  }
+
+  private extractErrorDetail(exception: any): Record<string, any> | null {
+    if (!exception || typeof exception !== 'object') return null;
+
+    const candidates: Record<string, any> = {
+      code: exception.code,
+      detail: exception.detail,
+      constraint: exception.constraint,
+      table: exception.table,
+      column: exception.column,
+      query: exception.query,
+      parameters: exception.parameters,
+    };
+
+    // name 은 서브클래스(QueryFailedError, TypeError 등)일 때만 의미가 있음.
+    // 기본 Error 는 message 만으로 충분하므로 스킵해 응답 노이즈를 줄인다.
+    if (exception.name && exception.name !== 'Error') {
+      candidates.name = exception.name;
+    }
+
+    const error: Record<string, any> = {};
+    for (const [key, value] of Object.entries(candidates)) {
+      if (value !== undefined && value !== null) {
+        error[key] = value;
+      }
+    }
+
+    return Object.keys(error).length > 0 ? error : null;
   }
 }

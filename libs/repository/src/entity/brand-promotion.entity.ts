@@ -3,7 +3,6 @@ import {
   Column,
   Entity,
   JoinColumn,
-  OneToOne,
   OneToMany,
   ManyToOne,
 } from 'typeorm';
@@ -29,13 +28,13 @@ export class BrandPromotionEntity extends CommonEntity {
   @Column('int', { name: 'promotion_id', nullable: true })
   promotionId: number;
 
-  @Column('int', { name: 'brand_id', nullable: false, unique: true })
+  @Column('int', { name: 'brand_id', nullable: false })
   brandId: number;
 
   @Column('boolean', { default: true, nullable: false })
   isActive: boolean;
 
-  @OneToOne(() => BrandEntity, (brand) => brand.promotions, {
+  @OneToMany(() => BrandEntity, (brand) => brand.promotions, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
