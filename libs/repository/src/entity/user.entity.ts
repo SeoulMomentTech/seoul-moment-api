@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import {
   Column,
   Entity,
@@ -29,6 +30,7 @@ export class UserEntity extends CommonEntity {
   @Column('varchar', {
     length: 255,
     nullable: false,
+    select: false,
     comment: '암호화된 비밀번호',
   })
   password: string;
@@ -40,6 +42,14 @@ export class UserEntity extends CommonEntity {
     comment: '전화번호',
   })
   phone: string;
+
+  @Column('varchar', {
+    length: 255,
+    nullable: true,
+    select: false,
+    comment: '리프레시 토큰',
+  })
+  refreshToken: string;
 
   @Column('timestamp', {
     nullable: true,
@@ -79,4 +89,8 @@ export class UserEntity extends CommonEntity {
 
   @OneToMany(() => UserProductLikeEntity, (like) => like.user)
   productLikes: UserProductLikeEntity[];
+
+  async verifyPassword(password: string): Promise<boolean> {
+    return bcrypt.compare(password, this.password);
+  }
 }

@@ -56,6 +56,7 @@ import { PlanScheduleModule } from './module/plen/schedule/plan-schedule.module'
 import { PlanSettingModule } from './module/plen/setting/plan-setting.module';
 import { PlanUserModule } from './module/plen/user/plan.user.module';
 import { ProductModule } from './module/product/product.module';
+import { UserAuthModule } from './module/user/auth/user.auth.module';
 
 async function bootstrap() {
   const config = Configuration.getConfig();
@@ -110,6 +111,7 @@ async function bootstrap() {
       NewsModule,
       PartnerModule,
       ProductModule,
+      UserAuthModule,
     ], // /docs, /docs-json에만 노출 (Plen 제외)
     plenInclude: [
       PlanModule,
