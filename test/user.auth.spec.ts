@@ -218,14 +218,10 @@ describe('UserAuthController (E2E)', () => {
       expect(rows[0].refresh_token).toBe(res.body.data.refreshToken);
 
       // 토큰 페이로드 검증
-      const tokenPayload = jwtService.decode(res.body.data.token) as {
-        jwtType: string;
-      } | null;
+      const tokenPayload = jwtService.decode(res.body.data.token);
       expect(tokenPayload).not.toBeNull();
       expect(tokenPayload.jwtType).toBe(ONE_TIME_TOKEN_TYPE);
-      const refreshPayload = jwtService.decode(res.body.data.refreshToken) as {
-        jwtType: string;
-      } | null;
+      const refreshPayload = jwtService.decode(res.body.data.refreshToken);
       expect(refreshPayload).not.toBeNull();
       expect(refreshPayload.jwtType).toBe(REFRESH_TOKEN_TYPE);
     });
@@ -283,9 +279,7 @@ describe('UserAuthController (E2E)', () => {
   describe('GET /user/auth/one-time-token', () => {
     async function signUpAndLogin() {
       const body = buildSignUpBody();
-      await request(app.getHttpServer())
-        .post(`${BASE_URL}/signup`)
-        .send(body);
+      await request(app.getHttpServer()).post(`${BASE_URL}/signup`).send(body);
       const loginRes = await request(app.getHttpServer())
         .post(`${BASE_URL}/login`)
         .send({ email: body.email, password: body.password });
@@ -308,9 +302,7 @@ describe('UserAuthController (E2E)', () => {
       // Then
       expect(res.status).toBe(200);
       expect(typeof res.body.data.oneTimeToken).toBe('string');
-      const payload = jwtService.decode(res.body.data.oneTimeToken) as {
-        jwtType: string;
-      } | null;
+      const payload = jwtService.decode(res.body.data.oneTimeToken);
       expect(payload).not.toBeNull();
       expect(payload.jwtType).toBe(ONE_TIME_TOKEN_TYPE);
     });
@@ -341,9 +333,7 @@ describe('UserAuthController (E2E)', () => {
     it('만료된 refreshToken이면 401을 반환한다', async () => {
       // Given - signup 후 만료된 refreshToken을 직접 서명
       const body = buildSignUpBody();
-      await request(app.getHttpServer())
-        .post(`${BASE_URL}/signup`)
-        .send(body);
+      await request(app.getHttpServer()).post(`${BASE_URL}/signup`).send(body);
       const userRow = await dataSource.query(
         `SELECT id FROM "user" WHERE email = $1`,
         [body.email],
