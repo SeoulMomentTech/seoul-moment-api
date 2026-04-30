@@ -37,11 +37,15 @@ export class UserBrandLikeEntity extends BaseEntity {
 
   @ManyToOne(() => UserEntity, (user) => user.brandLikes, {
     onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 
-  @ManyToOne(() => BrandEntity, { onDelete: 'CASCADE' })
+  @ManyToOne(() => BrandEntity, (brand) => brand.userBrandLikes, {
+    onDelete: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
   @JoinColumn({ name: 'brand_id' })
   brand: BrandEntity;
 }

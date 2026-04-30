@@ -17,6 +17,7 @@ import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
 import { NewsEntity } from './news.entity';
 import { ProductEntity } from './product.entity';
+import { UserBrandLikeEntity } from './user-brand-like.entity';
 import { EntityType } from '../enum/entity.enum';
 
 /**
@@ -85,6 +86,15 @@ export class BrandEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   products: ProductEntity[];
+
+  @OneToMany(
+    () => UserBrandLikeEntity,
+    (userBrandLike) => userBrandLike.brand,
+    {
+      createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+    },
+  )
+  userBrandLikes: UserBrandLikeEntity[];
 
   @ManyToOne(() => CategoryEntity, (category) => category.brand, {
     eager: true,

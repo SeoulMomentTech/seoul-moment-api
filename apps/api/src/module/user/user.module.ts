@@ -4,9 +4,10 @@ import { UserOneTimeTokenStrategy } from 'apps/api/src/strategy/user-one-time-to
 import { UserRefreshTokenStrategy } from 'apps/api/src/strategy/user-refresh-token.strategy';
 
 import { UserAuthModule } from './auth/user.auth.module';
+import { UserLikeModule } from './like/user.like.module';
 
 @Module({
-  imports: [RepositoryModule, UserAuthModule],
+  imports: [RepositoryModule, UserAuthModule, UserLikeModule],
   providers: [UserOneTimeTokenStrategy, UserRefreshTokenStrategy],
 })
 export class UserModule {}

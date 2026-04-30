@@ -14,6 +14,7 @@ import { ProductExternalEntity } from './product-external.entity';
 import { ProductItemImageEntity } from './product-item-image.entity';
 import { ProductVariantEntity } from './product-variant.entity';
 import { ProductEntity } from './product.entity';
+import { UserProductLikeEntity } from './user-product-like.entity';
 import { ProductItemStatus } from '../enum/product.enum';
 
 @Entity('product_item')
@@ -121,4 +122,13 @@ export class ProductItemEntity extends CommonEntity {
     },
   )
   productExternals: ProductExternalEntity[];
+
+  @OneToMany(
+    () => UserProductLikeEntity,
+    (userProductLike) => userProductLike.productItem,
+    {
+      createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+    },
+  )
+  userProductLikes: UserProductLikeEntity[];
 }

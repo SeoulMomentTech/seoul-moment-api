@@ -81,6 +81,7 @@ import { PlanUserRoomRepositoryService } from './service/plan-user-room.reposito
 import { PlanUserRepositoryService } from './service/plan-user.repository.service';
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
+import { UserLikeRepositoryService } from './service/user.like.repository.service';
 import { UserRepositoryService } from './service/user.repository.service';
 
 @Module({
@@ -171,6 +172,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     ChatRepositoryService,
     BrandPromotionRepositoryService,
     UserRepositoryService,
+    UserLikeRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -194,6 +196,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     ChatRepositoryService,
     BrandPromotionRepositoryService,
     UserRepositoryService,
+    UserLikeRepositoryService,
   ],
 })
 export class RepositoryModule {}
