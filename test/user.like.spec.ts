@@ -5,6 +5,9 @@ import { DataSource } from 'typeorm';
 
 import { getDataSource, truncateTables } from './setup/db.helper';
 import { closeTestApp, getTestApp } from './setup/test-app';
+import { EntityType } from '../libs/repository/src/enum/entity.enum';
+import { LanguageCode } from '../libs/repository/src/enum/language.enum';
+import { LanguageRepositoryService } from '../libs/repository/src/service/language.repository.service';
 
 const USER_AUTH_BASE = '/user/auth';
 const LIKE_BASE = '/user/like';
@@ -12,11 +15,13 @@ const LIKE_BASE = '/user/like';
 describe('UserLikeController (E2E)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let languageRepositoryService: LanguageRepositoryService;
 
   beforeAll(async () => {
     // Given - 앱 싱글톤 획득 (최초 1회만 부트스트랩)
     app = await getTestApp();
     dataSource = getDataSource(app);
+    languageRepositoryService = app.get(LanguageRepositoryService);
   }, 60_000);
 
   afterEach(async () => {
@@ -30,7 +35,9 @@ describe('UserLikeController (E2E)', () => {
       'product_item',
       'product',
       'brand',
+      'product_category',
       'category',
+      'multilingual_text',
     ]);
   });
 
@@ -417,6 +424,415 @@ describe('UserLikeController (E2E)', () => {
       const res = await request(app.getHttpServer()).delete(
         `${LIKE_BASE}/brand/1`,
       );
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 헬퍼: GET 목록 조회용 시드 (productCategory, multilingual_text 포함)
+  // -------------------------------------------------------------------------
+  async function createProductCategory(): Promise<number> {
+    const rows = await dataSource.query(
+      `INSERT INTO product_category (sort_order) VALUES (1) RETURNING id`,
+    );
+    return rows[0].id;
+  }
+
+  async function ensureCategoryId(): Promise<number> {
+    const rows = await dataSource.query(`SELECT id FROM category LIMIT 1`);
+    if (rows.length > 0) return rows[0].id;
+    const created = await dataSource.query(
+      `INSERT INTO category (sort_order) VALUES (1) RETURNING id`,
+    );
+    return created[0].id;
+  }
+
+  async function createBrandWithEnglishName(
+    englishName: string | null,
+  ): Promise<number> {
+    const categoryId = await ensureCategoryId();
+    const rows = await dataSource.query(
+      `INSERT INTO brand (category_id, english_name) VALUES ($1, $2) RETURNING id`,
+      [categoryId, englishName],
+    );
+    return rows[0].id;
+  }
+
+  async function createProductInBrand(
+    brandId: number,
+    productCategoryId?: number,
+  ): Promise<number> {
+    const categoryId = await ensureCategoryId();
+    const rows = await dataSource.query(
+      `INSERT INTO product (brand_id, category_id, product_category_id) VALUES ($1, $2, $3) RETURNING id`,
+      [brandId, categoryId, productCategoryId ?? null],
+    );
+    return rows[0].id;
+  }
+
+  async function createProductItemInProduct(
+    productId: number,
+    options?: { price?: number; discountPrice?: number; createDate?: Date },
+  ): Promise<number> {
+    const rows = options?.createDate
+      ? await dataSource.query(
+          `INSERT INTO product_item (product_id, price, discount_price, create_date)
+           VALUES ($1, $2, $3, $4) RETURNING id`,
+          [
+            productId,
+            options.price ?? 1000,
+            options.discountPrice ?? 0,
+            options.createDate.toISOString(),
+          ],
+        )
+      : await dataSource.query(
+          `INSERT INTO product_item (product_id, price, discount_price)
+           VALUES ($1, $2, $3) RETURNING id`,
+          [productId, options?.price ?? 1000, options?.discountPrice ?? 0],
+        );
+    return rows[0].id;
+  }
+
+  async function likeProductItem(
+    userId: number,
+    productItemId: number,
+  ): Promise<void> {
+    await dataSource.query(
+      `INSERT INTO user_product_like (user_id, product_item_id) VALUES ($1, $2)`,
+      [userId, productItemId],
+    );
+  }
+
+  async function likeBrand(userId: number, brandId: number): Promise<void> {
+    await dataSource.query(
+      `INSERT INTO user_brand_like (user_id, brand_id) VALUES ($1, $2)`,
+      [userId, brandId],
+    );
+  }
+
+  async function saveText(
+    entityType: EntityType,
+    entityId: number,
+    fieldName: string,
+    ko: string,
+    en?: string,
+  ): Promise<void> {
+    await languageRepositoryService.saveMultilingualTextByLanguageCode(
+      entityType,
+      entityId,
+      fieldName,
+      LanguageCode.KOREAN,
+      ko,
+    );
+    if (en) {
+      await languageRepositoryService.saveMultilingualTextByLanguageCode(
+        entityType,
+        entityId,
+        fieldName,
+        LanguageCode.ENGLISH,
+        en,
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /user/like/product
+  // -------------------------------------------------------------------------
+  describe('GET /user/like/product', () => {
+    it('좋아요한 상품 목록을 다국어 brandName/productName과 함께 200으로 반환한다', async () => {
+      // Given - 유저, 브랜드, 상품, 좋아요, 다국어 텍스트 시드
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const brandId = await createBrandWithEnglishName('51percent');
+      const productId = await createProductInBrand(brandId);
+      const productItemId = await createProductItemInProduct(productId, {
+        price: 12000,
+        discountPrice: 9000,
+      });
+      await likeProductItem(userId, productItemId);
+      await saveText(EntityType.BRAND, brandId, 'name', '오일일퍼센트');
+      await saveText(EntityType.PRODUCT, productId, 'name', '베이직 티셔츠');
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/product`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(1);
+      expect(res.body.data.list).toHaveLength(1);
+      const item = res.body.data.list[0];
+      expect(item.productItemId).toBe(productItemId);
+      expect(item.brandName).toBe('오일일퍼센트');
+      expect(item.productName).toBe('베이직 티셔츠');
+      expect(item.price).toBe(12000);
+      expect(item.discountPrice).toBe(9000);
+    });
+
+    it('좋아요한 상품이 없으면 빈 list와 total=0을 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/product`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(0);
+      expect(res.body.data.list).toEqual([]);
+    });
+
+    it('productCategoryId 쿼리로 필터링하면 해당 카테고리 상품만 반환한다', async () => {
+      // Given - 두 개의 productCategory에 속한 상품 좋아요
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const brandId = await createBrandWithEnglishName('brand');
+      const targetCategoryId = await createProductCategory();
+      const otherCategoryId = await createProductCategory();
+
+      const targetProductId = await createProductInBrand(
+        brandId,
+        targetCategoryId,
+      );
+      const otherProductId = await createProductInBrand(
+        brandId,
+        otherCategoryId,
+      );
+      const targetItemId = await createProductItemInProduct(targetProductId);
+      const otherItemId = await createProductItemInProduct(otherProductId);
+      await likeProductItem(userId, targetItemId);
+      await likeProductItem(userId, otherItemId);
+      await saveText(EntityType.BRAND, brandId, 'name', '브랜드');
+      await saveText(EntityType.PRODUCT, targetProductId, 'name', '타깃');
+      await saveText(EntityType.PRODUCT, otherProductId, 'name', '아더');
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/product`)
+        .query({ productCategoryId: targetCategoryId })
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(1);
+      expect(res.body.data.list[0].productItemId).toBe(targetItemId);
+    });
+
+    it('페이지네이션이 정상 동작한다 (page=2, count=1)', async () => {
+      // Given - 좋아요 2개 등록
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const brandId = await createBrandWithEnglishName('brand');
+      const productAId = await createProductInBrand(brandId);
+      const productBId = await createProductInBrand(brandId);
+      const itemAId = await createProductItemInProduct(productAId);
+      const itemBId = await createProductItemInProduct(productBId);
+      await likeProductItem(userId, itemAId);
+      await likeProductItem(userId, itemBId);
+      await saveText(EntityType.BRAND, brandId, 'name', '브랜드');
+      await saveText(EntityType.PRODUCT, productAId, 'name', 'A');
+      await saveText(EntityType.PRODUCT, productBId, 'name', 'B');
+
+      // When - 두 번째 페이지 1개
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/product`)
+        .query({ page: 2, count: 1 })
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(2);
+      expect(res.body.data.list).toHaveLength(1);
+    });
+
+    it('다른 유저의 좋아요는 응답에 포함되지 않는다', async () => {
+      // Given - 다른 유저가 상품을 좋아요한 상태에서 본인은 0개
+      const other = await signUpAndLogin();
+      const me = await signUpAndLogin();
+      const brandId = await createBrandWithEnglishName('brand');
+      const productId = await createProductInBrand(brandId);
+      const itemId = await createProductItemInProduct(productId);
+      await likeProductItem(other.userId, itemId);
+      await saveText(EntityType.BRAND, brandId, 'name', '브랜드');
+      await saveText(EntityType.PRODUCT, productId, 'name', '상품');
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/product`)
+        .set('Authorization', `Bearer ${me.oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(0);
+    });
+
+    it('Authorization 헤더가 없으면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/product`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /user/like/brand
+  // -------------------------------------------------------------------------
+  describe('GET /user/like/brand', () => {
+    it('좋아요한 브랜드 목록을 다국어 brandName/totalLikeCount와 함께 200으로 반환한다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const brandId = await createBrandWithEnglishName('51percent');
+      await likeBrand(userId, brandId);
+      await saveText(EntityType.BRAND, brandId, 'name', '오일일퍼센트');
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/brand`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(1);
+      const brand = res.body.data.list[0];
+      expect(brand.brandId).toBe(brandId);
+      expect(brand.brandName).toBe('오일일퍼센트');
+      expect(brand.englishBrandName).toBe('51percent');
+      expect(brand.totalLikeCount).toBe(1);
+      expect(brand.recentProductList).toEqual([]);
+    });
+
+    it('recentProductList는 createDate DESC로 최근 4개까지만 반환한다', async () => {
+      // Given - productItem 5개를 createDate 차이를 두어 생성
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const brandId = await createBrandWithEnglishName('brand');
+      const productId = await createProductInBrand(brandId);
+
+      const baseTime = Date.now();
+      const itemIds: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        // i가 클수록 최신 (가장 큰 i가 가장 최근)
+        const id = await createProductItemInProduct(productId, {
+          createDate: new Date(baseTime + i * 1000),
+        });
+        itemIds.push(id);
+      }
+      await likeBrand(userId, brandId);
+      await saveText(EntityType.BRAND, brandId, 'name', '브랜드');
+      await saveText(EntityType.PRODUCT, productId, 'name', '상품');
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/brand`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      const recent = res.body.data.list[0].recentProductList;
+      expect(recent).toHaveLength(4);
+      // 최신 4개가 createDate DESC 순으로 (마지막에 만든 것부터)
+      expect(
+        recent.map((p: { productItemId: number }) => p.productItemId),
+      ).toEqual([itemIds[4], itemIds[3], itemIds[2], itemIds[1]]);
+    });
+
+    it('totalLikeCount는 다른 유저들의 좋아요까지 합산해 반환한다', async () => {
+      // Given - 본인 + 다른 유저 2명이 같은 브랜드를 좋아요
+      const me = await signUpAndLogin();
+      const other1 = await signUpAndLogin();
+      const other2 = await signUpAndLogin();
+      const brandId = await createBrandWithEnglishName('brand');
+      await likeBrand(me.userId, brandId);
+      await likeBrand(other1.userId, brandId);
+      await likeBrand(other2.userId, brandId);
+      await saveText(EntityType.BRAND, brandId, 'name', '브랜드');
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/brand`)
+        .set('Authorization', `Bearer ${me.oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.list[0].totalLikeCount).toBe(3);
+    });
+
+    it('englishBrandName이 null이면 다국어 brandName으로 fallback한다', async () => {
+      // Given - english_name 미입력 브랜드
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const brandId = await createBrandWithEnglishName(null);
+      await likeBrand(userId, brandId);
+      await saveText(EntityType.BRAND, brandId, 'name', '한글브랜드');
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/brand`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      const brand = res.body.data.list[0];
+      expect(brand.englishBrandName).toBe('한글브랜드');
+      expect(brand.brandName).toBe('한글브랜드');
+    });
+
+    it('좋아요한 브랜드가 없으면 빈 list와 total=0을 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/brand`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(0);
+      expect(res.body.data.list).toEqual([]);
+    });
+
+    it('페이지네이션이 정상 동작한다 (page=2, count=1)', async () => {
+      // Given - 브랜드 2개 좋아요
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const brandAId = await createBrandWithEnglishName('A');
+      const brandBId = await createBrandWithEnglishName('B');
+      await likeBrand(userId, brandAId);
+      await likeBrand(userId, brandBId);
+      await saveText(EntityType.BRAND, brandAId, 'name', 'A');
+      await saveText(EntityType.BRAND, brandBId, 'name', 'B');
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/brand`)
+        .query({ page: 2, count: 1 })
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(2);
+      expect(res.body.data.list).toHaveLength(1);
+    });
+
+    it('Authorization 헤더가 없으면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${LIKE_BASE}/brand`)
+        .set('Accept-language', LanguageCode.KOREAN);
 
       // Then
       expect(res.status).toBe(401);

@@ -60,6 +60,7 @@ import { UserProductLikeEntity } from './entity/user-product-like.entity';
 import { UserProfileEntity } from './entity/user-profile.entity';
 import { UserSnsEntity } from './entity/user-sns.entity';
 import { UserEntity } from './entity/user.entity';
+import { UserRecentEntity } from './entity/user.recent.entity';
 import { VariantOptionEntity } from './entity/variant-option.entity';
 import { SortOrderHelper } from './helper/sort-order.helper';
 import { AdminRoleRepositoryService } from './service/admin-role.repository.service';
@@ -82,6 +83,7 @@ import { PlanUserRepositoryService } from './service/plan-user.repository.servic
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
 import { UserLikeRepositoryService } from './service/user.like.repository.service';
+import { UserRecentRepositoryService } from './service/user.recent.repository.service';
 import { UserRepositoryService } from './service/user.repository.service';
 
 @Module({
@@ -147,6 +149,7 @@ import { UserRepositoryService } from './service/user.repository.service';
       UserSnsEntity,
       UserProductLikeEntity,
       UserBrandLikeEntity,
+      UserRecentEntity,
     ]),
   ],
   providers: [
@@ -173,6 +176,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     BrandPromotionRepositoryService,
     UserRepositoryService,
     UserLikeRepositoryService,
+    UserRecentRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -197,6 +201,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     BrandPromotionRepositoryService,
     UserRepositoryService,
     UserLikeRepositoryService,
+    UserRecentRepositoryService,
   ],
 })
 export class RepositoryModule {}

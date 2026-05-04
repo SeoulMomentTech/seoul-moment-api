@@ -77,6 +77,24 @@ export class UserLikeRepositoryService {
       .getManyAndCount();
   }
 
+  async countByProductItemIds(
+    productItemIds: number[],
+  ): Promise<Map<number, number>> {
+    if (productItemIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.userProductLikeRepository
+      .createQueryBuilder('upl')
+      .select('upl.productItemId', 'productItemId')
+      .addSelect('COUNT(*)', 'count')
+      .where('upl.productItemId IN (:...productItemIds)', { productItemIds })
+      .groupBy('upl.productItemId')
+      .getRawMany<{ productItemId: number; count: string }>();
+
+    return new Map(rows.map((r) => [Number(r.productItemId), Number(r.count)]));
+  }
+
   async getUserBrandLikeList(
     userId: number,
     page: number,

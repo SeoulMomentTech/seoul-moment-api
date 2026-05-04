@@ -105,14 +105,6 @@ export class CacheService implements OnModuleInit {
   }
 
   async getList(key: string): Promise<string[]> {
-    const list = await this.lrange(key, 0, -1);
-
-    if (list.length < 1)
-      throw new ServiceError(
-        `no exist keyword, please setting keyword. key: ${key}`,
-        ServiceErrorCode.NOT_FOUND_DATA,
-      );
-
-    return list;
+    return this.lrange(key, 0, -1);
   }
 }

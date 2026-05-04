@@ -13,6 +13,7 @@ import { UserFitEntity } from './user-fit.entity';
 import { UserProductLikeEntity } from './user-product-like.entity';
 import { UserProfileEntity } from './user-profile.entity';
 import { UserSnsEntity } from './user-sns.entity';
+import { UserRecentEntity } from './user.recent.entity';
 
 @Entity('user')
 export class UserEntity extends CommonEntity {
@@ -89,6 +90,9 @@ export class UserEntity extends CommonEntity {
 
   @OneToMany(() => UserProductLikeEntity, (like) => like.user)
   productLikes: UserProductLikeEntity[];
+
+  @OneToMany(() => UserRecentEntity, (recent) => recent.user)
+  userRecents: UserRecentEntity[];
 
   async verifyPassword(password: string): Promise<boolean> {
     return bcrypt.compare(password, this.password);

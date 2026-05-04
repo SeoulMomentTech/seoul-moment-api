@@ -187,6 +187,7 @@ export class ProductRepositoryService implements OnModuleInit {
     withoutId?: number,
     optionIdList?: number[],
     mainView?: boolean,
+    withoutIdList?: number[],
   ): Promise<[ProductItemEntity[], number]> {
     // 대용량 최적화: 옵션 필터링을 위한 서브쿼리 생성
     const buildOptionFilterSubquery = () => {
@@ -269,6 +270,10 @@ export class ProductRepositoryService implements OnModuleInit {
 
       if (withoutId) {
         query.andWhere('pc.id != :withoutId', { withoutId });
+      }
+
+      if (withoutIdList && withoutIdList.length > 0) {
+        query.andWhere('pc.id NOT IN (:...withoutIdList)', { withoutIdList });
       }
 
       // 옵션 필터링: EXISTS 서브쿼리 사용 (JOIN 대신)
@@ -374,6 +379,16 @@ export class ProductRepositoryService implements OnModuleInit {
       );
 
     return result;
+  }
+
+  async existProductItemById(id: number): Promise<boolean> {
+    const result = await this.productItemRepository.findOne({
+      where: {
+        id,
+        status: ProductItemStatus.NORMAL,
+      },
+    });
+    return !!result?.id;
   }
 
   async getProductItemById(id: number): Promise<ProductItemEntity> {

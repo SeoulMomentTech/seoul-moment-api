@@ -15,6 +15,7 @@ import { ProductItemImageEntity } from './product-item-image.entity';
 import { ProductVariantEntity } from './product-variant.entity';
 import { ProductEntity } from './product.entity';
 import { UserProductLikeEntity } from './user-product-like.entity';
+import { UserRecentEntity } from './user.recent.entity';
 import { ProductItemStatus } from '../enum/product.enum';
 
 @Entity('product_item')
@@ -131,4 +132,7 @@ export class ProductItemEntity extends CommonEntity {
     },
   )
   userProductLikes: UserProductLikeEntity[];
+
+  @OneToMany(() => UserRecentEntity, (recent) => recent.productItem)
+  userRecents: UserRecentEntity[];
 }

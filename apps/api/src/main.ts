@@ -58,6 +58,7 @@ import { PlanUserModule } from './module/plen/user/plan.user.module';
 import { ProductModule } from './module/product/product.module';
 import { UserAuthModule } from './module/user/auth/user.auth.module';
 import { UserLikeModule } from './module/user/like/user.like.module';
+import { UserRecentModule } from './module/user/recent/user.recent.module';
 
 async function bootstrap() {
   const config = Configuration.getConfig();
@@ -114,6 +115,7 @@ async function bootstrap() {
       ProductModule,
       UserAuthModule,
       UserLikeModule,
+      UserRecentModule,
     ], // /docs, /docs-json에만 노출 (Plen 제외)
     plenInclude: [
       PlanModule,
