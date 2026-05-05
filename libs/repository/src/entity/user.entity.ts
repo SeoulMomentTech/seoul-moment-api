@@ -38,7 +38,7 @@ export class UserEntity extends CommonEntity {
 
   @Column('varchar', {
     length: 255,
-    nullable: false,
+    nullable: true,
     unique: true,
     comment: '전화번호',
   })

@@ -138,8 +138,8 @@ describe('UserAuthController (E2E)', () => {
       expect(res.status).toBe(400);
     });
 
-    it('필수 필드(phone)가 누락되면 400을 반환한다', async () => {
-      // Given
+    it('phone이 누락되어도 가입에 성공하고 DB에는 null로 저장된다', async () => {
+      // Given - phone이 빠진 가입 요청
       const body = buildSignUpBody();
       delete (body as Record<string, unknown>).phone;
 
@@ -149,7 +149,54 @@ describe('UserAuthController (E2E)', () => {
         .send(body);
 
       // Then
+      expect(res.status).toBe(204);
+      const rows = await dataSource.query(
+        `SELECT phone FROM "user" WHERE email = $1`,
+        [body.email],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].phone).toBeNull();
+    });
+
+    it('phone이 string이 아니면 400을 반환한다', async () => {
+      // Given - phone에 숫자형 값을 넣어 IsString 검증을 트리거
+      const body = buildSignUpBody({ phone: 12345678901 });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(body);
+
+      // Then
       expect(res.status).toBe(400);
+    });
+
+    it('phone을 NULL로 둔 사용자는 여러 명 존재할 수 있다', async () => {
+      // Given - phone이 빠진 두 개의 가입 요청
+      const first = buildSignUpBody();
+      const second = buildSignUpBody();
+      delete (first as Record<string, unknown>).phone;
+      delete (second as Record<string, unknown>).phone;
+
+      // When
+      const firstRes = await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(first);
+      const secondRes = await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(second);
+
+      // Then - NULL은 unique 제약에서 서로 다른 값으로 취급되어 둘 다 가입 가능
+      expect(firstRes.status).toBe(204);
+      expect(secondRes.status).toBe(204);
+      const rows = await dataSource.query(
+        `SELECT phone FROM "user" WHERE email IN ($1, $2)`,
+        [first.email, second.email],
+      );
+      expect(rows).toHaveLength(2);
+      expect(
+        rows.every((r: { phone: string | null }) => r.phone === null),
+      ).toBe(true);
     });
 
     it('personalInfoAgreeDate가 잘못된 날짜 형식이면 400을 반환한다', async () => {

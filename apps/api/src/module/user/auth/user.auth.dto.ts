@@ -24,13 +24,13 @@ export class PostUserSignUpRequest {
   @IsDefined()
   password: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '전화번호',
     example: '01012345678',
   })
   @IsString()
-  @IsDefined()
-  phone: string;
+  @IsOptional()
+  phone?: string;
 
   @ApiProperty({
     description: '개인정보 수집 동의 일시',
