@@ -26,6 +26,7 @@ import {
   PostUserSignUpRequest,
 } from './user.auth.dto';
 import { UserAuthService } from './user.auth.service';
+import { PostEmailCodeRequest } from '../../auth/auth.dto';
 
 @Controller('user/auth')
 export class UserAuthController {
@@ -76,5 +77,13 @@ export class UserAuthController {
     return new ResponseDataDto(
       plainToInstance(GetUserOneTimeTokenResponse, { oneTimeToken }),
     );
+  }
+
+  @Post('email/code')
+  @ApiOperation({ summary: '이메일 인증 코드 발송' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.CONFLICT, '이미 가입된 이메일')
+  async postEmailCode(@Body() body: PostEmailCodeRequest) {
+    await this.userAuthService.postEmailCode(body.email);
   }
 }

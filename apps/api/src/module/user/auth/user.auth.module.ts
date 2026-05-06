@@ -5,11 +5,13 @@ import { Module } from '@nestjs/common';
 
 import { UserAuthController } from './user.auth.controller';
 import { UserAuthService } from './user.auth.service';
+import { AuthModule } from '../../auth/auth.module';
 
 @Module({
   imports: [
     RepositoryModule,
     CommonAuthModule.forRoot(Configuration.getConfig().JWT_SECRET),
+    AuthModule,
   ],
   controllers: [UserAuthController],
   providers: [UserAuthService],

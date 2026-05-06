@@ -15,12 +15,14 @@ import {
   PostUserLoginResponse,
   PostUserSignUpRequest,
 } from './user.auth.dto';
+import { AuthService } from '../../auth/auth.service';
 
 @Injectable()
 export class UserAuthService {
   constructor(
     private readonly userRepositoryService: UserRepositoryService,
     private readonly commonAuthService: CommonAuthService,
+    private readonly authService: AuthService,
   ) {}
 
   async signUp(signUpRequest: PostUserSignUpRequest): Promise<void> {
@@ -76,5 +78,15 @@ export class UserAuthService {
     await this.userRepositoryService.updateUser(updateDto);
 
     return { token: accessToken, refreshToken };
+  }
+
+  async postEmailCode(email: string): Promise<void> {
+    const exist = await this.userRepositoryService.existUserByEmail(email);
+
+    if (exist) {
+      throw new ServiceError('User already exists', ServiceErrorCode.CONFLICT);
+    }
+
+    await this.authService.sendEmailCode(email);
   }
 }

@@ -1,3 +1,4 @@
+import { CacheService } from '@app/cache/cache.service';
 import { faker } from '@faker-js/faker';
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -26,15 +27,18 @@ describe('UserAuthController (E2E)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
   let jwtService: JwtService;
+  let cacheService: CacheService;
 
   beforeAll(async () => {
     // Given - 앱 싱글톤 획득 (최초 1회만 부트스트랩)
     app = await getTestApp();
     dataSource = getDataSource(app);
     jwtService = app.get(JwtService);
+    cacheService = app.get(CacheService);
   }, 60_000);
 
   afterEach(async () => {
+    await cacheService.deleteAll();
     await truncateTables(dataSource, [
       'user_brand_like',
       'user_product_like',
@@ -447,6 +451,69 @@ describe('UserAuthController (E2E)', () => {
 
       // Then
       expect(res.status).toBe(401);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // POST /user/auth/email/code
+  // -----------------------------------------------------------------------
+  describe('POST /user/auth/email/code', () => {
+    it('미가입 이메일로 요청하면 200을 반환하고 Redis에 6자리 인증 코드가 저장된다', async () => {
+      // Given
+      const email = faker.internet.email().toLowerCase();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/email/code`)
+        .send({ email });
+
+      // Then
+      expect(res.status).toBe(200);
+      const cached = await cacheService.find(email);
+      expect(cached).not.toBeNull();
+      expect(cached).toMatch(/^\d{6}$/);
+    });
+
+    it('이미 가입된 이메일이면 409와 User already exists를 반환한다', async () => {
+      // Given - signup으로 사용자 생성
+      const body = buildSignUpBody();
+      const signupRes = await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(body);
+      expect(signupRes.status).toBe(204);
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/email/code`)
+        .send({ email: body.email });
+
+      // Then
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe('User already exists');
+
+      // Redis에 인증 코드가 저장되지 않아야 한다
+      const cached = await cacheService.find(body.email);
+      expect(cached).toBeNull();
+    });
+
+    it('이메일 형식이 잘못되면 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/email/code`)
+        .send({ email: 'not-an-email' });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('email 필드가 누락되면 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/email/code`)
+        .send({});
+
+      // Then
+      expect(res.status).toBe(400);
     });
   });
 });

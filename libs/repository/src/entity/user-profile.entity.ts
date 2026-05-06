@@ -21,15 +21,15 @@ export class UserProfileEntity extends CommonEntity {
   })
   userId: number;
 
-  @Column('varchar', { length: 255, nullable: false, comment: '닉네임' })
-  nickname: string;
+  @Column('varchar', { length: 255, nullable: true, comment: '닉네임' })
+  nickname?: string;
 
   @Column('varchar', {
     length: 255,
-    nullable: false,
+    nullable: true,
     comment: '프로필 이미지 경로',
   })
-  imagePath: string;
+  imagePath?: string;
 
   @Index()
   @Column('varchar', { length: 255, nullable: false, comment: '이름' })
@@ -44,7 +44,7 @@ export class UserProfileEntity extends CommonEntity {
   gender: UserProfileGender;
 
   @Column('date', { nullable: false, comment: '생년월일' })
-  birthDate: Date;
+  birthDate: string;
 
   @Column('varchar', { length: 255, nullable: false, comment: '우편번호' })
   postalCode: string;
@@ -57,6 +57,13 @@ export class UserProfileEntity extends CommonEntity {
 
   @Column('varchar', { length: 255, nullable: false, comment: '상세 주소' })
   detailAddress: string;
+
+  @Column('boolean', {
+    nullable: false,
+    default: true,
+    comment: '프로필 공개 범위',
+  })
+  visibility: boolean;
 
   //TODO 신분증 정보 작성
 

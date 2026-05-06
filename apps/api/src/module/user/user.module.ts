@@ -6,9 +6,12 @@ import { UserRefreshTokenStrategy } from 'apps/api/src/strategy/user-refresh-tok
 import { UserAuthModule } from './auth/user.auth.module';
 import { UserLikeModule } from './like/user.like.module';
 import { UserRecentModule } from './recent/user.recent.module';
+import { UserController } from './user.controller';
+import { UserService } from './user.service';
 
 @Module({
   imports: [RepositoryModule, UserAuthModule, UserLikeModule, UserRecentModule],
-  providers: [UserOneTimeTokenStrategy, UserRefreshTokenStrategy],
+  controllers: [UserController],
+  providers: [UserService, UserOneTimeTokenStrategy, UserRefreshTokenStrategy],
 })
 export class UserModule {}
