@@ -110,3 +110,23 @@ export class GetUserOneTimeTokenResponse {
   @IsDefined()
   oneTimeToken: string;
 }
+
+export class PatchPasswordRequest {
+  @ApiProperty({
+    description: '비밀번호',
+    example: 'password',
+  })
+  @IsString()
+  @IsDefined()
+  password: string;
+}
+
+export class PostUserPasswordEmailVerifyResponse {
+  @ApiProperty({
+    description: '비밀번호 재설정용 one time token JWT',
+    example: 'oneTimeToken',
+  })
+  @IsString()
+  @IsDefined()
+  token: string;
+}

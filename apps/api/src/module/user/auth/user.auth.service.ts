@@ -89,4 +89,38 @@ export class UserAuthService {
 
     await this.authService.sendEmailCode(email);
   }
+
+  async postPasswordEmailCode(email: string): Promise<void> {
+    const exist = await this.userRepositoryService.existUserByEmail(email);
+
+    if (!exist) {
+      throw new ServiceError('User not found', ServiceErrorCode.NOT_FOUND_DATA);
+    }
+
+    await this.authService.sendEmailCode(email);
+  }
+
+  async postPasswordEmailVerify(
+    email: string,
+    code: number,
+  ): Promise<{ token: string }> {
+    await this.authService.verifyEmail(email, code);
+
+    const user = await this.userRepositoryService.getUserByEmail(email);
+
+    const token = await this.commonAuthService.generateJwt(
+      { id: user.id },
+      JwtType.ONE_TIME_TOKEN,
+      Configuration.getConfig().JWT_EXPIRES_IN,
+    );
+
+    return { token };
+  }
+
+  async patchPassword(userId: number, password: string): Promise<void> {
+    await this.userRepositoryService.updateUser({
+      id: userId,
+      password: await bcrypt.hash(password, 10),
+    });
+  }
 }

@@ -48,7 +48,7 @@ export class CommonAuthService {
   }
 
   async verifyEmail(email: string, code: number) {
-    const cachedCode = await this.cacheService.get(email);
+    const cachedCode = await this.cacheService.find(email);
 
     if (!cachedCode) {
       throw new ServiceError(

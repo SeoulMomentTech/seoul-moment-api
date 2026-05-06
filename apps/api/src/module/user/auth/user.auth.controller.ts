@@ -11,22 +11,29 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { UserOneTimeTokenGuard } from 'apps/api/src/guard/user-one-time-token.guard';
 import { UserRefreshTokenGuard } from 'apps/api/src/guard/user-refresh-token.guard';
 import { plainToInstance } from 'class-transformer';
 
 import {
   GetUserOneTimeTokenResponse,
+  PatchPasswordRequest,
   PostUserLoginRequest,
   PostUserLoginResponse,
+  PostUserPasswordEmailVerifyResponse,
   PostUserSignUpRequest,
 } from './user.auth.dto';
 import { UserAuthService } from './user.auth.service';
-import { PostEmailCodeRequest } from '../../auth/auth.dto';
+import {
+  PostEmailCodeRequest,
+  PostEmailVerifyRequest,
+} from '../../auth/auth.dto';
 
 @Controller('user/auth')
 export class UserAuthController {
@@ -80,10 +87,56 @@ export class UserAuthController {
   }
 
   @Post('email/code')
-  @ApiOperation({ summary: '이메일 인증 코드 발송' })
+  @ApiOperation({ summary: '회원 가입용 이메일 인증 코드 발송' })
   @HttpCode(HttpStatus.OK)
   @ResponseException(HttpStatus.CONFLICT, '이미 가입된 이메일')
   async postEmailCode(@Body() body: PostEmailCodeRequest) {
     await this.userAuthService.postEmailCode(body.email);
+  }
+
+  @Post('password/email/code')
+  @ApiOperation({ summary: '비밀번호 찾기 이메일 인증 코드 발송' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.NOT_FOUND, '존재 하지 않는 이메일')
+  async postPasswordEmailCode(@Body() body: PostEmailCodeRequest) {
+    await this.userAuthService.postPasswordEmailCode(body.email);
+  }
+
+  @Post('password/email/verify')
+  @ApiOperation({
+    summary: '비밀번호 찾기 이메일 인증 코드 검증',
+    description:
+      '검증 성공 시 비밀번호 변경에 사용할 one time token을 반환합니다.',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '인증 코드 만료 또는 불일치')
+  @ResponseException(HttpStatus.NOT_FOUND, '존재 하지 않는 이메일')
+  @ResponseData(PostUserPasswordEmailVerifyResponse)
+  async postPasswordEmailVerify(
+    @Body() body: PostEmailVerifyRequest,
+  ): Promise<ResponseDataDto<PostUserPasswordEmailVerifyResponse>> {
+    const result = await this.userAuthService.postPasswordEmailVerify(
+      body.email,
+      parseInt(body.code, 10),
+    );
+
+    return new ResponseDataDto(
+      plainToInstance(PostUserPasswordEmailVerifyResponse, result),
+    );
+  }
+
+  @Patch('password')
+  @ApiOperation({
+    summary: '비밀번호 변경',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, 'one time token 만료 및 변조')
+  async patchPassword(
+    @Request() req: any,
+    @Body() body: PatchPasswordRequest,
+  ): Promise<void> {
+    await this.userAuthService.patchPassword(req.user.id, body.password);
   }
 }

@@ -516,4 +516,316 @@ describe('UserAuthController (E2E)', () => {
       expect(res.status).toBe(400);
     });
   });
+
+  // -----------------------------------------------------------------------
+  // POST /user/auth/password/email/code
+  // -----------------------------------------------------------------------
+  describe('POST /user/auth/password/email/code', () => {
+    it('가입된 이메일로 요청하면 200을 반환하고 Redis에 6자리 인증 코드가 저장된다', async () => {
+      // Given - signup으로 사용자 생성
+      const body = buildSignUpBody();
+      await request(app.getHttpServer()).post(`${BASE_URL}/signup`).send(body);
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/code`)
+        .send({ email: body.email });
+
+      // Then
+      expect(res.status).toBe(200);
+      const cached = await cacheService.find(body.email);
+      expect(cached).not.toBeNull();
+      expect(cached).toMatch(/^\d{6}$/);
+    });
+
+    it('미가입 이메일이면 404와 User not found를 반환하고 Redis에 코드가 저장되지 않는다', async () => {
+      // Given
+      const email = faker.internet.email().toLowerCase();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/code`)
+        .send({ email });
+
+      // Then
+      expect(res.status).toBe(404);
+      expect(res.body.message).toBe('User not found');
+      const cached = await cacheService.find(email);
+      expect(cached).toBeNull();
+    });
+
+    it('이메일 형식이 잘못되면 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/code`)
+        .send({ email: 'not-an-email' });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('email 필드가 누락되면 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/code`)
+        .send({});
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // POST /user/auth/password/email/verify
+  // -----------------------------------------------------------------------
+  describe('POST /user/auth/password/email/verify', () => {
+    async function signUpAndRequestCode() {
+      const body = buildSignUpBody();
+      await request(app.getHttpServer()).post(`${BASE_URL}/signup`).send(body);
+      const codeRes = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/code`)
+        .send({ email: body.email });
+      expect(codeRes.status).toBe(200);
+      const code = await cacheService.find(body.email);
+      expect(code).not.toBeNull();
+      return { email: body.email, code };
+    }
+
+    it('정상 코드로 검증하면 200과 비밀번호 재설정용 one time token을 반환한다', async () => {
+      // Given
+      const { email, code } = await signUpAndRequestCode();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/verify`)
+        .send({ email, code });
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.result).toBe(true);
+      expect(typeof res.body.data.token).toBe('string');
+      const payload = jwtService.decode(res.body.data.token);
+      expect(payload).not.toBeNull();
+      expect(payload.jwtType).toBe(ONE_TIME_TOKEN_TYPE);
+
+      // 토큰의 id가 실제 가입된 사용자 id와 일치해야 한다
+      const userRow = await dataSource.query(
+        `SELECT id FROM "user" WHERE email = $1`,
+        [email],
+      );
+      expect(payload.id).toBe(userRow[0].id);
+    });
+
+    it('코드가 일치하지 않으면 401과 인증 코드 불일치 메시지를 반환한다', async () => {
+      // Given
+      const { email, code } = await signUpAndRequestCode();
+      const wrongCode = ((parseInt(code, 10) + 1) % 1000000)
+        .toString()
+        .padStart(6, '0');
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/verify`)
+        .send({ email, code: wrongCode });
+
+      // Then
+      expect(res.status).toBe(401);
+      expect(res.body.message).toBe('인증 코드가 일치하지 않습니다.');
+    });
+
+    it('코드가 만료되었거나 발송된 적 없으면 401을 반환한다', async () => {
+      // Given - 가입은 했지만 코드 발송 안 함
+      const body = buildSignUpBody();
+      await request(app.getHttpServer()).post(`${BASE_URL}/signup`).send(body);
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/verify`)
+        .send({ email: body.email, code: '123456' });
+
+      // Then
+      expect(res.status).toBe(401);
+      expect(res.body.message).toBe('인증 코드가 만료되었습니다.');
+    });
+
+    it('이메일 형식이 잘못되면 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/verify`)
+        .send({ email: 'not-an-email', code: '123456' });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('code 필드가 누락되면 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/verify`)
+        .send({ email: 'foo@bar.com' });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // PATCH /user/auth/password
+  // -----------------------------------------------------------------------
+  describe('PATCH /user/auth/password', () => {
+    async function signUpAndIssueResetToken() {
+      const body = buildSignUpBody();
+      await request(app.getHttpServer()).post(`${BASE_URL}/signup`).send(body);
+      await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/code`)
+        .send({ email: body.email });
+      const code = await cacheService.find(body.email);
+      const verifyRes = await request(app.getHttpServer())
+        .post(`${BASE_URL}/password/email/verify`)
+        .send({ email: body.email, code });
+      expect(verifyRes.status).toBe(200);
+      return {
+        email: body.email,
+        oldPassword: body.password,
+        token: verifyRes.body.data.token as string,
+      };
+    }
+
+    it('one time token으로 비밀번호를 변경하면 204를 반환하고 새 비밀번호로 로그인할 수 있다', async () => {
+      // Given
+      const { email, oldPassword, token } = await signUpAndIssueResetToken();
+      const newPassword = 'brand-new-password-1234';
+
+      const beforeRow = await dataSource.query(
+        `SELECT password FROM "user" WHERE email = $1`,
+        [email],
+      );
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE_URL}/password`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ password: newPassword });
+
+      // Then
+      expect(res.status).toBe(204);
+      expect(res.body).toEqual({});
+
+      const afterRow = await dataSource.query(
+        `SELECT password FROM "user" WHERE email = $1`,
+        [email],
+      );
+      expect(afterRow[0].password).not.toBe(beforeRow[0].password);
+      expect(afterRow[0].password.startsWith('$2')).toBe(true);
+
+      // 기존 비밀번호로는 로그인 실패
+      const oldLoginRes = await request(app.getHttpServer())
+        .post(`${BASE_URL}/login`)
+        .send({ email, password: oldPassword });
+      expect(oldLoginRes.status).toBe(401);
+
+      // 새 비밀번호로는 로그인 성공
+      const newLoginRes = await request(app.getHttpServer())
+        .post(`${BASE_URL}/login`)
+        .send({ email, password: newPassword });
+      expect(newLoginRes.status).toBe(200);
+    });
+
+    it('Authorization 헤더가 없으면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE_URL}/password`)
+        .send({ password: 'whatever-1234' });
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+
+    it('refresh token(jwtType이 다름)으로 호출하면 401을 반환한다', async () => {
+      // Given - signup → login으로 refreshToken 획득
+      const body = buildSignUpBody();
+      await request(app.getHttpServer()).post(`${BASE_URL}/signup`).send(body);
+      const loginRes = await request(app.getHttpServer())
+        .post(`${BASE_URL}/login`)
+        .send({ email: body.email, password: body.password });
+      const refreshToken = loginRes.body.data.refreshToken as string;
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE_URL}/password`)
+        .set('Authorization', `Bearer ${refreshToken}`)
+        .send({ password: 'whatever-1234' });
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+
+    it('만료된 token이면 401을 반환한다', async () => {
+      // Given - signup 후 만료된 ONE_TIME_TOKEN을 직접 서명
+      const body = buildSignUpBody();
+      await request(app.getHttpServer()).post(`${BASE_URL}/signup`).send(body);
+      const userRow = await dataSource.query(
+        `SELECT id FROM "user" WHERE email = $1`,
+        [body.email],
+      );
+      const expiredToken = await jwtService.signAsync(
+        { id: userRow[0].id, jwtType: ONE_TIME_TOKEN_TYPE },
+        { expiresIn: '-1s' },
+      );
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE_URL}/password`)
+        .set('Authorization', `Bearer ${expiredToken}`)
+        .send({ password: 'whatever-1234' });
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+
+    it('서명이 변조된 token이면 401을 반환한다', async () => {
+      // Given
+      const { token } = await signUpAndIssueResetToken();
+      const tampered = `${token.slice(0, -1)}${
+        token.slice(-1) === 'A' ? 'B' : 'A'
+      }`;
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE_URL}/password`)
+        .set('Authorization', `Bearer ${tampered}`)
+        .send({ password: 'whatever-1234' });
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+
+    it('password 필드가 누락되면 400을 반환한다', async () => {
+      // Given
+      const { token } = await signUpAndIssueResetToken();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE_URL}/password`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('email 필드가 추가되면 forbidNonWhitelisted 검증으로 400을 반환한다', async () => {
+      // Given
+      const { token } = await signUpAndIssueResetToken();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE_URL}/password`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ email: 'extra@test.com', password: 'whatever-1234' });
+
+      // Then - DTO에 email이 없으므로 whitelist에 의해 거부됨
+      expect(res.status).toBe(400);
+    });
+  });
 });
