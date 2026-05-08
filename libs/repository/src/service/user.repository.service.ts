@@ -2,7 +2,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 
 import {
   UpdateUserDto,
@@ -89,7 +89,10 @@ export class UserRepositoryService {
   }
 
   async getUserProfile(userId: number): Promise<UserProfileEntity> {
-    const result = await this.userProfileRepository.findOneBy({ userId });
+    const result = await this.userProfileRepository.findOne({
+      where: { userId },
+      relations: { user: true },
+    });
 
     if (!result) {
       throw new ServiceError(
@@ -149,5 +152,23 @@ export class UserRepositoryService {
 
   async softDeleteUserFit(userId: number): Promise<void> {
     await this.userFitRepository.softDelete({ userId });
+  }
+
+  async validateUserNickname(
+    nickname: string,
+    excludeUserId?: number,
+  ): Promise<void> {
+    const where =
+      excludeUserId !== undefined
+        ? { nickname, id: Not(excludeUserId) }
+        : { nickname };
+    const result = await this.userRepository.findOneBy(where);
+
+    if (result) {
+      throw new ServiceError(
+        'User nickname already exists',
+        ServiceErrorCode.CONFLICT,
+      );
+    }
   }
 }

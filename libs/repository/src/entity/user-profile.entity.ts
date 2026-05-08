@@ -21,9 +21,6 @@ export class UserProfileEntity extends CommonEntity {
   })
   userId: number;
 
-  @Column('varchar', { length: 255, nullable: true, comment: '닉네임' })
-  nickname?: string;
-
   @Column('varchar', {
     length: 255,
     nullable: true,
@@ -31,7 +28,6 @@ export class UserProfileEntity extends CommonEntity {
   })
   imagePath?: string;
 
-  @Index()
   @Column('varchar', { length: 255, nullable: false, comment: '이름' })
   name: string;
 
@@ -57,15 +53,6 @@ export class UserProfileEntity extends CommonEntity {
 
   @Column('varchar', { length: 255, nullable: false, comment: '상세 주소' })
   detailAddress: string;
-
-  @Column('boolean', {
-    nullable: false,
-    default: true,
-    comment: '프로필 공개 범위',
-  })
-  visibility: boolean;
-
-  //TODO 신분증 정보 작성
 
   @OneToOne(() => UserEntity, (user) => user.profile, {
     onDelete: 'CASCADE',

@@ -35,10 +35,9 @@ export class UserService {
       id: user.id,
       phone: dto.phone,
       email: dto.email,
-      adAgreeEmailDate: dto.adAgreeEmail ? new Date() : null,
-      recommendEmailDate: dto.recommendEmail ? new Date() : null,
-      recommendPhoneDate: dto.recommendPhone ? new Date() : null,
-      personalInfoAgreeDate: dto.personalInfoAgree ? new Date() : null,
+      newProductDate: dto.newProductAgreed ? new Date() : null,
+      adAgreeDate: dto.adAgreed ? new Date() : null,
+      recommendDate: dto.recommendAgreed ? new Date() : null,
     };
 
     await this.userRepositoryService.updateUser(updateDto);
@@ -49,13 +48,14 @@ export class UserService {
     id: number,
     dto: PostUserProfileRequest,
   ): Promise<void> {
+    await this.validateAndUpdateNickname(id, dto.nickname);
+
     await this.userRepositoryService.createUserProfile(
       plainToInstance(UserProfileEntity, {
         userId: id,
         imagePath: dto.profileImageUrl
           ? stripImageDomain(dto.profileImageUrl)
           : undefined,
-        nickname: dto.nickname,
         name: dto.name,
         gender: dto.gender,
         birthDate: dto.birthDate,
@@ -63,23 +63,24 @@ export class UserService {
         city: dto.city,
         district: dto.district,
         detailAddress: dto.detailAddress,
-        visibility: dto.visibility,
       }),
     );
   }
 
+  @Transactional()
   async patchUserProfile(
     id: number,
     dto: PatchUserProfileRequest,
   ): Promise<void> {
     await this.userRepositoryService.getUserProfile(id);
 
+    await this.validateAndUpdateNickname(id, dto.nickname);
+
     await this.userRepositoryService.updateUserProfile({
       userId: id,
       imagePath: dto.profileImageUrl
         ? stripImageDomain(dto.profileImageUrl)
         : undefined,
-      nickname: dto.nickname,
       name: dto.name,
       gender: dto.gender,
       birthDate: dto.birthDate,
@@ -87,7 +88,6 @@ export class UserService {
       city: dto.city,
       district: dto.district,
       detailAddress: dto.detailAddress,
-      visibility: dto.visibility,
     });
   }
 
@@ -108,7 +108,6 @@ export class UserService {
         outerSize: dto.outerSize,
         topSize: dto.topSize,
         bottomSize: dto.bottomSize,
-        isSensitiveDataAgreed: dto.isSensitiveDataAgreed,
       }),
     );
   }
@@ -124,7 +123,6 @@ export class UserService {
       outerSize: dto.outerSize,
       topSize: dto.topSize,
       bottomSize: dto.bottomSize,
-      isSensitiveDataAgreed: dto.isSensitiveDataAgreed,
     });
   }
 
@@ -138,5 +136,17 @@ export class UserService {
     await this.userRepositoryService.getUserFit(id);
 
     await this.userRepositoryService.softDeleteUserFit(id);
+  }
+
+  private async validateAndUpdateNickname(
+    id: number,
+    nickname: string,
+  ): Promise<void> {
+    await this.userRepositoryService.validateUserNickname(nickname, id);
+
+    await this.userRepositoryService.updateUser({
+      id,
+      nickname,
+    });
   }
 }

@@ -17,8 +17,10 @@ function buildSignUpBody(overrides?: Record<string, unknown>) {
   return {
     email: faker.internet.email().toLowerCase(),
     password: faker.internet.password({ length: 12 }),
-    phone: faker.string.numeric(11),
-    personalInfoAgreeDate: '2025-01-01 12:00:00',
+    nickname: faker.internet
+      .username()
+      .replace(/[^a-zA-Z0-9_]/g, '')
+      .slice(0, 20),
     ...overrides,
   };
 }
@@ -71,7 +73,8 @@ describe('UserAuthController (E2E)', () => {
       expect(res.body).toEqual({});
 
       const rows = await dataSource.query(
-        `SELECT email, phone, password, refresh_token, personal_info_agree_date
+        `SELECT email, nickname, password, refresh_token,
+                terms_of_service_agree_date, privacy_policy_agree_date
          FROM "user" WHERE email = $1`,
         [body.email],
       );
@@ -79,11 +82,13 @@ describe('UserAuthController (E2E)', () => {
       expect(rows[0].password).not.toBe('plain-password-1234');
       expect(rows[0].password.startsWith('$2')).toBe(true);
       expect(rows[0].refresh_token).toBeNull();
-      expect(rows[0].phone).toBe(body.phone);
-      expect(rows[0].personal_info_agree_date).toBeInstanceOf(Date);
+      expect(rows[0].nickname).toBe(body.nickname);
+      // 약관/개인정보 동의 일시는 DB DEFAULT NOW()로 자동 기록
+      expect(rows[0].terms_of_service_agree_date).toBeInstanceOf(Date);
+      expect(rows[0].privacy_policy_agree_date).toBeInstanceOf(Date);
     });
 
-    it('선택 동의 일시는 누락 시 null로 저장된다', async () => {
+    it('선택 동의 boolean이 누락되면 해당 일시 컬럼은 null로 저장된다', async () => {
       // Given
       const body = buildSignUpBody();
 
@@ -95,21 +100,21 @@ describe('UserAuthController (E2E)', () => {
       // Then
       expect(res.status).toBe(204);
       const rows = await dataSource.query(
-        `SELECT ad_agree_email_date, recommend_email_date, recommend_phone_date
+        `SELECT new_product_date, ad_agree_date, recommend_date
          FROM "user" WHERE email = $1`,
         [body.email],
       );
-      expect(rows[0].ad_agree_email_date).toBeNull();
-      expect(rows[0].recommend_email_date).toBeNull();
-      expect(rows[0].recommend_phone_date).toBeNull();
+      expect(rows[0].new_product_date).toBeNull();
+      expect(rows[0].ad_agree_date).toBeNull();
+      expect(rows[0].recommend_date).toBeNull();
     });
 
-    it('선택 동의 일시 문자열이 Date로 변환되어 저장된다', async () => {
+    it('선택 동의 boolean이 true면 해당 일시 컬럼이 Date로 채워진다', async () => {
       // Given
       const body = buildSignUpBody({
-        adAgreeEmailDate: '2025-02-03 04:05:06',
-        recommendEmailDate: '2025-03-04 05:06:07',
-        recommendPhoneDate: '2025-04-05 06:07:08',
+        newProductAgreed: true,
+        adAgreed: true,
+        recommendAgreed: true,
       });
 
       // When
@@ -120,13 +125,38 @@ describe('UserAuthController (E2E)', () => {
       // Then
       expect(res.status).toBe(204);
       const rows = await dataSource.query(
-        `SELECT ad_agree_email_date, recommend_email_date, recommend_phone_date
+        `SELECT new_product_date, ad_agree_date, recommend_date
          FROM "user" WHERE email = $1`,
         [body.email],
       );
-      expect(rows[0].ad_agree_email_date).toBeInstanceOf(Date);
-      expect(rows[0].recommend_email_date).toBeInstanceOf(Date);
-      expect(rows[0].recommend_phone_date).toBeInstanceOf(Date);
+      expect(rows[0].new_product_date).toBeInstanceOf(Date);
+      expect(rows[0].ad_agree_date).toBeInstanceOf(Date);
+      expect(rows[0].recommend_date).toBeInstanceOf(Date);
+    });
+
+    it('선택 동의 boolean이 false면 해당 일시 컬럼은 null로 저장된다', async () => {
+      // Given
+      const body = buildSignUpBody({
+        newProductAgreed: false,
+        adAgreed: false,
+        recommendAgreed: false,
+      });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(body);
+
+      // Then
+      expect(res.status).toBe(204);
+      const rows = await dataSource.query(
+        `SELECT new_product_date, ad_agree_date, recommend_date
+         FROM "user" WHERE email = $1`,
+        [body.email],
+      );
+      expect(rows[0].new_product_date).toBeNull();
+      expect(rows[0].ad_agree_date).toBeNull();
+      expect(rows[0].recommend_date).toBeNull();
     });
 
     it('이메일 형식이 잘못되면 400을 반환한다', async () => {
@@ -142,29 +172,10 @@ describe('UserAuthController (E2E)', () => {
       expect(res.status).toBe(400);
     });
 
-    it('phone이 누락되어도 가입에 성공하고 DB에는 null로 저장된다', async () => {
-      // Given - phone이 빠진 가입 요청
+    it('nickname이 누락되면 400을 반환한다', async () => {
+      // Given
       const body = buildSignUpBody();
-      delete (body as Record<string, unknown>).phone;
-
-      // When
-      const res = await request(app.getHttpServer())
-        .post(`${BASE_URL}/signup`)
-        .send(body);
-
-      // Then
-      expect(res.status).toBe(204);
-      const rows = await dataSource.query(
-        `SELECT phone FROM "user" WHERE email = $1`,
-        [body.email],
-      );
-      expect(rows).toHaveLength(1);
-      expect(rows[0].phone).toBeNull();
-    });
-
-    it('phone이 string이 아니면 400을 반환한다', async () => {
-      // Given - phone에 숫자형 값을 넣어 IsString 검증을 트리거
-      const body = buildSignUpBody({ phone: 12345678901 });
+      delete (body as Record<string, unknown>).nickname;
 
       // When
       const res = await request(app.getHttpServer())
@@ -175,37 +186,34 @@ describe('UserAuthController (E2E)', () => {
       expect(res.status).toBe(400);
     });
 
-    it('phone을 NULL로 둔 사용자는 여러 명 존재할 수 있다', async () => {
-      // Given - phone이 빠진 두 개의 가입 요청
+    it('이미 가입된 nickname으로 가입 시 409와 nickname 중복 메시지를 반환한다', async () => {
+      // Given - 첫 사용자 가입
       const first = buildSignUpBody();
-      const second = buildSignUpBody();
-      delete (first as Record<string, unknown>).phone;
-      delete (second as Record<string, unknown>).phone;
-
-      // When
       const firstRes = await request(app.getHttpServer())
         .post(`${BASE_URL}/signup`)
         .send(first);
-      const secondRes = await request(app.getHttpServer())
+      expect(firstRes.status).toBe(204);
+
+      // When - 동일 nickname으로 두 번째 가입 시도
+      const second = buildSignUpBody({ nickname: first.nickname });
+      const res = await request(app.getHttpServer())
         .post(`${BASE_URL}/signup`)
         .send(second);
 
-      // Then - NULL은 unique 제약에서 서로 다른 값으로 취급되어 둘 다 가입 가능
-      expect(firstRes.status).toBe(204);
-      expect(secondRes.status).toBe(204);
+      // Then
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe('User nickname already exists');
       const rows = await dataSource.query(
-        `SELECT phone FROM "user" WHERE email IN ($1, $2)`,
-        [first.email, second.email],
+        `SELECT email FROM "user" WHERE nickname = $1`,
+        [first.nickname],
       );
-      expect(rows).toHaveLength(2);
-      expect(
-        rows.every((r: { phone: string | null }) => r.phone === null),
-      ).toBe(true);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].email).toBe(first.email);
     });
 
-    it('personalInfoAgreeDate가 잘못된 날짜 형식이면 400을 반환한다', async () => {
+    it('선택 동의 필드가 boolean이 아니면 400을 반환한다', async () => {
       // Given
-      const body = buildSignUpBody({ personalInfoAgreeDate: 'not-a-date' });
+      const body = buildSignUpBody({ newProductAgreed: 'yes' });
 
       // When
       const res = await request(app.getHttpServer())
@@ -215,15 +223,61 @@ describe('UserAuthController (E2E)', () => {
       // Then
       expect(res.status).toBe(400);
     });
+  });
 
-    it('선택 동의 일시가 잘못된 날짜 형식이면 400을 반환한다', async () => {
+  // -----------------------------------------------------------------------
+  // POST /user/auth/nickname/validate
+  // -----------------------------------------------------------------------
+  describe('POST /user/auth/nickname/validate', () => {
+    it('미사용 nickname이면 200을 반환한다', async () => {
       // Given
-      const body = buildSignUpBody({ adAgreeEmailDate: 'oops' });
+      const nickname = faker.internet
+        .username()
+        .replace(/[^a-zA-Z0-9_]/g, '')
+        .slice(0, 20);
 
       // When
       const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/nickname/validate`)
+        .send({ nickname });
+
+      // Then
+      expect(res.status).toBe(200);
+    });
+
+    it('이미 가입된 nickname이면 409와 nickname 중복 메시지를 반환한다', async () => {
+      // Given - 사용자 가입
+      const body = buildSignUpBody();
+      const signupRes = await request(app.getHttpServer())
         .post(`${BASE_URL}/signup`)
         .send(body);
+      expect(signupRes.status).toBe(204);
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/nickname/validate`)
+        .send({ nickname: body.nickname });
+
+      // Then
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe('User nickname already exists');
+    });
+
+    it('nickname 필드가 누락되면 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/nickname/validate`)
+        .send({});
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('nickname이 문자열이 아니면 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/nickname/validate`)
+        .send({ nickname: 12345 });
 
       // Then
       expect(res.status).toBe(400);

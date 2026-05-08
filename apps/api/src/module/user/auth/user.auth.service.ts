@@ -26,21 +26,18 @@ export class UserAuthService {
   ) {}
 
   async signUp(signUpRequest: PostUserSignUpRequest): Promise<void> {
+    await this.userRepositoryService.validateUserNickname(
+      signUpRequest.nickname,
+    );
+
     await this.userRepositoryService.createUser(
       plainToInstance(UserEntity, {
         email: signUpRequest.email,
         password: await bcrypt.hash(signUpRequest.password, 10),
-        phone: signUpRequest.phone,
-        personalInfoAgreeDate: new Date(signUpRequest.personalInfoAgreeDate),
-        adAgreeEmailDate: signUpRequest.adAgreeEmailDate
-          ? new Date(signUpRequest.adAgreeEmailDate)
-          : null,
-        recommendEmailDate: signUpRequest.recommendEmailDate
-          ? new Date(signUpRequest.recommendEmailDate)
-          : null,
-        recommendPhoneDate: signUpRequest.recommendPhoneDate
-          ? new Date(signUpRequest.recommendPhoneDate)
-          : null,
+        nickname: signUpRequest.nickname,
+        newProductDate: signUpRequest.newProductAgreed ? new Date() : null,
+        adAgreeDate: signUpRequest.adAgreed ? new Date() : null,
+        recommendDate: signUpRequest.recommendAgreed ? new Date() : null,
       }),
     );
   }
@@ -122,5 +119,9 @@ export class UserAuthService {
       id: userId,
       password: await bcrypt.hash(password, 10),
     });
+  }
+
+  async validateUserNickname(nickname: string): Promise<void> {
+    await this.userRepositoryService.validateUserNickname(nickname);
   }
 }

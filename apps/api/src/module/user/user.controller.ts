@@ -60,6 +60,7 @@ export class UserController {
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(UserOneTimeTokenGuard)
   @ResponseException(HttpStatus.NOT_FOUND, '유저 프로필 없음')
+  @ResponseException(HttpStatus.CONFLICT, '이미 존재하는 닉네임')
   async postUserProfile(
     @Request() req: any,
     @Body() body: PostUserProfileRequest,
@@ -72,6 +73,7 @@ export class UserController {
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(UserOneTimeTokenGuard)
   @ResponseException(HttpStatus.NOT_FOUND, '유저 프로필 없음')
+  @ResponseException(HttpStatus.CONFLICT, '이미 존재하는 닉네임')
   async patchUserProfile(
     @Request() req: any,
     @Body() body: PatchUserProfileRequest,

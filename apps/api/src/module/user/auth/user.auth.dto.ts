@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsDateString,
+  IsBoolean,
   IsDefined,
   IsEmail,
   IsOptional,
@@ -24,45 +24,47 @@ export class PostUserSignUpRequest {
   @IsDefined()
   password: string;
 
-  @ApiPropertyOptional({
-    description: '전화번호',
-    example: '01012345678',
+  @ApiProperty({
+    description: '닉네임',
+    example: 'nickname',
   })
   @IsString()
-  @IsOptional()
-  phone?: string;
-
-  @ApiProperty({
-    description: '개인정보 수집 동의 일시',
-    example: '2025-01-01 12:00:00',
-  })
-  @IsDateString()
   @IsDefined()
-  personalInfoAgreeDate: string;
+  nickname: string;
 
   @ApiPropertyOptional({
-    description: '광고성 이메일 수신 동의 일시',
-    example: '2025-01-01 12:00:00',
+    description: '신상품 및 기획전 출시 알림',
+    example: true,
   })
-  @IsDateString()
+  @IsBoolean()
   @IsOptional()
-  adAgreeEmailDate?: string;
+  newProductAgreed?: boolean;
 
   @ApiPropertyOptional({
-    description: '추천 이메일 수신 동의 일시',
-    example: '2025-01-01 12:00:00',
+    description: '광고 및 이벤트 할인 이메일',
+    example: true,
   })
-  @IsDateString()
+  @IsBoolean()
   @IsOptional()
-  recommendEmailDate?: string;
+  adAgreed?: boolean;
 
   @ApiPropertyOptional({
-    description: '추천 문자 수신 동의 일시',
-    example: '2025-01-01 12:00:00',
+    description: '개인 맞춤 상품 추천 알림',
+    example: true,
   })
-  @IsDateString()
+  @IsBoolean()
   @IsOptional()
-  recommendPhoneDate?: string;
+  recommendAgreed?: boolean;
+}
+
+export class PostNicknameValidateRequest {
+  @ApiProperty({
+    description: '닉네임',
+    example: 'nickname',
+  })
+  @IsString()
+  @IsDefined()
+  nickname: string;
 }
 
 export class PostUserLoginRequest {

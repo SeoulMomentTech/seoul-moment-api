@@ -42,13 +42,6 @@ export class UserFitEntity extends CommonEntity {
   })
   bottomSize: string;
 
-  @Column('boolean', {
-    nullable: false,
-    comment:
-      '민감정보(체형 데이터) 수집 동의 여부 — user.personalInfoAgreeDate(공통 개인정보 동의)와 별개',
-  })
-  isSensitiveDataAgreed: boolean;
-
   @OneToOne(() => UserEntity, (user) => user.fit, {
     onDelete: 'CASCADE',
   })

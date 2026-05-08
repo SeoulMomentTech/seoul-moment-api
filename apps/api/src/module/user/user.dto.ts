@@ -30,37 +30,30 @@ export class GetUserInfoResponse {
   email: string;
 
   @ApiProperty({
-    description: '광고성 이메일 수신 동의 여부',
+    description: '신상품 및 기획전 출시 알림',
     example: true,
   })
-  adAgreeEmail: boolean;
+  newProductAgreed: boolean;
 
   @ApiProperty({
-    description: '추천 이메일 수신 동의 여부',
+    description: '광고 및 이벤트 할인 이메일',
     example: true,
   })
-  recommendEmail: boolean;
+  adAgreed: boolean;
 
   @ApiProperty({
-    description: '추천 문자 수신 동의 여부',
+    description: '개인 맞춤 상품 추천 알림',
     example: true,
   })
-  recommendPhone: boolean;
-
-  @ApiProperty({
-    description: '개인정보 수집 동의 여부',
-    example: true,
-  })
-  personalInfoAgree: boolean;
+  recommendAgreed: boolean;
 
   static from(entity: UserEntity) {
     return plainToInstance(this, {
       phone: entity.phone,
       email: entity.email,
-      adAgreeEmail: entity.adAgreeEmailDate !== null,
-      recommendEmail: entity.recommendEmailDate !== null,
-      recommendPhone: entity.recommendPhoneDate !== null,
-      personalInfoAgree: entity.personalInfoAgreeDate !== null,
+      newProductAgreed: entity.newProductDate !== null,
+      adAgreed: entity.adAgreeDate !== null,
+      recommendAgreed: entity.recommendDate !== null,
     });
   }
 }
@@ -82,37 +75,29 @@ export class PatchUserInfoRequest {
   @IsDefined()
   email: string;
 
-  @ApiProperty({
-    description: '광고성 이메일 수신 동의 여부',
+  @ApiPropertyOptional({
+    description: '신상품 및 기획전 출시 알림',
     example: true,
   })
   @IsBoolean()
-  @IsDefined()
-  adAgreeEmail: boolean;
+  @IsOptional()
+  newProductAgreed?: boolean;
 
-  @ApiProperty({
-    description: '추천 이메일 수신 동의 여부',
+  @ApiPropertyOptional({
+    description: '광고 및 이벤트 할인 이메일',
     example: true,
   })
   @IsBoolean()
-  @IsDefined()
-  recommendEmail: boolean;
+  @IsOptional()
+  adAgreed?: boolean;
 
-  @ApiProperty({
-    description: '추천 문자 수신 동의 여부',
+  @ApiPropertyOptional({
+    description: '개인 맞춤 상품 추천 알림',
     example: true,
   })
   @IsBoolean()
-  @IsDefined()
-  recommendPhone: boolean;
-
-  @ApiProperty({
-    description: '개인정보 수집 동의 여부',
-    example: true,
-  })
-  @IsBoolean()
-  @IsDefined()
-  personalInfoAgree: boolean;
+  @IsOptional()
+  recommendAgreed?: boolean;
 }
 
 export class PostUserProfileRequest {
@@ -124,13 +109,13 @@ export class PostUserProfileRequest {
   @IsOptional()
   profileImageUrl?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: '닉네임',
     example: '세리프',
   })
   @IsString()
-  @IsOptional()
-  nickname?: string;
+  @IsDefined()
+  nickname: string;
 
   @ApiProperty({
     description: '이름',
@@ -191,14 +176,6 @@ export class PostUserProfileRequest {
   @IsString()
   @IsDefined()
   detailAddress: string;
-
-  @ApiProperty({
-    description: '프로필 공개 범위',
-    example: true,
-  })
-  @IsBoolean()
-  @IsDefined()
-  visibility: boolean;
 }
 
 export class GetUserProfileResponse {
@@ -208,11 +185,11 @@ export class GetUserProfileResponse {
   })
   profileImageUrl?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: '닉네임',
     example: '세리프',
   })
-  nickname?: string;
+  nickname: string;
 
   @ApiProperty({
     description: '이름',
@@ -257,16 +234,10 @@ export class GetUserProfileResponse {
   })
   detailAddress: string;
 
-  @ApiProperty({
-    description: '프로필 공개 범위',
-    example: true,
-  })
-  visibility: boolean;
-
   static from(entity: UserProfileEntity) {
     return plainToInstance(this, {
       profileImageUrl: entity.imagePath,
-      nickname: entity.nickname,
+      nickname: entity.user.nickname,
       name: entity.name,
       gender: entity.gender,
       birthDate: entity.birthDate,
@@ -274,7 +245,6 @@ export class GetUserProfileResponse {
       city: entity.city,
       district: entity.district,
       detailAddress: entity.detailAddress,
-      visibility: entity.visibility,
     });
   }
 }
@@ -288,13 +258,13 @@ export class PatchUserProfileRequest {
   @IsOptional()
   profileImageUrl?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: '닉네임',
     example: '세리프',
   })
   @IsString()
-  @IsOptional()
-  nickname?: string;
+  @IsDefined()
+  nickname: string;
 
   @ApiProperty({
     description: '이름',
@@ -355,14 +325,6 @@ export class PatchUserProfileRequest {
   @IsString()
   @IsDefined()
   detailAddress: string;
-
-  @ApiProperty({
-    description: '프로필 공개 범위',
-    example: true,
-  })
-  @IsBoolean()
-  @IsDefined()
-  visibility: boolean;
 }
 
 export class PostUserFitRequest {
@@ -416,14 +378,6 @@ export class PostUserFitRequest {
   @IsString()
   @IsDefined()
   bottomSize: string;
-
-  @ApiProperty({
-    description: '민감정보(체형 데이터) 수집 동의 여부',
-    example: true,
-  })
-  @IsBoolean()
-  @IsDefined()
-  isSensitiveDataAgreed: boolean;
 }
 
 export class GetUserFitResponse {
@@ -463,12 +417,6 @@ export class GetUserFitResponse {
   })
   bottomSize: string;
 
-  @ApiProperty({
-    description: '민감정보(체형 데이터) 수집 동의 여부',
-    example: true,
-  })
-  isSensitiveDataAgreed: boolean;
-
   static from(entity: UserFitEntity) {
     return plainToInstance(this, {
       height: entity.height,
@@ -477,7 +425,6 @@ export class GetUserFitResponse {
       outerSize: entity.outerSize,
       topSize: entity.topSize,
       bottomSize: entity.bottomSize,
-      isSensitiveDataAgreed: entity.isSensitiveDataAgreed,
     });
   }
 }
@@ -533,12 +480,4 @@ export class PatchUserFitRequest {
   @IsString()
   @IsDefined()
   bottomSize: string;
-
-  @ApiProperty({
-    description: '민감정보(체형 데이터) 수집 동의 여부',
-    example: true,
-  })
-  @IsBoolean()
-  @IsDefined()
-  isSensitiveDataAgreed: boolean;
 }

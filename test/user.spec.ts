@@ -10,12 +10,18 @@ import { UserProfileGender } from '../libs/repository/src/enum/user-profile.enum
 const USER_AUTH_BASE = '/user/auth';
 const USER_BASE = '/user';
 
+function randomNickname(): string {
+  return faker.internet
+    .username()
+    .replace(/[^a-zA-Z0-9_]/g, '')
+    .slice(0, 20);
+}
+
 function buildSignUpBody(overrides?: Record<string, unknown>) {
   return {
     email: faker.internet.email().toLowerCase(),
     password: faker.internet.password({ length: 12 }),
-    phone: faker.string.numeric(11),
-    personalInfoAgreeDate: '2025-01-01 12:00:00',
+    nickname: randomNickname(),
     ...overrides,
   };
 }
@@ -23,7 +29,7 @@ function buildSignUpBody(overrides?: Record<string, unknown>) {
 function buildProfileBody(overrides?: Record<string, unknown>) {
   return {
     profileImageUrl: faker.image.url(),
-    nickname: faker.person.firstName(),
+    nickname: randomNickname(),
     name: faker.person.fullName(),
     gender: UserProfileGender.MALE,
     birthDate: '1990-01-01',
@@ -31,7 +37,6 @@ function buildProfileBody(overrides?: Record<string, unknown>) {
     city: '서울',
     district: '강남구',
     detailAddress: faker.location.streetAddress(),
-    visibility: true,
     ...overrides,
   };
 }
@@ -44,7 +49,6 @@ function buildFitBody(overrides?: Record<string, unknown>) {
     outerSize: 'M',
     topSize: 'M',
     bottomSize: '32',
-    isSensitiveDataAgreed: true,
     ...overrides,
   };
 }
@@ -80,6 +84,7 @@ describe('UserController (E2E)', () => {
   async function signUpAndLogin(overrides?: Record<string, unknown>): Promise<{
     userId: number;
     email: string;
+    nickname: string;
     oneTimeToken: string;
   }> {
     const body = buildSignUpBody(overrides);
@@ -102,6 +107,7 @@ describe('UserController (E2E)', () => {
     return {
       userId: userRow[0].id,
       email: body.email,
+      nickname: body.nickname,
       oneTimeToken: loginRes.body.data.token as string,
     };
   }
@@ -111,11 +117,10 @@ describe('UserController (E2E)', () => {
   // -------------------------------------------------------------------------
   describe('GET /user/info', () => {
     it('정상 조회 시 200과 유저 정보를 반환한다', async () => {
-      // Given
+      // Given - 가입 시 광고/추천 동의는 true, 신상품 알림은 미선택
       const { email, oneTimeToken } = await signUpAndLogin({
-        adAgreeEmailDate: '2025-02-03 04:05:06',
-        recommendEmailDate: null,
-        recommendPhoneDate: null,
+        adAgreed: true,
+        recommendAgreed: true,
       });
 
       // When
@@ -127,11 +132,9 @@ describe('UserController (E2E)', () => {
       expect(res.status).toBe(200);
       expect(res.body.result).toBe(true);
       expect(res.body.data.email).toBe(email);
-      expect(typeof res.body.data.phone).toBe('string');
-      expect(res.body.data.adAgreeEmail).toBe(true);
-      expect(res.body.data.recommendEmail).toBe(false);
-      expect(res.body.data.recommendPhone).toBe(false);
-      expect(res.body.data.personalInfoAgree).toBe(true);
+      expect(res.body.data.adAgreed).toBe(true);
+      expect(res.body.data.recommendAgreed).toBe(true);
+      expect(res.body.data.newProductAgreed).toBe(false);
     });
 
     it('Authorization 헤더가 없으면 401을 반환한다', async () => {
@@ -160,34 +163,31 @@ describe('UserController (E2E)', () => {
         .send({
           phone: newPhone,
           email: newEmail,
-          adAgreeEmail: true,
-          recommendEmail: true,
-          recommendPhone: true,
-          personalInfoAgree: true,
+          newProductAgreed: true,
+          adAgreed: true,
+          recommendAgreed: true,
         });
 
       // Then
       expect(res.status).toBe(200);
       const rows = await dataSource.query(
-        `SELECT phone, email, ad_agree_email_date, recommend_email_date,
-                recommend_phone_date, personal_info_agree_date
+        `SELECT phone, email, new_product_date, ad_agree_date, recommend_date
          FROM "user" WHERE id = $1`,
         [userId],
       );
       expect(rows[0].phone).toBe(newPhone);
       expect(rows[0].email).toBe(newEmail);
-      expect(rows[0].ad_agree_email_date).toBeInstanceOf(Date);
-      expect(rows[0].recommend_email_date).toBeInstanceOf(Date);
-      expect(rows[0].recommend_phone_date).toBeInstanceOf(Date);
-      expect(rows[0].personal_info_agree_date).toBeInstanceOf(Date);
+      expect(rows[0].new_product_date).toBeInstanceOf(Date);
+      expect(rows[0].ad_agree_date).toBeInstanceOf(Date);
+      expect(rows[0].recommend_date).toBeInstanceOf(Date);
     });
 
     it('동의 boolean이 false면 해당 컬럼이 NULL로 저장된다', async () => {
       // Given - 가입 시 모든 동의 컬럼을 채움
       const { userId, oneTimeToken } = await signUpAndLogin({
-        adAgreeEmailDate: '2025-02-03 04:05:06',
-        recommendEmailDate: '2025-02-03 04:05:06',
-        recommendPhoneDate: '2025-02-03 04:05:06',
+        newProductAgreed: true,
+        adAgreed: true,
+        recommendAgreed: true,
       });
 
       // When - 모두 false로 PATCH
@@ -196,24 +196,21 @@ describe('UserController (E2E)', () => {
         .set('Authorization', `Bearer ${oneTimeToken}`)
         .send({
           email: faker.internet.email().toLowerCase(),
-          adAgreeEmail: false,
-          recommendEmail: false,
-          recommendPhone: false,
-          personalInfoAgree: false,
+          newProductAgreed: false,
+          adAgreed: false,
+          recommendAgreed: false,
         });
 
       // Then
       expect(res.status).toBe(200);
       const rows = await dataSource.query(
-        `SELECT ad_agree_email_date, recommend_email_date,
-                recommend_phone_date, personal_info_agree_date
+        `SELECT new_product_date, ad_agree_date, recommend_date
          FROM "user" WHERE id = $1`,
         [userId],
       );
-      expect(rows[0].ad_agree_email_date).toBeNull();
-      expect(rows[0].recommend_email_date).toBeNull();
-      expect(rows[0].recommend_phone_date).toBeNull();
-      expect(rows[0].personal_info_agree_date).toBeNull();
+      expect(rows[0].new_product_date).toBeNull();
+      expect(rows[0].ad_agree_date).toBeNull();
+      expect(rows[0].recommend_date).toBeNull();
     });
 
     it('Authorization 헤더가 없으면 401을 반환한다', async () => {
@@ -222,10 +219,9 @@ describe('UserController (E2E)', () => {
         .patch(`${USER_BASE}/info`)
         .send({
           email: faker.internet.email().toLowerCase(),
-          adAgreeEmail: true,
-          recommendEmail: true,
-          recommendPhone: true,
-          personalInfoAgree: true,
+          newProductAgreed: true,
+          adAgreed: true,
+          recommendAgreed: true,
         });
 
       // Then
@@ -241,10 +237,9 @@ describe('UserController (E2E)', () => {
         .patch(`${USER_BASE}/info`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
         .send({
-          adAgreeEmail: true,
-          recommendEmail: true,
-          recommendPhone: true,
-          personalInfoAgree: true,
+          newProductAgreed: true,
+          adAgreed: true,
+          recommendAgreed: true,
         });
 
       // Then
@@ -256,7 +251,7 @@ describe('UserController (E2E)', () => {
   // POST /user/profile
   // -------------------------------------------------------------------------
   describe('POST /user/profile', () => {
-    it('정상 생성 시 201을 반환하고 DB에 프로필이 저장된다', async () => {
+    it('정상 생성 시 201을 반환하고 DB에 프로필이 저장되며 user.nickname도 갱신된다', async () => {
       // Given
       const { userId, oneTimeToken } = await signUpAndLogin();
       const body = buildProfileBody();
@@ -269,29 +264,54 @@ describe('UserController (E2E)', () => {
 
       // Then
       expect(res.status).toBe(201);
-      const rows = await dataSource.query(
-        `SELECT user_id, nickname, image_path, name, gender, birth_date,
-                postal_code, city, district, detail_address, visibility
+      const profileRows = await dataSource.query(
+        `SELECT user_id, image_path, name, gender, birth_date,
+                postal_code, city, district, detail_address
          FROM user_profile WHERE user_id = $1`,
         [userId],
       );
-      expect(rows).toHaveLength(1);
-      expect(rows[0].nickname).toBe(body.nickname);
-      expect(rows[0].image_path).toBe(body.profileImageUrl);
-      expect(rows[0].name).toBe(body.name);
-      expect(rows[0].gender).toBe(body.gender);
-      expect(rows[0].postal_code).toBe(body.postalCode);
-      expect(rows[0].city).toBe(body.city);
-      expect(rows[0].district).toBe(body.district);
-      expect(rows[0].detail_address).toBe(body.detailAddress);
-      expect(rows[0].visibility).toBe(body.visibility);
+      expect(profileRows).toHaveLength(1);
+      expect(profileRows[0].image_path).toBe(body.profileImageUrl);
+      expect(profileRows[0].name).toBe(body.name);
+      expect(profileRows[0].gender).toBe(body.gender);
+      expect(profileRows[0].postal_code).toBe(body.postalCode);
+      expect(profileRows[0].city).toBe(body.city);
+      expect(profileRows[0].district).toBe(body.district);
+      expect(profileRows[0].detail_address).toBe(body.detailAddress);
+
+      // user.nickname이 프로필 요청의 nickname으로 갱신되어야 함
+      const userRows = await dataSource.query(
+        `SELECT nickname FROM "user" WHERE id = $1`,
+        [userId],
+      );
+      expect(userRows[0].nickname).toBe(body.nickname);
     });
 
-    it('profileImageUrl과 nickname을 생략해도 생성된다', async () => {
+    it('profileImageUrl을 생략해도 생성된다', async () => {
       // Given
       const { userId, oneTimeToken } = await signUpAndLogin();
       const body = buildProfileBody();
       delete (body as Record<string, unknown>).profileImageUrl;
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(body);
+
+      // Then
+      expect(res.status).toBe(201);
+      const rows = await dataSource.query(
+        `SELECT image_path FROM user_profile WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows[0].image_path).toBeNull();
+    });
+
+    it('nickname이 누락되면 400을 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+      const body = buildProfileBody();
       delete (body as Record<string, unknown>).nickname;
 
       // When
@@ -301,13 +321,24 @@ describe('UserController (E2E)', () => {
         .send(body);
 
       // Then
-      expect(res.status).toBe(201);
-      const rows = await dataSource.query(
-        `SELECT nickname, image_path FROM user_profile WHERE user_id = $1`,
-        [userId],
-      );
-      expect(rows[0].nickname).toBeNull();
-      expect(rows[0].image_path).toBeNull();
+      expect(res.status).toBe(400);
+    });
+
+    it('다른 사용자가 이미 사용 중인 nickname이면 409를 반환한다', async () => {
+      // Given - 첫 사용자는 nickname A로 가입, 두 번째 사용자는 다른 nickname으로 가입 후 프로필 생성을 nickname A로 시도
+      const first = await signUpAndLogin();
+      const second = await signUpAndLogin();
+      const body = buildProfileBody({ nickname: first.nickname });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${second.oneTimeToken}`)
+        .send(body);
+
+      // Then
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe('User nickname already exists');
     });
 
     it('Authorization 헤더가 없으면 401을 반환한다', async () => {
@@ -388,15 +419,16 @@ describe('UserController (E2E)', () => {
     it('정상 수정 시 200을 반환하고 DB에 반영된다', async () => {
       // Given - 먼저 프로필 생성
       const { userId, oneTimeToken } = await signUpAndLogin();
+      const initialProfile = buildProfileBody();
       await request(app.getHttpServer())
         .post(`${USER_BASE}/profile`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
-        .send(buildProfileBody());
+        .send(initialProfile);
 
       const updated = buildProfileBody({
+        nickname: initialProfile.nickname,
         name: '변경된이름',
         city: '부산',
-        visibility: false,
       });
 
       // When
@@ -408,12 +440,55 @@ describe('UserController (E2E)', () => {
       // Then
       expect(res.status).toBe(200);
       const rows = await dataSource.query(
-        `SELECT name, city, visibility FROM user_profile WHERE user_id = $1`,
+        `SELECT name, city FROM user_profile WHERE user_id = $1`,
         [userId],
       );
       expect(rows[0].name).toBe('변경된이름');
       expect(rows[0].city).toBe('부산');
-      expect(rows[0].visibility).toBe(false);
+    });
+
+    it('자기 자신의 nickname을 그대로 보내도 200을 반환한다 (self-conflict 방지)', async () => {
+      // Given
+      const { userId, nickname, oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody({ nickname }));
+
+      // When - 같은 nickname으로 PATCH (다른 필드만 변경)
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody({ nickname, city: '부산' }));
+
+      // Then
+      expect(res.status).toBe(200);
+      const userRows = await dataSource.query(
+        `SELECT nickname FROM "user" WHERE id = $1`,
+        [userId],
+      );
+      expect(userRows[0].nickname).toBe(nickname);
+    });
+
+    it('다른 사용자가 사용 중인 nickname으로 변경하면 409를 반환한다', async () => {
+      // Given - 두 사용자 가입, 두 번째 사용자가 프로필 생성 후 첫 사용자 nickname으로 PATCH 시도
+      const first = await signUpAndLogin();
+      const second = await signUpAndLogin();
+
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${second.oneTimeToken}`)
+        .send(buildProfileBody({ nickname: second.nickname }));
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${second.oneTimeToken}`)
+        .send(buildProfileBody({ nickname: first.nickname }));
+
+      // Then
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe('User nickname already exists');
     });
 
     it('Authorization 헤더가 없으면 401을 반환한다', async () => {
@@ -444,7 +519,7 @@ describe('UserController (E2E)', () => {
       expect(res.status).toBe(404);
     });
 
-    it('정상 조회 시 200과 프로필 정보를 반환한다', async () => {
+    it('정상 조회 시 200과 프로필 정보를 반환하고 nickname은 user.nickname을 따른다', async () => {
       // Given
       const { oneTimeToken } = await signUpAndLogin();
       const profileBody = buildProfileBody();
@@ -470,7 +545,6 @@ describe('UserController (E2E)', () => {
       expect(res.body.data.city).toBe(profileBody.city);
       expect(res.body.data.district).toBe(profileBody.district);
       expect(res.body.data.detailAddress).toBe(profileBody.detailAddress);
-      expect(res.body.data.visibility).toBe(profileBody.visibility);
     });
 
     it('Authorization 헤더가 없으면 401을 반환한다', async () => {
@@ -503,7 +577,7 @@ describe('UserController (E2E)', () => {
       expect(res.status).toBe(201);
       const rows = await dataSource.query(
         `SELECT user_id, height, weight, shoe_size, outer_size, top_size,
-                bottom_size, is_sensitive_data_agreed, delete_date
+                bottom_size, delete_date
          FROM user_fit WHERE user_id = $1`,
         [userId],
       );
@@ -514,7 +588,6 @@ describe('UserController (E2E)', () => {
       expect(rows[0].outer_size).toBe(body.outerSize);
       expect(rows[0].top_size).toBe(body.topSize);
       expect(rows[0].bottom_size).toBe(body.bottomSize);
-      expect(rows[0].is_sensitive_data_agreed).toBe(body.isSensitiveDataAgreed);
       expect(rows[0].delete_date).toBeNull();
     });
 
@@ -670,9 +743,6 @@ describe('UserController (E2E)', () => {
       expect(res.body.data.outerSize).toBe(fitBody.outerSize);
       expect(res.body.data.topSize).toBe(fitBody.topSize);
       expect(res.body.data.bottomSize).toBe(fitBody.bottomSize);
-      expect(res.body.data.isSensitiveDataAgreed).toBe(
-        fitBody.isSensitiveDataAgreed,
-      );
     });
 
     it('soft-deleted 상태이면 404를 반환한다', async () => {

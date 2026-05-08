@@ -61,8 +61,10 @@ describe('UserRecentController (E2E)', () => {
     const body = {
       email: faker.internet.email().toLowerCase(),
       password: faker.internet.password({ length: 12 }),
-      phone: faker.string.numeric(11),
-      personalInfoAgreeDate: '2025-01-01 12:00:00',
+      nickname: faker.internet
+        .username()
+        .replace(/[^a-zA-Z0-9_]/g, '')
+        .slice(0, 20),
     };
 
     const signupRes = await request(app.getHttpServer())

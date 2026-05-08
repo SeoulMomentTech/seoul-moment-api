@@ -24,6 +24,7 @@ import { plainToInstance } from 'class-transformer';
 import {
   GetUserOneTimeTokenResponse,
   PatchPasswordRequest,
+  PostNicknameValidateRequest,
   PostUserLoginRequest,
   PostUserLoginResponse,
   PostUserPasswordEmailVerifyResponse,
@@ -138,5 +139,13 @@ export class UserAuthController {
     @Body() body: PatchPasswordRequest,
   ): Promise<void> {
     await this.userAuthService.patchPassword(req.user.id, body.password);
+  }
+
+  @Post('nickname/validate')
+  @ApiOperation({ summary: '닉네임 중복 검사' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.CONFLICT, '이미 존재하는 닉네임')
+  async postNicknameValidate(@Body() body: PostNicknameValidateRequest) {
+    await this.userAuthService.validateUserNickname(body.nickname);
   }
 }
