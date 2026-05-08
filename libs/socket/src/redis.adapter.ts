@@ -59,11 +59,10 @@ export class RedisIoAdapter extends IoAdapter {
     const host = config.REDIS_HOST;
     const port = config.REDIS_PORT ?? 6379;
 
-    /** * Factory 설정과 동일하게 DEV 환경에서 TLS(rediss) 활성화
-     * ElastiCache 사용 시 필수인 경우가 많습니다.
+    /** * Factory 설정과 동일하게 PROD 환경에서만 TLS(rediss) 활성화
+     * (ElastiCache 사용 시 필수). DEV는 docker-compose 내부 Redis 라 plain.
      */
-    const useTls =
-      config.NODE_ENV === SupportEnv.DEV || config.NODE_ENV === SupportEnv.PROD;
+    const useTls = config.NODE_ENV === SupportEnv.PROD;
 
     log('🚀 [Step 1] connectToRedis() 초기화 시작');
 
