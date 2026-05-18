@@ -4,6 +4,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import path from 'path';
 
+import { ExternalGoogleAuthService } from './google-auth.service';
 import { ExternalGoogleMailService } from './google-mail.service';
 import { ExternalGoogleSheetService } from './google-sheet.service';
 
@@ -29,7 +30,15 @@ import { ExternalGoogleSheetService } from './google-sheet.service';
       },
     }),
   ],
-  providers: [ExternalGoogleSheetService, ExternalGoogleMailService],
-  exports: [ExternalGoogleSheetService, ExternalGoogleMailService],
+  providers: [
+    ExternalGoogleSheetService,
+    ExternalGoogleMailService,
+    ExternalGoogleAuthService,
+  ],
+  exports: [
+    ExternalGoogleSheetService,
+    ExternalGoogleMailService,
+    ExternalGoogleAuthService,
+  ],
 })
 export class ExternalGoogleModule {}

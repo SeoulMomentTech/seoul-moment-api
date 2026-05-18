@@ -1,4 +1,8 @@
 import { CacheService } from '@app/cache/cache.service';
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
+import { Configuration } from '@app/config/configuration';
+import { ExternalGoogleAuthService } from '@app/external/google/google-auth.service';
 import { faker } from '@faker-js/faker';
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -12,6 +16,8 @@ const BASE_URL = '/user/auth';
 
 const REFRESH_TOKEN_TYPE = 'REFRESH_TOKEN';
 const ONE_TIME_TOKEN_TYPE = 'ONE_TIME_TIME';
+const SNS_LINK_TOKEN_TYPE = 'SNS_LINK_TOKEN';
+const SNS_SIGNUP_TOKEN_TYPE = 'SNS_SIGNUP_TOKEN';
 
 function buildSignUpBody(overrides?: Record<string, unknown>) {
   return {
@@ -880,6 +886,480 @@ describe('UserAuthController (E2E)', () => {
 
       // Then - DTO에 email이 없으므로 whitelist에 의해 거부됨
       expect(res.status).toBe(400);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Google 인증 (POST /user/auth/google/login | link | signup)
+  // -----------------------------------------------------------------------
+  describe('Google 인증', () => {
+    let googleAuthService: ExternalGoogleAuthService;
+    let tokenSigner: JwtService;
+
+    beforeAll(() => {
+      // Given - 외부 Google idToken 검증 서비스 + user.auth와 동일 시크릿 서명기
+      googleAuthService = app.get(ExternalGoogleAuthService, {
+        strict: false,
+      });
+      tokenSigner = new JwtService({
+        secret: Configuration.getConfig().JWT_SECRET,
+      });
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    function mockVerifyIdToken(payload: {
+      providerUserId: string;
+      email: string;
+      emailVerified: boolean;
+    }) {
+      jest.spyOn(googleAuthService, 'verifyIdToken').mockResolvedValue(payload);
+    }
+
+    function buildNickname() {
+      return faker.internet
+        .username()
+        .replace(/[^a-zA-Z0-9_]/g, '')
+        .slice(0, 20);
+    }
+
+    async function signUpUser() {
+      const body = buildSignUpBody();
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(body);
+      expect(res.status).toBe(204);
+      const rows = await dataSource.query(
+        `SELECT id FROM "user" WHERE email = $1`,
+        [body.email],
+      );
+      return { ...body, id: rows[0].id as number };
+    }
+
+    describe('POST /user/auth/google/login', () => {
+      it('미가입 + 미연결 계정이면 needsSignup과 signupToken을 반환한다', async () => {
+        // Given
+        const providerUserId = faker.string.numeric(21);
+        const email = faker.internet.email().toLowerCase();
+        mockVerifyIdToken({ providerUserId, email, emailVerified: true });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsLinkConfirm).toBe(false);
+        expect(res.body.data.needsSignup).toBe(true);
+        expect(res.body.data.email).toBe(email);
+        const payload = jwtService.decode(res.body.data.signupToken);
+        expect(payload.jwtType).toBe(SNS_SIGNUP_TOKEN_TYPE);
+        expect(payload.providerUserId).toBe(providerUserId);
+        expect(res.body.data.token).toBeUndefined();
+      });
+
+      it('기존 이메일 가입자가 미연결이면 needsLinkConfirm과 linkToken을 반환한다', async () => {
+        // Given
+        const user = await signUpUser();
+        const providerUserId = faker.string.numeric(21);
+        mockVerifyIdToken({
+          providerUserId,
+          email: user.email,
+          emailVerified: true,
+        });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsLinkConfirm).toBe(true);
+        expect(res.body.data.email).toBe(user.email);
+        const payload = jwtService.decode(res.body.data.linkToken);
+        expect(payload.jwtType).toBe(SNS_LINK_TOKEN_TYPE);
+        expect(payload.userId).toBe(user.id);
+      });
+
+      it('이미 연결된 Google 계정이면 바로 로그인 토큰을 반환한다', async () => {
+        // Given - 가입 후 link까지 완료해 user_sns 연결 생성
+        const user = await signUpUser();
+        const providerUserId = faker.string.numeric(21);
+        mockVerifyIdToken({
+          providerUserId,
+          email: user.email,
+          emailVerified: true,
+        });
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/link`)
+          .send({ linkToken: loginRes.body.data.linkToken })
+          .expect(200);
+
+        // When - 동일 providerUserId로 재로그인
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsLinkConfirm).toBe(false);
+        expect(typeof res.body.data.token).toBe('string');
+        expect(typeof res.body.data.refreshToken).toBe('string');
+        const rows = await dataSource.query(
+          `SELECT refresh_token FROM "user" WHERE id = $1`,
+          [user.id],
+        );
+        expect(rows[0].refresh_token).toBe(res.body.data.refreshToken);
+      });
+
+      it('Google 이메일이 미인증이면 401을 반환한다', async () => {
+        // Given
+        mockVerifyIdToken({
+          providerUserId: faker.string.numeric(21),
+          email: faker.internet.email().toLowerCase(),
+          emailVerified: false,
+        });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.code).toBe('UNAUTHORIZED');
+      });
+
+      it('유효하지 않은 idToken이면 401을 반환한다', async () => {
+        // Given
+        jest
+          .spyOn(googleAuthService, 'verifyIdToken')
+          .mockRejectedValue(
+            new ServiceError(
+              '유효하지 않은 Google idToken입니다.',
+              ServiceErrorCode.UNAUTHORIZED,
+            ),
+          );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'bad-token' });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.code).toBe('UNAUTHORIZED');
+      });
+
+      it('idToken이 누락되면 400을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({});
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe('POST /user/auth/google/link', () => {
+      it('linkToken으로 연결하면 토큰을 발급하고 user_sns 행이 생성된다', async () => {
+        // Given
+        const user = await signUpUser();
+        const providerUserId = faker.string.numeric(21);
+        mockVerifyIdToken({
+          providerUserId,
+          email: user.email,
+          emailVerified: true,
+        });
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/link`)
+          .send({ linkToken: loginRes.body.data.linkToken });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(typeof res.body.data.token).toBe('string');
+        expect(typeof res.body.data.refreshToken).toBe('string');
+        const sns = await dataSource.query(
+          `SELECT user_id, provider, provider_user_id, provider_email
+           FROM user_sns WHERE user_id = $1`,
+          [user.id],
+        );
+        expect(sns).toHaveLength(1);
+        expect(sns[0].provider).toBe('GOOGLE');
+        expect(sns[0].provider_user_id).toBe(providerUserId);
+      });
+
+      it('이미 다른 계정에 연결된 Google 계정이면 409를 반환한다', async () => {
+        // Given - userA에 providerUserId P 연결
+        const userA = await signUpUser();
+        const providerUserId = faker.string.numeric(21);
+        mockVerifyIdToken({
+          providerUserId,
+          email: userA.email,
+          emailVerified: true,
+        });
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/link`)
+          .send({ linkToken: loginRes.body.data.linkToken })
+          .expect(200);
+
+        // Given - userB 명의의 linkToken을 동일 providerUserId로 위조
+        const userB = await signUpUser();
+        const forgedLinkToken = tokenSigner.sign(
+          {
+            userId: userB.id,
+            providerUserId,
+            providerEmail: userB.email,
+            email: userB.email,
+            provider: 'GOOGLE',
+            jwtType: SNS_LINK_TOKEN_TYPE,
+          },
+          { expiresIn: '5m' },
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/link`)
+          .send({ linkToken: forgedLinkToken });
+
+        // Then
+        expect(res.status).toBe(409);
+        expect(res.body.message).toBe(
+          '이미 다른 계정에 연결된 Google 계정입니다.',
+        );
+      });
+
+      it('해당 계정이 이미 다른 Google 계정에 연결돼 있으면 409를 반환하고 기존 연결을 덮어쓰지 않는다', async () => {
+        // Given - user에 P1 연결
+        const user = await signUpUser();
+        const providerUserId1 = faker.string.numeric(21);
+        mockVerifyIdToken({
+          providerUserId: providerUserId1,
+          email: user.email,
+          emailVerified: true,
+        });
+        const loginRes1 = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/link`)
+          .send({ linkToken: loginRes1.body.data.linkToken })
+          .expect(200);
+
+        // Given - 같은 user에 새 providerUserId P2 linkToken 발급
+        const providerUserId2 = faker.string.numeric(21);
+        mockVerifyIdToken({
+          providerUserId: providerUserId2,
+          email: user.email,
+          emailVerified: true,
+        });
+        const loginRes2 = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // When - P2로 link 시도
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/link`)
+          .send({ linkToken: loginRes2.body.data.linkToken });
+
+        // Then - 409 & 기존 P1 연결이 그대로 유지됨
+        expect(res.status).toBe(409);
+        expect(res.body.message).toBe(
+          '이미 다른 Google 계정이 연결된 계정입니다.',
+        );
+        const sns = await dataSource.query(
+          `SELECT provider_user_id FROM user_sns WHERE user_id = $1`,
+          [user.id],
+        );
+        expect(sns).toHaveLength(1);
+        expect(sns[0].provider_user_id).toBe(providerUserId1);
+      });
+
+      it('jwtType이 link 토큰이 아니면 401을 반환한다', async () => {
+        // Given - refresh 타입 토큰을 linkToken 자리에 전달
+        const wrongToken = tokenSigner.sign(
+          {
+            userId: 1,
+            providerUserId: faker.string.numeric(21),
+            jwtType: REFRESH_TOKEN_TYPE,
+          },
+          { expiresIn: '5m' },
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/link`)
+          .send({ linkToken: wrongToken });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('유효하지 않은 link token입니다.');
+      });
+
+      it('linkToken이 누락되면 400을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/link`)
+          .send({});
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe('POST /user/auth/google/signup', () => {
+      function buildSignupToken(overrides?: Record<string, unknown>) {
+        return tokenSigner.sign(
+          {
+            providerUserId: faker.string.numeric(21),
+            providerEmail: faker.internet.email().toLowerCase(),
+            email: faker.internet.email().toLowerCase(),
+            provider: 'GOOGLE',
+            jwtType: SNS_SIGNUP_TOKEN_TYPE,
+            ...overrides,
+          },
+          { expiresIn: '10m' },
+        );
+      }
+
+      it('signupToken과 nickname으로 신규 user와 user_sns를 생성한다', async () => {
+        // Given
+        const email = faker.internet.email().toLowerCase();
+        const providerUserId = faker.string.numeric(21);
+        const signupToken = buildSignupToken({
+          email,
+          providerEmail: email,
+          providerUserId,
+        });
+        const nickname = buildNickname();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/signup`)
+          .send({ signupToken, nickname });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(typeof res.body.data.token).toBe('string');
+        expect(typeof res.body.data.refreshToken).toBe('string');
+        const users = await dataSource.query(
+          `SELECT id, nickname, password FROM "user" WHERE email = $1`,
+          [email],
+        );
+        expect(users).toHaveLength(1);
+        expect(users[0].nickname).toBe(nickname);
+        // SNS 가입자는 사용 불가한 임의 bcrypt 해시가 채워진다
+        expect(users[0].password.startsWith('$2')).toBe(true);
+        const sns = await dataSource.query(
+          `SELECT provider, provider_user_id FROM user_sns WHERE user_id = $1`,
+          [users[0].id],
+        );
+        expect(sns).toHaveLength(1);
+        expect(sns[0].provider_user_id).toBe(providerUserId);
+      });
+
+      it('이미 가입된 nickname이면 409를 반환한다', async () => {
+        // Given
+        const existing = await signUpUser();
+        const signupToken = buildSignupToken();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/signup`)
+          .send({ signupToken, nickname: existing.nickname });
+
+        // Then
+        expect(res.status).toBe(409);
+      });
+
+      it('createUserSns 단계에서 충돌이 나면 트랜잭션이 롤백되어 user가 생성되지 않는다', async () => {
+        // Given - userA에 providerUserId P 연결
+        const userA = await signUpUser();
+        const providerUserId = faker.string.numeric(21);
+        mockVerifyIdToken({
+          providerUserId,
+          email: userA.email,
+          emailVerified: true,
+        });
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/link`)
+          .send({ linkToken: loginRes.body.data.linkToken })
+          .expect(200);
+
+        // Given - 신규 이메일이지만 providerUserId는 P(이미 사용중)인 signupToken 위조
+        const newEmail = faker.internet.email().toLowerCase();
+        const signupToken = buildSignupToken({
+          email: newEmail,
+          providerEmail: newEmail,
+          providerUserId,
+        });
+
+        // When - createUser는 성공하지만 createUserSns가 unique 제약 위반
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/signup`)
+          .send({ signupToken, nickname: buildNickname() });
+
+        // Then - 에러 응답 + 트랜잭션 롤백으로 user 행이 남지 않음
+        expect(res.status).toBeGreaterThanOrEqual(400);
+        const users = await dataSource.query(
+          `SELECT id FROM "user" WHERE email = $1`,
+          [newEmail],
+        );
+        expect(users).toHaveLength(0);
+      });
+
+      it('jwtType이 signup 토큰이 아니면 401을 반환한다', async () => {
+        // Given
+        const wrongToken = tokenSigner.sign(
+          {
+            providerUserId: faker.string.numeric(21),
+            email: faker.internet.email().toLowerCase(),
+            jwtType: ONE_TIME_TOKEN_TYPE,
+          },
+          { expiresIn: '5m' },
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/signup`)
+          .send({ signupToken: wrongToken, nickname: buildNickname() });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('유효하지 않은 signup token입니다.');
+      });
+
+      it('nickname이 누락되면 400을 반환한다', async () => {
+        // Given
+        const signupToken = buildSignupToken();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/signup`)
+          .send({ signupToken });
+
+        // Then
+        expect(res.status).toBe(400);
+      });
     });
   });
 });

@@ -31,6 +31,7 @@ export interface ConfigImpl {
   // Google api
   GOOGLE_SHEET_SERVICE_EMAIL: string;
   GOOGLE_SHEET_SERVICE_PRIMARY: string;
+  GOOGLE_OAUTH_CLIENT_ID: string;
 
   SERPER_URL: string;
   SERPER_API_KEY: string;

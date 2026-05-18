@@ -34,6 +34,17 @@ export class CommonAuthService {
     );
   }
 
+  async verifyJwt(token: string): Promise<Record<string, any>> {
+    try {
+      return await this.jwtService.verifyAsync(token);
+    } catch (error) {
+      throw new ServiceError(
+        `유효하지 않은 토큰입니다: ${error.message}`,
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
+  }
+
   async authEmail(email: string) {
     const code = Math.floor(100000 + Math.random() * 900000);
 

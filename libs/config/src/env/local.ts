@@ -28,6 +28,7 @@ const getConfig = (): ConfigImpl => ({
 
   GOOGLE_SHEET_SERVICE_EMAIL: process.env.GOOGLE_SHEET_SERVICE_EMAIL || '',
   GOOGLE_SHEET_SERVICE_PRIMARY: process.env.GOOGLE_SHEET_SERVICE_PRIMARY || '',
+  GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
 
   SERPER_URL: process.env.SERPER_URL || '',
   SERPER_API_KEY: process.env.SERPER_API_KEY || '',

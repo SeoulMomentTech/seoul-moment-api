@@ -24,6 +24,10 @@ import { plainToInstance } from 'class-transformer';
 import {
   GetUserOneTimeTokenResponse,
   PatchPasswordRequest,
+  PostGoogleLinkRequest,
+  PostGoogleLoginRequest,
+  PostGoogleLoginResponse,
+  PostGoogleSignupRequest,
   PostNicknameValidateRequest,
   PostUserLoginRequest,
   PostUserLoginResponse,
@@ -35,6 +39,19 @@ import {
   PostEmailCodeRequest,
   PostEmailVerifyRequest,
 } from '../../auth/auth.dto';
+
+const GOOGLE_AUTH_FLOW = `**Google 인증 전체 플로우**
+
+1. POST /user/auth/google/login { idToken }
+   - 이미 연결된 계정 → 200 { needsLinkConfirm: false, token, refreshToken } (로그인 완료)
+   - 가입됨 + Google 미연결 → 200 { needsLinkConfirm: true, email, linkToken } → 2-A
+   - 미가입(신규) → 200 { needsLinkConfirm: false, needsSignup: true, email, signupToken } → 2-B
+2. 다음 단계
+   - 2-A. 연결 확인 모달 → POST /user/auth/google/link { linkToken }
+   - 2-B. 닉네임/약관 입력 → POST /user/auth/google/signup { signupToken, nickname, ...약관동의 }
+3. link / signup 성공 → 200 { token, refreshToken } (로그인 완료)
+
+판단 기준: 응답에 token이 있으면 즉시 로그인. 없으면 needsLinkConfirm / needsSignup으로 다음 단계 결정. 모든 정상 분기는 HTTP 200 (가입 여부로 404 미반환). linkToken 5분 / signupToken 10분 만료.`;
 
 @Controller('user/auth')
 export class UserAuthController {
@@ -59,6 +76,72 @@ export class UserAuthController {
     const loginResponse = await this.userAuthService.login(body);
 
     return new ResponseDataDto(loginResponse);
+  }
+
+  @Post('google/login')
+  @ApiOperation({
+    summary: 'Google 로그인 / 연결확인 / 신규가입 분기',
+    description:
+      GOOGLE_AUTH_FLOW +
+      '\n\n▶ 현재 API: **1단계** — idToken 검증 후 ' +
+      '로그인 / 연결확인(linkToken) / 신규가입(signupToken) 분기 판단',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '유효하지 않은 Google idToken')
+  @ResponseData(PostGoogleLoginResponse)
+  async postGoogleLogin(
+    @Body() body: PostGoogleLoginRequest,
+  ): Promise<ResponseDataDto<PostGoogleLoginResponse>> {
+    const result = await this.userAuthService.googleLogin(body.idToken);
+
+    return new ResponseDataDto(
+      plainToInstance(PostGoogleLoginResponse, result),
+    );
+  }
+
+  @Post('google/link')
+  @ApiOperation({
+    summary: 'Google 계정 연결 (2-A단계)',
+    description:
+      GOOGLE_AUTH_FLOW +
+      '\n\n▶ 현재 API: **2-A 단계** — 기존 계정에 user_sns 행을 ' +
+      '추가(연결)하고 access/refresh 토큰을 발급한다. ' +
+      'linkToken은 google/login 응답에서 받는다.',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.UNAUTHORIZED, 'linkToken 만료 또는 변조')
+  @ResponseException(HttpStatus.CONFLICT, '이미 다른 계정에 연결된 Google 계정')
+  @ResponseData(PostUserLoginResponse)
+  async postGoogleLink(
+    @Body() body: PostGoogleLinkRequest,
+  ): Promise<ResponseDataDto<PostUserLoginResponse>> {
+    const result = await this.userAuthService.googleLink(body.linkToken);
+
+    return new ResponseDataDto(plainToInstance(PostUserLoginResponse, result));
+  }
+
+  @Post('google/signup')
+  @ApiOperation({
+    summary: 'Google SNS 회원가입 (2-B단계)',
+    description:
+      GOOGLE_AUTH_FLOW +
+      '\n\n▶ 현재 API: **2-B 단계** — signupToken + 닉네임/약관동의로 ' +
+      '신규 user + user_sns를 생성하고 access/refresh 토큰을 발급한다. ' +
+      'signupToken은 google/login 응답에서 받는다.',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.UNAUTHORIZED, 'signupToken 만료 또는 변조')
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '이미 존재하는 닉네임 또는 이미 가입된 이메일',
+  )
+  @ResponseData(PostUserLoginResponse)
+  async postGoogleSignup(
+    @Body() body: PostGoogleSignupRequest,
+  ): Promise<ResponseDataDto<PostUserLoginResponse>> {
+    const result = await this.userAuthService.googleSignup(body);
+
+    return new ResponseDataDto(plainToInstance(PostUserLoginResponse, result));
   }
 
   @Get('one-time-token')

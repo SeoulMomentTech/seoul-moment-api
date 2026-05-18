@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Google 로그인 플로우 테스트</title>
+    <!-- Google Identity Services (idToken 발급용) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        max-width: 760px;
+        margin: 24px auto;
+        padding: 0 16px;
+        color: #1a1a1a;
+        line-height: 1.5;
+      }
+      h1 {
+        font-size: 20px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 20px 0 8px;
+        color: #444;
+      }
+      .card {
+        border: 1px solid #e2e2e2;
+        border-radius: 10px;
+        padding: 16px;
+        margin: 12px 0;
+        background: #fafafa;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin: 8px 0 4px;
+      }
+      input[type='text'] {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 13px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 400;
+        margin: 4px 0;
+      }
+      .row input {
+        width: auto;
+      }
+      button {
+        padding: 9px 14px;
+        border: 0;
+        border-radius: 6px;
+        background: #1a73e8;
+        color: #fff;
+        font-size: 13px;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+      button.secondary {
+        background: #5f6368;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 360px;
+        overflow: auto;
+      }
+      .hidden {
+        display: none;
+      }
+      .hint {
+        font-size: 12px;
+        color: #888;
+        margin-top: 4px;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #e8f0fe;
+        color: #1a73e8;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Google 로그인 플로우 테스트</h1>
+    <p class="hint">
+      seoul-moment-api 의 <code>/user/auth/google/*</code> 3단계 플로우(로그인 ·
+      연결확인 · 신규가입)를 브라우저에서 직접 검증하는 도구입니다.
+    </p>
+
+    <div class="card">
+      <h2>설정</h2>
+      <label>API Base URL</label>
+      <input
+        id="apiBase"
+        type="text"
+        placeholder="비우면 이 페이지의 origin을 사용 (서버가 직접 서빙하므로 권장)"
+      />
+      <label>Google OAuth Client ID</label>
+      <input
+        id="clientId"
+        type="text"
+        value="704631056743-62q48j0llni5dt4okjs8sri8kba3cvo0.apps.googleusercontent.com"
+      />
+      <button id="initBtn">설정 적용 & Google 버튼 초기화</button>
+      <p class="hint">
+        ⚠️ 이 페이지는 API 서버가 직접 서빙하며 API base는 환경별로 주입됩니다 —
+        LOCAL <code>http://localhost:3111</code>, DEV
+        <code>https://api-dev.seoulmoment.com.tw</code>. 해당 서버의
+        <code>/google_oauth</code> 로 접속하고, Google Cloud Console의
+        <b>웹 애플리케이션</b> OAuth 클라이언트 →
+        <b>"승인된 JavaScript 원본"</b>에 그 origin을 등록해야 합니다.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>1단계 · Google 로그인</h2>
+      <div id="gbtn"></div>
+      <p class="hint">
+        버튼이 안 보이면 위 "설정 적용"을 누르고, origin 등록 여부를 확인하세요.
+      </p>
+    </div>
+
+    <!-- 2-A. 연결 확인 -->
+    <div id="linkCard" class="card hidden">
+      <h2>2-A단계 · 기존 계정에 Google 연결</h2>
+      <p>
+        <span class="pill">needsLinkConfirm</span>
+        이미 가입된 이메일(<b id="linkEmail"></b>)입니다. 이 계정에 Google을
+        연결할까요?
+      </p>
+      <button id="linkBtn">연결하기 (POST /google/link)</button>
+    </div>
+
+    <!-- 2-B. 신규 가입 -->
+    <div id="signupCard" class="card hidden">
+      <h2>2-B단계 · Google 신규 회원가입</h2>
+      <p>
+        <span class="pill">needsSignup</span>
+        미가입 이메일(<b id="signupEmail"></b>)입니다. 닉네임을 입력해
+        가입하세요.
+      </p>
+      <label>닉네임</label>
+      <input id="nickname" type="text" placeholder="nickname" />
+      <div class="row">
+        <input id="newProductAgreed" type="checkbox" /><label
+          for="newProductAgreed"
+          style="margin: 0"
+          >신상품 및 기획전 출시 알림</label
+        >
+      </div>
+      <div class="row">
+        <input id="adAgreed" type="checkbox" /><label
+          for="adAgreed"
+          style="margin: 0"
+          >광고 및 이벤트 할인 이메일</label
+        >
+      </div>
+      <div class="row">
+        <input id="recommendAgreed" type="checkbox" /><label
+          for="recommendAgreed"
+          style="margin: 0"
+          >개인 맞춤 상품 추천 알림</label
+        >
+      </div>
+      <button id="signupBtn">가입하기 (POST /google/signup)</button>
+    </div>
+
+    <!-- 로그인 완료 -->
+    <div id="doneCard" class="card hidden">
+      <h2>✅ 로그인 완료</h2>
+      <p>access / refresh 토큰이 발급되었습니다. 아래 로그를 확인하세요.</p>
+    </div>
+
+    <div class="card">
+      <h2>로그</h2>
+      <button id="clearLog" class="secondary">로그 지우기</button>
+      <pre id="log">대기 중…</pre>
+    </div>
+
+    <script>
+      // --- 상태 ---
+      let linkToken = null;
+      let signupToken = null;
+
+      const $ = (id) => document.getElementById(id);
+      // 서버가 환경(LOCAL/DEV)에 맞춰 주입한다.
+      // 서버 없이 파일을 직접 열면 치환되지 않으므로 현재 origin으로 폴백.
+      const RAW_SERVED_API_BASE = '__API_BASE__';
+      const SERVED_API_BASE = RAW_SERVED_API_BASE.startsWith('__')
+        ? window.location.origin
+        : RAW_SERVED_API_BASE;
+      const apiBase = () =>
+        ($('apiBase').value.trim() || SERVED_API_BASE).replace(/\/$/, '');
+
+      function log(label, data) {
+        const el = $('log');
+        const time = new Date().toLocaleTimeString();
+        const body =
+          typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        el.textContent = `[${time}] ${label}\n${body}\n\n` + el.textContent;
+      }
+
+      function show(id) {
+        $(id).classList.remove('hidden');
+      }
+      function hide(id) {
+        $(id).classList.add('hidden');
+      }
+
+      // --- 백엔드 호출 ---
+      async function callApi(path, payload) {
+        log(`▶ POST ${path}`, payload);
+        try {
+          const res = await fetch(apiBase() + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const json = await res.json().catch(() => ({}));
+          log(`◀ ${res.status} ${path}`, json);
+          return { status: res.status, json };
+        } catch (e) {
+          log(`✖ 네트워크 오류 ${path}`, String(e));
+          throw e;
+        }
+      }
+
+      // --- 1단계: Google credential(idToken) 수신 ---
+      async function handleCredential(response) {
+        const idToken = response.credential;
+        log('Google idToken 수신', idToken.slice(0, 32) + '…');
+        resetCards();
+
+        const { json } = await callApi('/user/auth/google/login', { idToken });
+        const data = json?.data;
+        if (!data) return;
+
+        if (data.token) {
+          // 이미 연결된 계정 → 즉시 로그인
+          show('doneCard');
+          return;
+        }
+        if (data.needsLinkConfirm) {
+          linkToken = data.linkToken;
+          $('linkEmail').textContent = data.email || '';
+          show('linkCard');
+          return;
+        }
+        if (data.needsSignup) {
+          signupToken = data.signupToken;
+          $('signupEmail').textContent = data.email || '';
+          show('signupCard');
+          return;
+        }
+      }
+
+      function resetCards() {
+        hide('linkCard');
+        hide('signupCard');
+        hide('doneCard');
+      }
+
+      // --- 2-A: 연결 ---
+      $('linkBtn').addEventListener('click', async () => {
+        const { json } = await callApi('/user/auth/google/link', {
+          linkToken,
+        });
+        if (json?.data?.token) {
+          resetCards();
+          show('doneCard');
+        }
+      });
+
+      // --- 2-B: 가입 ---
+      $('signupBtn').addEventListener('click', async () => {
+        const nickname = $('nickname').value.trim();
+        if (!nickname) return alert('닉네임을 입력하세요.');
+        const { json } = await callApi('/user/auth/google/signup', {
+          signupToken,
+          nickname,
+          newProductAgreed: $('newProductAgreed').checked,
+          adAgreed: $('adAgreed').checked,
+          recommendAgreed: $('recommendAgreed').checked,
+        });
+        if (json?.data?.token) {
+          resetCards();
+          show('doneCard');
+        }
+      });
+
+      // --- Google 버튼 초기화 ---
+      function initGoogle() {
+        if (!window.google || !google.accounts) {
+          alert(
+            'Google 스크립트가 아직 로드되지 않았습니다. 잠시 후 다시 시도하세요.',
+          );
+          return;
+        }
+        const clientId = $('clientId').value.trim();
+        localStorage.setItem('gAuthClientId', clientId);
+
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleCredential,
+        });
+        $('gbtn').innerHTML = '';
+        google.accounts.id.renderButton($('gbtn'), {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          locale: 'ko',
+        });
+        log('Google 버튼 초기화 완료', { clientId, apiBase: apiBase() });
+      }
+
+      $('initBtn').addEventListener('click', initGoogle);
+      $('clearLog').addEventListener('click', () => {
+        $('log').textContent = '대기 중…';
+      });
+
+      // 저장된 설정 복원 + 스크립트 로드 후 자동 초기화
+      window.addEventListener('load', () => {
+        const savedId = localStorage.getItem('gAuthClientId');
+        if (savedId) $('clientId').value = savedId;
+        const timer = setInterval(() => {
+          if (window.google && google.accounts) {
+            clearInterval(timer);
+            initGoogle();
+          }
+        }, 300);
+      });
+    </script>
+  </body>
+</html>

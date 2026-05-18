@@ -13,6 +13,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 
+import { GoogleOauthTestController } from '../google-oauth-test.controller';
 import { HealthController } from '../health.controller';
 import { AdminModule } from './admin/admin.module';
 import { ArticleModule } from './article/article.module';
@@ -69,7 +70,7 @@ import { UserModule } from './user/user.module';
     BrandPromotionModule,
     UserModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, GoogleOauthTestController],
   providers: [
     {
       provide: APP_FILTER,
