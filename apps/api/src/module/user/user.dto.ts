@@ -328,94 +328,100 @@ export class PatchUserProfileRequest {
 }
 
 export class PostUserFitRequest {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '키 (cm)',
     example: 180,
   })
   @IsNumber()
   @Type(() => Number)
-  @IsDefined()
-  height: number;
+  @IsOptional()
+  height?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '몸무게 (kg)',
     example: 70,
   })
   @IsNumber()
   @Type(() => Number)
-  @IsDefined()
-  weight: number;
+  @IsOptional()
+  weight?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '신발 사이즈 (mm 단위, 예: 270)',
     example: 270,
   })
   @IsNumber()
   @Type(() => Number)
-  @IsDefined()
-  shoeSize: number;
+  @IsOptional()
+  shoeSize?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '아우터 사이즈 (예: S/M/L/XL, 95/100/105)',
     example: 'S',
   })
   @IsString()
-  @IsDefined()
-  outerSize: string;
+  @IsOptional()
+  outerSize?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '상의 사이즈 (예: S/M/L/XL, 95/100/105)',
     example: 'S',
   })
   @IsString()
-  @IsDefined()
-  topSize: string;
+  @IsOptional()
+  topSize?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '하의 사이즈 (예: 28/30/32, S/M/L)',
     example: '28',
   })
   @IsString()
-  @IsDefined()
-  bottomSize: string;
+  @IsOptional()
+  bottomSize?: string;
 }
 
 export class GetUserFitResponse {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '키 (cm)',
     example: 180,
+    nullable: true,
   })
-  height: number;
+  height: number | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '몸무게 (kg)',
     example: 70,
+    nullable: true,
   })
-  weight: number;
+  weight: number | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '신발 사이즈 (mm 단위, 예: 270)',
     example: 270,
+    nullable: true,
   })
-  shoeSize: number;
+  shoeSize: number | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '아우터 사이즈 (예: S/M/L/XL, 95/100/105)',
     example: 'S',
+    nullable: true,
   })
-  outerSize: string;
+  outerSize: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '상의 사이즈 (예: S/M/L/XL, 95/100/105)',
     example: 'S',
+    nullable: true,
   })
-  topSize: string;
+  topSize: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '하의 사이즈 (예: 28/30/32, S/M/L)',
     example: '28',
+    nullable: true,
   })
-  bottomSize: string;
+  bottomSize: string | null;
 
   static from(entity: UserFitEntity) {
     return plainToInstance(this, {
@@ -430,54 +436,54 @@ export class GetUserFitResponse {
 }
 
 export class PatchUserFitRequest {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '키 (cm)',
     example: 180,
   })
   @IsNumber()
   @Type(() => Number)
-  @IsDefined()
-  height: number;
+  @IsOptional()
+  height?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '몸무게 (kg)',
     example: 70,
   })
   @IsNumber()
   @Type(() => Number)
-  @IsDefined()
-  weight: number;
+  @IsOptional()
+  weight?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '신발 사이즈 (mm 단위, 예: 270)',
     example: 270,
   })
   @IsNumber()
   @Type(() => Number)
-  @IsDefined()
-  shoeSize: number;
+  @IsOptional()
+  shoeSize?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '아우터 사이즈 (예: S/M/L/XL, 95/100/105)',
     example: 'S',
   })
   @IsString()
-  @IsDefined()
-  outerSize: string;
+  @IsOptional()
+  outerSize?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '상의 사이즈 (예: S/M/L/XL, 95/100/105)',
     example: 'S',
   })
   @IsString()
-  @IsDefined()
-  topSize: string;
+  @IsOptional()
+  topSize?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '하의 사이즈 (예: 28/30/32, S/M/L)',
     example: '28',
   })
   @IsString()
-  @IsDefined()
-  bottomSize: string;
+  @IsOptional()
+  bottomSize?: string;
 }

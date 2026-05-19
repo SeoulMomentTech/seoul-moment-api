@@ -636,11 +636,58 @@ describe('UserController (E2E)', () => {
       expect(res.status).toBe(401);
     });
 
-    it('필수 필드(height)가 누락되면 400을 반환한다', async () => {
-      // Given
-      const { oneTimeToken } = await signUpAndLogin();
+    it('일부 필드(height)가 누락되어도 201을 반환하고 누락 필드는 NULL로 저장된다', async () => {
+      // Given - 모든 필드가 선택적이므로 height 없이 전송
+      const { userId, oneTimeToken } = await signUpAndLogin();
       const body = buildFitBody();
       delete (body as Record<string, unknown>).height;
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/fit`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(body);
+
+      // Then
+      expect(res.status).toBe(201);
+      const rows = await dataSource.query(
+        `SELECT height, weight FROM user_fit WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows[0].height).toBeNull();
+      expect(rows[0].weight).toBe(body.weight);
+    });
+
+    it('모든 필드가 비어있는 빈 바디로도 201을 반환하고 전부 NULL로 저장된다', async () => {
+      // Given - 빈 바디 (모든 필드 선택적)
+      const { userId, oneTimeToken } = await signUpAndLogin();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/fit`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({});
+
+      // Then
+      expect(res.status).toBe(201);
+      const rows = await dataSource.query(
+        `SELECT height, weight, shoe_size, outer_size, top_size, bottom_size
+         FROM user_fit WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].height).toBeNull();
+      expect(rows[0].weight).toBeNull();
+      expect(rows[0].shoe_size).toBeNull();
+      expect(rows[0].outer_size).toBeNull();
+      expect(rows[0].top_size).toBeNull();
+      expect(rows[0].bottom_size).toBeNull();
+    });
+
+    it('선택적이어도 값이 잘못된 타입(height가 숫자 아님)이면 400을 반환한다', async () => {
+      // Given - 필드는 선택적이지만 값이 있으면 타입 검증은 유지된다
+      const { oneTimeToken } = await signUpAndLogin();
+      const body = buildFitBody({ height: 'not-a-number' });
 
       // When
       const res = await request(app.getHttpServer())
@@ -701,6 +748,30 @@ describe('UserController (E2E)', () => {
       expect(rows[0].weight).toBe(60);
       expect(rows[0].top_size).toBe('L');
     });
+
+    it('일부 필드만 전송하면 200을 반환하고 해당 필드만 갱신된다', async () => {
+      // Given - 전체 체형 정보 생성
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/fit`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildFitBody());
+
+      // When - weight만 전송 (나머지 필드는 선택적이라 생략)
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/fit`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ weight: 55 });
+
+      // Then - weight만 갱신되고 나머지는 기존 값이 유지된다
+      expect(res.status).toBe(200);
+      const rows = await dataSource.query(
+        `SELECT height, weight FROM user_fit WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows[0].weight).toBe(55);
+      expect(rows[0].height).toBe(180);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -743,6 +814,53 @@ describe('UserController (E2E)', () => {
       expect(res.body.data.outerSize).toBe(fitBody.outerSize);
       expect(res.body.data.topSize).toBe(fitBody.topSize);
       expect(res.body.data.bottomSize).toBe(fitBody.bottomSize);
+    });
+
+    it('빈 바디로 생성된 체형 정보는 200과 함께 모든 필드를 null로 반환한다', async () => {
+      // Given - 빈 바디로 생성 (모든 필드 선택적, GetUserFitResponse는 null 허용)
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/fit`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({});
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${USER_BASE}/fit`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.result).toBe(true);
+      expect(res.body.data.height).toBeNull();
+      expect(res.body.data.weight).toBeNull();
+      expect(res.body.data.shoeSize).toBeNull();
+      expect(res.body.data.outerSize).toBeNull();
+      expect(res.body.data.topSize).toBeNull();
+      expect(res.body.data.bottomSize).toBeNull();
+    });
+
+    it('일부 필드만 생성된 경우 채워진 필드는 값, 나머지는 null로 반환한다', async () => {
+      // Given - height/topSize만 채워서 생성
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/fit`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ height: 165, topSize: 'L' });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${USER_BASE}/fit`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.height).toBe(165);
+      expect(res.body.data.topSize).toBe('L');
+      expect(res.body.data.weight).toBeNull();
+      expect(res.body.data.shoeSize).toBeNull();
+      expect(res.body.data.outerSize).toBeNull();
+      expect(res.body.data.bottomSize).toBeNull();
     });
 
     it('soft-deleted 상태이면 404를 반환한다', async () => {
