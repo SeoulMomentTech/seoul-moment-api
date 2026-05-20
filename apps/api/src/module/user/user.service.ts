@@ -33,8 +33,6 @@ export class UserService {
 
     const updateDto: UpdateUserDto = {
       id: user.id,
-      phone: dto.phone,
-      email: dto.email,
       newProductDate: dto.newProductAgreed ? new Date() : null,
       adAgreeDate: dto.adAgreed ? new Date() : null,
       recommendDate: dto.recommendAgreed ? new Date() : null,

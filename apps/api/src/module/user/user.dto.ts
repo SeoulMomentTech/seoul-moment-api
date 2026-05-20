@@ -3,12 +3,11 @@ import { UserProfileEntity } from '@app/repository/entity/user-profile.entity';
 import { UserEntity } from '@app/repository/entity/user.entity';
 import { UserProfileGender } from '@app/repository/enum/user-profile.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { plainToInstance, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
   IsDefined,
-  IsEmail,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -60,25 +59,10 @@ export class GetUserInfoResponse {
 
 export class PatchUserInfoRequest {
   @ApiPropertyOptional({
-    description: '전화번호',
-    example: '01012345678',
-  })
-  @IsString()
-  @IsOptional()
-  phone?: string;
-
-  @ApiProperty({
-    description: '이메일',
-    example: 'test@test.com',
-  })
-  @IsEmail()
-  @IsDefined()
-  email: string;
-
-  @ApiPropertyOptional({
     description: '신상품 및 기획전 출시 알림',
     example: true,
   })
+  @Transform(({ value }) => value ?? false)
   @IsBoolean()
   @IsOptional()
   newProductAgreed?: boolean;
@@ -87,6 +71,7 @@ export class PatchUserInfoRequest {
     description: '광고 및 이벤트 할인 이메일',
     example: true,
   })
+  @Transform(({ value }) => value ?? false)
   @IsBoolean()
   @IsOptional()
   adAgreed?: boolean;
@@ -95,6 +80,7 @@ export class PatchUserInfoRequest {
     description: '개인 맞춤 상품 추천 알림',
     example: true,
   })
+  @Transform(({ value }) => value ?? false)
   @IsBoolean()
   @IsOptional()
   recommendAgreed?: boolean;
