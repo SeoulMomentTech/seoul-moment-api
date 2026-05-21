@@ -159,7 +159,7 @@ export class ProductController {
     name: 'Authorization',
     required: false,
     description:
-      'JWT token 이곳에 토큰을 쓰지 말고 실제 사용은 swagger 좌물세를 사용',
+      'JWT token 이곳에 토큰을 쓰지 말고 실제 사용은 swagger 자물쇠를 사용',
   })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @ResponseList(GetProductResponse)
@@ -263,7 +263,7 @@ export class ProductController {
     name: 'Authorization',
     required: false,
     description:
-      'JWT token 이곳에 토큰을 쓰지 말고 실제 사용은 swagger 좌물세를 사용',
+      'JWT token 이곳에 토큰을 쓰지 말고 실제 사용은 swagger 자물쇠를 사용',
   })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @ResponseData(GetProductDetailResponse)
