@@ -364,6 +364,12 @@ export class GetProductResponse {
   })
   image: string;
 
+  @ApiProperty({
+    description: '좋아요 여부 (로그인 사용자만 확인 가능)',
+    example: true,
+  })
+  isLiked: boolean;
+
   static from(
     entity: ProductItemEntity,
     multilingualText: {
@@ -415,6 +421,7 @@ export class GetProductResponse {
       review: Math.floor(Math.random() * 101),
       reviewAverage: Math.round((Math.random() + 4) * 10) / 10,
       image: entity.getMainImage(),
+      isLiked: entity.userProductLikes.length > 0,
     });
   }
 }
@@ -650,6 +657,12 @@ export class GetProductDetailResponse {
   })
   external: GetProductDetailExternal[];
 
+  @ApiProperty({
+    description: '좋아요 여부 (로그인 사용자만 확인 가능)',
+    example: true,
+  })
+  isLiked: boolean;
+
   static from(
     entity: ProductItemEntity,
     productExternalEntity: ProductExternalEntity[],
@@ -698,6 +711,7 @@ export class GetProductDetailResponse {
       external: productExternalEntity.map((v) =>
         GetProductDetailExternal.from(v),
       ),
+      isLiked: entity.userProductLikes.length > 0,
     });
   }
 }

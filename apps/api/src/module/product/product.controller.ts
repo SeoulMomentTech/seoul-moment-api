@@ -1,6 +1,7 @@
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseException } from '@app/common/decorator/response-exception.decorator';
 import { ResponseList } from '@app/common/decorator/response-list.decorator';
+import { SwaggerAuthName } from '@app/common/docs/swagger.dto';
 import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
@@ -16,7 +17,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation } from '@nestjs/swagger';
+import { JwtService } from '@nestjs/jwt';
+import { ApiBearerAuth, ApiHeader, ApiOperation } from '@nestjs/swagger';
 
 import {
   GetProductBannerByBrandResponse,
@@ -44,7 +46,10 @@ import { ProductService } from './product.service';
 
 @Controller('product')
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(
+    private readonly productService: ProductService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @Get('banner')
   @ApiOperation({
@@ -150,11 +155,21 @@ export class ProductController {
     description: 'Alternative way to specify language preference (ko, en, zh)',
     enum: LanguageCode,
   })
+  @ApiHeader({
+    name: 'Authorization',
+    required: false,
+    description:
+      'JWT token 이곳에 토큰을 쓰지 말고 실제 사용은 swagger 좌물세를 사용',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @ResponseList(GetProductResponse)
   async getProduct(
     @Headers('Accept-language') acceptLanguage: LanguageCode,
+    @Headers('Authorization') authorization: string | undefined,
     @Query() query: GetProductRequest,
   ): Promise<ResponseListDto<GetProductResponse>> {
+    const userId = await this.resolveOptionalUserId(authorization);
+
     const [result, count] = await this.productService.getProduct(
       GetProductRequest.from(
         query.page,
@@ -169,6 +184,8 @@ export class ProductController {
         query.mainView,
       ),
       acceptLanguage,
+      undefined,
+      userId,
     );
     return new ResponseListDto(result, count);
   }
@@ -242,15 +259,25 @@ export class ProductController {
     description: 'Alternative way to specify language preference (ko, en, zh)',
     enum: LanguageCode,
   })
+  @ApiHeader({
+    name: 'Authorization',
+    required: false,
+    description:
+      'JWT token 이곳에 토큰을 쓰지 말고 실제 사용은 swagger 좌물세를 사용',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @ResponseData(GetProductDetailResponse)
   @ResponseException(HttpStatus.NOT_FOUND, '상품이 존재하지 않습니다.')
   async getProductDetail(
     @Headers('Accept-language') acceptLanguage: LanguageCode,
+    @Headers('Authorization') authorization: string | undefined,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<ResponseDataDto<GetProductDetailResponse>> {
+    const userId = await this.resolveOptionalUserId(authorization);
     const result = await this.productService.getProductDetail(
       id,
       acceptLanguage,
+      userId,
     );
 
     return new ResponseDataDto(result);
@@ -296,6 +323,20 @@ export class ProductController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async postProductItem(@Body() body: PostProductItemRequest) {
     await this.productService.postProductItem(body);
+  }
+
+  private async resolveOptionalUserId(
+    authorization?: string,
+  ): Promise<number | undefined> {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    if (!token) return undefined;
+
+    try {
+      const payload = await this.jwtService.verifyAsync(token);
+      return Number(payload.id);
+    } catch {
+      return undefined;
+    }
   }
 
   @Post('variant')

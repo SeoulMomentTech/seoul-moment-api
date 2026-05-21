@@ -128,6 +128,7 @@ export class ProductService {
     dto: GetProductRequest,
     language: LanguageCode,
     withoutId?: number,
+    userId?: number,
   ): Promise<[GetProductResponse[], number]> {
     const [productItemList, count] =
       await this.productRepositoryService.findProductItem(
@@ -142,6 +143,8 @@ export class ProductService {
         withoutId,
         dto.optionIdList,
         dto.mainView,
+        undefined,
+        userId,
       );
 
     const [brandText, productText, optionValueText] = await Promise.all([
@@ -183,10 +186,11 @@ export class ProductService {
   async getProductDetail(
     productItemId: number,
     language: LanguageCode,
+    userId?: number,
   ): Promise<GetProductDetailResponse> {
     const [languageEntity, productDetail] = await Promise.all([
       this.languageRepositoryService.findLanguageByCode(language),
-      this.productRepositoryService.getProductItemDetail(productItemId),
+      this.productRepositoryService.getProductItemDetail(productItemId, userId),
     ]);
 
     const productExternal =

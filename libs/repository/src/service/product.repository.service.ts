@@ -188,6 +188,7 @@ export class ProductRepositoryService implements OnModuleInit {
     optionIdList?: number[],
     mainView?: boolean,
     withoutIdList?: number[],
+    userId?: number,
   ): Promise<[ProductItemEntity[], number]> {
     // 대용량 최적화: 옵션 필터링을 위한 서브쿼리 생성
     const buildOptionFilterSubquery = () => {
@@ -249,7 +250,6 @@ export class ProductRepositoryService implements OnModuleInit {
         .andWhere('b.deleteDate IS NULL');
 
       if (mainView !== undefined) {
-        console.log('mainView', mainView);
         query.andWhere('pc.main_view = :mainView', { mainView });
       }
 
@@ -349,6 +349,9 @@ export class ProductRepositoryService implements OnModuleInit {
       .leftJoinAndSelect('pv.variantOptions', 'vo')
       .leftJoinAndSelect('vo.optionValue', 'ov')
       .leftJoinAndSelect('ov.option', 'o')
+      .leftJoinAndSelect('pc.userProductLikes', 'upl', 'upl.userId = :userId', {
+        userId,
+      })
       .where('pc.id = ANY(:ids)', { ids }) // IN 대신 ANY 사용 (PostgreSQL 최적화)
       .andWhere('(pv.status = :productVariantStatus OR pv.status IS NULL)', {
         productVariantStatus: ProductVariantStatus.ACTIVE,
@@ -416,14 +419,21 @@ export class ProductRepositoryService implements OnModuleInit {
     return result;
   }
 
-  async getProductItemDetail(id: number): Promise<ProductItemEntity> {
-    const result = await this.productItemRepository.findOne({
-      where: {
-        id,
-        status: ProductItemStatus.NORMAL,
-      },
-      relations: ['product', 'product.brand', 'images'],
-    });
+  async getProductItemDetail(
+    id: number,
+    userId?: number,
+  ): Promise<ProductItemEntity> {
+    const result = await this.productItemRepository
+      .createQueryBuilder('pi')
+      .leftJoinAndSelect('pi.product', 'product')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('pi.images', 'images')
+      .leftJoinAndSelect('pi.userProductLikes', 'upl', 'upl.userId = :userId', {
+        userId: userId ?? 0,
+      })
+      .where('pi.id = :id', { id })
+      .andWhere('pi.status = :status', { status: ProductItemStatus.NORMAL })
+      .getOne();
 
     if (!result)
       throw new ServiceError(
