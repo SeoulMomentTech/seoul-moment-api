@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { ProductController } from './product.controller';
 import { ProductService } from './product.service';
+import { OptionalUserGuard } from '../../guard/optional-user.guard';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { ProductService } from './product.service';
     }),
   ],
   controllers: [ProductController],
-  providers: [ProductService],
+  providers: [ProductService, OptionalUserGuard],
   exports: [ProductService],
 })
 export class ProductModule {}

@@ -175,11 +175,21 @@ export class BrandPromotionRepositoryService {
     return result;
   }
 
-  async getBrandPromotionById(id: number): Promise<BrandPromotionEntity> {
-    const result = await this.brandPromotionRepository.findOne({
-      where: { id },
-      relations: ['brand'],
-    });
+  async getBrandPromotionById(
+    id: number,
+    userId?: number,
+  ): Promise<BrandPromotionEntity> {
+    const result = await this.brandPromotionRepository
+      .createQueryBuilder('bp')
+      .leftJoinAndSelect('bp.brand', 'brand')
+      .leftJoinAndSelect(
+        'brand.userBrandLikes',
+        'ubl',
+        'ubl.userId = :userId',
+        { userId: userId ?? 0 },
+      )
+      .where('bp.id = :id', { id })
+      .getOne();
 
     if (!result) {
       throw new ServiceError(

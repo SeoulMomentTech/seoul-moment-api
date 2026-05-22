@@ -117,6 +117,12 @@ export class GetBrandPromotionBrandDetailResponse {
   @IsDefined()
   colorCode: string;
 
+  @ApiProperty({
+    description: '좋아요 여부 (로그인 사용자만 확인 가능)',
+    example: true,
+  })
+  isLiked: boolean;
+
   static from(
     entity: BrandPromotionEntity,
     multilingualTexts: MultilingualTextEntity[],
@@ -131,6 +137,7 @@ export class GetBrandPromotionBrandDetailResponse {
       description: descriptionTextsByEntityAndLanguage.getContent(),
       likeCount: Math.floor(Math.random() * 50001),
       colorCode: entity.brand.colorCode,
+      isLiked: (entity.brand.userBrandLikes ?? []).length > 0,
     };
   }
 }

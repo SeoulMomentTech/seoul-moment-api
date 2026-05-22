@@ -70,9 +70,12 @@ export class ProductService {
   async getProductBannerByBrand(
     brandId: number,
     language: LanguageCode,
+    userId?: number,
   ): Promise<GetProductBannerByBrandResponse> {
-    const brandEntity =
-      await this.brandRepositoryService.findBrandById(brandId);
+    const brandEntity = await this.brandRepositoryService.findBrandById(
+      brandId,
+      userId,
+    );
 
     if (!brandEntity) {
       throw new ServiceError(

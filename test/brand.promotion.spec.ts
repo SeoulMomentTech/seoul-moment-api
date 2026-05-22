@@ -64,10 +64,57 @@ describe('BrandPromotionController (E2E)', () => {
       'promotion',
       'brand_mobile_banner_image',
       'brand_banner_image',
+      'user_brand_like',
+      'user_product_like',
+      'user_sns',
+      'user_fit',
+      'user_profile',
+      '"user"',
       'brand',
       'multilingual_text',
     ]);
   });
+
+  async function signUpAndLogin(): Promise<{
+    userId: number;
+    oneTimeToken: string;
+  }> {
+    const body = {
+      email: faker.internet.email().toLowerCase(),
+      password: faker.internet.password({ length: 12 }),
+      nickname: faker.internet
+        .username()
+        .replace(/[^a-zA-Z0-9_]/g, '')
+        .slice(0, 20),
+    };
+
+    const signupRes = await request(app.getHttpServer())
+      .post('/user/auth/signup')
+      .send(body);
+    expect(signupRes.status).toBe(204);
+
+    const loginRes = await request(app.getHttpServer())
+      .post('/user/auth/login')
+      .send({ email: body.email, password: body.password });
+    expect(loginRes.status).toBe(200);
+
+    const userRow = await dataSource.query(
+      `SELECT id FROM "user" WHERE email = $1`,
+      [body.email],
+    );
+
+    return {
+      userId: userRow[0].id,
+      oneTimeToken: loginRes.body.data.token as string,
+    };
+  }
+
+  async function likeBrand(userId: number, brandId: number): Promise<void> {
+    await dataSource.query(
+      `INSERT INTO user_brand_like (user_id, brand_id) VALUES ($1, $2)`,
+      [userId, brandId],
+    );
+  }
 
   afterAll(async () => {
     await closeTestApp();
@@ -398,6 +445,120 @@ describe('BrandPromotionController (E2E)', () => {
       expect(res.body.data.promotionId).toBe(promotionB.id);
       expect(res.body.data.promotionId).not.toBe(promotionA.id);
       expect(brandPromotionA.id).not.toBe(brandPromotionB.id);
+    });
+
+    describe('brand.isLiked 처리', () => {
+      it('인증 없이 호출 시 brand.isLiked는 false다', async () => {
+        // Given
+        const promotion = await createPromotion();
+        const brand = await createBrand();
+        const brandPromotion = await createBrandPromotion(
+          promotion.id,
+          brand.id,
+          true,
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .get(`/brand/promotion/v1/${brandPromotion.id}`)
+          .set('Accept-language', LanguageCode.KOREAN);
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.brand.isLiked).toBe(false);
+      });
+
+      it('로그인했지만 해당 브랜드를 좋아요하지 않은 사용자는 brand.isLiked가 false다', async () => {
+        // Given - 좋아요 없는 사용자
+        const { oneTimeToken } = await signUpAndLogin();
+        const promotion = await createPromotion();
+        const brand = await createBrand();
+        const brandPromotion = await createBrandPromotion(
+          promotion.id,
+          brand.id,
+          true,
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .get(`/brand/promotion/v1/${brandPromotion.id}`)
+          .set('Accept-language', LanguageCode.KOREAN)
+          .set('Authorization', `Bearer ${oneTimeToken}`);
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.brand.isLiked).toBe(false);
+      });
+
+      it('해당 브랜드를 좋아요한 사용자는 brand.isLiked가 true다', async () => {
+        // Given
+        const { userId, oneTimeToken } = await signUpAndLogin();
+        const promotion = await createPromotion();
+        const brand = await createBrand();
+        const brandPromotion = await createBrandPromotion(
+          promotion.id,
+          brand.id,
+          true,
+        );
+        await likeBrand(userId, brand.id);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .get(`/brand/promotion/v1/${brandPromotion.id}`)
+          .set('Accept-language', LanguageCode.KOREAN)
+          .set('Authorization', `Bearer ${oneTimeToken}`);
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.brand.isLiked).toBe(true);
+      });
+
+      it('다른 사용자가 좋아요해도 요청자의 brand.isLiked는 영향받지 않는다', async () => {
+        // Given - other 가 좋아요, me 는 좋아요 안함
+        const other = await signUpAndLogin();
+        const me = await signUpAndLogin();
+        const promotion = await createPromotion();
+        const brand = await createBrand();
+        const brandPromotion = await createBrandPromotion(
+          promotion.id,
+          brand.id,
+          true,
+        );
+        await likeBrand(other.userId, brand.id);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .get(`/brand/promotion/v1/${brandPromotion.id}`)
+          .set('Accept-language', LanguageCode.KOREAN)
+          .set('Authorization', `Bearer ${me.oneTimeToken}`);
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.brand.isLiked).toBe(false);
+      });
+
+      it('잘못된 토큰이면 익명으로 처리되어 brand.isLiked가 false다', async () => {
+        // Given - 좋아요한 사용자가 있어도 토큰이 잘못되면 익명
+        const { userId } = await signUpAndLogin();
+        const promotion = await createPromotion();
+        const brand = await createBrand();
+        const brandPromotion = await createBrandPromotion(
+          promotion.id,
+          brand.id,
+          true,
+        );
+        await likeBrand(userId, brand.id);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .get(`/brand/promotion/v1/${brandPromotion.id}`)
+          .set('Accept-language', LanguageCode.KOREAN)
+          .set('Authorization', 'Bearer not-a-real-token');
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.brand.isLiked).toBe(false);
+      });
     });
   });
 });

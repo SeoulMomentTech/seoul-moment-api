@@ -85,10 +85,12 @@ export class BrandPromotionService {
   async v1GetBrandPromotionDetail(
     brandPromotionId: number,
     language: LanguageCode,
+    userId?: number,
   ): Promise<GetBrandPromotionResponse> {
     const brandPromotion =
       await this.brandPromotionRepositoryService.getBrandPromotionById(
         brandPromotionId,
+        userId,
       );
 
     const [

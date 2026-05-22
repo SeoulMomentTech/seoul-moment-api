@@ -79,6 +79,12 @@ export class GetProductBannerByBrandResponse {
   @Type(() => Number)
   like: number;
 
+  @ApiProperty({
+    description: '좋아요 여부 (로그인 사용자만 확인 가능)',
+    example: true,
+  })
+  isLiked: boolean;
+
   static from(entity: BrandEntity, multilingualText: MultilingualTextEntity[]) {
     const name = MultilingualFieldDto.fromByEntityList(
       multilingualText,
@@ -96,6 +102,7 @@ export class GetProductBannerByBrandResponse {
       englishName: entity.englishName,
       description: description.getContent(),
       like: Math.floor(Math.random() * 50001),
+      isLiked: entity.userBrandLikes.length > 0,
     });
   }
 }
@@ -533,7 +540,7 @@ export class GetProductDetailResponse {
     description: '할인가',
     example: 189000,
   })
-  discoountPrice: number;
+  discountPrice: number;
 
   @ApiProperty({
     description: '원산지',
@@ -697,7 +704,7 @@ export class GetProductDetailResponse {
         brandName.getContent(),
       ),
       price: entity.price,
-      discoountPrice: entity.discountPrice,
+      discountPrice: entity.discountPrice,
       origin: origin.getContent(),
       shippingInfo: entity.shippingInfo,
       shippingCost: entity.shippingCost,

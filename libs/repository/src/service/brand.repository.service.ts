@@ -53,8 +53,20 @@ export class BrandRepositoryService {
     return this.brandRepository.find();
   }
 
-  async findBrandById(id: number): Promise<BrandEntity | null> {
-    return this.brandRepository.findOneBy({ id });
+  async findBrandById(
+    id: number,
+    userId?: number,
+  ): Promise<BrandEntity | null> {
+    return this.brandRepository
+      .createQueryBuilder('brand')
+      .leftJoinAndSelect(
+        'brand.userBrandLikes',
+        'ubl',
+        'ubl.userId = :userId',
+        { userId: userId ?? 0 },
+      )
+      .where('brand.id = :id', { id })
+      .getOne();
   }
 
   async getBrandById(id: number): Promise<BrandEntity> {

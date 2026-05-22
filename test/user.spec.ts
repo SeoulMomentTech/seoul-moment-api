@@ -150,19 +150,15 @@ describe('UserController (E2E)', () => {
   // PATCH /user/info
   // -------------------------------------------------------------------------
   describe('PATCH /user/info', () => {
-    it('정상 수정 시 200을 반환하고 DB에 반영된다', async () => {
+    it('정상 수정 시 200을 반환하고 동의 일시가 DB에 반영된다', async () => {
       // Given
       const { userId, oneTimeToken } = await signUpAndLogin();
-      const newPhone = faker.string.numeric(11);
-      const newEmail = faker.internet.email().toLowerCase();
 
       // When
       const res = await request(app.getHttpServer())
         .patch(`${USER_BASE}/info`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
         .send({
-          phone: newPhone,
-          email: newEmail,
           newProductAgreed: true,
           adAgreed: true,
           recommendAgreed: true,
@@ -171,12 +167,10 @@ describe('UserController (E2E)', () => {
       // Then
       expect(res.status).toBe(200);
       const rows = await dataSource.query(
-        `SELECT phone, email, new_product_date, ad_agree_date, recommend_date
+        `SELECT new_product_date, ad_agree_date, recommend_date
          FROM "user" WHERE id = $1`,
         [userId],
       );
-      expect(rows[0].phone).toBe(newPhone);
-      expect(rows[0].email).toBe(newEmail);
       expect(rows[0].new_product_date).toBeInstanceOf(Date);
       expect(rows[0].ad_agree_date).toBeInstanceOf(Date);
       expect(rows[0].recommend_date).toBeInstanceOf(Date);
@@ -195,7 +189,6 @@ describe('UserController (E2E)', () => {
         .patch(`${USER_BASE}/info`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
         .send({
-          email: faker.internet.email().toLowerCase(),
           newProductAgreed: false,
           adAgreed: false,
           recommendAgreed: false,
@@ -218,7 +211,6 @@ describe('UserController (E2E)', () => {
       const res = await request(app.getHttpServer())
         .patch(`${USER_BASE}/info`)
         .send({
-          email: faker.internet.email().toLowerCase(),
           newProductAgreed: true,
           adAgreed: true,
           recommendAgreed: true,
@@ -228,8 +220,8 @@ describe('UserController (E2E)', () => {
       expect(res.status).toBe(401);
     });
 
-    it('email이 누락되면 400을 반환한다', async () => {
-      // Given
+    it('허용되지 않은 필드(email)가 포함되면 400을 반환한다', async () => {
+      // Given - DTO에서 제거된 email 필드는 forbidNonWhitelisted로 거부되어야 함
       const { oneTimeToken } = await signUpAndLogin();
 
       // When
@@ -237,6 +229,7 @@ describe('UserController (E2E)', () => {
         .patch(`${USER_BASE}/info`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
         .send({
+          email: faker.internet.email().toLowerCase(),
           newProductAgreed: true,
           adAgreed: true,
           recommendAgreed: true,
