@@ -3,6 +3,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
 import { ExternalGoogleAuthService } from '@app/external/google/google-auth.service';
+import { HttpRequestService } from '@app/http/http.service';
 import { faker } from '@faker-js/faker';
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -885,6 +886,93 @@ describe('UserAuthController (E2E)', () => {
         .send({ email: 'extra@test.com', password: 'whatever-1234' });
 
       // Then - DTO에 email이 없으므로 whitelist에 의해 거부됨
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // POST /user/auth/phone/code
+  // -----------------------------------------------------------------------
+  describe('POST /user/auth/phone/code', () => {
+    let httpService: HttpRequestService;
+
+    beforeAll(() => {
+      httpService = app.get(HttpRequestService);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    function buildPhone() {
+      return `8210${faker.string.numeric(8)}`;
+    }
+
+    it('미가입 휴대폰으로 요청하면 200을 반환하고 Redis에 6자리 인증 코드가 저장된다', async () => {
+      // Given
+      const phone = buildPhone();
+      const spy = jest
+        .spyOn(httpService, 'sendPostRequest')
+        .mockResolvedValue({ result: true, data: {} });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/phone/code`)
+        .send({ phone });
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(spy).toHaveBeenCalledTimes(1);
+      const cached = await cacheService.find(phone);
+      expect(cached).not.toBeNull();
+      expect(cached).toMatch(/^\d{6}$/);
+    });
+
+    it('이미 가입된 휴대폰이면 409를 반환하고 SMS 발송도 캐시 저장도 일어나지 않는다', async () => {
+      // Given - signup으로 사용자 생성 후 phone 컬럼 직접 업데이트
+      const signupBody = buildSignUpBody();
+      await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(signupBody);
+      const phone = buildPhone();
+      await dataSource.query(`UPDATE "user" SET phone = $1 WHERE email = $2`, [
+        phone,
+        signupBody.email,
+      ]);
+      const spy = jest
+        .spyOn(httpService, 'sendPostRequest')
+        .mockResolvedValue({ result: true, data: {} });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/phone/code`)
+        .send({ phone });
+
+      // Then
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe('User already exists');
+      expect(spy).not.toHaveBeenCalled();
+      const cached = await cacheService.find(phone);
+      expect(cached).toBeNull();
+    });
+
+    it('phone 필드가 누락되면 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/phone/code`)
+        .send({});
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('phone이 문자열이 아니면 400을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/phone/code`)
+        .send({ phone: 821012345678 });
+
+      // Then
       expect(res.status).toBe(400);
     });
   });

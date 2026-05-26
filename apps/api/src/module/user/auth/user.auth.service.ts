@@ -233,6 +233,16 @@ export class UserAuthService {
     await this.userRepositoryService.validateUserNickname(nickname);
   }
 
+  async sendPhoneCode(phone: string): Promise<void> {
+    const exist = await this.userRepositoryService.existUserByPhone(phone);
+
+    if (exist) {
+      throw new ServiceError('User already exists', ServiceErrorCode.CONFLICT);
+    }
+
+    await this.commonAuthService.authPhone(phone);
+  }
+
   private async createSnsUser(
     signupRequest: PostGoogleSignupRequest,
     payload: Record<string, any>,

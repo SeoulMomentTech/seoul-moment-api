@@ -263,3 +263,13 @@ export class PostGoogleSignupRequest {
   @IsOptional()
   recommendAgreed?: boolean;
 }
+
+export class PostPhoneCodeRequest {
+  @ApiProperty({
+    description: '휴대폰 번호 (국제 코드 포함)',
+    example: '821012345678',
+  })
+  @IsString()
+  @IsDefined()
+  phone: string;
+}

@@ -45,4 +45,8 @@ export interface ConfigImpl {
   OPENSEARCH_HOST: string;
   OPENSEARCH_NAME: string;
   OPENSEARCH_PASS: string;
+
+  TWSMS_API_URL: string;
+  TWSMS_USER: string;
+  TWSMS_PASS: string;
 }

@@ -15,7 +15,7 @@ export class HttpRequestService {
 
   async sendPostRequest<T>(
     url: string,
-    body: Record<string, any>,
+    body: Record<string, any> | URLSearchParams,
     headers?: Record<string, any>,
   ): Promise<{ result: boolean; data: T }> {
     this.logger.info('Post request', {

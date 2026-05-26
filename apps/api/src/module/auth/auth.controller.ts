@@ -4,6 +4,7 @@ import { ApiOperation } from '@nestjs/swagger';
 import {
   PostEmailCodeRequest,
   PostEmailVerifyRequest,
+  PostPhoneVerifyRequest,
   PostRecaptchaRequest,
 } from './auth.dto';
 import { AuthService } from './auth.service';
@@ -24,6 +25,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async postEmailVerify(@Body() body: PostEmailVerifyRequest) {
     await this.authService.verifyEmail(body.email, parseInt(body.code, 10));
+  }
+
+  @Post('phone/verify')
+  @ApiOperation({ summary: '휴대폰 인증' })
+  @HttpCode(HttpStatus.OK)
+  async postPhoneVerify(@Body() body: PostPhoneVerifyRequest) {
+    await this.authService.verifyPhone(body.phone, parseInt(body.code, 10));
   }
 
   @Post('recaptcha')

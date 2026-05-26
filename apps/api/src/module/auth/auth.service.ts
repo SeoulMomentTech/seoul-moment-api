@@ -13,6 +13,10 @@ export class AuthService {
     await this.authService.verifyEmail(email, code);
   }
 
+  async verifyPhone(phone: string, code: number) {
+    await this.authService.verifyPhone(phone, code);
+  }
+
   async verifyRecaptcha(token: string) {
     await this.authService.verifyRecaptcha(token);
   }

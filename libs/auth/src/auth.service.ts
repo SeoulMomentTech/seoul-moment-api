@@ -74,6 +74,28 @@ export class CommonAuthService {
         ServiceErrorCode.UNAUTHORIZED,
       );
     }
+
+    await this.cacheService.del(email);
+  }
+
+  async verifyPhone(phone: string, code: number) {
+    const cachedCode = await this.cacheService.find(phone);
+
+    if (!cachedCode) {
+      throw new ServiceError(
+        '인증 코드가 만료되었습니다.',
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
+
+    if (parseInt(cachedCode, 10) !== code) {
+      throw new ServiceError(
+        '인증 코드가 일치하지 않습니다.',
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
+
+    await this.cacheService.del(phone);
   }
 
   async verifyRecaptcha(token: string) {
@@ -93,5 +115,30 @@ export class CommonAuthService {
     }
 
     return data;
+  }
+
+  async authPhone(phone: string) {
+    const code = Math.floor(100000 + Math.random() * 900000);
+
+    const body = new URLSearchParams({
+      username: Configuration.getConfig().TWSMS_USER,
+      password: Configuration.getConfig().TWSMS_PASS,
+      mobile: phone,
+      longsms: 'Y',
+      message: `
+[SeoulMoment]
+驗證碼:${code}
+5分鐘內有效,請勿提供給他人。若非本人操作請忽略.`,
+    });
+
+    await this.httpService.sendPostRequest(
+      `${Configuration.getConfig().TWSMS_API_URL}/sms_send.php`,
+      body,
+      {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    );
+
+    await this.cacheService.set(phone, code, 60 * 5);
   }
 }

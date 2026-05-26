@@ -29,6 +29,7 @@ import {
   PostGoogleLoginResponse,
   PostGoogleSignupRequest,
   PostNicknameValidateRequest,
+  PostPhoneCodeRequest,
   PostUserLoginRequest,
   PostUserLoginResponse,
   PostUserPasswordEmailVerifyResponse,
@@ -230,5 +231,13 @@ export class UserAuthController {
   @ResponseException(HttpStatus.CONFLICT, '이미 존재하는 닉네임')
   async postNicknameValidate(@Body() body: PostNicknameValidateRequest) {
     await this.userAuthService.validateUserNickname(body.nickname);
+  }
+
+  @Post('phone/code')
+  @ApiOperation({ summary: '회원 가입용 휴대폰 인증 코드 발송' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.CONFLICT, '이미 가입된 휴대폰')
+  async postPhoneCode(@Body() body: PostPhoneCodeRequest) {
+    await this.userAuthService.sendPhoneCode(body.phone);
   }
 }

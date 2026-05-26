@@ -42,6 +42,10 @@ const getConfig = (): ConfigImpl => ({
   OPENSEARCH_HOST: process.env.OPENSEARCH_HOST || '',
   OPENSEARCH_NAME: process.env.OPENSEARCH_NAME || '',
   OPENSEARCH_PASS: process.env.OPENSEARCH_PASS || '',
+
+  TWSMS_API_URL: process.env.TWSMS_API_URL || '',
+  TWSMS_USER: process.env.TWSMS_USER || '',
+  TWSMS_PASS: process.env.TWSMS_PASS || '',
 });
 
 export default getConfig;

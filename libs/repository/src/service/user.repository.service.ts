@@ -110,6 +110,12 @@ export class UserRepositoryService {
     return result;
   }
 
+  async existUserByPhone(phone: string): Promise<boolean> {
+    const result = await this.userRepository.exists({ where: { phone } });
+
+    return result;
+  }
+
   async getUserByEmail(email: string): Promise<UserEntity> {
     const result = await this.userRepository.findOneBy({ email });
 
