@@ -445,6 +445,41 @@ describe('UserRecentController (E2E)', () => {
       expect(res.body.data.total).toBe(0);
     });
 
+    it('캐시에 동일 productItemId가 중복으로 있어도 ON CONFLICT 에러 없이 DB에 1건만 sync된다', async () => {
+      // Given - 정상 경로(lrem+lpush)로는 만들 수 없으므로 cacheService로 직접 중복 push
+      // 동시성 등으로 캐시에 동일 ID가 중복으로 남는 상황을 시뮬레이션
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const productCategoryId = await createProductCategory();
+      const { brandId, productId, productItemId } =
+        await createProductItemInCategory(productCategoryId);
+      await saveText(EntityType.BRAND, brandId, 'name', '브랜드');
+      await saveText(EntityType.PRODUCT, productId, 'name', '상품');
+
+      const cacheKey = `${REDIS_RECENT_KEY}:${userId}`;
+      await cacheService.lpush(cacheKey, productItemId);
+      await cacheService.lpush(cacheKey, productItemId);
+      await cacheService.lpush(cacheKey, productItemId);
+
+      // When - sync 시 dedup 되지 않으면 PostgreSQL이
+      // "ON CONFLICT DO UPDATE command cannot affect row a second time" 에러를 던짐
+      const res = await request(app.getHttpServer())
+        .get(RECENT_BASE)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .set('Accept-language', LanguageCode.KOREAN);
+
+      // Then - 200 응답, DB에는 1건만 저장
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(1);
+      expect(res.body.data.list[0].productItemId).toBe(productItemId);
+
+      const dbRows = await dataSource.query(
+        `SELECT user_id, product_item_id FROM user_recent
+         WHERE user_id = $1 AND product_item_id = $2`,
+        [userId, productItemId],
+      );
+      expect(dbRows).toHaveLength(1);
+    });
+
     it('Authorization 헤더가 없으면 401을 반환한다', async () => {
       // When
       const res = await request(app.getHttpServer())

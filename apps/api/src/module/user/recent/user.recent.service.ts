@@ -97,11 +97,15 @@ export class UserRecentService {
       return;
     }
 
+    const uniqueProductItemIds = Array.from(
+      new Set(inMemoryUserRecentList.map((v) => Number(v))),
+    );
+
     await this.userRecentRepositoryService.createBulk(
-      inMemoryUserRecentList.map((v) =>
+      uniqueProductItemIds.map((productItemId) =>
         plainToInstance(UserRecentEntity, {
           userId,
-          productItemId: Number(v),
+          productItemId,
         }),
       ),
     );
