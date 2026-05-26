@@ -57,6 +57,7 @@ import { PromotionEntity } from './entity/promotion.entity';
 import { UserBrandLikeEntity } from './entity/user-brand-like.entity';
 import { UserFitEntity } from './entity/user-fit.entity';
 import { UserProductLikeEntity } from './entity/user-product-like.entity';
+import { UserProfileImageEntity } from './entity/user-profile-image.entity';
 import { UserProfileEntity } from './entity/user-profile.entity';
 import { UserSnsEntity } from './entity/user-sns.entity';
 import { UserEntity } from './entity/user.entity';
@@ -146,6 +147,7 @@ import { UserRepositoryService } from './service/user.repository.service';
       PromotionEntity,
       UserEntity,
       UserProfileEntity,
+      UserProfileImageEntity,
       UserFitEntity,
       UserSnsEntity,
       UserProductLikeEntity,

@@ -28,7 +28,6 @@ function buildSignUpBody(overrides?: Record<string, unknown>) {
 
 function buildProfileBody(overrides?: Record<string, unknown>) {
   return {
-    profileImageUrl: faker.image.url(),
     nickname: randomNickname(),
     name: faker.person.fullName(),
     gender: UserProfileGender.MALE,
@@ -69,6 +68,7 @@ describe('UserController (E2E)', () => {
       'user_product_like',
       'user_sns',
       'user_fit',
+      'user_profile_image',
       'user_profile',
       '"user"',
     ]);
@@ -258,13 +258,12 @@ describe('UserController (E2E)', () => {
       // Then
       expect(res.status).toBe(201);
       const profileRows = await dataSource.query(
-        `SELECT user_id, image_path, name, gender, birth_date,
+        `SELECT user_id, name, gender, birth_date,
                 postal_code, city, district, detail_address
          FROM user_profile WHERE user_id = $1`,
         [userId],
       );
       expect(profileRows).toHaveLength(1);
-      expect(profileRows[0].image_path).toBe(body.profileImageUrl);
       expect(profileRows[0].name).toBe(body.name);
       expect(profileRows[0].gender).toBe(body.gender);
       expect(profileRows[0].postal_code).toBe(body.postalCode);
@@ -280,11 +279,13 @@ describe('UserController (E2E)', () => {
       expect(userRows[0].nickname).toBe(body.nickname);
     });
 
-    it('profileImageUrl을 생략해도 생성된다', async () => {
-      // Given
-      const { userId, oneTimeToken } = await signUpAndLogin();
-      const body = buildProfileBody();
-      delete (body as Record<string, unknown>).profileImageUrl;
+    it('profileImageUrl 같은 unknown 필드가 포함되면 400을 반환한다', async () => {
+      // Given - 이미지 등록은 별도 endpoint이므로 profile DTO는 unknown 필드를 거부해야 한다
+      const { oneTimeToken } = await signUpAndLogin();
+      const body = {
+        ...buildProfileBody(),
+        profileImageUrl: faker.image.url(),
+      };
 
       // When
       const res = await request(app.getHttpServer())
@@ -293,12 +294,7 @@ describe('UserController (E2E)', () => {
         .send(body);
 
       // Then
-      expect(res.status).toBe(201);
-      const rows = await dataSource.query(
-        `SELECT image_path FROM user_profile WHERE user_id = $1`,
-        [userId],
-      );
-      expect(rows[0].image_path).toBeNull();
+      expect(res.status).toBe(400);
     });
 
     it('nickname이 누락되면 400을 반환한다', async () => {
@@ -513,7 +509,7 @@ describe('UserController (E2E)', () => {
     });
 
     it('정상 조회 시 200과 프로필 정보를 반환하고 nickname은 user.nickname을 따른다', async () => {
-      // Given
+      // Given - 이미지를 등록하지 않은 상태이므로 profileImageUrl은 비어야 함
       const { oneTimeToken } = await signUpAndLogin();
       const profileBody = buildProfileBody();
       await request(app.getHttpServer())
@@ -529,7 +525,7 @@ describe('UserController (E2E)', () => {
       // Then
       expect(res.status).toBe(200);
       expect(res.body.result).toBe(true);
-      expect(res.body.data.profileImageUrl).toBe(profileBody.profileImageUrl);
+      expect(res.body.data.profileImageUrl).toBeFalsy();
       expect(res.body.data.nickname).toBe(profileBody.nickname);
       expect(res.body.data.name).toBe(profileBody.name);
       expect(res.body.data.gender).toBe(profileBody.gender);
@@ -540,10 +536,227 @@ describe('UserController (E2E)', () => {
       expect(res.body.data.detailAddress).toBe(profileBody.detailAddress);
     });
 
+    it('프로필 이미지 등록 후 조회하면 profileImageUrl이 채워진다', async () => {
+      // Given - 프로필 생성 + 이미지 등록
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+
+      const imageUrl = '/uploads/profile/test.webp';
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ imageUrl });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .get(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+
+      // Then - IMAGE_DOMAIN_NAME이 빈 문자열인 테스트 환경에서는 path 그대로 반환된다
+      expect(res.status).toBe(200);
+      expect(res.body.data.profileImageUrl).toBe(imageUrl);
+    });
+
     it('Authorization 헤더가 없으면 401을 반환한다', async () => {
       // When
       const res = await request(app.getHttpServer()).get(
         `${USER_BASE}/profile`,
+      );
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // POST /user/profile/image
+  // -------------------------------------------------------------------------
+  describe('POST /user/profile/image', () => {
+    async function createProfile(oneTimeToken: string) {
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+      expect(res.status).toBe(201);
+    }
+
+    it('프로필이 없으면 404를 반환한다', async () => {
+      // Given - 프로필 생성 없이 이미지 등록 시도
+      const { oneTimeToken } = await signUpAndLogin();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ imageUrl: '/uploads/profile/sample.webp' });
+
+      // Then
+      expect(res.status).toBe(404);
+    });
+
+    it('정상 등록 시 201을 반환하고 DB에 imagePath가 저장된다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await createProfile(oneTimeToken);
+
+      const imageUrl = '/uploads/profile/new.webp';
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ imageUrl });
+
+      // Then - 테스트 환경에서 IMAGE_DOMAIN_NAME이 빈 문자열이라 path가 그대로 저장된다
+      expect(res.status).toBe(201);
+      const rows = await dataSource.query(
+        `SELECT user_id, image_path FROM user_profile_image WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].image_path).toBe(imageUrl);
+    });
+
+    it('기존 이미지가 있으면 교체되어 단일 row만 유지된다', async () => {
+      // Given - 프로필 + 첫 이미지 등록
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await createProfile(oneTimeToken);
+
+      const firstImageUrl = '/uploads/profile/first.webp';
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ imageUrl: firstImageUrl });
+
+      // When - 두 번째 이미지로 다시 POST
+      const secondImageUrl = '/uploads/profile/second.webp';
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ imageUrl: secondImageUrl });
+
+      // Then - row는 1개, 이미지 경로는 새 값으로 교체
+      expect(res.status).toBe(201);
+      const rows = await dataSource.query(
+        `SELECT image_path FROM user_profile_image WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].image_path).toBe(secondImageUrl);
+    });
+
+    it('imageUrl이 누락되면 400을 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+      await createProfile(oneTimeToken);
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({});
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('Authorization 헤더가 없으면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile/image`)
+        .send({ imageUrl: '/uploads/profile/x.webp' });
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // DELETE /user/profile/image
+  // -------------------------------------------------------------------------
+  describe('DELETE /user/profile/image', () => {
+    it('이미지가 없으면 404를 반환한다', async () => {
+      // Given - 프로필만 있고 이미지는 없음
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+
+      // When
+      const res = await request(app.getHttpServer())
+        .delete(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+
+      // Then
+      expect(res.status).toBe(404);
+    });
+
+    it('정상 삭제 시 200을 반환하고 DB row가 hard delete된다', async () => {
+      // Given - 프로필 + 이미지 등록
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ imageUrl: '/uploads/profile/to-delete.webp' });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .delete(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+
+      // Then - soft delete가 아닌 hard delete이므로 row 자체가 사라져야 한다
+      expect(res.status).toBe(200);
+      const rows = await dataSource.query(
+        `SELECT user_id FROM user_profile_image WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(0);
+    });
+
+    it('삭제 후 같은 사용자가 다시 POST하면 새 이미지가 정상 저장된다', async () => {
+      // Given - 등록 → 삭제
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ imageUrl: '/uploads/profile/v1.webp' });
+      await request(app.getHttpServer())
+        .delete(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+
+      // When - 재등록
+      const newUrl = '/uploads/profile/v2.webp';
+      const res = await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile/image`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ imageUrl: newUrl });
+
+      // Then
+      expect(res.status).toBe(201);
+      const rows = await dataSource.query(
+        `SELECT image_path FROM user_profile_image WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].image_path).toBe(newUrl);
+    });
+
+    it('Authorization 헤더가 없으면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer()).delete(
+        `${USER_BASE}/profile/image`,
       );
 
       // Then

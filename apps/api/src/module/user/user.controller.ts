@@ -23,6 +23,7 @@ import {
   PatchUserInfoRequest,
   PatchUserProfileRequest,
   PostUserFitRequest,
+  PostUserProfileImageRequest,
   PostUserProfileRequest,
 } from './user.dto';
 import { UserService } from './user.service';
@@ -93,6 +94,29 @@ export class UserController {
     const result = await this.userService.getUserProfile(req.user.id);
 
     return new ResponseDataDto(result);
+  }
+
+  @Post('profile/image')
+  @ApiOperation({
+    summary: '유저 프로필 이미지 등록 (기존 이미지가 있으면 교체)',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseException(HttpStatus.NOT_FOUND, '유저 프로필 없음')
+  async postUserProfileImage(
+    @Request() req: any,
+    @Body() body: PostUserProfileImageRequest,
+  ) {
+    await this.userService.postUserProfileImage(req.user.id, body);
+  }
+
+  @Delete('profile/image')
+  @ApiOperation({ summary: '유저 프로필 이미지 삭제' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseException(HttpStatus.NOT_FOUND, '유저 프로필 이미지 없음')
+  async deleteUserProfileImage(@Request() req: any) {
+    await this.userService.deleteUserProfileImage(req.user.id);
   }
 
   @Post('fit')

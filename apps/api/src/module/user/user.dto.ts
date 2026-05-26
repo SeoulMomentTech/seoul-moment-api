@@ -87,14 +87,6 @@ export class PatchUserInfoRequest {
 }
 
 export class PostUserProfileRequest {
-  @ApiPropertyOptional({
-    description: '프로필 이미지 URL',
-    example: 'https://example.com/image.png',
-  })
-  @IsString()
-  @IsOptional()
-  profileImageUrl?: string;
-
   @ApiProperty({
     description: '닉네임',
     example: '세리프',
@@ -222,7 +214,7 @@ export class GetUserProfileResponse {
 
   static from(entity: UserProfileEntity) {
     return plainToInstance(this, {
-      profileImageUrl: entity.imagePath,
+      profileImageUrl: entity?.image?.getImageUrl(),
       nickname: entity.user.nickname,
       name: entity.name,
       gender: entity.gender,
@@ -236,14 +228,6 @@ export class GetUserProfileResponse {
 }
 
 export class PatchUserProfileRequest {
-  @ApiPropertyOptional({
-    description: '프로필 이미지 URL',
-    example: 'https://example.com/image.png',
-  })
-  @IsString()
-  @IsOptional()
-  profileImageUrl?: string;
-
   @ApiProperty({
     description: '닉네임',
     example: '세리프',
@@ -472,4 +456,14 @@ export class PatchUserFitRequest {
   @IsString()
   @IsOptional()
   bottomSize?: string;
+}
+
+export class PostUserProfileImageRequest {
+  @ApiProperty({
+    description: '프로필 이미지',
+    example: 'https://example.com/image.png',
+  })
+  @IsString()
+  @IsDefined()
+  imageUrl: string;
 }

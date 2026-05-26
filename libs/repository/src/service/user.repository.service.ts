@@ -10,6 +10,7 @@ import {
   UpdateUserProfileDto,
 } from '../dto/user.dto';
 import { UserFitEntity } from '../entity/user-fit.entity';
+import { UserProfileImageEntity } from '../entity/user-profile-image.entity';
 import { UserProfileEntity } from '../entity/user-profile.entity';
 import { UserEntity } from '../entity/user.entity';
 
@@ -21,6 +22,9 @@ export class UserRepositoryService {
 
     @InjectRepository(UserProfileEntity)
     private readonly userProfileRepository: Repository<UserProfileEntity>,
+
+    @InjectRepository(UserProfileImageEntity)
+    private readonly userProfileImageRepository: Repository<UserProfileImageEntity>,
 
     @InjectRepository(UserFitEntity)
     private readonly userFitRepository: Repository<UserFitEntity>,
@@ -91,7 +95,7 @@ export class UserRepositoryService {
   async getUserProfile(userId: number): Promise<UserProfileEntity> {
     const result = await this.userProfileRepository.findOne({
       where: { userId },
-      relations: { user: true },
+      relations: { user: true, image: true },
     });
 
     if (!result) {
@@ -102,6 +106,35 @@ export class UserRepositoryService {
     }
 
     return result;
+  }
+
+  async createUserProfileImage(
+    image: UserProfileImageEntity,
+  ): Promise<UserProfileImageEntity> {
+    return await this.userProfileImageRepository.save(image);
+  }
+
+  async findUserProfileImage(
+    userId: number,
+  ): Promise<UserProfileImageEntity | null> {
+    return await this.userProfileImageRepository.findOneBy({ userId });
+  }
+
+  async getUserProfileImage(userId: number): Promise<UserProfileImageEntity> {
+    const result = await this.userProfileImageRepository.findOneBy({ userId });
+
+    if (!result) {
+      throw new ServiceError(
+        'User profile image not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
+  async deleteUserProfileImage(userId: number): Promise<void> {
+    await this.userProfileImageRepository.delete({ userId });
   }
 
   async existUserByEmail(email: string): Promise<boolean> {

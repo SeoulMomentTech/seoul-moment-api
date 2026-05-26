@@ -1,6 +1,9 @@
+import { LoggerService } from '@app/common/log/logger.service';
 import { stripImageDomain } from '@app/common/util/image.util';
+import { S3Service } from '@app/external/aws/s3/s3.service';
 import { UpdateUserDto } from '@app/repository/dto/user.dto';
 import { UserFitEntity } from '@app/repository/entity/user-fit.entity';
+import { UserProfileImageEntity } from '@app/repository/entity/user-profile-image.entity';
 import { UserProfileEntity } from '@app/repository/entity/user-profile.entity';
 import { UserRepositoryService } from '@app/repository/service/user.repository.service';
 import { Injectable } from '@nestjs/common';
@@ -15,12 +18,17 @@ import {
   PatchUserInfoRequest,
   PatchUserProfileRequest,
   PostUserFitRequest,
+  PostUserProfileImageRequest,
   PostUserProfileRequest,
 } from './user.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRepositoryService: UserRepositoryService) {}
+  constructor(
+    private readonly userRepositoryService: UserRepositoryService,
+    private readonly s3Service: S3Service,
+    private readonly logger: LoggerService,
+  ) {}
 
   async getUserInfo(id: number): Promise<GetUserInfoResponse> {
     const user = await this.userRepositoryService.getUserInfo(id);
@@ -51,9 +59,6 @@ export class UserService {
     await this.userRepositoryService.createUserProfile(
       plainToInstance(UserProfileEntity, {
         userId: id,
-        imagePath: dto.profileImageUrl
-          ? stripImageDomain(dto.profileImageUrl)
-          : undefined,
         name: dto.name,
         gender: dto.gender,
         birthDate: dto.birthDate,
@@ -76,9 +81,6 @@ export class UserService {
 
     await this.userRepositoryService.updateUserProfile({
       userId: id,
-      imagePath: dto.profileImageUrl
-        ? stripImageDomain(dto.profileImageUrl)
-        : undefined,
       name: dto.name,
       gender: dto.gender,
       birthDate: dto.birthDate,
@@ -93,6 +95,61 @@ export class UserService {
     const userProfile = await this.userRepositoryService.getUserProfile(id);
 
     return GetUserProfileResponse.from(userProfile);
+  }
+
+  async postUserProfileImage(
+    id: number,
+    dto: PostUserProfileImageRequest,
+  ): Promise<void> {
+    await this.userRepositoryService.getUserProfile(id);
+
+    const previousImagePath = await this.replaceUserProfileImage(id, dto);
+
+    if (previousImagePath) {
+      await this.removeS3Image(previousImagePath);
+    }
+  }
+
+  @Transactional()
+  private async replaceUserProfileImage(
+    id: number,
+    dto: PostUserProfileImageRequest,
+  ): Promise<string | null> {
+    const existing = await this.userRepositoryService.findUserProfileImage(id);
+    if (existing) {
+      await this.userRepositoryService.deleteUserProfileImage(id);
+    }
+
+    await this.userRepositoryService.createUserProfileImage(
+      plainToInstance(UserProfileImageEntity, {
+        userId: id,
+        imagePath: stripImageDomain(dto.imageUrl),
+      }),
+    );
+
+    return existing?.imagePath ?? null;
+  }
+
+  async deleteUserProfileImage(id: number): Promise<void> {
+    const image = await this.userRepositoryService.getUserProfileImage(id);
+
+    await this.userRepositoryService.deleteUserProfileImage(id);
+    await this.removeS3Image(image.imagePath);
+  }
+
+  private async removeS3Image(imagePath: string): Promise<void> {
+    if (!imagePath) return;
+
+    const key = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+
+    try {
+      await this.s3Service.deleteFile(key);
+    } catch (error) {
+      this.logger.warn('Failed to delete S3 object during profile image flow', {
+        key,
+        error: error.message,
+      });
+    }
   }
 
   @Transactional()

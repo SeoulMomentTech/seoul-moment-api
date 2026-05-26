@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
+import { UserProfileImageEntity } from './user-profile-image.entity';
 import { UserEntity } from './user.entity';
 import { UserProfileGender } from '../enum/user-profile.enum';
 
@@ -20,13 +21,6 @@ export class UserProfileEntity extends CommonEntity {
     comment: '사용자 ID (PK, user.id 참조)',
   })
   userId: number;
-
-  @Column('varchar', {
-    length: 255,
-    nullable: true,
-    comment: '프로필 이미지 경로',
-  })
-  imagePath?: string;
 
   @Column('varchar', { length: 255, nullable: false, comment: '이름' })
   name: string;
@@ -53,6 +47,9 @@ export class UserProfileEntity extends CommonEntity {
 
   @Column('varchar', { length: 255, nullable: false, comment: '상세 주소' })
   detailAddress: string;
+
+  @OneToOne(() => UserProfileImageEntity, (image) => image.userProfile)
+  image: UserProfileImageEntity;
 
   @OneToOne(() => UserEntity, (user) => user.profile, {
     onDelete: 'CASCADE',
