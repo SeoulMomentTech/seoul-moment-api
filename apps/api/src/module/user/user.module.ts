@@ -5,6 +5,7 @@ import { UserOneTimeTokenStrategy } from 'apps/api/src/strategy/user-one-time-to
 import { UserRefreshTokenStrategy } from 'apps/api/src/strategy/user-refresh-token.strategy';
 
 import { UserAuthModule } from './auth/user.auth.module';
+import { UserImageModule } from './image/user.image.module';
 import { UserLikeModule } from './like/user.like.module';
 import { UserRecentModule } from './recent/user.recent.module';
 import { UserController } from './user.controller';
@@ -15,6 +16,7 @@ import { UserService } from './user.service';
     RepositoryModule,
     S3Module,
     UserAuthModule,
+    UserImageModule,
     UserLikeModule,
     UserRecentModule,
   ],

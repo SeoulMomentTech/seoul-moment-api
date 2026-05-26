@@ -57,6 +57,7 @@ import { PlanSettingModule } from './module/plen/setting/plan-setting.module';
 import { PlanUserModule } from './module/plen/user/plan.user.module';
 import { ProductModule } from './module/product/product.module';
 import { UserAuthModule } from './module/user/auth/user.auth.module';
+import { UserImageModule } from './module/user/image/user.image.module';
 import { UserLikeModule } from './module/user/like/user.like.module';
 import { UserRecentModule } from './module/user/recent/user.recent.module';
 import { UserModule } from './module/user/user.module';
@@ -115,6 +116,7 @@ async function bootstrap() {
       PartnerModule,
       ProductModule,
       UserAuthModule,
+      UserImageModule,
       UserLikeModule,
       UserRecentModule,
       UserModule,
