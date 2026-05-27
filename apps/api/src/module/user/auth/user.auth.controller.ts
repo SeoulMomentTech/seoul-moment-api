@@ -28,8 +28,13 @@ import {
   PostGoogleLoginRequest,
   PostGoogleLoginResponse,
   PostGoogleSignupRequest,
+  PostInfoPhoneCodeRequest,
+  PostInfoPhoneVerifyRequest,
   PostNicknameValidateRequest,
-  PostPhoneCodeRequest,
+  PostPasswordPhoneCodeRequest,
+  PostPasswordPhoneVerifyRequest,
+  PostSignupPhoneCodeRequest,
+  PostSignupPhoneVerifyRequest,
   PostUserLoginRequest,
   PostUserLoginResponse,
   PostUserPasswordEmailVerifyResponse,
@@ -233,11 +238,68 @@ export class UserAuthController {
     await this.userAuthService.validateUserNickname(body.nickname);
   }
 
-  @Post('phone/code')
+  @Post('signup/phone/code')
   @ApiOperation({ summary: '회원 가입용 휴대폰 인증 코드 발송' })
   @HttpCode(HttpStatus.OK)
   @ResponseException(HttpStatus.CONFLICT, '이미 가입된 휴대폰')
-  async postPhoneCode(@Body() body: PostPhoneCodeRequest) {
-    await this.userAuthService.sendPhoneCode(body.phone);
+  async postSignupPhoneCode(@Body() body: PostSignupPhoneCodeRequest) {
+    await this.userAuthService.sendSignupPhoneCode(body.phone);
+  }
+
+  @Post('signup/phone/verify')
+  @ApiOperation({ summary: '회원 가입용 휴대폰 인증 코드 검증' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '인증 코드 만료 또는 불일치')
+  async postSignupPhoneVerify(@Body() body: PostSignupPhoneVerifyRequest) {
+    await this.userAuthService.verifySignupPhone(
+      body.phone,
+      parseInt(body.code, 10),
+    );
+  }
+
+  @Post('info/phone/code')
+  @ApiOperation({ summary: '회원 정보 수정용 휴대폰 인증 코드 발송' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseException(HttpStatus.CONFLICT, '이미 가입된 휴대폰')
+  async postInfoPhoneCode(@Body() body: PostInfoPhoneCodeRequest) {
+    await this.userAuthService.sendInfoPhoneCode(body.phone);
+  }
+
+  @Post('info/phone/verify')
+  @ApiOperation({ summary: '회원 정보 수정용 휴대폰 인증 코드 검증' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '인증 코드 만료 또는 불일치')
+  async postInfoPhoneVerify(
+    @Request() req: any,
+    @Body() body: PostInfoPhoneVerifyRequest,
+  ) {
+    await this.userAuthService.verifyInfoPhone(
+      body.phone,
+      parseInt(body.code, 10),
+      req.user.id,
+    );
+  }
+
+  @Post('password/phone/code')
+  @ApiOperation({ summary: '비밀번호 찾기용 휴대폰 인증 코드 발송' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.NOT_FOUND, '존재 하지 않는 휴대폰')
+  async postPasswordPhoneCode(@Body() body: PostPasswordPhoneCodeRequest) {
+    await this.userAuthService.sendPasswordPhoneCode(body.phone);
+  }
+
+  @Post('password/phone/verify')
+  @ApiOperation({ summary: '비밀번호 찾기용 휴대폰 인증 코드 검증' })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '인증 코드 만료 또는 불일치')
+  async postPasswordPhoneVerify(@Body() body: PostPasswordPhoneVerifyRequest) {
+    await this.userAuthService.verifyPasswordPhone(
+      body.phone,
+      parseInt(body.code, 10),
+    );
   }
 }

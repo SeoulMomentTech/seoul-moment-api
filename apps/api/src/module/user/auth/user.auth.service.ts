@@ -1,5 +1,6 @@
 import { JwtType } from '@app/auth/auth.dto';
 import { CommonAuthService } from '@app/auth/auth.service';
+import { RedisKey } from '@app/cache/cache.dto';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
@@ -233,14 +234,63 @@ export class UserAuthService {
     await this.userRepositoryService.validateUserNickname(nickname);
   }
 
-  async sendPhoneCode(phone: string): Promise<void> {
+  async sendSignupPhoneCode(phone: string): Promise<void> {
     const exist = await this.userRepositoryService.existUserByPhone(phone);
 
     if (exist) {
       throw new ServiceError('User already exists', ServiceErrorCode.CONFLICT);
     }
 
-    await this.commonAuthService.authPhone(phone);
+    await this.commonAuthService.authPhone(RedisKey.SIGNUP_PHONE, phone);
+  }
+
+  async verifySignupPhone(phone: string, code: number): Promise<void> {
+    await this.commonAuthService.verifyPhone(
+      phone,
+      code,
+      RedisKey.SIGNUP_PHONE,
+    );
+  }
+
+  async sendInfoPhoneCode(phone: string): Promise<void> {
+    const exist = await this.userRepositoryService.existUserByPhone(phone);
+
+    if (exist) {
+      throw new ServiceError('User already exists', ServiceErrorCode.CONFLICT);
+    }
+
+    await this.commonAuthService.authPhone(RedisKey.INFO_PHONE, phone);
+  }
+
+  async verifyInfoPhone(
+    phone: string,
+    code: number,
+    id: number,
+  ): Promise<void> {
+    await this.commonAuthService.verifyPhone(phone, code, RedisKey.INFO_PHONE);
+
+    await this.userRepositoryService.updateUser({
+      id,
+      phone,
+    });
+  }
+
+  async sendPasswordPhoneCode(phone: string): Promise<void> {
+    const exist = await this.userRepositoryService.existUserByPhone(phone);
+
+    if (!exist) {
+      throw new ServiceError('User not found', ServiceErrorCode.NOT_FOUND_DATA);
+    }
+
+    await this.commonAuthService.authPhone(RedisKey.PASSWORD_PHONE, phone);
+  }
+
+  async verifyPasswordPhone(phone: string, code: number): Promise<void> {
+    await this.commonAuthService.verifyPhone(
+      phone,
+      code,
+      RedisKey.PASSWORD_PHONE,
+    );
   }
 
   private async createSnsUser(

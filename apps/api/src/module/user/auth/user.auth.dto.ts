@@ -7,6 +7,8 @@ import {
   IsString,
 } from 'class-validator';
 
+import { PostPhoneVerifyRequest as CommonPostPhoneVerifyRequest } from '../../auth/auth.dto';
+
 export class PostUserSignUpRequest {
   @ApiProperty({
     description: '이메일',
@@ -273,3 +275,15 @@ export class PostPhoneCodeRequest {
   @IsDefined()
   phone: string;
 }
+
+export class PostSignupPhoneCodeRequest extends PostPhoneCodeRequest {}
+
+export class PostSignupPhoneVerifyRequest extends CommonPostPhoneVerifyRequest {}
+
+export class PostInfoPhoneCodeRequest extends PostPhoneCodeRequest {}
+
+export class PostInfoPhoneVerifyRequest extends CommonPostPhoneVerifyRequest {}
+
+export class PostPasswordPhoneCodeRequest extends PostPhoneCodeRequest {}
+
+export class PostPasswordPhoneVerifyRequest extends CommonPostPhoneVerifyRequest {}

@@ -1,4 +1,5 @@
 /* eslint-disable max-lines-per-function */
+import { RedisKey } from '@app/cache/cache.dto';
 import { CacheService } from '@app/cache/cache.service';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
@@ -78,8 +79,9 @@ export class CommonAuthService {
     await this.cacheService.del(email);
   }
 
-  async verifyPhone(phone: string, code: number) {
-    const cachedCode = await this.cacheService.find(phone);
+  async verifyPhone(phone: string, code: number, redisKey?: RedisKey) {
+    const cacheKey = redisKey ? `${redisKey}:${phone}` : phone;
+    const cachedCode = await this.cacheService.find(cacheKey);
 
     if (!cachedCode) {
       throw new ServiceError(
@@ -95,7 +97,7 @@ export class CommonAuthService {
       );
     }
 
-    await this.cacheService.del(phone);
+    await this.cacheService.del(cacheKey);
   }
 
   async verifyRecaptcha(token: string) {
@@ -117,7 +119,7 @@ export class CommonAuthService {
     return data;
   }
 
-  async authPhone(phone: string) {
+  async authPhone(redisKey: RedisKey, phone: string) {
     const code = Math.floor(100000 + Math.random() * 900000);
 
     const body = new URLSearchParams({
@@ -139,6 +141,6 @@ export class CommonAuthService {
       },
     );
 
-    await this.cacheService.set(phone, code, 60 * 5);
+    await this.cacheService.set(`${redisKey}:${phone}`, code, 60 * 5);
   }
 }

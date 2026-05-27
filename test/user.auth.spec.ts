@@ -891,9 +891,9 @@ describe('UserAuthController (E2E)', () => {
   });
 
   // -----------------------------------------------------------------------
-  // POST /user/auth/phone/code
+  // Phone 인증 (signup / info / password 3 scope)
   // -----------------------------------------------------------------------
-  describe('POST /user/auth/phone/code', () => {
+  describe('Phone 인증', () => {
     let httpService: HttpRequestService;
 
     beforeAll(() => {
@@ -908,72 +908,433 @@ describe('UserAuthController (E2E)', () => {
       return `8210${faker.string.numeric(8)}`;
     }
 
-    it('미가입 휴대폰으로 요청하면 200을 반환하고 Redis에 6자리 인증 코드가 저장된다', async () => {
-      // Given
-      const phone = buildPhone();
-      const spy = jest
+    function mockSms() {
+      return jest
         .spyOn(httpService, 'sendPostRequest')
         .mockResolvedValue({ result: true, data: {} });
+    }
 
-      // When
-      const res = await request(app.getHttpServer())
-        .post(`${BASE_URL}/phone/code`)
-        .send({ phone });
+    async function signUpAndLoginUser() {
+      const body = buildSignUpBody();
+      await request(app.getHttpServer()).post(`${BASE_URL}/signup`).send(body);
+      const loginRes = await request(app.getHttpServer())
+        .post(`${BASE_URL}/login`)
+        .send({ email: body.email, password: body.password });
+      return {
+        email: body.email,
+        token: loginRes.body.data.token as string,
+        refreshToken: loginRes.body.data.refreshToken as string,
+      };
+    }
 
-      // Then
-      expect(res.status).toBe(200);
-      expect(spy).toHaveBeenCalledTimes(1);
-      const cached = await cacheService.find(phone);
-      expect(cached).not.toBeNull();
-      expect(cached).toMatch(/^\d{6}$/);
+    // ---------------------------------------------------------------------
+    // POST /user/auth/signup/phone/code
+    // ---------------------------------------------------------------------
+    describe('POST /user/auth/signup/phone/code', () => {
+      it('미가입 휴대폰으로 요청하면 200을 반환하고 signup_phone prefix로 코드가 저장된다', async () => {
+        // Given
+        const phone = buildPhone();
+        const spy = mockSms();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup/phone/code`)
+          .send({ phone });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(spy).toHaveBeenCalledTimes(1);
+        const cached = await cacheService.find(`signup_phone:${phone}`);
+        expect(cached).not.toBeNull();
+        expect(cached).toMatch(/^\d{6}$/);
+        // bare phone 키에는 저장되지 않아야 한다
+        const bareCached = await cacheService.find(phone);
+        expect(bareCached).toBeNull();
+      });
+
+      it('이미 가입된 휴대폰이면 409를 반환하고 SMS 발송도 캐시 저장도 일어나지 않는다', async () => {
+        // Given
+        const signupBody = buildSignUpBody();
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup`)
+          .send(signupBody);
+        const phone = buildPhone();
+        await dataSource.query(
+          `UPDATE "user" SET phone = $1 WHERE email = $2`,
+          [phone, signupBody.email],
+        );
+        const spy = mockSms();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup/phone/code`)
+          .send({ phone });
+
+        // Then
+        expect(res.status).toBe(409);
+        expect(res.body.message).toBe('User already exists');
+        expect(spy).not.toHaveBeenCalled();
+        const cached = await cacheService.find(`signup_phone:${phone}`);
+        expect(cached).toBeNull();
+      });
+
+      it('phone 필드가 누락되면 400을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup/phone/code`)
+          .send({});
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+
+      it('phone이 문자열이 아니면 400을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup/phone/code`)
+          .send({ phone: 821012345678 });
+
+        // Then
+        expect(res.status).toBe(400);
+      });
     });
 
-    it('이미 가입된 휴대폰이면 409를 반환하고 SMS 발송도 캐시 저장도 일어나지 않는다', async () => {
-      // Given - signup으로 사용자 생성 후 phone 컬럼 직접 업데이트
-      const signupBody = buildSignUpBody();
-      await request(app.getHttpServer())
-        .post(`${BASE_URL}/signup`)
-        .send(signupBody);
-      const phone = buildPhone();
-      await dataSource.query(`UPDATE "user" SET phone = $1 WHERE email = $2`, [
-        phone,
-        signupBody.email,
-      ]);
-      const spy = jest
-        .spyOn(httpService, 'sendPostRequest')
-        .mockResolvedValue({ result: true, data: {} });
+    // ---------------------------------------------------------------------
+    // POST /user/auth/signup/phone/verify
+    // ---------------------------------------------------------------------
+    describe('POST /user/auth/signup/phone/verify', () => {
+      it('signup_phone prefix에 저장된 정상 코드면 200을 반환하고 캐시는 1회 소비된다', async () => {
+        // Given
+        const phone = buildPhone();
+        const code = 123456;
+        await cacheService.set(`signup_phone:${phone}`, code, 60 * 5);
 
-      // When
-      const res = await request(app.getHttpServer())
-        .post(`${BASE_URL}/phone/code`)
-        .send({ phone });
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup/phone/verify`)
+          .send({ phone, code: code.toString() });
 
-      // Then
-      expect(res.status).toBe(409);
-      expect(res.body.message).toBe('User already exists');
-      expect(spy).not.toHaveBeenCalled();
-      const cached = await cacheService.find(phone);
-      expect(cached).toBeNull();
+        // Then
+        expect(res.status).toBe(200);
+        const cached = await cacheService.find(`signup_phone:${phone}`);
+        expect(cached).toBeNull();
+      });
+
+      it('잘못된 코드면 401을 반환하고 캐시는 유지된다', async () => {
+        // Given
+        const phone = buildPhone();
+        const code = 123456;
+        await cacheService.set(`signup_phone:${phone}`, code, 60 * 5);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup/phone/verify`)
+          .send({ phone, code: '654321' });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('인증 코드가 일치하지 않습니다.');
+        const cached = await cacheService.find(`signup_phone:${phone}`);
+        expect(cached).toBe(code.toString());
+      });
+
+      it('코드가 발송된 적 없으면 401(만료)을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup/phone/verify`)
+          .send({ phone: buildPhone(), code: '123456' });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('인증 코드가 만료되었습니다.');
+      });
+
+      it('code가 6자리 숫자가 아니면 400을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup/phone/verify`)
+          .send({ phone: buildPhone(), code: '12345' });
+
+        // Then
+        expect(res.status).toBe(400);
+      });
     });
 
-    it('phone 필드가 누락되면 400을 반환한다', async () => {
-      // When
-      const res = await request(app.getHttpServer())
-        .post(`${BASE_URL}/phone/code`)
-        .send({});
+    // ---------------------------------------------------------------------
+    // POST /user/auth/info/phone/code (인증 필요)
+    // ---------------------------------------------------------------------
+    describe('POST /user/auth/info/phone/code', () => {
+      it('인증된 사용자가 미가입 휴대폰으로 요청하면 200을 반환하고 info_phone prefix로 코드가 저장된다', async () => {
+        // Given
+        const { token } = await signUpAndLoginUser();
+        const phone = buildPhone();
+        const spy = mockSms();
 
-      // Then
-      expect(res.status).toBe(400);
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/info/phone/code`)
+          .set('Authorization', `Bearer ${token}`)
+          .send({ phone });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(spy).toHaveBeenCalledTimes(1);
+        const cached = await cacheService.find(`info_phone:${phone}`);
+        expect(cached).not.toBeNull();
+        expect(cached).toMatch(/^\d{6}$/);
+      });
+
+      it('Authorization 헤더가 없으면 401을 반환하고 SMS도 발송되지 않는다', async () => {
+        // Given
+        const phone = buildPhone();
+        const spy = mockSms();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/info/phone/code`)
+          .send({ phone });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(spy).not.toHaveBeenCalled();
+        const cached = await cacheService.find(`info_phone:${phone}`);
+        expect(cached).toBeNull();
+      });
+
+      it('refreshToken(jwtType 다름)으로 호출하면 401을 반환한다', async () => {
+        // Given
+        const { refreshToken } = await signUpAndLoginUser();
+        const phone = buildPhone();
+        const spy = mockSms();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/info/phone/code`)
+          .set('Authorization', `Bearer ${refreshToken}`)
+          .send({ phone });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(spy).not.toHaveBeenCalled();
+      });
+
+      it('이미 다른 유저가 보유한 휴대폰이면 409를 반환한다', async () => {
+        // Given - 다른 유저가 phone 보유
+        const otherSignup = buildSignUpBody();
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup`)
+          .send(otherSignup);
+        const phone = buildPhone();
+        await dataSource.query(
+          `UPDATE "user" SET phone = $1 WHERE email = $2`,
+          [phone, otherSignup.email],
+        );
+
+        const { token } = await signUpAndLoginUser();
+        const spy = mockSms();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/info/phone/code`)
+          .set('Authorization', `Bearer ${token}`)
+          .send({ phone });
+
+        // Then
+        expect(res.status).toBe(409);
+        expect(res.body.message).toBe('User already exists');
+        expect(spy).not.toHaveBeenCalled();
+      });
     });
 
-    it('phone이 문자열이 아니면 400을 반환한다', async () => {
-      // When
-      const res = await request(app.getHttpServer())
-        .post(`${BASE_URL}/phone/code`)
-        .send({ phone: 821012345678 });
+    // ---------------------------------------------------------------------
+    // POST /user/auth/info/phone/verify (인증 필요)
+    // ---------------------------------------------------------------------
+    describe('POST /user/auth/info/phone/verify', () => {
+      it('인증된 사용자가 info_phone prefix 코드를 검증하면 200을 반환하고 user.phone이 업데이트된다', async () => {
+        // Given
+        const { email, token } = await signUpAndLoginUser();
+        const phone = buildPhone();
+        const code = 123456;
+        await cacheService.set(`info_phone:${phone}`, code, 60 * 5);
 
-      // Then
-      expect(res.status).toBe(400);
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/info/phone/verify`)
+          .set('Authorization', `Bearer ${token}`)
+          .send({ phone, code: code.toString() });
+
+        // Then
+        expect(res.status).toBe(200);
+        const cached = await cacheService.find(`info_phone:${phone}`);
+        expect(cached).toBeNull();
+        const rows = await dataSource.query(
+          `SELECT phone FROM "user" WHERE email = $1`,
+          [email],
+        );
+        expect(rows[0].phone).toBe(phone);
+      });
+
+      it('잘못된 코드면 401(불일치)을 반환하고 user.phone은 업데이트되지 않는다', async () => {
+        // Given
+        const { email, token } = await signUpAndLoginUser();
+        const phone = buildPhone();
+        await cacheService.set(`info_phone:${phone}`, 123456, 60 * 5);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/info/phone/verify`)
+          .set('Authorization', `Bearer ${token}`)
+          .send({ phone, code: '654321' });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('인증 코드가 일치하지 않습니다.');
+        const rows = await dataSource.query(
+          `SELECT phone FROM "user" WHERE email = $1`,
+          [email],
+        );
+        expect(rows[0].phone).toBeNull();
+      });
+
+      it('인증코드가 발송된 적 없으면 401(만료)를 반환한다', async () => {
+        // Given
+        const { token } = await signUpAndLoginUser();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/info/phone/verify`)
+          .set('Authorization', `Bearer ${token}`)
+          .send({ phone: buildPhone(), code: '123456' });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('인증 코드가 만료되었습니다.');
+      });
+
+      it('Authorization 헤더가 없으면 401을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/info/phone/verify`)
+          .send({ phone: buildPhone(), code: '123456' });
+
+        // Then
+        expect(res.status).toBe(401);
+      });
+    });
+
+    // ---------------------------------------------------------------------
+    // POST /user/auth/password/phone/code
+    // ---------------------------------------------------------------------
+    describe('POST /user/auth/password/phone/code', () => {
+      it('가입된 휴대폰이면 200을 반환하고 password_phone prefix로 코드가 저장된다', async () => {
+        // Given - signup 후 phone 컬럼 직접 업데이트
+        const signupBody = buildSignUpBody();
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup`)
+          .send(signupBody);
+        const phone = buildPhone();
+        await dataSource.query(
+          `UPDATE "user" SET phone = $1 WHERE email = $2`,
+          [phone, signupBody.email],
+        );
+        const spy = mockSms();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/password/phone/code`)
+          .send({ phone });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(spy).toHaveBeenCalledTimes(1);
+        const cached = await cacheService.find(`password_phone:${phone}`);
+        expect(cached).not.toBeNull();
+        expect(cached).toMatch(/^\d{6}$/);
+      });
+
+      it('미가입 휴대폰이면 404를 반환하고 SMS도 발송되지 않는다', async () => {
+        // Given
+        const phone = buildPhone();
+        const spy = mockSms();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/password/phone/code`)
+          .send({ phone });
+
+        // Then
+        expect(res.status).toBe(404);
+        expect(res.body.message).toBe('User not found');
+        expect(spy).not.toHaveBeenCalled();
+        const cached = await cacheService.find(`password_phone:${phone}`);
+        expect(cached).toBeNull();
+      });
+
+      it('phone 필드가 누락되면 400을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/password/phone/code`)
+          .send({});
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+    });
+
+    // ---------------------------------------------------------------------
+    // POST /user/auth/password/phone/verify
+    // ---------------------------------------------------------------------
+    describe('POST /user/auth/password/phone/verify', () => {
+      it('password_phone prefix에 저장된 정상 코드면 200을 반환하고 캐시는 1회 소비된다', async () => {
+        // Given
+        const phone = buildPhone();
+        const code = 123456;
+        await cacheService.set(`password_phone:${phone}`, code, 60 * 5);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/password/phone/verify`)
+          .send({ phone, code: code.toString() });
+
+        // Then
+        expect(res.status).toBe(200);
+        const cached = await cacheService.find(`password_phone:${phone}`);
+        expect(cached).toBeNull();
+      });
+
+      it('signup_phone prefix 코드는 password verify로 사용할 수 없다 (scope 격리)', async () => {
+        // Given - signup prefix 에만 저장
+        const phone = buildPhone();
+        const code = 123456;
+        await cacheService.set(`signup_phone:${phone}`, code, 60 * 5);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/password/phone/verify`)
+          .send({ phone, code: code.toString() });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('인증 코드가 만료되었습니다.');
+        // signup_phone prefix 키는 그대로 남아 있어야 한다
+        const cached = await cacheService.find(`signup_phone:${phone}`);
+        expect(cached).toBe(code.toString());
+      });
+
+      it('잘못된 코드면 401을 반환한다', async () => {
+        // Given
+        const phone = buildPhone();
+        await cacheService.set(`password_phone:${phone}`, 123456, 60 * 5);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/password/phone/verify`)
+          .send({ phone, code: '654321' });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('인증 코드가 일치하지 않습니다.');
+      });
     });
   });
 
