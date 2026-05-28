@@ -21,6 +21,8 @@ import {
   GetUserProfileResponse,
   PatchUserFitRequest,
   PatchUserInfoRequest,
+  PatchUserProfileNameRequest,
+  PatchUserProfileNicknameRequest,
   PatchUserProfileRequest,
   PostUserFitRequest,
   PostUserProfileImageRequest,
@@ -57,7 +59,7 @@ export class UserController {
   }
 
   @Post('profile')
-  @ApiOperation({ summary: '유저 프로필 생성' })
+  @ApiOperation({ summary: '유저 프로필 생성', deprecated: true })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(UserOneTimeTokenGuard)
   @ResponseException(HttpStatus.NOT_FOUND, '유저 프로필 없음')
@@ -67,6 +69,32 @@ export class UserController {
     @Body() body: PostUserProfileRequest,
   ) {
     await this.userService.postUserProfile(req.user.id, body);
+  }
+
+  @Patch('profile/nickname')
+  @ApiOperation({ summary: '유저 닉네임 수정' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseException(HttpStatus.NOT_FOUND, '유저 프로필 없음')
+  @ResponseException(HttpStatus.CONFLICT, '이미 존재하는 닉네임')
+  async patchUserProfileNickname(
+    @Request() req: any,
+    @Body() body: PatchUserProfileNicknameRequest,
+  ) {
+    await this.userService.patchUserProfileNickname(req.user.id, body);
+  }
+
+  @Patch('profile/name')
+  @ApiOperation({ summary: '유저 이름 수정' })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseException(HttpStatus.NOT_FOUND, '유저 프로필 없음')
+  @ResponseException(HttpStatus.CONFLICT, '이미 존재하는 이름')
+  async patchUserProfileName(
+    @Request() req: any,
+    @Body() body: PatchUserProfileNameRequest,
+  ) {
+    await this.userService.patchUserProfileName(req.user.id, body);
   }
 
   @Patch('profile')
@@ -87,7 +115,7 @@ export class UserController {
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(UserOneTimeTokenGuard)
   @ResponseData(GetUserProfileResponse)
-  @ResponseException(HttpStatus.NOT_FOUND, '유저 프로필 없음')
+  @ResponseException(HttpStatus.NOT_FOUND, '유저 없음')
   async getUserProfile(
     @Request() req: any,
   ): Promise<ResponseDataDto<GetUserProfileResponse>> {

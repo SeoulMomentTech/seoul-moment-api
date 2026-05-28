@@ -22,30 +22,29 @@ export class UserProfileEntity extends CommonEntity {
   })
   userId: number;
 
-  @Column('varchar', { length: 255, nullable: false, comment: '이름' })
+  @Column('varchar', { length: 255, nullable: true, comment: '이름' })
   name: string;
 
   @Column('enum', {
     enum: UserProfileGender,
-    default: UserProfileGender.OTHER,
-    nullable: false,
+    nullable: true,
     comment: '성별',
   })
   gender: UserProfileGender;
 
-  @Column('date', { nullable: false, comment: '생년월일' })
+  @Column('date', { nullable: true, comment: '생년월일' })
   birthDate: string;
 
-  @Column('varchar', { length: 255, nullable: false, comment: '우편번호' })
+  @Column('varchar', { length: 255, nullable: true, comment: '우편번호' })
   postalCode: string;
 
-  @Column('varchar', { length: 255, nullable: false, comment: '시/도' })
+  @Column('varchar', { length: 255, nullable: true, comment: '시/도' })
   city: string;
 
-  @Column('varchar', { length: 255, nullable: false, comment: '시/군/구' })
+  @Column('varchar', { length: 255, nullable: true, comment: '시/군/구' })
   district: string;
 
-  @Column('varchar', { length: 255, nullable: false, comment: '상세 주소' })
+  @Column('varchar', { length: 255, nullable: true, comment: '상세 주소' })
   detailAddress: string;
 
   @OneToOne(() => UserProfileImageEntity, (image) => image.userProfile)

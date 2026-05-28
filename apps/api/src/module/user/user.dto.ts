@@ -160,8 +160,9 @@ export class GetUserProfileResponse {
   @ApiPropertyOptional({
     description: '프로필 이미지 URL',
     example: 'https://example.com/image.png',
+    nullable: true,
   })
-  profileImageUrl?: string;
+  profileImageUrl: string | null;
 
   @ApiProperty({
     description: '닉네임',
@@ -169,91 +170,82 @@ export class GetUserProfileResponse {
   })
   nickname: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '이름',
     example: '김서울',
+    nullable: true,
   })
-  name: string;
+  name: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '성별',
     example: 'MALE',
     enum: UserProfileGender,
+    nullable: true,
   })
-  gender: UserProfileGender;
+  gender: UserProfileGender | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '생년월일',
     example: '2025-01-01',
+    nullable: true,
   })
-  birthDate: string;
+  birthDate: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '우편번호',
     example: '12345',
+    nullable: true,
   })
-  postalCode: string;
+  postalCode: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '시/도',
     example: '서울',
+    nullable: true,
   })
-  city: string;
+  city: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '시/군/구',
     example: '강남구',
+    nullable: true,
   })
-  district: string;
+  district: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '상세 주소',
     example: '12345',
+    nullable: true,
   })
-  detailAddress: string;
+  detailAddress: string | null;
 
-  static from(entity: UserProfileEntity) {
+  static from(entity: UserProfileEntity | null, nickname: string) {
     return plainToInstance(this, {
-      profileImageUrl: entity?.image?.getImageUrl(),
-      nickname: entity.user.nickname,
-      name: entity.name,
-      gender: entity.gender,
-      birthDate: entity.birthDate,
-      postalCode: entity.postalCode,
-      city: entity.city,
-      district: entity.district,
-      detailAddress: entity.detailAddress,
+      profileImageUrl: entity?.image?.getImageUrl() ?? null,
+      nickname,
+      name: entity?.name ?? null,
+      gender: entity?.gender ?? null,
+      birthDate: entity?.birthDate ?? null,
+      postalCode: entity?.postalCode ?? null,
+      city: entity?.city ?? null,
+      district: entity?.district ?? null,
+      detailAddress: entity?.detailAddress ?? null,
     });
   }
 }
 
 export class PatchUserProfileRequest {
-  @ApiProperty({
-    description: '닉네임',
-    example: '세리프',
-  })
-  @IsString()
-  @IsDefined()
-  nickname: string;
-
-  @ApiProperty({
-    description: '이름',
-    example: '김서울',
-  })
-  @IsString()
-  @IsDefined()
-  name: string;
-
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '성별',
     example: 'MALE',
     enum: UserProfileGender,
   })
   @IsEnum(UserProfileGender)
-  @IsDefined()
-  gender: UserProfileGender;
+  @IsOptional()
+  gender?: UserProfileGender;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '생년월일 (YYYY-MM-DD)',
     example: '2025-01-01',
   })
@@ -261,40 +253,40 @@ export class PatchUserProfileRequest {
     message: 'birthDate는 YYYY-MM-DD 형식이어야 합니다.',
   })
   @IsDateString()
-  @IsDefined()
-  birthDate: string;
+  @IsOptional()
+  birthDate?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '우편번호',
     example: '12345',
   })
   @IsString()
-  @IsDefined()
-  postalCode: string;
+  @IsOptional()
+  postalCode?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '시/도',
     example: '서울',
   })
   @IsString()
-  @IsDefined()
-  city: string;
+  @IsOptional()
+  city?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '시/군/구',
     example: '강남구',
   })
   @IsString()
-  @IsDefined()
-  district: string;
+  @IsOptional()
+  district?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '상세 주소',
     example: '12345',
   })
   @IsString()
-  @IsDefined()
-  detailAddress: string;
+  @IsOptional()
+  detailAddress?: string;
 }
 
 export class PostUserFitRequest {
@@ -466,4 +458,24 @@ export class PostUserProfileImageRequest {
   @IsString()
   @IsDefined()
   imageUrl: string;
+}
+
+export class PatchUserProfileNicknameRequest {
+  @ApiProperty({
+    description: '닉네임',
+    example: '세리프',
+  })
+  @IsString()
+  @IsDefined()
+  nickname: string;
+}
+
+export class PatchUserProfileNameRequest {
+  @ApiProperty({
+    description: '이름',
+    example: '김서울',
+  })
+  @IsString()
+  @IsDefined()
+  name: string;
 }

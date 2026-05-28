@@ -16,6 +16,8 @@ import {
   GetUserProfileResponse,
   PatchUserFitRequest,
   PatchUserInfoRequest,
+  PatchUserProfileNameRequest,
+  PatchUserProfileNicknameRequest,
   PatchUserProfileRequest,
   PostUserFitRequest,
   PostUserProfileImageRequest,
@@ -77,11 +79,8 @@ export class UserService {
   ): Promise<void> {
     await this.userRepositoryService.getUserProfile(id);
 
-    await this.validateAndUpdateNickname(id, dto.nickname);
-
     await this.userRepositoryService.updateUserProfile({
       userId: id,
-      name: dto.name,
       gender: dto.gender,
       birthDate: dto.birthDate,
       postalCode: dto.postalCode,
@@ -92,9 +91,10 @@ export class UserService {
   }
 
   async getUserProfile(id: number): Promise<GetUserProfileResponse> {
-    const userProfile = await this.userRepositoryService.getUserProfile(id);
+    const user = await this.userRepositoryService.getUserById(id);
+    const userProfile = await this.userRepositoryService.findUserProfile(id);
 
-    return GetUserProfileResponse.from(userProfile);
+    return GetUserProfileResponse.from(userProfile, user.nickname);
   }
 
   async postUserProfileImage(
@@ -193,6 +193,24 @@ export class UserService {
     await this.userRepositoryService.softDeleteUserFit(id);
   }
 
+  async patchUserProfileNickname(
+    id: number,
+    dto: PatchUserProfileNicknameRequest,
+  ): Promise<void> {
+    await this.userRepositoryService.getUserProfile(id);
+
+    await this.validateAndUpdateNickname(id, dto.nickname);
+  }
+
+  async patchUserProfileName(
+    id: number,
+    dto: PatchUserProfileNameRequest,
+  ): Promise<void> {
+    await this.userRepositoryService.getUserProfile(id);
+
+    await this.validateAndUpdateName(id, dto.name);
+  }
+
   private async validateAndUpdateNickname(
     id: number,
     nickname: string,
@@ -202,6 +220,15 @@ export class UserService {
     await this.userRepositoryService.updateUser({
       id,
       nickname,
+    });
+  }
+
+  private async validateAndUpdateName(id: number, name: string): Promise<void> {
+    await this.userRepositoryService.validateUserName(name, id);
+
+    await this.userRepositoryService.updateUserProfile({
+      userId: id,
+      name,
     });
   }
 }

@@ -40,6 +40,22 @@ function buildProfileBody(overrides?: Record<string, unknown>) {
   };
 }
 
+function buildProfilePatchBody(overrides?: Record<string, unknown>) {
+  return {
+    gender: UserProfileGender.FEMALE,
+    birthDate: '1995-05-05',
+    postalCode: '54321',
+    city: '인천',
+    district: '연수구',
+    detailAddress: faker.location.streetAddress(),
+    ...overrides,
+  };
+}
+
+function uniqueName(prefix = '테스트'): string {
+  return `${prefix}_${faker.string.alphanumeric(10)}`;
+}
+
 function buildFitBody(overrides?: Record<string, unknown>) {
   return {
     height: 180,
@@ -399,41 +415,209 @@ describe('UserController (E2E)', () => {
       const res = await request(app.getHttpServer())
         .patch(`${USER_BASE}/profile`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
-        .send(buildProfileBody());
+        .send(buildProfilePatchBody());
 
       // Then
       expect(res.status).toBe(404);
     });
 
-    it('정상 수정 시 200을 반환하고 DB에 반영된다', async () => {
+    it('정상 수정 시 200을 반환하고 주소/성별 등이 DB에 반영된다', async () => {
       // Given - 먼저 프로필 생성
       const { userId, oneTimeToken } = await signUpAndLogin();
-      const initialProfile = buildProfileBody();
       await request(app.getHttpServer())
         .post(`${USER_BASE}/profile`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
-        .send(initialProfile);
+        .send(buildProfileBody());
 
-      const updated = buildProfileBody({
-        nickname: initialProfile.nickname,
-        name: '변경된이름',
-        city: '부산',
-      });
+      // When - nickname/name 제외한 필드만 PATCH
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({
+          city: '부산',
+          district: '해운대구',
+          detailAddress: '센텀로 123',
+        });
+
+      // Then
+      expect(res.status).toBe(200);
+      const rows = await dataSource.query(
+        `SELECT city, district, detail_address FROM user_profile WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows[0].city).toBe('부산');
+      expect(rows[0].district).toBe('해운대구');
+      expect(rows[0].detail_address).toBe('센텀로 123');
+    });
+
+    it('일부 필드만 전송해도 200을 반환하고 보낸 필드만 갱신된다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const initial = buildProfileBody();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(initial);
+
+      // When - city만 전송
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ city: '대전' });
+
+      // Then - city만 변경되고 나머지는 기존 값 유지
+      expect(res.status).toBe(200);
+      const rows = await dataSource.query(
+        `SELECT city, district, postal_code FROM user_profile WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows[0].city).toBe('대전');
+      expect(rows[0].district).toBe(initial.district);
+      expect(rows[0].postal_code).toBe(initial.postalCode);
+    });
+
+    it('빈 바디로도 200을 반환한다 (모든 필드 선택적)', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
 
       // When
       const res = await request(app.getHttpServer())
         .patch(`${USER_BASE}/profile`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
-        .send(updated);
+        .send({});
+
+      // Then
+      expect(res.status).toBe(200);
+    });
+
+    it('nickname 필드를 전송하면 400을 반환한다 (whitelist 거부)', async () => {
+      // Given - PATCH /user/profile은 더 이상 nickname을 받지 않으므로 거부되어야 한다
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ ...buildProfilePatchBody(), nickname: randomNickname() });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('name 필드를 전송하면 400을 반환한다 (whitelist 거부)', async () => {
+      // Given - PATCH /user/profile은 더 이상 name을 받지 않는다
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ ...buildProfilePatchBody(), name: uniqueName() });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('birthDate 형식이 YYYY-MM-DD가 아니면 400을 반환한다', async () => {
+      // Given - 값이 있으면 @Matches 정규식 검증이 동작
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ birthDate: '1990/01/01' });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('gender enum이 잘못되면 400을 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ gender: 'INVALID' });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('Authorization 헤더가 없으면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile`)
+        .send(buildProfilePatchBody());
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // PATCH /user/profile/nickname
+  // -------------------------------------------------------------------------
+  describe('PATCH /user/profile/nickname', () => {
+    it('프로필이 없으면 404를 반환한다', async () => {
+      // Given - profile은 없지만 user는 있는 상태
+      const { oneTimeToken } = await signUpAndLogin();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile/nickname`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ nickname: randomNickname() });
+
+      // Then
+      expect(res.status).toBe(404);
+    });
+
+    it('정상 수정 시 200을 반환하고 user.nickname이 갱신된다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+
+      const newNickname = randomNickname();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile/nickname`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ nickname: newNickname });
 
       // Then
       expect(res.status).toBe(200);
       const rows = await dataSource.query(
-        `SELECT name, city FROM user_profile WHERE user_id = $1`,
+        `SELECT nickname FROM "user" WHERE id = $1`,
         [userId],
       );
-      expect(rows[0].name).toBe('변경된이름');
-      expect(rows[0].city).toBe('부산');
+      expect(rows[0].nickname).toBe(newNickname);
     });
 
     it('자기 자신의 nickname을 그대로 보내도 200을 반환한다 (self-conflict 방지)', async () => {
@@ -444,26 +628,25 @@ describe('UserController (E2E)', () => {
         .set('Authorization', `Bearer ${oneTimeToken}`)
         .send(buildProfileBody({ nickname }));
 
-      // When - 같은 nickname으로 PATCH (다른 필드만 변경)
+      // When
       const res = await request(app.getHttpServer())
-        .patch(`${USER_BASE}/profile`)
+        .patch(`${USER_BASE}/profile/nickname`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
-        .send(buildProfileBody({ nickname, city: '부산' }));
+        .send({ nickname });
 
       // Then
       expect(res.status).toBe(200);
-      const userRows = await dataSource.query(
+      const rows = await dataSource.query(
         `SELECT nickname FROM "user" WHERE id = $1`,
         [userId],
       );
-      expect(userRows[0].nickname).toBe(nickname);
+      expect(rows[0].nickname).toBe(nickname);
     });
 
-    it('다른 사용자가 사용 중인 nickname으로 변경하면 409를 반환한다', async () => {
-      // Given - 두 사용자 가입, 두 번째 사용자가 프로필 생성 후 첫 사용자 nickname으로 PATCH 시도
+    it('다른 사용자가 사용 중인 nickname이면 409를 반환한다', async () => {
+      // Given
       const first = await signUpAndLogin();
       const second = await signUpAndLogin();
-
       await request(app.getHttpServer())
         .post(`${USER_BASE}/profile`)
         .set('Authorization', `Bearer ${second.oneTimeToken}`)
@@ -471,20 +654,160 @@ describe('UserController (E2E)', () => {
 
       // When
       const res = await request(app.getHttpServer())
-        .patch(`${USER_BASE}/profile`)
+        .patch(`${USER_BASE}/profile/nickname`)
         .set('Authorization', `Bearer ${second.oneTimeToken}`)
-        .send(buildProfileBody({ nickname: first.nickname }));
+        .send({ nickname: first.nickname });
 
       // Then
       expect(res.status).toBe(409);
       expect(res.body.message).toBe('User nickname already exists');
     });
 
+    it('nickname이 누락되면 400을 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile/nickname`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({});
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
     it('Authorization 헤더가 없으면 401을 반환한다', async () => {
       // When
       const res = await request(app.getHttpServer())
-        .patch(`${USER_BASE}/profile`)
+        .patch(`${USER_BASE}/profile/nickname`)
+        .send({ nickname: randomNickname() });
+
+      // Then
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // PATCH /user/profile/name
+  // -------------------------------------------------------------------------
+  describe('PATCH /user/profile/name', () => {
+    it('프로필이 없으면 404를 반환한다', async () => {
+      // Given - profile은 없지만 user는 있는 상태
+      const { oneTimeToken } = await signUpAndLogin();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile/name`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ name: uniqueName() });
+
+      // Then
+      expect(res.status).toBe(404);
+    });
+
+    it('정상 수정 시 200을 반환하고 user_profile.name이 갱신된다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
         .send(buildProfileBody());
+
+      const newName = uniqueName('새이름');
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile/name`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ name: newName });
+
+      // Then
+      expect(res.status).toBe(200);
+      const rows = await dataSource.query(
+        `SELECT name FROM user_profile WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows[0].name).toBe(newName);
+    });
+
+    it('자기 자신의 name을 그대로 보내도 200을 반환한다 (self-conflict 방지)', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const profile = buildProfileBody({ name: uniqueName('동일') });
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(profile);
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile/name`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ name: profile.name });
+
+      // Then
+      expect(res.status).toBe(200);
+      const rows = await dataSource.query(
+        `SELECT name FROM user_profile WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows[0].name).toBe(profile.name);
+    });
+
+    it('다른 사용자가 사용 중인 name이면 409를 반환한다', async () => {
+      // Given - 첫 사용자가 고유 name으로 프로필 생성
+      const first = await signUpAndLogin();
+      const second = await signUpAndLogin();
+      const sharedName = uniqueName('충돌');
+
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${first.oneTimeToken}`)
+        .send(buildProfileBody({ nickname: first.nickname, name: sharedName }));
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${second.oneTimeToken}`)
+        .send(buildProfileBody({ nickname: second.nickname }));
+
+      // When - second 사용자가 first의 name으로 PATCH 시도
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile/name`)
+        .set('Authorization', `Bearer ${second.oneTimeToken}`)
+        .send({ name: sharedName });
+
+      // Then
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe('User name already exists');
+    });
+
+    it('name이 누락되면 400을 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+      await request(app.getHttpServer())
+        .post(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send(buildProfileBody());
+
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile/name`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({});
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('Authorization 헤더가 없으면 401을 반환한다', async () => {
+      // When
+      const res = await request(app.getHttpServer())
+        .patch(`${USER_BASE}/profile/name`)
+        .send({ name: uniqueName() });
 
       // Then
       expect(res.status).toBe(401);
@@ -495,9 +818,9 @@ describe('UserController (E2E)', () => {
   // GET /user/profile
   // -------------------------------------------------------------------------
   describe('GET /user/profile', () => {
-    it('프로필이 없으면 404를 반환한다', async () => {
-      // Given
-      const { oneTimeToken } = await signUpAndLogin();
+    it('프로필이 없어도 200을 반환하고 nickname만 채워서 다른 필드는 null로 응답한다', async () => {
+      // Given - profile은 생성하지 않은 신규 사용자
+      const { nickname, oneTimeToken } = await signUpAndLogin();
 
       // When
       const res = await request(app.getHttpServer())
@@ -505,7 +828,17 @@ describe('UserController (E2E)', () => {
         .set('Authorization', `Bearer ${oneTimeToken}`);
 
       // Then
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(200);
+      expect(res.body.result).toBe(true);
+      expect(res.body.data.nickname).toBe(nickname);
+      expect(res.body.data.profileImageUrl).toBeNull();
+      expect(res.body.data.name).toBeNull();
+      expect(res.body.data.gender).toBeNull();
+      expect(res.body.data.birthDate).toBeNull();
+      expect(res.body.data.postalCode).toBeNull();
+      expect(res.body.data.city).toBeNull();
+      expect(res.body.data.district).toBeNull();
+      expect(res.body.data.detailAddress).toBeNull();
     });
 
     it('정상 조회 시 200과 프로필 정보를 반환하고 nickname은 user.nickname을 따른다', async () => {

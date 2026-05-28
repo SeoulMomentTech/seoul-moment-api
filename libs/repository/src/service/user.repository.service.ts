@@ -108,6 +108,13 @@ export class UserRepositoryService {
     return result;
   }
 
+  async findUserProfile(userId: number): Promise<UserProfileEntity | null> {
+    return await this.userProfileRepository.findOne({
+      where: { userId },
+      relations: { user: true, image: true },
+    });
+  }
+
   async createUserProfileImage(
     image: UserProfileImageEntity,
   ): Promise<UserProfileImageEntity> {
@@ -206,6 +213,21 @@ export class UserRepositoryService {
     if (result) {
       throw new ServiceError(
         'User nickname already exists',
+        ServiceErrorCode.CONFLICT,
+      );
+    }
+  }
+
+  async validateUserName(name: string, excludeUserId?: number): Promise<void> {
+    const where =
+      excludeUserId !== undefined
+        ? { name, userId: Not(excludeUserId) }
+        : { name };
+    const result = await this.userProfileRepository.findOneBy(where);
+
+    if (result) {
+      throw new ServiceError(
+        'User name already exists',
         ServiceErrorCode.CONFLICT,
       );
     }
