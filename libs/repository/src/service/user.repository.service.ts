@@ -166,6 +166,16 @@ export class UserRepositoryService {
     return result;
   }
 
+  async getUserByPhone(phone: string): Promise<UserEntity> {
+    const result = await this.userRepository.findOneBy({ phone });
+
+    if (!result) {
+      throw new ServiceError('User not found', ServiceErrorCode.NOT_FOUND_DATA);
+    }
+
+    return result;
+  }
+
   async createUserFit(userFit: UserFitEntity): Promise<UserFitEntity> {
     const existing = await this.userFitRepository.findOne({
       where: { userId: userFit.userId },

@@ -33,6 +33,7 @@ import {
   PostNicknameValidateRequest,
   PostPasswordPhoneCodeRequest,
   PostPasswordPhoneVerifyRequest,
+  PostPasswordPhoneVerifyResponse,
   PostSignupPhoneCodeRequest,
   PostSignupPhoneVerifyRequest,
   PostUserLoginRequest,
@@ -210,9 +211,7 @@ export class UserAuthController {
       parseInt(body.code, 10),
     );
 
-    return new ResponseDataDto(
-      plainToInstance(PostUserPasswordEmailVerifyResponse, result),
-    );
+    return new ResponseDataDto(result);
   }
 
   @Patch('password')
@@ -293,13 +292,23 @@ export class UserAuthController {
   }
 
   @Post('password/phone/verify')
-  @ApiOperation({ summary: '비밀번호 찾기용 휴대폰 인증 코드 검증' })
+  @ApiOperation({
+    summary: '비밀번호 찾기용 휴대폰 인증 코드 검증',
+    description:
+      '검증 성공 시 비밀번호 변경에 사용할 one time token을 반환합니다.',
+  })
   @HttpCode(HttpStatus.OK)
   @ResponseException(HttpStatus.UNAUTHORIZED, '인증 코드 만료 또는 불일치')
-  async postPasswordPhoneVerify(@Body() body: PostPasswordPhoneVerifyRequest) {
-    await this.userAuthService.verifyPasswordPhone(
+  @ResponseException(HttpStatus.NOT_FOUND, '존재 하지 않는 휴대폰')
+  @ResponseData(PostPasswordPhoneVerifyResponse)
+  async postPasswordPhoneVerify(
+    @Body() body: PostPasswordPhoneVerifyRequest,
+  ): Promise<ResponseDataDto<PostPasswordPhoneVerifyResponse>> {
+    const result = await this.userAuthService.verifyPasswordPhone(
       body.phone,
       parseInt(body.code, 10),
     );
+
+    return new ResponseDataDto(result);
   }
 }

@@ -19,8 +19,10 @@ import { Transactional } from 'typeorm-transactional';
 import {
   PostGoogleLoginResponse,
   PostGoogleSignupRequest,
+  PostPasswordPhoneVerifyResponse,
   PostUserLoginRequest,
   PostUserLoginResponse,
+  PostUserPasswordEmailVerifyResponse,
   PostUserSignUpRequest,
 } from './user.auth.dto';
 import { AuthService } from '../../auth/auth.service';
@@ -209,7 +211,7 @@ export class UserAuthService {
   async postPasswordEmailVerify(
     email: string,
     code: number,
-  ): Promise<{ token: string }> {
+  ): Promise<PostUserPasswordEmailVerifyResponse> {
     await this.authService.verifyEmail(email, code);
 
     const user = await this.userRepositoryService.getUserByEmail(email);
@@ -220,7 +222,7 @@ export class UserAuthService {
       Configuration.getConfig().JWT_EXPIRES_IN,
     );
 
-    return { token };
+    return PostUserPasswordEmailVerifyResponse.from(token);
   }
 
   async patchPassword(userId: number, password: string): Promise<void> {
@@ -285,12 +287,25 @@ export class UserAuthService {
     await this.commonAuthService.authPhone(RedisKey.PASSWORD_PHONE, phone);
   }
 
-  async verifyPasswordPhone(phone: string, code: number): Promise<void> {
+  async verifyPasswordPhone(
+    phone: string,
+    code: number,
+  ): Promise<PostPasswordPhoneVerifyResponse> {
     await this.commonAuthService.verifyPhone(
       phone,
       code,
       RedisKey.PASSWORD_PHONE,
     );
+
+    const user = await this.userRepositoryService.getUserByPhone(phone);
+
+    const token = await this.commonAuthService.generateJwt(
+      { id: user.id },
+      JwtType.ONE_TIME_TOKEN,
+      Configuration.getConfig().JWT_EXPIRES_IN,
+    );
+
+    return PostPasswordPhoneVerifyResponse.from(token);
   }
 
   private async createSnsUser(

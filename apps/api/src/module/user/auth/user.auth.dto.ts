@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { plainToInstance } from 'class-transformer';
 import {
   IsBoolean,
   IsDefined,
@@ -133,6 +134,12 @@ export class PostUserPasswordEmailVerifyResponse {
   @IsString()
   @IsDefined()
   token: string;
+
+  static from(token: string) {
+    return plainToInstance(this, {
+      token,
+    });
+  }
 }
 
 export class PostGoogleLoginRequest {
@@ -287,3 +294,19 @@ export class PostInfoPhoneVerifyRequest extends CommonPostPhoneVerifyRequest {}
 export class PostPasswordPhoneCodeRequest extends PostPhoneCodeRequest {}
 
 export class PostPasswordPhoneVerifyRequest extends CommonPostPhoneVerifyRequest {}
+
+export class PostPasswordPhoneVerifyResponse {
+  @ApiProperty({
+    description: '비밀번호 재설정용 one time token JWT',
+    example: 'oneTimeToken',
+  })
+  @IsString()
+  @IsDefined()
+  token: string;
+
+  static from(token: string) {
+    return plainToInstance(this, {
+      token,
+    });
+  }
+}

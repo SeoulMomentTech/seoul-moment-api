@@ -1285,9 +1285,17 @@ describe('UserAuthController (E2E)', () => {
     // POST /user/auth/password/phone/verify
     // ---------------------------------------------------------------------
     describe('POST /user/auth/password/phone/verify', () => {
-      it('password_phone prefix에 저장된 정상 코드면 200을 반환하고 캐시는 1회 소비된다', async () => {
-        // Given
+      it('password_phone prefix에 저장된 정상 코드면 200과 ONE_TIME_TOKEN을 반환하고 캐시는 1회 소비된다', async () => {
+        // Given - 해당 phone으로 가입된 사용자가 존재해야 한다
+        const signupBody = buildSignUpBody();
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup`)
+          .send(signupBody);
         const phone = buildPhone();
+        await dataSource.query(
+          `UPDATE "user" SET phone = $1 WHERE email = $2`,
+          [phone, signupBody.email],
+        );
         const code = 123456;
         await cacheService.set(`password_phone:${phone}`, code, 60 * 5);
 
@@ -1298,6 +1306,18 @@ describe('UserAuthController (E2E)', () => {
 
         // Then
         expect(res.status).toBe(200);
+        expect(res.body.result).toBe(true);
+        expect(typeof res.body.data.token).toBe('string');
+        const payload = jwtService.decode(res.body.data.token);
+        expect(payload).not.toBeNull();
+        expect(payload.jwtType).toBe(ONE_TIME_TOKEN_TYPE);
+
+        const userRow = await dataSource.query(
+          `SELECT id FROM "user" WHERE email = $1`,
+          [signupBody.email],
+        );
+        expect(payload.id).toBe(userRow[0].id);
+
         const cached = await cacheService.find(`password_phone:${phone}`);
         expect(cached).toBeNull();
       });
@@ -1334,6 +1354,70 @@ describe('UserAuthController (E2E)', () => {
         // Then
         expect(res.status).toBe(401);
         expect(res.body.message).toBe('인증 코드가 일치하지 않습니다.');
+      });
+
+      it('코드 검증은 성공해도 해당 phone의 user가 없으면 404를 반환한다', async () => {
+        // Given - 코드만 캐시에 있고, 해당 phone 으로 가입된 사용자는 없음
+        const phone = buildPhone();
+        const code = 123456;
+        await cacheService.set(`password_phone:${phone}`, code, 60 * 5);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/password/phone/verify`)
+          .send({ phone, code: code.toString() });
+
+        // Then
+        expect(res.status).toBe(404);
+        expect(res.body.message).toBe('User not found');
+      });
+
+      it('verify로 받은 token으로 PATCH /password를 호출하면 비밀번호가 변경된다', async () => {
+        // Given - phone 으로 가입된 사용자 + password_phone 코드 캐시
+        const signupBody = buildSignUpBody();
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/signup`)
+          .send(signupBody);
+        const phone = buildPhone();
+        await dataSource.query(
+          `UPDATE "user" SET phone = $1 WHERE email = $2`,
+          [phone, signupBody.email],
+        );
+        const code = 123456;
+        await cacheService.set(`password_phone:${phone}`, code, 60 * 5);
+
+        const beforeRow = await dataSource.query(
+          `SELECT password FROM "user" WHERE email = $1`,
+          [signupBody.email],
+        );
+
+        // When - phone verify 로 one time token 발급 → PATCH /password
+        const verifyRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/password/phone/verify`)
+          .send({ phone, code: code.toString() });
+        expect(verifyRes.status).toBe(200);
+        const token = verifyRes.body.data.token as string;
+
+        const newPassword = 'phone-reset-password-1234';
+        const patchRes = await request(app.getHttpServer())
+          .patch(`${BASE_URL}/password`)
+          .set('Authorization', `Bearer ${token}`)
+          .send({ password: newPassword });
+
+        // Then
+        expect(patchRes.status).toBe(204);
+        const afterRow = await dataSource.query(
+          `SELECT password FROM "user" WHERE email = $1`,
+          [signupBody.email],
+        );
+        expect(afterRow[0].password).not.toBe(beforeRow[0].password);
+
+        // 새 비밀번호로 로그인 가능해야 한다
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/login`)
+          .send({ email: signupBody.email, password: newPassword });
+        expect(loginRes.status).toBe(200);
+        expect(typeof loginRes.body.data.token).toBe('string');
       });
     });
   });
