@@ -916,18 +916,27 @@ describe('UserController (E2E)', () => {
       expect(res.status).toBe(201);
     }
 
-    it('프로필이 없으면 404를 반환한다', async () => {
+    it('프로필이 없어도 201을 반환하고 이미지가 저장된다 (프로필 존재 검증 제거됨)', async () => {
       // Given - 프로필 생성 없이 이미지 등록 시도
-      const { oneTimeToken } = await signUpAndLogin();
+      // 리팩터링으로 postUserProfileImage의 getUserProfile 사전 검증이 제거되어
+      // 프로필이 없어도 user_profile_image row가 곧바로 생성된다
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const imageUrl = '/uploads/profile/sample.webp';
 
       // When
       const res = await request(app.getHttpServer())
         .post(`${USER_BASE}/profile/image`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
-        .send({ imageUrl: '/uploads/profile/sample.webp' });
+        .send({ imageUrl });
 
       // Then
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(201);
+      const rows = await dataSource.query(
+        `SELECT image_path FROM user_profile_image WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].image_path).toBe(imageUrl);
     });
 
     it('정상 등록 시 201을 반환하고 DB에 imagePath가 저장된다', async () => {
