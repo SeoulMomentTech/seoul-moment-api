@@ -130,7 +130,6 @@ export class UserController {
   })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(UserOneTimeTokenGuard)
-  @ResponseException(HttpStatus.NOT_FOUND, '유저 프로필 없음')
   async postUserProfileImage(
     @Request() req: any,
     @Body() body: PostUserProfileImageRequest,

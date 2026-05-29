@@ -101,8 +101,6 @@ export class UserService {
     id: number,
     dto: PostUserProfileImageRequest,
   ): Promise<void> {
-    await this.userRepositoryService.getUserProfile(id);
-
     const previousImagePath = await this.replaceUserProfileImage(id, dto);
 
     if (previousImagePath) {
@@ -116,6 +114,7 @@ export class UserService {
     dto: PostUserProfileImageRequest,
   ): Promise<string | null> {
     const existing = await this.userRepositoryService.findUserProfileImage(id);
+
     if (existing) {
       await this.userRepositoryService.deleteUserProfileImage(id);
     }
