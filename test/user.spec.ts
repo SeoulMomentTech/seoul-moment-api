@@ -841,6 +841,60 @@ describe('UserController (E2E)', () => {
       expect(res.body.data.detailAddress).toBeNull();
     });
 
+    it('프로필이 없을 때 조회하면 빈 user_profile row가 lazy 생성된다', async () => {
+      // Given - profile이 없는 신규 사용자 (조회 전에는 row가 없어야 함)
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const before = await dataSource.query(
+        `SELECT user_id FROM user_profile WHERE user_id = $1`,
+        [userId],
+      );
+      expect(before).toHaveLength(0);
+
+      // When - 프로필 조회
+      const res = await request(app.getHttpServer())
+        .get(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+
+      // Then - userId만 채워진 빈 프로필 row가 생성되어 있어야 한다
+      expect(res.status).toBe(200);
+      const rows = await dataSource.query(
+        `SELECT user_id, name, gender, birth_date, postal_code,
+                city, district, detail_address
+         FROM user_profile WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].user_id).toBe(userId);
+      expect(rows[0].name).toBeNull();
+      expect(rows[0].gender).toBeNull();
+      expect(rows[0].birth_date).toBeNull();
+      expect(rows[0].postal_code).toBeNull();
+      expect(rows[0].city).toBeNull();
+      expect(rows[0].district).toBeNull();
+      expect(rows[0].detail_address).toBeNull();
+    });
+
+    it('프로필이 없는 상태로 여러 번 조회해도 row가 중복 생성되지 않는다', async () => {
+      // Given - profile이 없는 신규 사용자
+      const { userId, oneTimeToken } = await signUpAndLogin();
+
+      // When - 프로필을 두 번 연속 조회
+      await request(app.getHttpServer())
+        .get(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+      const res = await request(app.getHttpServer())
+        .get(`${USER_BASE}/profile`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+
+      // Then - lazy 생성된 row는 단 한 개만 유지된다
+      expect(res.status).toBe(200);
+      const rows = await dataSource.query(
+        `SELECT user_id FROM user_profile WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(1);
+    });
+
     it('정상 조회 시 200과 프로필 정보를 반환하고 nickname은 user.nickname을 따른다', async () => {
       // Given - 이미지를 등록하지 않은 상태이므로 profileImageUrl은 비어야 함
       const { oneTimeToken } = await signUpAndLogin();

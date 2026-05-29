@@ -92,7 +92,16 @@ export class UserService {
 
   async getUserProfile(id: number): Promise<GetUserProfileResponse> {
     const user = await this.userRepositoryService.getUserById(id);
+
     const userProfile = await this.userRepositoryService.findUserProfile(id);
+
+    if (!userProfile) {
+      await this.userRepositoryService.createUserProfile(
+        plainToInstance(UserProfileEntity, {
+          userId: id,
+        }),
+      );
+    }
 
     return GetUserProfileResponse.from(userProfile, user.nickname);
   }
