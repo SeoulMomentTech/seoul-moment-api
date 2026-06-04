@@ -10,6 +10,7 @@ import { ProductRepositoryService } from '@app/repository/service/product.reposi
 import { UserLikeRepositoryService } from '@app/repository/service/user.like.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { Transactional } from 'typeorm-transactional';
 
 import {
   GetUserBrandLikeRequest,
@@ -17,6 +18,7 @@ import {
   GetUserProductLikeRequest,
   GetUserProductLikeResponse,
 } from './user.like.dto';
+import { ProductLikeCountService } from '../../product/like-count/product-like-count.service';
 
 @Injectable()
 export class UserLikeService {
@@ -25,8 +27,10 @@ export class UserLikeService {
     private readonly productRepositoryService: ProductRepositoryService,
     private readonly brandRepositoryService: BrandRepositoryService,
     private readonly languageRepositoryService: LanguageRepositoryService,
+    private readonly productLikeCountService: ProductLikeCountService,
   ) {}
 
+  @Transactional()
   async createUserProductLike(userId: number, productItemId: number) {
     await this.productRepositoryService.getProductItemById(productItemId);
 
@@ -48,6 +52,8 @@ export class UserLikeService {
         productItemId,
       }),
     );
+
+    await this.productLikeCountService.increment(productItemId);
   }
 
   async createUserBrandLike(userId: number, brandId: number) {
@@ -70,11 +76,18 @@ export class UserLikeService {
     );
   }
 
+  @Transactional()
   async deleteUserProductLike(userId: number, productItemId: number) {
-    await this.userLikeRepositoryService.deleteUserProductLike(
-      userId,
-      productItemId,
-    );
+    const deleteResult =
+      await this.userLikeRepositoryService.deleteUserProductLike(
+        userId,
+        productItemId,
+      );
+
+    // 실제로 삭제된 행이 있을 때만 감소(존재하지 않던 삭제로 인한 음수 드리프트 방지).
+    if (deleteResult.affected && deleteResult.affected > 0) {
+      await this.productLikeCountService.decrement(productItemId);
+    }
   }
 
   async deleteUserBrandLike(userId: number, brandId: number) {

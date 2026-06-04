@@ -384,6 +384,7 @@ export class GetProductResponse {
       product: MultilingualTextEntity[];
       optionValue: MultilingualTextEntity[];
     },
+    likeCount: number,
   ) {
     multilingualText.brand = multilingualText.brand.filter(
       (v) => v.entityId === entity.product.brand.id,
@@ -424,7 +425,7 @@ export class GetProductResponse {
             .map((v) => v.optionValue.colorCode),
         )[0] || null,
       price: entity.getEffectivePrice(),
-      like: Math.floor(Math.random() * 50001),
+      like: likeCount,
       review: Math.floor(Math.random() * 101),
       reviewAverage: Math.round((Math.random() + 4) * 10) / 10,
       image: entity.getMainImage(),
@@ -679,6 +680,7 @@ export class GetProductDetailResponse {
     },
     option: Record<string, any>,
     relate: GetProductResponse[],
+    likeCount: number,
   ) {
     const name = MultilingualFieldDto.fromByEntityList(
       multilingualText.product,
@@ -709,7 +711,7 @@ export class GetProductDetailResponse {
       shippingInfo: entity.shippingInfo,
       shippingCost: entity.shippingCost,
       option,
-      like: Math.floor(Math.random() * 50001),
+      like: likeCount,
       review: Math.floor(Math.random() * 101),
       reviewAverage: Math.round((Math.random() + 4) * 10) / 10,
       detailImg: entity.product.getDetailInfoImage(),

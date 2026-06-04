@@ -6,12 +6,13 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GetProductDetailOptionValue } from 'apps/api/src/module/product/product.dto';
-import { Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 
 import { LanguageRepositoryService } from './language.repository.service';
 import {
   ProductFilterDto,
+  ProductLikeCountDto,
   ProductSortDto,
   UpdateProductBannerDto,
   UpdateProductDto,
@@ -417,6 +418,43 @@ export class ProductRepositoryService implements OnModuleInit {
       );
 
     return result;
+  }
+
+  async incrementLikeCount(productItemId: number): Promise<number> {
+    const result = await this.productItemRepository
+      .createQueryBuilder()
+      .update(ProductItemEntity)
+      .set({ likeCount: () => 'like_count + 1' })
+      .where('id = :id', { id: productItemId })
+      .returning(['like_count'])
+      .execute();
+
+    return Number(result.raw[0]?.like_count ?? 0);
+  }
+
+  async decrementLikeCount(productItemId: number): Promise<number> {
+    const result = await this.productItemRepository
+      .createQueryBuilder()
+      .update(ProductItemEntity)
+      .set({ likeCount: () => 'GREATEST(like_count - 1, 0)' })
+      .where('id = :id', { id: productItemId })
+      .returning(['like_count'])
+      .execute();
+
+    return Number(result.raw[0]?.like_count ?? 0);
+  }
+
+  async findLikeCounts(ids: number[]): Promise<ProductLikeCountDto[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const rows = await this.productItemRepository.find({
+      select: { id: true, likeCount: true },
+      where: { id: In(ids) },
+    });
+
+    return rows.map((row) => ProductLikeCountDto.from(row.id, row.likeCount));
   }
 
   async getProductItemDetail(

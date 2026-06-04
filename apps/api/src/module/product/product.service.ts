@@ -26,6 +26,7 @@ import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
+import { ProductLikeCountService } from './like-count/product-like-count.service';
 import {
   GetProductBannerResponse,
   GetProductCategoryResponse,
@@ -59,6 +60,7 @@ export class ProductService {
     private readonly brandRepositoryService: BrandRepositoryService,
     private readonly productFilterRepositoryService: ProductFilterRepositoryService,
     private readonly categoryRepositoryService: CategoryRepositoryService,
+    private readonly productLikeCountService: ProductLikeCountService,
   ) {}
 
   async getProductBanner(): Promise<GetProductBannerResponse[]> {
@@ -150,37 +152,45 @@ export class ProductService {
         userId,
       );
 
-    const [brandText, productText, optionValueText] = await Promise.all([
-      this.languageRepositoryService.findMultilingualTextsByEntities(
-        EntityType.BRAND,
-        productItemList.map((v) => v.product.brand.id),
-        language,
-      ),
-      this.languageRepositoryService.findMultilingualTextsByEntities(
-        EntityType.PRODUCT,
-        productItemList.map((v) => v.product.id),
-        language,
-      ),
-      this.languageRepositoryService.findMultilingualTextsByEntities(
-        EntityType.OPTION_VALUE,
-        productItemList.flatMap((v) =>
-          v.variants.flatMap((v) =>
-            v.variantOptions
-              .filter((vo) => vo.optionValue?.option?.type === 'COLOR')
-              .map((vo) => vo.optionValueId),
-          ),
+    const [brandText, productText, optionValueText, likeCounts] =
+      await Promise.all([
+        this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.BRAND,
+          productItemList.map((v) => v.product.brand.id),
+          language,
         ),
-        language,
-      ),
-    ]);
+        this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.PRODUCT,
+          productItemList.map((v) => v.product.id),
+          language,
+        ),
+        this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.OPTION_VALUE,
+          productItemList.flatMap((v) =>
+            v.variants.flatMap((v) =>
+              v.variantOptions
+                .filter((vo) => vo.optionValue?.option?.type === 'COLOR')
+                .map((vo) => vo.optionValueId),
+            ),
+          ),
+          language,
+        ),
+        this.productLikeCountService.getCounts(
+          productItemList.map((v) => v.id),
+        ),
+      ]);
 
     return [
       productItemList.map((v) =>
-        GetProductResponse.from(v, {
-          brand: brandText,
-          product: productText,
-          optionValue: optionValueText,
-        }),
+        GetProductResponse.from(
+          v,
+          {
+            brand: brandText,
+            product: productText,
+            optionValue: optionValueText,
+          },
+          likeCounts.getCount(v.id),
+        ),
       ),
       count,
     ];
@@ -230,7 +240,7 @@ export class ProductService {
       );
     }
 
-    const [brandtext, productText] = await Promise.all([
+    const [brandtext, productText, likeCounts] = await Promise.all([
       this.languageRepositoryService.findMultilingualTexts(
         EntityType.BRAND,
         productDetail.product.brand.id,
@@ -241,6 +251,7 @@ export class ProductService {
         productDetail.product.id,
         language,
       ),
+      this.productLikeCountService.getCounts([productDetail.id]),
     ]);
 
     const getProductRequest = GetProductRequest.from(1, 5);
@@ -271,6 +282,7 @@ export class ProductService {
       },
       optionValueMap,
       relate,
+      likeCounts.getCount(productDetail.id),
     );
   }
 

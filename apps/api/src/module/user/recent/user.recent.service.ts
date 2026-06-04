@@ -12,7 +12,6 @@ import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ProductSortColumn } from '@app/repository/enum/product.enum';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { ProductRepositoryService } from '@app/repository/service/product.repository.service';
-import { UserLikeRepositoryService } from '@app/repository/service/user.like.repository.service';
 import { UserRecentRepositoryService } from '@app/repository/service/user.recent.repository.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -22,6 +21,7 @@ import {
   GetUserRecentRequest,
   PostUserRecentRequest,
 } from './user.recent.dto';
+import { ProductLikeCountService } from '../../product/like-count/product-like-count.service';
 
 @Injectable()
 export class UserRecentService {
@@ -30,7 +30,7 @@ export class UserRecentService {
     private readonly cacheService: CacheService,
     private readonly languageRepositoryService: LanguageRepositoryService,
     private readonly productRepositoryService: ProductRepositoryService,
-    private readonly userLikeRepositoryService: UserLikeRepositoryService,
+    private readonly productLikeCountService: ProductLikeCountService,
   ) {}
 
   async postUserRecent(
@@ -64,7 +64,7 @@ export class UserRecentService {
       return [];
     }
 
-    const [brandText, productText, likeCountMap] = await Promise.all([
+    const [brandText, productText, likeCounts] = await Promise.all([
       this.languageRepositoryService.findMultilingualTextsByEntities(
         EntityType.BRAND,
         productItems.map((v) => v.product.brand.id),
@@ -75,16 +75,14 @@ export class UserRecentService {
         productItems.map((v) => v.product.id),
         language,
       ),
-      this.userLikeRepositoryService.countByProductItemIds(
-        productItems.map((v) => v.id),
-      ),
+      this.productLikeCountService.getCounts(productItems.map((v) => v.id)),
     ]);
 
     return productItems.map((v) =>
       GetUserRecentProductResponse.from(
         v,
         { brand: brandText, product: productText },
-        likeCountMap.get(v.id) ?? 0,
+        likeCounts.getCount(v.id),
       ),
     );
   }

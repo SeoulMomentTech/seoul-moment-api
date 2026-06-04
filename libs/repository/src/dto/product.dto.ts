@@ -38,6 +38,24 @@ export class ProductSortDto {
   }
 }
 
+export class ProductLikeCountDto {
+  @ApiProperty({
+    description: '상품 아이템 ID',
+    example: 1,
+  })
+  productItemId: number;
+
+  @ApiProperty({
+    description: '좋아요 수',
+    example: 54244,
+  })
+  count: number;
+
+  static from(productItemId: number, count: number): ProductLikeCountDto {
+    return plainToInstance(this, { productItemId, count });
+  }
+}
+
 export class ProductFilterDto {
   @ApiProperty({
     description: '옵션 값 ID',

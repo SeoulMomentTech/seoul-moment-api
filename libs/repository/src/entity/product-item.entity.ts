@@ -84,6 +84,14 @@ export class ProductItemEntity extends CommonEntity {
   })
   status: ProductItemStatus;
 
+  @Column('int', {
+    name: 'like_count',
+    default: 0,
+    nullable: false,
+    comment: '좋아요 수 (비정규화)',
+  })
+  likeCount: number;
+
   getEffectivePrice(): number {
     return this.discountPrice || this.price;
   }

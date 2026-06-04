@@ -54,6 +54,12 @@ export class CacheService implements OnModuleInit {
     return result;
   }
 
+  async mget(keys: string[]): Promise<(string | null)[]> {
+    if (keys.length === 0) return [];
+
+    return this.client.mget(keys);
+  }
+
   async incr(key: string) {
     await this.client.incr(key);
   }

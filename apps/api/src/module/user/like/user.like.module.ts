@@ -5,11 +5,13 @@ import { Module } from '@nestjs/common';
 
 import { UserLikeController } from './user.like.controller';
 import { UserLikeService } from './user.like.service';
+import { ProductLikeCountModule } from '../../product/like-count/product-like-count.module';
 
 @Module({
   imports: [
     RepositoryModule,
     CommonAuthModule.forRoot(Configuration.getConfig().JWT_SECRET),
+    ProductLikeCountModule,
   ],
   controllers: [UserLikeController],
   providers: [UserLikeService],

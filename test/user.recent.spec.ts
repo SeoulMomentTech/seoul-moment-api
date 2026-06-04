@@ -179,6 +179,12 @@ describe('UserRecentController (E2E)', () => {
       `INSERT INTO user_product_like (user_id, product_item_id) VALUES ($1, $2)`,
       [userId, productItemId],
     );
+    // 좋아요 수의 소스 오브 트루스는 product_item.like_count 컬럼(비정규화)이다.
+    // 직접 INSERT는 서비스의 write-through 경로를 타지 않으므로, 컬럼도 함께 올려준다.
+    await dataSource.query(
+      `UPDATE product_item SET like_count = like_count + 1 WHERE id = $1`,
+      [productItemId],
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -336,7 +342,7 @@ describe('UserRecentController (E2E)', () => {
       expect(list).toEqual([]);
     });
 
-    it('like 필드는 user_product_like 집계 결과를 반환한다 (userProductLikes 미로딩 회피)', async () => {
+    it('like 필드는 product_item.like_count(비정규화 컬럼) 값을 반환한다', async () => {
       // Given - productItem 하나에 다른 유저 2명이 좋아요
       const { userId, oneTimeToken } = await signUpAndLogin();
       const other1 = await signUpAndLogin();

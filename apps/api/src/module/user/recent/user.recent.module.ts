@@ -6,12 +6,14 @@ import { Module } from '@nestjs/common';
 
 import { UserRecentController } from './user.recent.controller';
 import { UserRecentService } from './user.recent.service';
+import { ProductLikeCountModule } from '../../product/like-count/product-like-count.module';
 
 @Module({
   imports: [
     RepositoryModule,
     CacheModule,
     CommonAuthModule.forRoot(Configuration.getConfig().JWT_SECRET),
+    ProductLikeCountModule,
   ],
   controllers: [UserRecentController],
   providers: [UserRecentService],

@@ -83,6 +83,7 @@ Path aliases defined in `tsconfig.json`:
 - Apply `@nestjs/swagger` decorators on all controllers and DTOs (`@ApiOperation`, `@ApiProperty` with descriptions and examples).
 - Avoid `any` type — define explicit types.
 - Use `ServiceError` for error handling, not raw exceptions.
+- Avoid returning raw `Map`/tuple collections (e.g. `Map<number, number>`) from services/repositories — wrap them in a dedicated DTO (with `static from` and accessor methods like `getCount(id)`) so the shape is named and lookup/default logic is encapsulated.
 
 ## Deployment
 

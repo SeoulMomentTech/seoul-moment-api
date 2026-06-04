@@ -1,3 +1,4 @@
+import { CacheService } from '@app/cache/cache.service';
 import { faker } from '@faker-js/faker';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -16,15 +17,19 @@ describe('UserLikeController (E2E)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
   let languageRepositoryService: LanguageRepositoryService;
+  let cacheService: CacheService;
 
   beforeAll(async () => {
     // Given - 앱 싱글톤 획득 (최초 1회만 부트스트랩)
     app = await getTestApp();
     dataSource = getDataSource(app);
     languageRepositoryService = app.get(LanguageRepositoryService);
+    cacheService = app.get(CacheService);
   }, 60_000);
 
   afterEach(async () => {
+    // like_count 캐시가 테스트 간(시퀀스 RESTART IDENTITY로 id 재사용) 누수되지 않도록 정리
+    await cacheService.deleteAll();
     await truncateTables(dataSource, [
       'user_brand_like',
       'user_product_like',
@@ -223,6 +228,109 @@ describe('UserLikeController (E2E)', () => {
 
       // Then
       expect(res.status).toBe(409);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 좋아요 수(product_item.like_count) write-through 반영
+  // -------------------------------------------------------------------------
+  describe('좋아요 수(like_count) write-through', () => {
+    async function getLikeCount(productItemId: number): Promise<number> {
+      const rows = await dataSource.query(
+        `SELECT like_count FROM product_item WHERE id = $1`,
+        [productItemId],
+      );
+      return Number(rows[0].like_count);
+    }
+
+    it('좋아요를 추가하면 product_item.like_count가 1 증가한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+      const { productItemId } = await createProductItem();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${LIKE_BASE}/product`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ productItemId });
+
+      // Then
+      expect(res.status).toBe(204);
+      expect(await getLikeCount(productItemId)).toBe(1);
+    });
+
+    it('서로 다른 두 유저가 좋아요하면 like_count는 2가 된다', async () => {
+      // Given
+      const user1 = await signUpAndLogin();
+      const user2 = await signUpAndLogin();
+      const { productItemId } = await createProductItem();
+
+      // When
+      await request(app.getHttpServer())
+        .post(`${LIKE_BASE}/product`)
+        .set('Authorization', `Bearer ${user1.oneTimeToken}`)
+        .send({ productItemId });
+      await request(app.getHttpServer())
+        .post(`${LIKE_BASE}/product`)
+        .set('Authorization', `Bearer ${user2.oneTimeToken}`)
+        .send({ productItemId });
+
+      // Then
+      expect(await getLikeCount(productItemId)).toBe(2);
+    });
+
+    it('같은 유저가 중복 좋아요(409)해도 like_count는 1로 유지된다 (이중 카운트 없음)', async () => {
+      // Given - 한 번 좋아요
+      const { oneTimeToken } = await signUpAndLogin();
+      const { productItemId } = await createProductItem();
+      await request(app.getHttpServer())
+        .post(`${LIKE_BASE}/product`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ productItemId });
+
+      // When - 같은 유저가 다시 좋아요
+      const res = await request(app.getHttpServer())
+        .post(`${LIKE_BASE}/product`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ productItemId });
+
+      // Then
+      expect(res.status).toBe(409);
+      expect(await getLikeCount(productItemId)).toBe(1);
+    });
+
+    it('좋아요를 삭제하면 like_count가 1 감소한다', async () => {
+      // Given - 좋아요 등록 (like_count = 1)
+      const { oneTimeToken } = await signUpAndLogin();
+      const { productItemId } = await createProductItem();
+      await request(app.getHttpServer())
+        .post(`${LIKE_BASE}/product`)
+        .set('Authorization', `Bearer ${oneTimeToken}`)
+        .send({ productItemId });
+
+      // When
+      const res = await request(app.getHttpServer())
+        .delete(`${LIKE_BASE}/product/${productItemId}`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+
+      // Then
+      expect(res.status).toBe(204);
+      expect(await getLikeCount(productItemId)).toBe(0);
+    });
+
+    it('좋아요가 없는 상태에서 삭제해도 like_count는 0 미만으로 내려가지 않는다', async () => {
+      // Given - 좋아요 없음 (like_count = 0)
+      const { oneTimeToken } = await signUpAndLogin();
+      const { productItemId } = await createProductItem();
+
+      // When
+      const res = await request(app.getHttpServer())
+        .delete(`${LIKE_BASE}/product/${productItemId}`)
+        .set('Authorization', `Bearer ${oneTimeToken}`);
+
+      // Then
+      expect(res.status).toBe(204);
+      expect(await getLikeCount(productItemId)).toBe(0);
     });
   });
 
