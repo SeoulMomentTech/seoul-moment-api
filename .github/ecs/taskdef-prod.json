@@ -82,6 +82,10 @@
           "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:GOOGLE_SHEET_SERVICE_PRIMARY::"
         },
         {
+          "name": "GOOGLE_OAUTH_CLIENT_ID",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:GOOGLE_OAUTH_CLIENT_ID::"
+        },
+        {
           "name": "SERPER_URL",
           "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:SERPER_URL::"
         },
@@ -116,6 +120,18 @@
         {
           "name": "OPENAI_API_KEY",
           "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:OPENAI_API_KEY::"
+        },
+        {
+          "name": "TWSMS_API_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:TWSMS_API_URL::"
+        },
+        {
+          "name": "TWSMS_USER",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:TWSMS_USER::"
+        },
+        {
+          "name": "TWSMS_PASS",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:TWSMS_PASS::"
         }
       ],
       "logConfiguration": {
