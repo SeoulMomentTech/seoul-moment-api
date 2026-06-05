@@ -122,6 +122,13 @@ export class CommonAuthService {
   async authPhone(redisKey: RedisKey, phone: string) {
     const code = Math.floor(100000 + Math.random() * 900000);
 
+    console.log(code);
+    console.log(Configuration.getConfig().TWSMS_USER);
+    console.log(Configuration.getConfig().TWSMS_PASS);
+    console.log(phone);
+    console.log(redisKey);
+    console.log(Configuration.getConfig().TWSMS_API_URL);
+
     const body = new URLSearchParams({
       username: Configuration.getConfig().TWSMS_USER,
       password: Configuration.getConfig().TWSMS_PASS,
