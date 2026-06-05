@@ -5,6 +5,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
 import { ExternalGoogleAuthService } from '@app/external/google/google-auth.service';
+import { ExternalLineAuthService } from '@app/external/line/line-auth.service';
 import { UpdateUserDto } from '@app/repository/dto/user.dto';
 import { UserEntity } from '@app/repository/entity/user.entity';
 import { UserSnsProvider } from '@app/repository/enum/user-sns.enum';
@@ -17,9 +18,11 @@ import { randomBytes } from 'crypto';
 import { Transactional } from 'typeorm-transactional';
 
 import {
-  PostGoogleLoginResponse,
   PostGoogleSignupRequest,
+  PostLineSignupRequest,
   PostPasswordPhoneVerifyResponse,
+  PostSnsLoginResponse,
+  PostSnsSignupRequest,
   PostUserLoginRequest,
   PostUserLoginResponse,
   PostUserPasswordEmailVerifyResponse,
@@ -35,6 +38,7 @@ export class UserAuthService {
     private readonly commonAuthService: CommonAuthService,
     private readonly authService: AuthService,
     private readonly externalGoogleAuthService: ExternalGoogleAuthService,
+    private readonly externalLineAuthService: ExternalLineAuthService,
   ) {}
 
   async signUp(signUpRequest: PostUserSignUpRequest): Promise<void> {
@@ -71,19 +75,63 @@ export class UserAuthService {
     return this.issueTokens(user.id);
   }
 
-  async googleLogin(idToken: string): Promise<PostGoogleLoginResponse> {
-    const { providerUserId, email, emailVerified } =
-      await this.externalGoogleAuthService.verifyIdToken(idToken);
+  async googleLogin(idToken: string): Promise<PostSnsLoginResponse> {
+    const payload = await this.externalGoogleAuthService.verifyIdToken(idToken);
 
+    return this.snsLogin(UserSnsProvider.GOOGLE, payload);
+  }
+
+  @Transactional()
+  async googleLink(linkToken: string): Promise<PostUserLoginResponse> {
+    return this.snsLink(UserSnsProvider.GOOGLE, linkToken);
+  }
+
+  @Transactional()
+  async googleSignup(
+    signupRequest: PostGoogleSignupRequest,
+  ): Promise<PostUserLoginResponse> {
+    return this.snsSignup(UserSnsProvider.GOOGLE, signupRequest);
+  }
+
+  async lineLogin(idToken: string): Promise<PostSnsLoginResponse> {
+    const payload = await this.externalLineAuthService.verifyIdToken(idToken);
+
+    return this.snsLogin(UserSnsProvider.LINE, payload);
+  }
+
+  @Transactional()
+  async lineLink(linkToken: string): Promise<PostUserLoginResponse> {
+    return this.snsLink(UserSnsProvider.LINE, linkToken);
+  }
+
+  @Transactional()
+  async lineSignup(
+    signupRequest: PostLineSignupRequest,
+  ): Promise<PostUserLoginResponse> {
+    return this.snsSignup(UserSnsProvider.LINE, signupRequest);
+  }
+
+  /**
+   * SNS 로그인 분기 코어. idToken 검증 결과를 받아
+   * 연결됨 → 로그인 / 미가입 → signupToken / 가입됨·미연결 → linkToken 으로 분기한다.
+   */
+  private async snsLogin(
+    provider: UserSnsProvider,
+    {
+      providerUserId,
+      email,
+      emailVerified,
+    }: { providerUserId: string; email: string; emailVerified: boolean },
+  ): Promise<PostSnsLoginResponse> {
     if (!emailVerified) {
       throw new ServiceError(
-        'Google 이메일이 인증되지 않았습니다.',
+        'SNS 이메일이 인증되지 않았습니다.',
         ServiceErrorCode.UNAUTHORIZED,
       );
     }
 
     const linkedSns = await this.userSnsRepositoryService.findByProvider(
-      UserSnsProvider.GOOGLE,
+      provider,
       providerUserId,
     );
 
@@ -97,6 +145,7 @@ export class UserAuthService {
       const signupToken = await this.issueSnsToken(
         { providerUserId, providerEmail: email, email },
         JwtType.SNS_SIGNUP_TOKEN,
+        provider,
       );
 
       return { needsLinkConfirm: false, needsSignup: true, email, signupToken };
@@ -106,16 +155,23 @@ export class UserAuthService {
     const linkToken = await this.issueSnsToken(
       { userId: user.id, providerUserId, providerEmail: email, email },
       JwtType.SNS_LINK_TOKEN,
+      provider,
     );
 
     return { needsLinkConfirm: true, email, linkToken };
   }
 
-  @Transactional()
-  async googleLink(linkToken: string): Promise<PostUserLoginResponse> {
+  /** SNS 계정 연결 코어. linkToken을 검증해 user_sns 행을 추가하고 토큰을 발급한다. */
+  private async snsLink(
+    provider: UserSnsProvider,
+    linkToken: string,
+  ): Promise<PostUserLoginResponse> {
     const payload = await this.commonAuthService.verifyJwt(linkToken);
 
-    if (payload.jwtType !== JwtType.SNS_LINK_TOKEN) {
+    if (
+      payload.jwtType !== JwtType.SNS_LINK_TOKEN ||
+      payload.provider !== provider
+    ) {
       throw new ServiceError(
         '유효하지 않은 link token입니다.',
         ServiceErrorCode.UNAUTHORIZED,
@@ -123,53 +179,66 @@ export class UserAuthService {
     }
 
     const { userId, providerUserId, providerEmail } = payload;
+    await this.linkSnsAccount(provider, userId, providerUserId, providerEmail);
 
+    return this.issueTokens(userId);
+  }
+
+  /** 중복 연결을 검사한 뒤 user_sns 행을 생성한다. 이미 동일 연결이 있으면 무시한다. */
+  private async linkSnsAccount(
+    provider: UserSnsProvider,
+    userId: number,
+    providerUserId: string,
+    providerEmail: string | null,
+  ): Promise<void> {
     const existing = await this.userSnsRepositoryService.findByProvider(
-      UserSnsProvider.GOOGLE,
+      provider,
       providerUserId,
     );
 
     if (existing && existing.userId !== userId) {
       throw new ServiceError(
-        '이미 다른 계정에 연결된 Google 계정입니다.',
+        '이미 다른 계정에 연결된 SNS 계정입니다.',
         ServiceErrorCode.CONFLICT,
       );
     }
 
-    if (!existing) {
-      const userGoogleSns =
-        await this.userSnsRepositoryService.findByUserAndProvider(
-          userId,
-          UserSnsProvider.GOOGLE,
-        );
+    if (existing) return;
 
-      if (userGoogleSns) {
-        throw new ServiceError(
-          '이미 다른 Google 계정이 연결된 계정입니다.',
-          ServiceErrorCode.CONFLICT,
-        );
-      }
-
-      await this.userSnsRepositoryService.createUserSns({
+    const userProviderSns =
+      await this.userSnsRepositoryService.findByUserAndProvider(
         userId,
-        provider: UserSnsProvider.GOOGLE,
-        providerUserId,
-        providerEmail,
-      });
+        provider,
+      );
+
+    if (userProviderSns) {
+      throw new ServiceError(
+        '이미 다른 SNS 계정이 연결된 계정입니다.',
+        ServiceErrorCode.CONFLICT,
+      );
     }
 
-    return this.issueTokens(userId);
+    await this.userSnsRepositoryService.createUserSns({
+      userId,
+      provider,
+      providerUserId,
+      providerEmail,
+    });
   }
 
-  @Transactional()
-  async googleSignup(
-    signupRequest: PostGoogleSignupRequest,
+  /** SNS 회원가입 코어. signupToken을 검증해 신규 user + user_sns를 생성하고 토큰을 발급한다. */
+  private async snsSignup(
+    provider: UserSnsProvider,
+    signupRequest: PostSnsSignupRequest,
   ): Promise<PostUserLoginResponse> {
     const payload = await this.commonAuthService.verifyJwt(
       signupRequest.signupToken,
     );
 
-    if (payload.jwtType !== JwtType.SNS_SIGNUP_TOKEN) {
+    if (
+      payload.jwtType !== JwtType.SNS_SIGNUP_TOKEN ||
+      payload.provider !== provider
+    ) {
       throw new ServiceError(
         '유효하지 않은 signup token입니다.',
         ServiceErrorCode.UNAUTHORIZED,
@@ -180,7 +249,7 @@ export class UserAuthService {
 
     await this.userSnsRepositoryService.createUserSns({
       userId: user.id,
-      provider: UserSnsProvider.GOOGLE,
+      provider,
       providerUserId: payload.providerUserId,
       providerEmail: payload.providerEmail,
     });
@@ -309,7 +378,7 @@ export class UserAuthService {
   }
 
   private async createSnsUser(
-    signupRequest: PostGoogleSignupRequest,
+    signupRequest: PostSnsSignupRequest,
     payload: Record<string, any>,
   ): Promise<UserEntity> {
     await this.userRepositoryService.validateUserNickname(
@@ -339,11 +408,12 @@ export class UserAuthService {
   private async issueSnsToken(
     payload: Record<string, any>,
     jwtType: JwtType,
+    provider: UserSnsProvider,
   ): Promise<string> {
     const expiresIn = jwtType === JwtType.SNS_SIGNUP_TOKEN ? '10m' : '5m';
 
     return this.commonAuthService.generateJwt(
-      { ...payload, provider: UserSnsProvider.GOOGLE },
+      { ...payload, provider },
       jwtType,
       expiresIn,
     );

@@ -152,12 +152,26 @@ export class PostGoogleLoginRequest {
   idToken: string;
 }
 
-export class PostGoogleLoginResponse {
+export class PostLineLoginRequest {
+  @ApiProperty({
+    description: 'LINE Login SDK/LIFF에서 발급받은 id_token',
+    example: 'eyJhbGciOiJSUzI1Ni', // LINE id_token JWT
+  })
+  @IsString()
+  @IsDefined()
+  idToken: string;
+}
+
+/**
+ * SNS 로그인(Google/LINE) 분기 응답 베이스.
+ * Google/LINE의 응답 형태가 동일하여 공통 베이스로 둔다.
+ */
+export class PostSnsLoginResponse {
   @ApiProperty({
     description:
-      'Google 계정 연결 확인이 필요한지 여부. ' +
+      'SNS 계정 연결 확인이 필요한지 여부. ' +
       'true면 email/linkToken이 내려가고, 클라이언트는 연결 확인 모달을 띄운 뒤 ' +
-      '/user/auth/google/link를 호출해야 한다. ' +
+      '해당 provider의 link API를 호출해야 한다. ' +
       'false면 token/refreshToken이 내려가 바로 로그인 처리된다.',
     example: true,
   })
@@ -168,7 +182,7 @@ export class PostGoogleLoginResponse {
   @ApiPropertyOptional({
     description:
       '연결 확인(needsLinkConfirm) 또는 신규 가입(needsSignup)이 필요한 경우, ' +
-      'Google 계정 이메일 (화면 표시용. 서버는 토큰에서 재검증한다)',
+      'SNS 계정 이메일 (화면 표시용. 서버는 토큰에서 재검증한다)',
     example: 'test@test.com',
   })
   @IsString()
@@ -177,7 +191,7 @@ export class PostGoogleLoginResponse {
 
   @ApiPropertyOptional({
     description:
-      '연결 확인이 필요한 경우, /user/auth/google/link에 전달할 단기 JWT',
+      '연결 확인이 필요한 경우, 해당 provider의 link API에 전달할 단기 JWT',
     example: 'linkToken',
   })
   @IsString()
@@ -188,7 +202,7 @@ export class PostGoogleLoginResponse {
     description:
       '가입된 이메일이 없어 SNS 회원가입이 필요한지 여부. ' +
       'true면 email/signupToken이 내려가고, 클라이언트는 닉네임/약관동의 ' +
-      '입력 후 /user/auth/google/signup을 호출해야 한다.',
+      '입력 후 해당 provider의 signup API를 호출해야 한다.',
     example: false,
   })
   @IsBoolean()
@@ -197,7 +211,7 @@ export class PostGoogleLoginResponse {
 
   @ApiPropertyOptional({
     description:
-      'SNS 회원가입이 필요한 경우, /user/auth/google/signup에 전달할 단기 JWT',
+      'SNS 회원가입이 필요한 경우, 해당 provider의 signup API에 전달할 단기 JWT',
     example: 'signupToken',
   })
   @IsString()
@@ -221,6 +235,10 @@ export class PostGoogleLoginResponse {
   refreshToken?: string;
 }
 
+export class PostGoogleLoginResponse extends PostSnsLoginResponse {}
+
+export class PostLineLoginResponse extends PostSnsLoginResponse {}
+
 export class PostGoogleLinkRequest {
   @ApiProperty({
     description: '/user/auth/google/login 응답으로 받은 단기 linkToken',
@@ -231,9 +249,23 @@ export class PostGoogleLinkRequest {
   linkToken: string;
 }
 
-export class PostGoogleSignupRequest {
+export class PostLineLinkRequest {
   @ApiProperty({
-    description: '/user/auth/google/login 응답으로 받은 단기 signupToken',
+    description: '/user/auth/line/login 응답으로 받은 단기 linkToken',
+    example: 'linkToken',
+  })
+  @IsString()
+  @IsDefined()
+  linkToken: string;
+}
+
+/**
+ * SNS 회원가입(Google/LINE) 요청 베이스.
+ * signupToken + 닉네임 + 약관동의로 구성되며 provider별로 동일하다.
+ */
+export class PostSnsSignupRequest {
+  @ApiProperty({
+    description: 'SNS login 응답으로 받은 단기 signupToken',
     example: 'signupToken',
   })
   @IsString()
@@ -272,6 +304,10 @@ export class PostGoogleSignupRequest {
   @IsOptional()
   recommendAgreed?: boolean;
 }
+
+export class PostGoogleSignupRequest extends PostSnsSignupRequest {}
+
+export class PostLineSignupRequest extends PostSnsSignupRequest {}
 
 export class PostPhoneCodeRequest {
   @ApiProperty({

@@ -30,6 +30,10 @@ import {
   PostGoogleSignupRequest,
   PostInfoPhoneCodeRequest,
   PostInfoPhoneVerifyRequest,
+  PostLineLinkRequest,
+  PostLineLoginRequest,
+  PostLineLoginResponse,
+  PostLineSignupRequest,
   PostNicknameValidateRequest,
   PostPasswordPhoneCodeRequest,
   PostPasswordPhoneVerifyRequest,
@@ -59,6 +63,19 @@ const GOOGLE_AUTH_FLOW = `**Google 인증 전체 플로우**
 3. link / signup 성공 → 200 { token, refreshToken } (로그인 완료)
 
 판단 기준: 응답에 token이 있으면 즉시 로그인. 없으면 needsLinkConfirm / needsSignup으로 다음 단계 결정. 모든 정상 분기는 HTTP 200 (가입 여부로 404 미반환). linkToken 5분 / signupToken 10분 만료.`;
+
+const LINE_AUTH_FLOW = `**LINE 인증 전체 플로우**
+
+1. POST /user/auth/line/login { idToken }
+   - 이미 연결된 계정 → 200 { needsLinkConfirm: false, token, refreshToken } (로그인 완료)
+   - 가입됨 + LINE 미연결 → 200 { needsLinkConfirm: true, email, linkToken } → 2-A
+   - 미가입(신규) → 200 { needsLinkConfirm: false, needsSignup: true, email, signupToken } → 2-B
+2. 다음 단계
+   - 2-A. 연결 확인 모달 → POST /user/auth/line/link { linkToken }
+   - 2-B. 닉네임/약관 입력 → POST /user/auth/line/signup { signupToken, nickname, ...약관동의 }
+3. link / signup 성공 → 200 { token, refreshToken } (로그인 완료)
+
+판단 기준: 응답에 token이 있으면 즉시 로그인. 없으면 needsLinkConfirm / needsSignup으로 다음 단계 결정. 모든 정상 분기는 HTTP 200 (가입 여부로 404 미반환). linkToken 5분 / signupToken 10분 만료. LINE은 이메일 제공이 필수이며, 이메일 미동의 시 401을 반환한다.`;
 
 @Controller('user/auth')
 export class UserAuthController {
@@ -147,6 +164,70 @@ export class UserAuthController {
     @Body() body: PostGoogleSignupRequest,
   ): Promise<ResponseDataDto<PostUserLoginResponse>> {
     const result = await this.userAuthService.googleSignup(body);
+
+    return new ResponseDataDto(plainToInstance(PostUserLoginResponse, result));
+  }
+
+  @Post('line/login')
+  @ApiOperation({
+    summary: 'LINE 로그인 / 연결확인 / 신규가입 분기',
+    description:
+      LINE_AUTH_FLOW +
+      '\n\n▶ 현재 API: **1단계** — id_token 검증 후 ' +
+      '로그인 / 연결확인(linkToken) / 신규가입(signupToken) 분기 판단',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '유효하지 않은 LINE idToken')
+  @ResponseData(PostLineLoginResponse)
+  async postLineLogin(
+    @Body() body: PostLineLoginRequest,
+  ): Promise<ResponseDataDto<PostLineLoginResponse>> {
+    const result = await this.userAuthService.lineLogin(body.idToken);
+
+    return new ResponseDataDto(plainToInstance(PostLineLoginResponse, result));
+  }
+
+  @Post('line/link')
+  @ApiOperation({
+    summary: 'LINE 계정 연결 (2-A단계)',
+    description:
+      LINE_AUTH_FLOW +
+      '\n\n▶ 현재 API: **2-A 단계** — 기존 계정에 user_sns 행을 ' +
+      '추가(연결)하고 access/refresh 토큰을 발급한다. ' +
+      'linkToken은 line/login 응답에서 받는다.',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.UNAUTHORIZED, 'linkToken 만료 또는 변조')
+  @ResponseException(HttpStatus.CONFLICT, '이미 다른 계정에 연결된 LINE 계정')
+  @ResponseData(PostUserLoginResponse)
+  async postLineLink(
+    @Body() body: PostLineLinkRequest,
+  ): Promise<ResponseDataDto<PostUserLoginResponse>> {
+    const result = await this.userAuthService.lineLink(body.linkToken);
+
+    return new ResponseDataDto(plainToInstance(PostUserLoginResponse, result));
+  }
+
+  @Post('line/signup')
+  @ApiOperation({
+    summary: 'LINE SNS 회원가입 (2-B단계)',
+    description:
+      LINE_AUTH_FLOW +
+      '\n\n▶ 현재 API: **2-B 단계** — signupToken + 닉네임/약관동의로 ' +
+      '신규 user + user_sns를 생성하고 access/refresh 토큰을 발급한다. ' +
+      'signupToken은 line/login 응답에서 받는다.',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.UNAUTHORIZED, 'signupToken 만료 또는 변조')
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '이미 존재하는 닉네임 또는 이미 가입된 이메일',
+  )
+  @ResponseData(PostUserLoginResponse)
+  async postLineSignup(
+    @Body() body: PostLineSignupRequest,
+  ): Promise<ResponseDataDto<PostUserLoginResponse>> {
+    const result = await this.userAuthService.lineSignup(body);
 
     return new ResponseDataDto(plainToInstance(PostUserLoginResponse, result));
   }

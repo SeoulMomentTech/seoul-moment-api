@@ -15,6 +15,7 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
 
 import { GoogleOauthTestController } from '../google-oauth-test.controller';
 import { HealthController } from '../health.controller';
+import { LineOauthTestController } from '../line-oauth-test.controller';
 import { AdminModule } from './admin/admin.module';
 import { ArticleModule } from './article/article.module';
 import { AuthModule } from './auth/auth.module';
@@ -70,7 +71,11 @@ import { UserModule } from './user/user.module';
     BrandPromotionModule,
     UserModule,
   ],
-  controllers: [HealthController, GoogleOauthTestController],
+  controllers: [
+    HealthController,
+    GoogleOauthTestController,
+    LineOauthTestController,
+  ],
   providers: [
     {
       provide: APP_FILTER,

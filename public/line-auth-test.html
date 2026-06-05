@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LINE 로그인 플로우 테스트</title>
+    <!-- LINE LIFF SDK (구글 GIS에 해당하는 LINE 공식 클라이언트 SDK) -->
+    <script
+      charset="utf-8"
+      src="https://static.line-scdn.net/liff/edge/2/sdk.js"
+    ></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        max-width: 760px;
+        margin: 24px auto;
+        padding: 0 16px;
+        color: #1a1a1a;
+        line-height: 1.5;
+      }
+      h1 {
+        font-size: 20px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 20px 0 8px;
+        color: #444;
+      }
+      code {
+        background: #eee;
+        padding: 1px 4px;
+        border-radius: 4px;
+      }
+      .card {
+        border: 1px solid #e2e2e2;
+        border-radius: 10px;
+        padding: 16px;
+        margin: 12px 0;
+        background: #fafafa;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin: 8px 0 4px;
+      }
+      input[type='text'],
+      textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 13px;
+        font-family: inherit;
+      }
+      textarea {
+        min-height: 70px;
+        resize: vertical;
+        word-break: break-all;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 400;
+        margin: 4px 0;
+      }
+      .row input {
+        width: auto;
+      }
+      button {
+        padding: 10px 16px;
+        border: 0;
+        border-radius: 6px;
+        background: #06c755;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+      button.secondary {
+        background: #5f6368;
+        font-weight: 400;
+        font-size: 13px;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 360px;
+        overflow: auto;
+      }
+      .hidden {
+        display: none;
+      }
+      .hint {
+        font-size: 12px;
+        color: #888;
+        margin-top: 4px;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #e6f9ef;
+        color: #06c755;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>LINE 로그인 플로우 테스트</h1>
+    <p class="hint">
+      seoul-moment-api 의 <code>/user/auth/line/*</code> 3단계 플로우(로그인 ·
+      연결확인 · 신규가입)를 브라우저에서 직접 검증하는 도구입니다. LINE 공식
+      <b>LIFF SDK</b>로 로그인해 id_token을 프론트에서 직접 받습니다(서버 교환
+      불필요). scope는 <code>openid profile</code>이라 이메일 권한 심사 전에도
+      동작합니다(이메일이 없으면 서버가 placeholder로 가입).
+    </p>
+
+    <div class="card">
+      <h2>설정</h2>
+      <label>API Base URL</label>
+      <input
+        id="apiBase"
+        type="text"
+        placeholder="비우면 이 페이지의 origin을 사용 (서버가 직접 서빙하므로 권장)"
+      />
+      <label>LIFF ID</label>
+      <input id="liffId" type="text" placeholder="예: 1234567890-abcdEFGH" />
+      <button id="initBtn">설정 적용 & LIFF 초기화</button>
+      <p class="hint">
+        ⚠️ LINE Developers Console → 해당 LINE Login 채널 → <b>LIFF 탭</b>에서 LIFF
+        앱을 추가하고, <b>Endpoint URL</b>을 이 페이지 주소(<code id="endpointHint"></code>)로,
+        <b>Scope</b>는 <code>openid</code> + <code>profile</code>로 설정하세요.
+        그 후 발급된 LIFF ID를 위에 입력합니다. (개발 중에는 endpoint로
+        <code>http://localhost</code>도 허용됩니다.)
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>1단계 · LINE 로그인</h2>
+      <button id="loginBtn" disabled>LINE으로 로그인</button>
+      <p class="hint" id="liffStatus">LIFF 초기화 대기 중…</p>
+    </div>
+
+    <!-- 2-A. 연결 확인 -->
+    <div id="linkCard" class="card hidden">
+      <h2>2-A단계 · 기존 계정에 LINE 연결</h2>
+      <p>
+        <span class="pill">needsLinkConfirm</span>
+        이미 가입된 이메일(<b id="linkEmail"></b>)입니다. 이 계정에 LINE을
+        연결할까요?
+      </p>
+      <button id="linkBtn">연결하기 (POST /line/link)</button>
+    </div>
+
+    <!-- 2-B. 신규 가입 -->
+    <div id="signupCard" class="card hidden">
+      <h2>2-B단계 · LINE 신규 회원가입</h2>
+      <p>
+        <span class="pill">needsSignup</span>
+        미가입(<b id="signupEmail"></b>)입니다. 닉네임을 입력해 가입하세요.
+      </p>
+      <label>닉네임</label>
+      <input id="nickname" type="text" placeholder="nickname" />
+      <div class="row">
+        <input id="newProductAgreed" type="checkbox" /><label
+          for="newProductAgreed"
+          style="margin: 0"
+          >신상품 및 기획전 출시 알림</label
+        >
+      </div>
+      <div class="row">
+        <input id="adAgreed" type="checkbox" /><label
+          for="adAgreed"
+          style="margin: 0"
+          >광고 및 이벤트 할인 이메일</label
+        >
+      </div>
+      <div class="row">
+        <input id="recommendAgreed" type="checkbox" /><label
+          for="recommendAgreed"
+          style="margin: 0"
+          >개인 맞춤 상품 추천 알림</label
+        >
+      </div>
+      <button id="signupBtn">가입하기 (POST /line/signup)</button>
+    </div>
+
+    <!-- 로그인 완료 -->
+    <div id="doneCard" class="card hidden">
+      <h2>✅ 로그인 완료</h2>
+      <p>access / refresh 토큰이 발급되었습니다. 아래 로그를 확인하세요.</p>
+      <button id="logoutBtn" class="secondary">LINE 로그아웃(다시 테스트)</button>
+    </div>
+
+    <div class="card">
+      <h2>로그</h2>
+      <button id="clearLog" class="secondary">로그 지우기</button>
+      <pre id="log">대기 중…</pre>
+    </div>
+
+    <script>
+      // --- 상태 ---
+      let linkToken = null;
+      let signupToken = null;
+      let liffReady = false;
+
+      const $ = (id) => document.getElementById(id);
+
+      // 서버가 환경(LOCAL/DEV)에 맞춰 주입한다.
+      // 서버 없이 파일을 직접 열면 치환되지 않으므로 현재 origin으로 폴백.
+      const RAW_SERVED_API_BASE = '__API_BASE__';
+      const SERVED_API_BASE = RAW_SERVED_API_BASE.startsWith('__')
+        ? window.location.origin
+        : RAW_SERVED_API_BASE;
+      const apiBase = () =>
+        ($('apiBase').value.trim() || SERVED_API_BASE).replace(/\/$/, '');
+
+      function log(label, data) {
+        const el = $('log');
+        const time = new Date().toLocaleTimeString();
+        const body =
+          typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        el.textContent = `[${time}] ${label}\n${body}\n\n` + el.textContent;
+      }
+
+      function show(id) {
+        $(id).classList.remove('hidden');
+      }
+      function hide(id) {
+        $(id).classList.add('hidden');
+      }
+      function resetCards() {
+        hide('linkCard');
+        hide('signupCard');
+        hide('doneCard');
+      }
+
+      // --- 백엔드 호출 ---
+      async function callApi(path, payload) {
+        log(`▶ POST ${path}`, payload);
+        try {
+          const res = await fetch(apiBase() + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const json = await res.json().catch(() => ({}));
+          log(`◀ ${res.status} ${path}`, json);
+          return { status: res.status, json };
+        } catch (e) {
+          log(`✖ 네트워크 오류 ${path}`, String(e));
+          throw e;
+        }
+      }
+
+      // --- LIFF 초기화 ---
+      async function initLiff() {
+        const liffId = $('liffId').value.trim();
+        if (!liffId) return alert('LIFF ID를 입력하세요.');
+        localStorage.setItem('lineLiffId', liffId);
+
+        try {
+          await liff.init({ liffId });
+          liffReady = true;
+          $('loginBtn').disabled = false;
+          $('liffStatus').textContent = liff.isLoggedIn()
+            ? '이미 LINE 로그인됨 — "LINE으로 로그인"을 눌러 진행하세요.'
+            : 'LIFF 준비 완료 — "LINE으로 로그인"을 누르세요.';
+          log('LIFF 초기화 완료', { liffId, isLoggedIn: liff.isLoggedIn() });
+
+          // 로그인 리다이렉트로 돌아온 경우 자동으로 id_token 처리
+          if (liff.isLoggedIn()) handleLogin();
+        } catch (e) {
+          log('✖ LIFF 초기화 실패', String(e && e.message ? e.message : e));
+          alert('LIFF 초기화 실패: ' + (e && e.message ? e.message : e));
+        }
+      }
+
+      // --- 1단계: 로그인 → id_token 획득 → 백엔드 호출 ---
+      async function handleLogin() {
+        if (!liffReady) return alert('먼저 LIFF를 초기화하세요.');
+
+        if (!liff.isLoggedIn()) {
+          // LINE 인증 화면으로 이동했다가 이 페이지(endpoint)로 복귀한다.
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        const idToken = liff.getIDToken();
+        if (!idToken) {
+          return alert(
+            'id_token이 없습니다. LIFF 앱 scope에 openid가 있는지 확인하세요.',
+          );
+        }
+        log('LINE id_token 수신', idToken.slice(0, 32) + '…');
+        resetCards();
+
+        const { json } = await callApi('/user/auth/line/login', { idToken });
+        const data = json?.data;
+        if (!data) return;
+
+        if (data.token) {
+          show('doneCard');
+          return;
+        }
+        if (data.needsLinkConfirm) {
+          linkToken = data.linkToken;
+          $('linkEmail').textContent = data.email || '';
+          show('linkCard');
+          return;
+        }
+        if (data.needsSignup) {
+          signupToken = data.signupToken;
+          $('signupEmail').textContent = data.email || '(이메일 없음)';
+          show('signupCard');
+          return;
+        }
+      }
+
+      // --- 2-A: 연결 ---
+      $('linkBtn').addEventListener('click', async () => {
+        const { json } = await callApi('/user/auth/line/link', { linkToken });
+        if (json?.data?.token) {
+          resetCards();
+          show('doneCard');
+        }
+      });
+
+      // --- 2-B: 가입 ---
+      $('signupBtn').addEventListener('click', async () => {
+        const nickname = $('nickname').value.trim();
+        if (!nickname) return alert('닉네임을 입력하세요.');
+        const { json } = await callApi('/user/auth/line/signup', {
+          signupToken,
+          nickname,
+          newProductAgreed: $('newProductAgreed').checked,
+          adAgreed: $('adAgreed').checked,
+          recommendAgreed: $('recommendAgreed').checked,
+        });
+        if (json?.data?.token) {
+          resetCards();
+          show('doneCard');
+        }
+      });
+
+      $('initBtn').addEventListener('click', initLiff);
+      $('loginBtn').addEventListener('click', handleLogin);
+      $('logoutBtn').addEventListener('click', () => {
+        if (liffReady && liff.isLoggedIn()) liff.logout();
+        location.reload();
+      });
+      $('clearLog').addEventListener('click', () => {
+        $('log').textContent = '대기 중…';
+      });
+
+      // --- 저장된 설정 복원 + SDK 로드 후 자동 초기화 ---
+      window.addEventListener('load', () => {
+        $('endpointHint').textContent = window.location.href.split('#')[0];
+        const savedId = localStorage.getItem('lineLiffId');
+        if (savedId) $('liffId').value = savedId;
+
+        const timer = setInterval(() => {
+          if (window.liff) {
+            clearInterval(timer);
+            if ($('liffId').value.trim()) initLiff();
+            else $('liffStatus').textContent = 'LIFF ID를 입력하고 초기화하세요.';
+          }
+        }, 300);
+      });
+    </script>
+  </body>
+</html>
