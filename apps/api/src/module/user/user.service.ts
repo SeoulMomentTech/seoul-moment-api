@@ -77,8 +77,6 @@ export class UserService {
     id: number,
     dto: PatchUserProfileRequest,
   ): Promise<void> {
-    await this.userRepositoryService.getUserProfile(id);
-
     await this.userRepositoryService.updateUserProfile({
       userId: id,
       gender: dto.gender,
@@ -205,8 +203,6 @@ export class UserService {
     id: number,
     dto: PatchUserProfileNicknameRequest,
   ): Promise<void> {
-    await this.userRepositoryService.getUserProfile(id);
-
     await this.validateAndUpdateNickname(id, dto.nickname);
   }
 
@@ -214,8 +210,6 @@ export class UserService {
     id: number,
     dto: PatchUserProfileNameRequest,
   ): Promise<void> {
-    await this.userRepositoryService.getUserProfile(id);
-
     await this.validateAndUpdateName(id, dto.name);
   }
 

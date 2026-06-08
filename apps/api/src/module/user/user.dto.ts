@@ -1,3 +1,4 @@
+import { EmptyStringToNull } from '@app/common/decorator/empty-string-to-null.decorator';
 import { UserFitEntity } from '@app/repository/entity/user-fit.entity';
 import { UserProfileEntity } from '@app/repository/entity/user-profile.entity';
 import { UserEntity } from '@app/repository/entity/user.entity';
@@ -8,6 +9,7 @@ import {
   IsBoolean,
   IsDateString,
   IsDefined,
+  IsEmpty,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -241,6 +243,7 @@ export class PatchUserProfileRequest {
     example: 'MALE',
     enum: UserProfileGender,
   })
+  @EmptyStringToNull()
   @IsEnum(UserProfileGender)
   @IsOptional()
   gender?: UserProfileGender;
@@ -249,10 +252,8 @@ export class PatchUserProfileRequest {
     description: '생년월일 (YYYY-MM-DD)',
     example: '2025-01-01',
   })
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
-    message: 'birthDate는 YYYY-MM-DD 형식이어야 합니다.',
-  })
-  @IsDateString()
+  @EmptyStringToNull()
+  @IsString()
   @IsOptional()
   birthDate?: string;
 
@@ -260,6 +261,7 @@ export class PatchUserProfileRequest {
     description: '우편번호',
     example: '12345',
   })
+  @EmptyStringToNull()
   @IsString()
   @IsOptional()
   postalCode?: string;
@@ -268,6 +270,7 @@ export class PatchUserProfileRequest {
     description: '시/도',
     example: '서울',
   })
+  @EmptyStringToNull()
   @IsString()
   @IsOptional()
   city?: string;
@@ -276,6 +279,7 @@ export class PatchUserProfileRequest {
     description: '시/군/구',
     example: '강남구',
   })
+  @EmptyStringToNull()
   @IsString()
   @IsOptional()
   district?: string;
@@ -284,6 +288,7 @@ export class PatchUserProfileRequest {
     description: '상세 주소',
     example: '12345',
   })
+  @EmptyStringToNull()
   @IsString()
   @IsOptional()
   detailAddress?: string;
