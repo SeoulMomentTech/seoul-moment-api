@@ -4,18 +4,19 @@ import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateAdminNewsImage } from 'apps/api/src/module/admin/news/admin.news.dto';
-import { In, Like, Not, Repository } from 'typeorm';
+import { Equal, In, Like, Not, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 
 import { LanguageRepositoryService } from './language.repository.service';
-import { UpdateNewsDto } from '../dto/news.dto';
+import { FindNewsFilterDto, UpdateNewsDto } from '../dto/news.dto';
 import { MultilingualTextEntity } from '../entity/multilingual-text.entity';
+import { NewsCategoryEntity } from '../entity/news-category.entity';
+import { NewsHashtagEntity } from '../entity/news-hashtag.entity';
 import { NewsSectionImageEntity } from '../entity/news-section-image.entity';
 import { NewsSectionEntity } from '../entity/news-section.entity';
 import { NewsEntity } from '../entity/news.entity';
 import { EntityType } from '../enum/entity.enum';
 import { NewsStatus } from '../enum/news.enum';
-import { NewsSearchEnum } from '../enum/news.repository.enum';
 import { SortOrderHelper } from '../helper/sort-order.helper';
 
 @Injectable()
@@ -29,6 +30,12 @@ export class NewsRepositoryService {
 
     @InjectRepository(NewsSectionImageEntity)
     private readonly newsSectionImageRepository: Repository<NewsSectionImageEntity>,
+
+    @InjectRepository(NewsHashtagEntity)
+    private readonly newsHashtagRepository: Repository<NewsHashtagEntity>,
+
+    @InjectRepository(NewsCategoryEntity)
+    private readonly newsCategoryRepository: Repository<NewsCategoryEntity>,
 
     @InjectRepository(MultilingualTextEntity)
     private readonly multilingualTextRepository: Repository<MultilingualTextEntity>,
@@ -123,12 +130,19 @@ export class NewsRepositoryService {
   }
 
   async findNewsByFilter(
-    page: number,
-    count: number,
-    searchName?: string,
-    searchColumn?: NewsSearchEnum,
-    sort: DatabaseSort = DatabaseSort.DESC,
+    filter: FindNewsFilterDto,
   ): Promise<[NewsEntity[], number]> {
+    const {
+      page,
+      count,
+      searchName,
+      searchColumn,
+      sort = DatabaseSort.DESC,
+      newsCategoryId,
+      hashtagId,
+      isEditorPick,
+    } = filter;
+
     let newsIds: number[] = [];
 
     if (searchName) {
@@ -146,6 +160,11 @@ export class NewsRepositoryService {
     const [newsEntities, total] = await this.newsRepository.findAndCount({
       where: {
         id: searchName ? In(newsIds) : undefined,
+        newsCategoryId:
+          newsCategoryId !== undefined ? Equal(newsCategoryId) : undefined,
+        hashtagId: hashtagId !== undefined ? Equal(hashtagId) : undefined,
+        editorPick:
+          isEditorPick !== undefined ? Equal(isEditorPick) : undefined,
       },
       order: {
         createDate: sort,
@@ -204,5 +223,27 @@ export class NewsRepositoryService {
 
   async deleteNewsSectionById(id: number) {
     await this.newsSectionRepository.delete(id);
+  }
+
+  async findNewsHashtagList(): Promise<NewsHashtagEntity[]> {
+    return this.newsHashtagRepository.find({
+      order: { id: DatabaseSort.ASC },
+    });
+  }
+
+  async findNewsCategoryList(): Promise<NewsCategoryEntity[]> {
+    return this.newsCategoryRepository.find({
+      order: { id: DatabaseSort.ASC },
+    });
+  }
+
+  async findNewsByNewsCategoryId(
+    newsCategoryId: number,
+  ): Promise<NewsEntity[]> {
+    return this.newsRepository.find({
+      where: {
+        newsCategoryId,
+      },
+    });
   }
 }

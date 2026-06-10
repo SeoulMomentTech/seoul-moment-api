@@ -31,6 +31,8 @@ import { HomeSectionImageEntity } from './entity/home-section-image.entity';
 import { HomeSectionEntity } from './entity/home-section.entity';
 import { LanguageEntity } from './entity/language.entity';
 import { MultilingualTextEntity } from './entity/multilingual-text.entity';
+import { NewsCategoryEntity } from './entity/news-category.entity';
+import { NewsHashtagEntity } from './entity/news-hashtag.entity';
 import { NewsSectionImageEntity } from './entity/news-section-image.entity';
 import { NewsSectionEntity } from './entity/news-section.entity';
 import { NewsEntity } from './entity/news.entity';
@@ -102,6 +104,8 @@ import { UserRepositoryService } from './service/user.repository.service';
       NewsEntity,
       NewsSectionEntity,
       NewsSectionImageEntity,
+      NewsHashtagEntity,
+      NewsCategoryEntity,
       ArticleEntity,
       ArticleSectionEntity,
       ArticleSectionImageEntity,

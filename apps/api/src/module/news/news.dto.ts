@@ -1,5 +1,6 @@
 /* eslint-disable max-lines-per-function */
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { NewsCategoryEntity } from '@app/repository/entity/news-category.entity';
 import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
@@ -285,4 +286,59 @@ export class GetNewsListRequest {
   @Type(() => Number)
   @IsDefined()
   count: number;
+}
+
+export class GetNewsDashboardHashtagResponse {
+  @ApiProperty({ description: '해시태그 이름', example: '해시태그1' })
+  name: string;
+
+  @ApiProperty({
+    description: '해시태그 뉴스 리스트',
+    type: [GetNewsListResponse],
+  })
+  list: GetNewsListResponse[];
+}
+
+export class GetNewsCategoryResponse {
+  @ApiProperty({ description: '카테고리 ID', example: 1 })
+  categoryId: number;
+
+  @ApiProperty({ description: '카테고리 이름', example: '브랜드 뉴스' })
+  name: string;
+
+  static from(entity: NewsCategoryEntity) {
+    return plainToInstance(this, {
+      categoryId: entity.id,
+      name: entity.name,
+    });
+  }
+}
+
+export class GetNewsDashboardResponse {
+  @ApiProperty({ description: '최근 뉴스 리스트', type: [GetNewsListResponse] })
+  recentList: GetNewsListResponse[];
+
+  @ApiProperty({
+    description: '편집자 추천 리스트',
+    type: [GetNewsListResponse],
+  })
+  editorPickList: GetNewsListResponse[];
+
+  @ApiProperty({
+    description: '해시태그 섹션 (선택된 해시태그 이름과 뉴스 리스트)',
+    type: GetNewsDashboardHashtagResponse,
+  })
+  hashtag: GetNewsDashboardHashtagResponse;
+
+  @ApiProperty({
+    description: '뉴스 카테고리 리스트',
+    type: [GetNewsListResponse],
+  })
+  newsCategoryCardList: GetNewsListResponse[];
+
+  @ApiProperty({
+    description: '뉴스 카테고리 리스트',
+    type: [GetNewsCategoryResponse],
+  })
+  newsCategoryList: GetNewsCategoryResponse[];
 }

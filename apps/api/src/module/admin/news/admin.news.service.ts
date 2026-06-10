@@ -38,13 +38,13 @@ export class AdminNewsService {
     request: AdminNewsListRequest,
   ): Promise<[GetAdminNewsResponse[], number]> {
     const [newsEntityList, total] =
-      await this.newsRepositoryService.findNewsByFilter(
-        request.page,
-        request.count,
-        request.search,
-        request.searchColumn,
-        request.sort,
-      );
+      await this.newsRepositoryService.findNewsByFilter({
+        page: request.page,
+        count: request.count,
+        searchName: request.search,
+        searchColumn: request.searchColumn,
+        sort: request.sort,
+      });
 
     const languageArray =
       await this.languageRepositoryService.findAllActiveLanguages();

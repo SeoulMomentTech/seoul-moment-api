@@ -11,6 +11,8 @@ import {
 import { BrandEntity } from './brand.entity';
 import { CategoryEntity } from './category.entity';
 import { CommonEntity } from './common.entity';
+import { NewsCategoryEntity } from './news-category.entity';
+import { NewsHashtagEntity } from './news-hashtag.entity';
 import { NewsSectionEntity } from './news-section.entity';
 import { EntityType } from '../enum/entity.enum';
 import { NewsStatus } from '../enum/news.enum';
@@ -26,6 +28,12 @@ export class NewsEntity extends CommonEntity {
   @Column('int', { name: 'category_id', nullable: true })
   categoryId: number;
 
+  @Column('int', { name: 'news_category_id', nullable: true })
+  newsCategoryId?: number;
+
+  @Column('int', { name: 'hashtag_id', nullable: true })
+  hashtagId?: number;
+
   @Column('int', { name: 'brand_id', nullable: true })
   brandId?: number;
 
@@ -40,6 +48,9 @@ export class NewsEntity extends CommonEntity {
 
   @Column('text', { nullable: true })
   homeImage: string;
+
+  @Column('boolean', { default: false })
+  editorPick: boolean;
 
   @Column('enum', {
     enum: NewsStatus,
@@ -64,11 +75,29 @@ export class NewsEntity extends CommonEntity {
   @JoinColumn({ name: 'brand_id' })
   brand: BrandEntity;
 
+  @ManyToOne(() => NewsHashtagEntity, (hashtag) => hashtag.news, {
+    eager: true,
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  @JoinColumn({ name: 'hashtag_id' })
+  hashtag: NewsHashtagEntity;
+
   @OneToMany(() => NewsSectionEntity, (section) => section.news, {
     eager: true,
     cascade: true,
   })
   section: NewsSectionEntity[];
+
+  @ManyToOne(() => NewsCategoryEntity, (newsCategory) => newsCategory.news, {
+    eager: true,
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  @JoinColumn({ name: 'news_category_id' })
+  newsCategory: NewsCategoryEntity;
 
   getProfileImage(): string {
     return this.profileImage
