@@ -6,8 +6,9 @@ import { NewsEntity } from '@app/repository/entity/news.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
-import { IsDefined, IsNumber } from 'class-validator';
+import { IsDefined, IsNumber, IsOptional } from 'class-validator';
 
+import { ListFilterDto } from '../admin/admin.dto';
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
 export class GetLastNews {
@@ -315,30 +316,43 @@ export class GetNewsCategoryResponse {
 }
 
 export class GetNewsDashboardResponse {
-  @ApiProperty({ description: '최근 뉴스 리스트', type: [GetNewsListResponse] })
+  @ApiProperty({
+    description: '최근 뉴스 리스트 5개',
+    type: [GetNewsListResponse],
+  })
   recentList: GetNewsListResponse[];
 
   @ApiProperty({
-    description: '편집자 추천 리스트',
+    description: '편집자 추천 리스트 4개',
     type: [GetNewsListResponse],
   })
   editorPickList: GetNewsListResponse[];
 
   @ApiProperty({
-    description: '해시태그 섹션 (선택된 해시태그 이름과 뉴스 리스트)',
+    description: '해시태그 섹션 (선택된 해시태그 이름과 뉴스 리스트 4개)',
     type: GetNewsDashboardHashtagResponse,
   })
   hashtag: GetNewsDashboardHashtagResponse;
 
   @ApiProperty({
-    description: '뉴스 카테고리 리스트',
+    description: '뉴스 카테고리 리스트 4개',
     type: [GetNewsListResponse],
   })
   newsCategoryCardList: GetNewsListResponse[];
 
   @ApiProperty({
-    description: '뉴스 카테고리 리스트',
+    description: '뉴스 카테고리 리스트 전체',
     type: [GetNewsCategoryResponse],
   })
   newsCategoryList: GetNewsCategoryResponse[];
+}
+
+export class GetNewsCategoryRequest extends ListFilterDto {
+  @ApiPropertyOptional({
+    description: '뉴스 카테고리 ID',
+  })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  categoryId?: number;
 }

@@ -237,13 +237,22 @@ export class NewsRepositoryService {
     });
   }
 
-  async findNewsByNewsCategoryId(
-    newsCategoryId: number,
-  ): Promise<NewsEntity[]> {
-    return this.newsRepository.find({
+  async findNewsByNewsCategoryFilter(
+    count: number,
+    page: number,
+    sort: DatabaseSort = DatabaseSort.DESC,
+    newsCategoryId?: number,
+  ): Promise<[NewsEntity[], number]> {
+    return this.newsRepository.findAndCount({
       where: {
-        newsCategoryId,
+        newsCategoryId:
+          newsCategoryId !== undefined ? Equal(newsCategoryId) : undefined,
       },
+      order: {
+        createDate: sort,
+      },
+      skip: (page - 1) * count,
+      take: count,
     });
   }
 }

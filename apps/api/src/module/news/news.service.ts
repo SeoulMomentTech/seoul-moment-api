@@ -8,6 +8,7 @@ import { NewsRepositoryService } from '@app/repository/service/news.repository.s
 import { Injectable } from '@nestjs/common';
 
 import {
+  GetNewsCategoryRequest,
   GetNewsCategoryResponse,
   GetNewsDashboardResponse,
   GetNewsListResponse,
@@ -134,12 +135,17 @@ export class NewsService {
     };
   }
 
-  async getNewsByNewsCategoryId(
-    newsCategoryId: number,
+  async getNewsByNewsCategoryFilter(
+    query: GetNewsCategoryRequest,
     language: LanguageCode,
-  ): Promise<GetNewsListResponse[]> {
-    const newsEntites =
-      await this.newsRepositoryService.findNewsByNewsCategoryId(newsCategoryId);
+  ): Promise<[GetNewsListResponse[], number]> {
+    const [newsEntites, total] =
+      await this.newsRepositoryService.findNewsByNewsCategoryFilter(
+        query.count,
+        query.page,
+        query.sort,
+        query.categoryId,
+      );
 
     const newsText =
       await this.languageRepositoryService.findMultilingualTextsByEntities(
@@ -147,7 +153,10 @@ export class NewsService {
         newsEntites.map((v) => v.id),
         language,
       );
-    return newsEntites.map((v) => GetNewsListResponse.from(v, newsText));
+    return [
+      newsEntites.map((v) => GetNewsListResponse.from(v, newsText)),
+      total,
+    ];
   }
 
   private async findDashboardHashtagName(
@@ -199,14 +208,14 @@ export class NewsService {
         newsCategoryId
           ? this.newsRepositoryService.findNewsByFilter({
               page: 1,
-              count: 5,
+              count: 4,
               newsCategoryId,
             })
           : emptyResult,
         selectedHashtag
           ? this.newsRepositoryService.findNewsByFilter({
               page: 1,
-              count: 5,
+              count: 4,
               hashtagId: selectedHashtag.id,
             })
           : emptyResult,

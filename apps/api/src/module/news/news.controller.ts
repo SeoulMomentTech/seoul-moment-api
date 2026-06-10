@@ -16,6 +16,7 @@ import {
 import { ApiHeader, ApiOperation } from '@nestjs/swagger';
 
 import {
+  GetNewsCategoryRequest,
   GetNewsDashboardResponse,
   GetNewsListRequest,
   GetNewsListResponse,
@@ -74,7 +75,7 @@ export class NewsController {
     return new ResponseDataDto(result);
   }
 
-  @Get('category/:id')
+  @Get('category')
   @ApiOperation({
     summary: 'Get News by News Category ID with Multilingual Support',
     description:
@@ -88,15 +89,13 @@ export class NewsController {
   })
   @ResponseList(GetNewsListResponse)
   async getNewsByNewsCategoryId(
-    @Param('id', ParseIntPipe) id: number,
     @Headers('Accept-language') acceptLanguage: LanguageCode,
+    @Query() query: GetNewsCategoryRequest,
   ): Promise<ResponseListDto<GetNewsListResponse>> {
-    const result = await this.newsService.getNewsByNewsCategoryId(
-      id,
-      acceptLanguage,
-    );
+    const [newsList, total] =
+      await this.newsService.getNewsByNewsCategoryFilter(query, acceptLanguage);
 
-    return new ResponseListDto(result);
+    return new ResponseListDto(newsList, total);
   }
 
   @Get(':id')
