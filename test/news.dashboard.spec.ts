@@ -82,6 +82,29 @@ describe('GET /news/dashboard', () => {
     }
   }
 
+  async function saveCategoryName(
+    categoryId: number,
+    ko: string,
+    en?: string,
+  ): Promise<void> {
+    await languageRepositoryService.saveMultilingualTextByLanguageCode(
+      EntityType.NEWS_CATEGORY,
+      categoryId,
+      'name',
+      LanguageCode.KOREAN,
+      ko,
+    );
+    if (en) {
+      await languageRepositoryService.saveMultilingualTextByLanguageCode(
+        EntityType.NEWS_CATEGORY,
+        categoryId,
+        'name',
+        LanguageCode.ENGLISH,
+        en,
+      );
+    }
+  }
+
   it('데이터가 하나도 없어도 200과 빈 대시보드를 반환한다 (해시태그 0건 가드)', async () => {
     // Given - 뉴스/해시태그/카테고리 없음
 
@@ -108,7 +131,8 @@ describe('GET /news/dashboard', () => {
 
     const category = await dataSource
       .getRepository(NewsCategoryEntity)
-      .save({ name: faker.word.noun() } as Partial<NewsCategoryEntity>);
+      .save({} as Partial<NewsCategoryEntity>);
+    await saveCategoryName(category.id, '라이프스타일', 'Lifestyle');
 
     // Given - 뉴스 시드: 일반 1건, 에디터픽 5건, 해시태그 2건, 카테고리 2건
     const plainNews = await insertNews();
@@ -155,20 +179,32 @@ describe('GET /news/dashboard', () => {
     );
     expect(hashtagListIds.sort()).toEqual(hashtagNewsIds.sort());
 
-    // Then - 카테고리 리스트는 해당 카테고리 뉴스만
-    const categoryListIds = res.body.data.newsCategoryList.map(
-      (v: { id: number }) => v.id,
-    );
-    expect(categoryListIds.sort()).toEqual(categoryNewsIds.sort());
+    // Then - 카테고리 리스트는 다국어 이름으로 시드한 카테고리를 반환
+    expect(res.body.data.newsCategoryList).toEqual([
+      { categoryId: category.id, name: '라이프스타일' },
+    ]);
+
+    // Then - 카테고리에 속한 뉴스 카드에는 카테고리 이름이 채워진다
+    const categoryCards = [
+      ...res.body.data.recentList,
+      ...res.body.data.newsCategoryCardList,
+    ].filter((v: { id: number }) => categoryNewsIds.includes(v.id));
+    expect(categoryCards.length).toBeGreaterThan(0);
+    for (const card of categoryCards) {
+      expect(card.newsCategoryName).toBe('라이프스타일');
+    }
 
     // When - 영어로 요청
     const enRes = await request(app.getHttpServer())
       .get('/news/dashboard')
       .set('Accept-language', LanguageCode.ENGLISH);
 
-    // Then - 해시태그 이름이 영어로 반환
+    // Then - 해시태그/카테고리 이름이 영어로 반환
     expect(enRes.status).toBe(200);
     expect(enRes.body.data.hashtag.name).toBe('Beauty');
+    expect(enRes.body.data.newsCategoryList).toEqual([
+      { categoryId: category.id, name: 'Lifestyle' },
+    ]);
   });
 
   it('해시태그가 여러 개면 id가 가장 작은 해시태그를 기준으로 반환한다', async () => {
@@ -197,6 +233,50 @@ describe('GET /news/dashboard', () => {
     expect(res.body.data.hashtag.list.map((v: { id: number }) => v.id)).toEqual(
       [firstNews.id],
     );
+  });
+
+  it('카테고리 카드 리스트는 카테고리 필터 없이 최신 4건을 반환하고, 카드마다 자기 카테고리 이름이 채워진다', async () => {
+    // Given - 카테고리 1개(다국어 이름)
+    const category = await dataSource
+      .getRepository(NewsCategoryEntity)
+      .save({} as Partial<NewsCategoryEntity>);
+    await saveCategoryName(category.id, '브랜드뉴스');
+
+    // Given - 카테고리 없는 뉴스 3건 → 카테고리 뉴스 3건 순으로 시드 (총 6건)
+    const noCategoryIds: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const news = await insertNews();
+      noCategoryIds.push(news.id);
+    }
+    const categoryNewsIds: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const news = await insertNews({ newsCategoryId: category.id });
+      categoryNewsIds.push(news.id);
+    }
+
+    // When
+    const res = await request(app.getHttpServer())
+      .get('/news/dashboard')
+      .set('Accept-language', LanguageCode.KOREAN);
+
+    // Then - 카드 리스트는 카테고리 필터 없이 최신 4건만 반환
+    expect(res.status).toBe(200);
+    expect(res.body.data.newsCategoryCardList).toHaveLength(4);
+
+    // Then - 카테고리 없는 뉴스도 카드 리스트에 포함된다 (필터 미적용 증명)
+    const cardIds: number[] = res.body.data.newsCategoryCardList.map(
+      (v: { id: number }) => v.id,
+    );
+    expect(cardIds.some((id) => noCategoryIds.includes(id))).toBe(true);
+
+    // Then - 카드의 카테고리 이름은 각 뉴스의 카테고리 소속에 따라 채워진다
+    for (const card of res.body.data.newsCategoryCardList) {
+      if (categoryNewsIds.includes(card.id)) {
+        expect(card.newsCategoryName).toBe('브랜드뉴스');
+      } else {
+        expect(card.newsCategoryName).toBeNull();
+      }
+    }
   });
 
   it('에디터픽 뉴스가 없으면 editorPickList는 빈 배열이다', async () => {

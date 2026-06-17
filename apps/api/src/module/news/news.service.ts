@@ -8,12 +8,22 @@ import { NewsRepositoryService } from '@app/repository/service/news.repository.s
 import { Injectable } from '@nestjs/common';
 
 import {
+  GetNewsCardListResponse,
   GetNewsCategoryRequest,
   GetNewsCategoryResponse,
   GetNewsDashboardResponse,
   GetNewsListResponse,
   GetNewsResponse,
 } from './news.dto';
+
+interface DashboardNewsLists {
+  recentList: NewsEntity[];
+  editorPickList: NewsEntity[];
+  newsCategoryList: NewsEntity[];
+  hashtagList: NewsEntity[];
+  selectedHashtag?: NewsHashtagEntity;
+  newsCategoryEntityList: NewsCategoryEntity[];
+}
 
 @Injectable()
 export class NewsService {
@@ -88,51 +98,53 @@ export class NewsService {
   async getNewsDashboard(
     language: LanguageCode,
   ): Promise<GetNewsDashboardResponse> {
-    const {
-      recentList,
-      editorPickList,
-      newsCategoryList,
-      hashtagList,
-      selectedHashtag,
-      newsCategoryEntityList,
-    } = await this.findDashboardNewsLists();
+    const lists = await this.findDashboardNewsLists();
+    const newsIds = this.collectDashboardNewsIds(lists);
 
-    const newsIds = [
-      ...new Set(
-        [
-          ...recentList,
-          ...editorPickList,
-          ...newsCategoryList,
-          ...hashtagList,
-        ].map((v) => v.id),
-      ),
-    ];
-
-    const [newsText, hashtagName] = await Promise.all([
+    const [newsText, hashtagName, newsCategoryText] = await Promise.all([
       this.languageRepositoryService.findMultilingualTextsByEntities(
         EntityType.NEWS,
         newsIds,
         language,
       ),
-      this.findDashboardHashtagName(selectedHashtag, language),
+      this.findDashboardHashtagName(lists.selectedHashtag, language),
+      this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.NEWS_CATEGORY,
+        lists.newsCategoryEntityList.map((v) => v.id),
+        language,
+      ),
     ]);
 
+    const toCardList = (list: NewsEntity[]) =>
+      list.map((v) =>
+        GetNewsCardListResponse.from(v, newsText, newsCategoryText),
+      );
+
     return {
-      recentList: recentList.map((v) => GetNewsListResponse.from(v, newsText)),
-      editorPickList: editorPickList.map((v) =>
-        GetNewsListResponse.from(v, newsText),
-      ),
+      recentList: toCardList(lists.recentList),
+      editorPickList: toCardList(lists.editorPickList),
       hashtag: {
         name: hashtagName,
-        list: hashtagList.map((v) => GetNewsListResponse.from(v, newsText)),
+        list: toCardList(lists.hashtagList),
       },
-      newsCategoryCardList: newsCategoryList.map((v) =>
-        GetNewsListResponse.from(v, newsText),
-      ),
-      newsCategoryList: newsCategoryEntityList.map((v) =>
-        GetNewsCategoryResponse.from(v),
+      newsCategoryCardList: toCardList(lists.newsCategoryList),
+      newsCategoryList: lists.newsCategoryEntityList.map((v) =>
+        GetNewsCategoryResponse.from(v, newsCategoryText),
       ),
     };
+  }
+
+  private collectDashboardNewsIds(lists: DashboardNewsLists): number[] {
+    return [
+      ...new Set(
+        [
+          ...lists.recentList,
+          ...lists.editorPickList,
+          ...lists.newsCategoryList,
+          ...lists.hashtagList,
+        ].map((v) => v.id),
+      ),
+    ];
   }
 
   async getNewsByNewsCategoryFilter(
@@ -153,6 +165,7 @@ export class NewsService {
         newsEntites.map((v) => v.id),
         language,
       );
+
     return [
       newsEntites.map((v) => GetNewsListResponse.from(v, newsText)),
       total,
@@ -179,20 +192,12 @@ export class NewsService {
   }
 
   // eslint-disable-next-line max-lines-per-function
-  private async findDashboardNewsLists(): Promise<{
-    recentList: NewsEntity[];
-    editorPickList: NewsEntity[];
-    newsCategoryList: NewsEntity[];
-    hashtagList: NewsEntity[];
-    selectedHashtag?: NewsHashtagEntity;
-    newsCategoryEntityList: NewsCategoryEntity[];
-  }> {
+  private async findDashboardNewsLists(): Promise<DashboardNewsLists> {
     const [hashtagEntityList, newsCategoryEntityList] = await Promise.all([
       this.newsRepositoryService.findNewsHashtagList(),
       this.newsRepositoryService.findNewsCategoryList(),
     ]);
 
-    const newsCategoryId = newsCategoryEntityList[0]?.id;
     const selectedHashtag = hashtagEntityList[0];
 
     const emptyResult: [NewsEntity[], number] = [[], 0];
@@ -205,13 +210,7 @@ export class NewsService {
           count: 4,
           isEditorPick: true,
         }),
-        newsCategoryId
-          ? this.newsRepositoryService.findNewsByFilter({
-              page: 1,
-              count: 4,
-              newsCategoryId,
-            })
-          : emptyResult,
+        this.newsRepositoryService.findNewsByFilter({ page: 1, count: 4 }),
         selectedHashtag
           ? this.newsRepositoryService.findNewsByFilter({
               page: 1,

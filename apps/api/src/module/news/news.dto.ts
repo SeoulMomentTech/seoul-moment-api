@@ -289,15 +289,36 @@ export class GetNewsListRequest {
   count: number;
 }
 
+export class GetNewsCardListResponse extends GetNewsListResponse {
+  @ApiProperty({ description: '뉴스 카테고리 이름', example: '라이프스타일' })
+  newsCategoryName: string;
+
+  static from(
+    entity: NewsEntity,
+    multilingualText: MultilingualTextEntity[],
+    newsCategoryText: MultilingualTextEntity[] = [],
+  ) {
+    const newsCategoryName = MultilingualFieldDto.fromByEntityList(
+      newsCategoryText.filter((v) => v.entityId === entity.newsCategoryId),
+      'name',
+    ).getContent();
+
+    return plainToInstance(this, {
+      ...GetNewsListResponse.from(entity, multilingualText),
+      newsCategoryName,
+    });
+  }
+}
+
 export class GetNewsDashboardHashtagResponse {
   @ApiProperty({ description: '해시태그 이름', example: '해시태그1' })
   name: string;
 
   @ApiProperty({
     description: '해시태그 뉴스 리스트',
-    type: [GetNewsListResponse],
+    type: [GetNewsCardListResponse],
   })
-  list: GetNewsListResponse[];
+  list: GetNewsCardListResponse[];
 }
 
 export class GetNewsCategoryResponse {
@@ -307,10 +328,20 @@ export class GetNewsCategoryResponse {
   @ApiProperty({ description: '카테고리 이름', example: '브랜드 뉴스' })
   name: string;
 
-  static from(entity: NewsCategoryEntity) {
+  static from(
+    entity: NewsCategoryEntity,
+    multilingualText: MultilingualTextEntity[],
+  ) {
+    multilingualText = multilingualText.filter((v) => v.entityId === entity.id);
+
+    const name = MultilingualFieldDto.fromByEntityList(
+      multilingualText,
+      'name',
+    );
+
     return plainToInstance(this, {
       categoryId: entity.id,
-      name: entity.name,
+      name: name.getContent(),
     });
   }
 }
@@ -318,15 +349,15 @@ export class GetNewsCategoryResponse {
 export class GetNewsDashboardResponse {
   @ApiProperty({
     description: '최근 뉴스 리스트 5개',
-    type: [GetNewsListResponse],
+    type: [GetNewsCardListResponse],
   })
-  recentList: GetNewsListResponse[];
+  recentList: GetNewsCardListResponse[];
 
   @ApiProperty({
     description: '편집자 추천 리스트 4개',
-    type: [GetNewsListResponse],
+    type: [GetNewsCardListResponse],
   })
-  editorPickList: GetNewsListResponse[];
+  editorPickList: GetNewsCardListResponse[];
 
   @ApiProperty({
     description: '해시태그 섹션 (선택된 해시태그 이름과 뉴스 리스트 4개)',
@@ -336,9 +367,9 @@ export class GetNewsDashboardResponse {
 
   @ApiProperty({
     description: '뉴스 카테고리 리스트 4개',
-    type: [GetNewsListResponse],
+    type: [GetNewsCardListResponse],
   })
-  newsCategoryCardList: GetNewsListResponse[];
+  newsCategoryCardList: GetNewsCardListResponse[];
 
   @ApiProperty({
     description: '뉴스 카테고리 리스트 전체',
