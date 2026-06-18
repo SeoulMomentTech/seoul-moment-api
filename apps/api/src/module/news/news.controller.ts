@@ -16,6 +16,7 @@ import {
 import { ApiHeader, ApiOperation } from '@nestjs/swagger';
 
 import {
+  GetNewsCardListResponse,
   GetNewsCategoryRequest,
   GetNewsDashboardResponse,
   GetNewsListRequest,
@@ -87,11 +88,11 @@ export class NewsController {
     description: 'Alternative way to specify language preference (ko, en, zh)',
     enum: LanguageCode,
   })
-  @ResponseList(GetNewsListResponse)
+  @ResponseList(GetNewsCardListResponse)
   async getNewsByNewsCategoryId(
     @Headers('Accept-language') acceptLanguage: LanguageCode,
     @Query() query: GetNewsCategoryRequest,
-  ): Promise<ResponseListDto<GetNewsListResponse>> {
+  ): Promise<ResponseListDto<GetNewsCardListResponse>> {
     const [newsList, total] =
       await this.newsService.getNewsByNewsCategoryFilter(query, acceptLanguage);
 

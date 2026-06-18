@@ -150,7 +150,7 @@ export class NewsService {
   async getNewsByNewsCategoryFilter(
     query: GetNewsCategoryRequest,
     language: LanguageCode,
-  ): Promise<[GetNewsListResponse[], number]> {
+  ): Promise<[GetNewsCardListResponse[], number]> {
     const [newsEntites, total] =
       await this.newsRepositoryService.findNewsByNewsCategoryFilter(
         query.count,
@@ -166,8 +166,17 @@ export class NewsService {
         language,
       );
 
+    const newsCategoryText =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.NEWS_CATEGORY,
+        newsEntites.map((v) => v.newsCategoryId),
+        language,
+      );
+
     return [
-      newsEntites.map((v) => GetNewsListResponse.from(v, newsText)),
+      newsEntites.map((v) =>
+        GetNewsCardListResponse.from(v, newsText, newsCategoryText),
+      ),
       total,
     ];
   }
