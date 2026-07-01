@@ -10,7 +10,8 @@
       "Bash(docker-compose -f docker-compose.test.yml down)",
       "Bash(git restore:*)",
       "Bash(npx eslint *)",
-      "Bash(npx prettier *)"
+      "Bash(npx prettier *)",
+      "Bash(awk '/class V2UpdateAdminNewsRequest/,/^}/' apps/api/src/module/admin/news/admin.news.dto.ts)"
     ]
   },
   "enableAllProjectMcpServers": true,

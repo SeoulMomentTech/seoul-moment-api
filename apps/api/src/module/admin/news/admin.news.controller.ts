@@ -54,6 +54,7 @@ export class AdminNewsController {
   @Get(':id(\\d+)')
   @ApiOperation({
     summary: '뉴스 다국어 조회',
+    deprecated: true,
   })
   @ResponseData(GetAdminNewsInfoResponse)
   @UseGuards(OneTimeTokenGuard)
@@ -68,6 +69,7 @@ export class AdminNewsController {
   @Post()
   @ApiOperation({
     summary: '뉴스 데이터 입력',
+    deprecated: true,
   })
   @HttpCode(HttpStatus.CREATED)
   async postNews(@Body() body: PostAdminNewsRequest) {
@@ -76,7 +78,8 @@ export class AdminNewsController {
 
   @Patch(':id(\\d+)')
   @ApiOperation({
-    summary: '뉴스 수정 --- deprecated',
+    summary: '뉴스 수정',
+    deprecated: true,
   })
   @HttpCode(HttpStatus.ACCEPTED)
   @UseGuards(OneTimeTokenGuard)
@@ -91,6 +94,7 @@ export class AdminNewsController {
   @Patch('v2/:id(\\d+)')
   @ApiOperation({
     summary: '뉴스 수정 (V2)',
+    deprecated: true,
   })
   @HttpCode(HttpStatus.ACCEPTED)
   @UseGuards(OneTimeTokenGuard)

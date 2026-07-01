@@ -255,4 +255,17 @@ export class NewsRepositoryService {
       take: count,
     });
   }
+
+  async getNewsCategoryById(id: number): Promise<NewsCategoryEntity> {
+    const result = await this.newsCategoryRepository.findOneBy({ id });
+
+    if (!result) {
+      throw new ServiceError(
+        `News category not found id: ${id}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
 }

@@ -17,13 +17,17 @@ import { Transactional } from 'typeorm-transactional';
 import {
   AdminNewsListRequest,
   GetAdminNewsInfoText,
-  GetAdminNewsInfoResponse,
   GetAdminNewsResponse,
   GetAdminNewsTextDto,
   PostAdminNewsRequest,
   UpdateAdminNewsRequest,
   V2UpdateAdminNewsRequest,
 } from './admin.news.dto';
+import {
+  V1GetAdminNewsInfoResponse,
+  V1PostAdminNewsRequest,
+  V1UpdateAdminNewsRequest,
+} from './v1/v1.admin.news.dto';
 
 @Injectable()
 export class AdminNewsService {
@@ -84,7 +88,7 @@ export class AdminNewsService {
     return [newsList, total];
   }
 
-  async getAdminNewsInfo(id: number): Promise<GetAdminNewsInfoResponse> {
+  async getAdminNewsInfo(id: number): Promise<V1GetAdminNewsInfoResponse> {
     const newsEntity = await this.newsRepositoryService.getNewsById(id);
 
     const languageArray =
@@ -117,7 +121,90 @@ export class AdminNewsService {
       });
     }
 
-    return GetAdminNewsInfoResponse.from(newsEntity, newsMultilingualList);
+    return V1GetAdminNewsInfoResponse.from(newsEntity, newsMultilingualList);
+  }
+
+  @Transactional()
+  async v1PostAdminNews(dto: V1PostAdminNewsRequest) {
+    await this.newsRepositoryService.getNewsCategoryById(dto.newsCategoryId);
+    await this.categoryRepositoryService.getCategoryById(dto.categoryId);
+
+    if (dto.brandId) {
+      await this.brandRepositoryService.getBrandById(dto.brandId);
+    }
+
+    const newsEntity = await this.newsRepositoryService.insert(
+      plainToInstance(NewsEntity, {
+        brandId: dto.brandId,
+        categoryId: dto.categoryId,
+        writer: dto.writer,
+        banner: dto.banner,
+        profileImage: dto.profile,
+        homeImage: dto.homeImage,
+      }),
+    );
+
+    await Promise.all(
+      dto.list.flatMap((v) => [
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS,
+          newsEntity.id,
+          'title',
+          v.languageId,
+          v.title,
+        ),
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS,
+          newsEntity.id,
+          'content',
+          v.languageId,
+          v.content,
+        ),
+      ]),
+    );
+
+    for (const section of dto.sectionList) {
+      const newsSectionEntity = await this.newsRepositoryService.insertSection(
+        plainToInstance(NewsSectionEntity, {
+          newsId: newsEntity.id,
+        }),
+      );
+
+      await Promise.all(
+        section.textList.flatMap((v) => [
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.NEWS_SECTION,
+            newsSectionEntity.id,
+            'title',
+            v.languageId,
+            v.title,
+          ),
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.NEWS_SECTION,
+            newsSectionEntity.id,
+            'subTitle',
+            v.languageId,
+            v.subTitle,
+          ),
+          this.languageRepositoryService.saveMultilingualText(
+            EntityType.NEWS_SECTION,
+            newsSectionEntity.id,
+            'content',
+            v.languageId,
+            v.content,
+          ),
+        ]),
+      );
+
+      for (const sectionImage of section.imageUrlList) {
+        await this.newsRepositoryService.insertSectionImage(
+          plainToInstance(NewsSectionImageEntity, {
+            sectionId: newsSectionEntity.id,
+            imageUrl: sectionImage,
+          }),
+        );
+      }
+    }
   }
 
   async postAdminNews(dto: PostAdminNewsRequest) {
@@ -199,6 +286,47 @@ export class AdminNewsService {
         );
       }
     }
+  }
+
+  @Transactional()
+  async v1UpdateAdminNews(newsId: number, dto: V1UpdateAdminNewsRequest) {
+    const newsEntity = await this.newsRepositoryService.getNewsById(newsId);
+
+    if (dto.newsCategoryId && dto.categoryId) {
+      await this.newsRepositoryService.getNewsCategoryById(dto.newsCategoryId);
+      await this.categoryRepositoryService.getCategoryById(dto.categoryId);
+    }
+
+    if (dto.brandId) {
+      await this.brandRepositoryService.getBrandById(dto.brandId);
+    }
+
+    const updateNewsDto: UpdateNewsDto = {
+      id: newsId,
+      newsCategoryId: dto.newsCategoryId,
+      categoryId: dto.categoryId,
+      brandId: dto.brandId,
+      writer: dto.writer,
+      banner: dto.banner?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+      profileImage: dto.profile?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+      homeImage: dto.homeImage?.replace(
+        Configuration.getConfig().IMAGE_DOMAIN_NAME,
+        '',
+      ),
+    };
+
+    await this.newsRepositoryService.update(updateNewsDto);
+
+    await this.V2newsMultilingualUpdate(
+      newsEntity.id,
+      dto.multilingualTextList,
+    );
   }
 
   @Transactional()
