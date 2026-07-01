@@ -1,4 +1,6 @@
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { NewsCategoryEntity } from '@app/repository/entity/news-category.entity';
+import { NewsHashtagEntity } from '@app/repository/entity/news-hashtag.entity';
 import { NewsSectionEntity } from '@app/repository/entity/news-section.entity';
 import { NewsEntity } from '@app/repository/entity/news.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
@@ -979,4 +981,126 @@ export class V2UpdateAdminNewsRequest {
   @Type(() => GetAdminNewsInfoText)
   @IsOptional()
   multilingualTextList?: GetAdminNewsInfoText[];
+}
+
+// ────────────────────────────────────────────────────────────
+// News Category / Hashtag (admin CRUD)
+// 카테고리·해시태그는 스칼라 컬럼이 없고 이름(name)만 다국어로 관리된다.
+// ────────────────────────────────────────────────────────────
+
+export class AdminNewsNameDto {
+  @ApiProperty({ description: '언어 ID', example: 1 })
+  languageId: number;
+
+  @ApiProperty({
+    description: '언어 코드',
+    enum: LanguageCode,
+    example: LanguageCode.KOREAN,
+  })
+  languageCode: LanguageCode;
+
+  @ApiProperty({ description: '이름', example: '브랜드 뉴스' })
+  name: string;
+
+  static listFrom(
+    entityId: number,
+    texts: MultilingualTextEntity[],
+  ): AdminNewsNameDto[] {
+    return texts
+      .filter((text) => text.entityId === entityId && text.fieldName === 'name')
+      .map((text) => ({
+        languageId: text.languageId,
+        languageCode: text.language.code,
+        name: text.textContent,
+      }));
+  }
+}
+
+export class GetAdminNewsCategoryResponse {
+  @ApiProperty({ description: '뉴스 카테고리 ID', example: 1 })
+  id: number;
+
+  @ApiProperty({
+    description: '다국어 이름 리스트 (한국어, 영어, 중국어)',
+    type: [AdminNewsNameDto],
+  })
+  nameList: AdminNewsNameDto[];
+
+  static from(
+    entity: NewsCategoryEntity,
+    texts: MultilingualTextEntity[],
+  ): GetAdminNewsCategoryResponse {
+    return plainToInstance(this, {
+      id: entity.id,
+      nameList: AdminNewsNameDto.listFrom(entity.id, texts),
+    });
+  }
+}
+
+export class GetAdminNewsHashtagResponse {
+  @ApiProperty({ description: '뉴스 해시태그 ID', example: 1 })
+  id: number;
+
+  @ApiProperty({
+    description: '다국어 이름 리스트 (한국어, 영어, 중국어)',
+    type: [AdminNewsNameDto],
+  })
+  nameList: AdminNewsNameDto[];
+
+  static from(
+    entity: NewsHashtagEntity,
+    texts: MultilingualTextEntity[],
+  ): GetAdminNewsHashtagResponse {
+    return plainToInstance(this, {
+      id: entity.id,
+      nameList: AdminNewsNameDto.listFrom(entity.id, texts),
+    });
+  }
+}
+
+export class UpdateAdminNewsNameItem {
+  @ApiProperty({ description: '언어 ID', example: 1 })
+  @IsInt()
+  @Type(() => Number)
+  @IsDefined()
+  languageId: number;
+
+  @ApiProperty({ description: '이름', example: '브랜드 뉴스' })
+  @IsString()
+  @IsDefined()
+  name: string;
+}
+
+export class UpdateAdminNewsCategoryRequest {
+  @ApiProperty({
+    description: '다국어 이름 리스트 (한국어, 영어, 중국어)',
+    type: [UpdateAdminNewsNameItem],
+    example: [
+      { languageId: 1, name: '브랜드 뉴스' },
+      { languageId: 2, name: 'Brand News' },
+      { languageId: 3, name: '品牌新聞' },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminNewsNameItem)
+  @IsDefined()
+  nameList: UpdateAdminNewsNameItem[];
+}
+
+export class UpdateAdminNewsHashtagRequest {
+  @ApiProperty({
+    description: '다국어 이름 리스트 (한국어, 영어, 중국어)',
+    type: [UpdateAdminNewsNameItem],
+    example: [
+      { languageId: 1, name: '서울' },
+      { languageId: 2, name: 'Seoul' },
+      { languageId: 3, name: '首爾' },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminNewsNameItem)
+  @IsDefined()
+  nameList: UpdateAdminNewsNameItem[];
 }

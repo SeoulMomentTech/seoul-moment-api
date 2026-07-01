@@ -23,9 +23,13 @@ import { OneTimeTokenGuard } from 'apps/api/src/guard/one-time-token.guard';
 
 import {
   AdminNewsListRequest,
+  GetAdminNewsCategoryResponse,
+  GetAdminNewsHashtagResponse,
   GetAdminNewsInfoResponse,
   GetAdminNewsResponse,
   PostAdminNewsRequest,
+  UpdateAdminNewsCategoryRequest,
+  UpdateAdminNewsHashtagRequest,
   UpdateAdminNewsRequest,
   V2UpdateAdminNewsRequest,
 } from './admin.news.dto';
@@ -115,5 +119,105 @@ export class AdminNewsController {
   @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료')
   async deleteAdminNews(@Param('id', ParseIntPipe) id: number) {
     await this.adminNewsService.deleteAdminNews(id);
+  }
+
+  // ── News Category CRUD ──
+
+  @Get('category')
+  @ApiOperation({
+    summary: '뉴스 카테고리 리스트 조회',
+  })
+  @ResponseList(GetAdminNewsCategoryResponse)
+  async getAdminNewsCategoryList(): Promise<
+    ResponseListDto<GetAdminNewsCategoryResponse>
+  > {
+    const result = await this.adminNewsService.getAdminNewsCategoryList();
+    return new ResponseListDto(result);
+  }
+
+  @Get('category/:id(\\d+)')
+  @ApiOperation({
+    summary: '뉴스 카테고리 다국어 조회',
+  })
+  @ResponseData(GetAdminNewsCategoryResponse)
+  @ResponseException(HttpStatus.NOT_FOUND, '뉴스 카테고리 없음')
+  async getAdminNewsCategoryInfo(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ResponseDataDto<GetAdminNewsCategoryResponse>> {
+    const result = await this.adminNewsService.getAdminNewsCategoryInfo(id);
+    return new ResponseDataDto(result);
+  }
+
+  @Patch('category/:id(\\d+)')
+  @ApiOperation({
+    summary: '뉴스 카테고리 다국어 수정',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ResponseException(HttpStatus.NOT_FOUND, '뉴스 카테고리 없음')
+  async updateAdminNewsCategory(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateAdminNewsCategoryRequest,
+  ) {
+    await this.adminNewsService.updateAdminNewsCategory(id, body);
+  }
+
+  @Delete('category/:id(\\d+)')
+  @ApiOperation({
+    summary: '뉴스 카테고리 삭제',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ResponseException(HttpStatus.NOT_FOUND, '뉴스 카테고리 없음')
+  async deleteAdminNewsCategory(@Param('id', ParseIntPipe) id: number) {
+    await this.adminNewsService.deleteAdminNewsCategory(id);
+  }
+
+  // ── News Hashtag CRUD ──
+
+  @Get('hashtag')
+  @ApiOperation({
+    summary: '뉴스 해시태그 리스트 조회',
+  })
+  @ResponseList(GetAdminNewsHashtagResponse)
+  async getAdminNewsHashtagList(): Promise<
+    ResponseListDto<GetAdminNewsHashtagResponse>
+  > {
+    const result = await this.adminNewsService.getAdminNewsHashtagList();
+    return new ResponseListDto(result);
+  }
+
+  @Get('hashtag/:id(\\d+)')
+  @ApiOperation({
+    summary: '뉴스 해시태그 다국어 조회',
+  })
+  @ResponseData(GetAdminNewsHashtagResponse)
+  @ResponseException(HttpStatus.NOT_FOUND, '뉴스 해시태그 없음')
+  async getAdminNewsHashtagInfo(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ResponseDataDto<GetAdminNewsHashtagResponse>> {
+    const result = await this.adminNewsService.getAdminNewsHashtagInfo(id);
+    return new ResponseDataDto(result);
+  }
+
+  @Patch('hashtag/:id(\\d+)')
+  @ApiOperation({
+    summary: '뉴스 해시태그 다국어 수정',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ResponseException(HttpStatus.NOT_FOUND, '뉴스 해시태그 없음')
+  async updateAdminNewsHashtag(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateAdminNewsHashtagRequest,
+  ) {
+    await this.adminNewsService.updateAdminNewsHashtag(id, body);
+  }
+
+  @Delete('hashtag/:id(\\d+)')
+  @ApiOperation({
+    summary: '뉴스 해시태그 삭제',
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ResponseException(HttpStatus.NOT_FOUND, '뉴스 해시태그 없음')
+  async deleteAdminNewsHashtag(@Param('id', ParseIntPipe) id: number) {
+    await this.adminNewsService.deleteAdminNewsHashtag(id);
   }
 }

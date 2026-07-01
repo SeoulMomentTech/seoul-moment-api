@@ -268,4 +268,25 @@ export class NewsRepositoryService {
 
     return result;
   }
+
+  async getHashtagById(id: number): Promise<NewsHashtagEntity> {
+    const result = await this.newsHashtagRepository.findOneBy({ id });
+
+    if (!result) {
+      throw new ServiceError(
+        `Hashtag not found id: ${id}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return result;
+  }
+
+  async deleteNewsCategory(id: number) {
+    await this.newsCategoryRepository.delete(id);
+  }
+
+  async deleteNewsHashtag(id: number) {
+    await this.newsHashtagRepository.delete(id);
+  }
 }

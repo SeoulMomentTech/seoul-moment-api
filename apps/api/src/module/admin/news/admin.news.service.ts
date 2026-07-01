@@ -16,10 +16,14 @@ import { Transactional } from 'typeorm-transactional';
 
 import {
   AdminNewsListRequest,
+  GetAdminNewsCategoryResponse,
+  GetAdminNewsHashtagResponse,
   GetAdminNewsInfoText,
   GetAdminNewsResponse,
   GetAdminNewsTextDto,
   PostAdminNewsRequest,
+  UpdateAdminNewsCategoryRequest,
+  UpdateAdminNewsHashtagRequest,
   UpdateAdminNewsRequest,
   V2UpdateAdminNewsRequest,
 } from './admin.news.dto';
@@ -301,9 +305,15 @@ export class AdminNewsService {
       await this.brandRepositoryService.getBrandById(dto.brandId);
     }
 
+    if (dto.hashtagId) {
+      await this.newsRepositoryService.getHashtagById(dto.hashtagId);
+    }
+
     const updateNewsDto: UpdateNewsDto = {
       id: newsId,
       newsCategoryId: dto.newsCategoryId,
+      hashtagId: dto.hashtagId,
+      editorPick: dto.editorPick,
       categoryId: dto.categoryId,
       brandId: dto.brandId,
       writer: dto.writer,
@@ -590,5 +600,129 @@ export class AdminNewsService {
   @Transactional()
   async deleteAdminNews(newsId: number) {
     await this.newsRepositoryService.deleteWithMultilingual(newsId);
+  }
+
+  // ── News Category (admin CRUD) ──
+
+  async getAdminNewsCategoryList(): Promise<GetAdminNewsCategoryResponse[]> {
+    const categoryList =
+      await this.newsRepositoryService.findNewsCategoryList();
+
+    const texts =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.NEWS_CATEGORY,
+        categoryList.map((category) => category.id),
+      );
+
+    return categoryList.map((category) =>
+      GetAdminNewsCategoryResponse.from(category, texts),
+    );
+  }
+
+  async getAdminNewsCategoryInfo(
+    id: number,
+  ): Promise<GetAdminNewsCategoryResponse> {
+    const category = await this.newsRepositoryService.getNewsCategoryById(id);
+
+    const texts = await this.languageRepositoryService.findMultilingualTexts(
+      EntityType.NEWS_CATEGORY,
+      id,
+      undefined,
+      'name',
+    );
+
+    return GetAdminNewsCategoryResponse.from(category, texts);
+  }
+
+  @Transactional()
+  async updateAdminNewsCategory(
+    id: number,
+    dto: UpdateAdminNewsCategoryRequest,
+  ) {
+    await this.newsRepositoryService.getNewsCategoryById(id);
+
+    await Promise.all(
+      dto.nameList.map((item) =>
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS_CATEGORY,
+          id,
+          'name',
+          item.languageId,
+          item.name,
+        ),
+      ),
+    );
+  }
+
+  @Transactional()
+  async deleteAdminNewsCategory(id: number) {
+    await this.newsRepositoryService.getNewsCategoryById(id);
+
+    await this.newsRepositoryService.deleteNewsCategory(id);
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.NEWS_CATEGORY,
+      id,
+    );
+  }
+
+  // ── News Hashtag (admin CRUD) ──
+
+  async getAdminNewsHashtagList(): Promise<GetAdminNewsHashtagResponse[]> {
+    const hashtagList = await this.newsRepositoryService.findNewsHashtagList();
+
+    const texts =
+      await this.languageRepositoryService.findMultilingualTextsByEntities(
+        EntityType.NEWS_HASHTAG,
+        hashtagList.map((hashtag) => hashtag.id),
+      );
+
+    return hashtagList.map((hashtag) =>
+      GetAdminNewsHashtagResponse.from(hashtag, texts),
+    );
+  }
+
+  async getAdminNewsHashtagInfo(
+    id: number,
+  ): Promise<GetAdminNewsHashtagResponse> {
+    const hashtag = await this.newsRepositoryService.getHashtagById(id);
+
+    const texts = await this.languageRepositoryService.findMultilingualTexts(
+      EntityType.NEWS_HASHTAG,
+      id,
+      undefined,
+      'name',
+    );
+
+    return GetAdminNewsHashtagResponse.from(hashtag, texts);
+  }
+
+  @Transactional()
+  async updateAdminNewsHashtag(id: number, dto: UpdateAdminNewsHashtagRequest) {
+    await this.newsRepositoryService.getHashtagById(id);
+
+    await Promise.all(
+      dto.nameList.map((item) =>
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS_HASHTAG,
+          id,
+          'name',
+          item.languageId,
+          item.name,
+        ),
+      ),
+    );
+  }
+
+  @Transactional()
+  async deleteAdminNewsHashtag(id: number) {
+    await this.newsRepositoryService.getHashtagById(id);
+
+    await this.newsRepositoryService.deleteNewsHashtag(id);
+
+    await this.languageRepositoryService.deleteMultilingualTexts(
+      EntityType.NEWS_HASHTAG,
+      id,
+    );
   }
 }

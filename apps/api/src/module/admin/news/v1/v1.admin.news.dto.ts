@@ -4,6 +4,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsDefined,
   IsNumber,
   IsOptional,
@@ -29,6 +30,12 @@ export class V1GetAdminNewsInfoResponse {
     example: 1,
   })
   newsCategoryId: number;
+
+  @ApiPropertyOptional({ description: '해시태그 ID', example: 1 })
+  hashtagId?: number;
+
+  @ApiProperty({ description: '편집자 추천 여부', example: false })
+  editorPick: boolean;
 
   @ApiProperty({ description: '카테고리 ID', example: 1 })
   categoryId: number;
@@ -133,6 +140,8 @@ export class V1GetAdminNewsInfoResponse {
     return plainToInstance(this, {
       id: entity.id,
       newsCategoryId: entity.newsCategoryId,
+      hashtagId: entity.hashtagId,
+      editorPick: entity.editorPick,
       banner: entity.getBannerImage(),
       profile: entity.getProfileImage(),
       homeImage: entity.getHomeImage(),
@@ -300,6 +309,20 @@ export class V1PostAdminNewsRequest {
 }
 
 export class V1UpdateAdminNewsRequest {
+  @ApiPropertyOptional({ description: '해시태그 ID', example: 1 })
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  hashtagId?: number;
+
+  @ApiProperty({
+    description: '편집자 추천 여부',
+    example: true,
+  })
+  @IsBoolean()
+  @IsDefined()
+  editorPick: boolean;
+
   @ApiProperty({
     description: '뉴스 카테고리 ID',
     example: 1,
