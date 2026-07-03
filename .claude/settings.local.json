@@ -11,7 +11,8 @@
       "Bash(git restore:*)",
       "Bash(npx eslint *)",
       "Bash(npx prettier *)",
-      "Bash(awk '/class V2UpdateAdminNewsRequest/,/^}/' apps/api/src/module/admin/news/admin.news.dto.ts)"
+      "Bash(awk '/class V2UpdateAdminNewsRequest/,/^}/' apps/api/src/module/admin/news/admin.news.dto.ts)",
+      "WebSearch"
     ]
   },
   "enableAllProjectMcpServers": true,

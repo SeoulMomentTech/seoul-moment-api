@@ -8,8 +8,10 @@ import {
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
+import { LookbookEntity } from './lookbook.entity';
 import { UserBrandLikeEntity } from './user-brand-like.entity';
 import { UserFitEntity } from './user-fit.entity';
+import { UserLookbookLikeEntity } from './user-lookbook-like.entity';
 import { UserProductLikeEntity } from './user-product-like.entity';
 import { UserProfileEntity } from './user-profile.entity';
 import { UserSnsEntity } from './user-sns.entity';
@@ -109,6 +111,12 @@ export class UserEntity extends CommonEntity {
 
   @OneToMany(() => UserRecentEntity, (recent) => recent.user)
   userRecents: UserRecentEntity[];
+
+  @OneToMany(() => LookbookEntity, (lookbook) => lookbook.user)
+  lookbooks: LookbookEntity[];
+
+  @OneToMany(() => UserLookbookLikeEntity, (like) => like.user)
+  lookbookLikes: UserLookbookLikeEntity[];
 
   async verifyPassword(password: string): Promise<boolean> {
     return bcrypt.compare(password, this.password);
