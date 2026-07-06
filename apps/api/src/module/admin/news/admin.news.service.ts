@@ -21,6 +21,8 @@ import {
   GetAdminNewsInfoText,
   GetAdminNewsResponse,
   GetAdminNewsTextDto,
+  PostAdminNewsCategoryRequest,
+  PostAdminNewsHashtagRequest,
   PostAdminNewsRequest,
   UpdateAdminNewsCategoryRequest,
   UpdateAdminNewsHashtagRequest,
@@ -635,6 +637,27 @@ export class AdminNewsService {
   }
 
   @Transactional()
+  async postAdminNewsCategory(
+    dto: PostAdminNewsCategoryRequest,
+  ): Promise<number> {
+    const category = await this.newsRepositoryService.createNewsCategory();
+
+    await Promise.all(
+      dto.nameList.map((item) =>
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS_CATEGORY,
+          category.id,
+          'name',
+          item.languageId,
+          item.name,
+        ),
+      ),
+    );
+
+    return category.id;
+  }
+
+  @Transactional()
   async updateAdminNewsCategory(
     id: number,
     dto: UpdateAdminNewsCategoryRequest,
@@ -695,6 +718,27 @@ export class AdminNewsService {
     );
 
     return GetAdminNewsHashtagResponse.from(hashtag, texts);
+  }
+
+  @Transactional()
+  async postAdminNewsHashtag(
+    dto: PostAdminNewsHashtagRequest,
+  ): Promise<number> {
+    const hashtag = await this.newsRepositoryService.createNewsHashtag();
+
+    await Promise.all(
+      dto.nameList.map((item) =>
+        this.languageRepositoryService.saveMultilingualText(
+          EntityType.NEWS_HASHTAG,
+          hashtag.id,
+          'name',
+          item.languageId,
+          item.name,
+        ),
+      ),
+    );
+
+    return hashtag.id;
   }
 
   @Transactional()

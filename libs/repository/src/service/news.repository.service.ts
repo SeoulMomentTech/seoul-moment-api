@@ -282,6 +282,16 @@ export class NewsRepositoryService {
     return result;
   }
 
+  async createNewsCategory(): Promise<NewsCategoryEntity> {
+    return this.newsCategoryRepository.save(
+      this.newsCategoryRepository.create(),
+    );
+  }
+
+  async createNewsHashtag(): Promise<NewsHashtagEntity> {
+    return this.newsHashtagRepository.save(this.newsHashtagRepository.create());
+  }
+
   async deleteNewsCategory(id: number) {
     await this.newsCategoryRepository.delete(id);
   }

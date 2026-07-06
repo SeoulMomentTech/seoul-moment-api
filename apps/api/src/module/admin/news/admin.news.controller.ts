@@ -27,7 +27,10 @@ import {
   GetAdminNewsHashtagResponse,
   GetAdminNewsInfoResponse,
   GetAdminNewsResponse,
+  PostAdminNewsCategoryRequest,
+  PostAdminNewsHashtagRequest,
   PostAdminNewsRequest,
+  PostAdminNewsTaxonomyResponse,
   UpdateAdminNewsCategoryRequest,
   UpdateAdminNewsHashtagRequest,
   UpdateAdminNewsRequest,
@@ -135,6 +138,19 @@ export class AdminNewsController {
     return new ResponseListDto(result);
   }
 
+  @Post('category')
+  @ApiOperation({
+    summary: '뉴스 카테고리 생성',
+  })
+  @HttpCode(HttpStatus.CREATED)
+  @ResponseData(PostAdminNewsTaxonomyResponse)
+  async postAdminNewsCategory(
+    @Body() body: PostAdminNewsCategoryRequest,
+  ): Promise<ResponseDataDto<PostAdminNewsTaxonomyResponse>> {
+    const id = await this.adminNewsService.postAdminNewsCategory(body);
+    return new ResponseDataDto(PostAdminNewsTaxonomyResponse.from(id));
+  }
+
   @Get('category/:id(\\d+)')
   @ApiOperation({
     summary: '뉴스 카테고리 다국어 조회',
@@ -183,6 +199,19 @@ export class AdminNewsController {
   > {
     const result = await this.adminNewsService.getAdminNewsHashtagList();
     return new ResponseListDto(result);
+  }
+
+  @Post('hashtag')
+  @ApiOperation({
+    summary: '뉴스 해시태그 생성',
+  })
+  @HttpCode(HttpStatus.CREATED)
+  @ResponseData(PostAdminNewsTaxonomyResponse)
+  async postAdminNewsHashtag(
+    @Body() body: PostAdminNewsHashtagRequest,
+  ): Promise<ResponseDataDto<PostAdminNewsTaxonomyResponse>> {
+    const id = await this.adminNewsService.postAdminNewsHashtag(body);
+    return new ResponseDataDto(PostAdminNewsTaxonomyResponse.from(id));
   }
 
   @Get('hashtag/:id(\\d+)')

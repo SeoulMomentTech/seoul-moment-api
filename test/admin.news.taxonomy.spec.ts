@@ -97,6 +97,73 @@ describe('AdminNewsController - Category/Hashtag CRUD (E2E)', () => {
   // News Category
   // =======================================================================
   describe('News Category', () => {
+    describe('POST /admin/news/category', () => {
+      it('카테고리를 생성하면 201과 id를 반환하고 조회 시 다국어 이름이 반영된다', async () => {
+        // Given
+        const auth = await authHeader(app);
+        const languages = await getLanguages();
+        const koId = languages.find((l) => l.code === 'ko').id;
+        const enId = languages.find((l) => l.code === 'en').id;
+        const zhId = languages.find((l) => l.code === 'zh-TW').id;
+        const names = { ko: '브랜드뉴스', en: 'BrandNews', zh: '品牌新聞' };
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(CATEGORY_URL)
+          .set('Authorization', auth)
+          .send({
+            nameList: [
+              { languageId: koId, name: names.ko },
+              { languageId: enId, name: names.en },
+              { languageId: zhId, name: names.zh },
+            ],
+          });
+
+        // Then
+        expect(res.status).toBe(201);
+        expect(typeof res.body.data.id).toBe('number');
+
+        const getRes = await request(app.getHttpServer())
+          .get(`${CATEGORY_URL}/${res.body.data.id}`)
+          .set('Authorization', auth);
+        expect(getRes.status).toBe(200);
+        const nameList = getRes.body.data.nameList;
+        expect(nameList.length).toBe(3);
+        expect(nameList.find((n: any) => n.languageCode === 'ko').name).toBe(
+          names.ko,
+        );
+        expect(nameList.find((n: any) => n.languageCode === 'zh-TW').name).toBe(
+          names.zh,
+        );
+      });
+
+      it('nameList가 빈 배열이면 400을 반환하고 카테고리가 생성되지 않는다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(CATEGORY_URL)
+          .set('Authorization', await authHeader(app))
+          .send({ nameList: [] });
+
+        // Then
+        expect(res.status).toBe(400);
+
+        const count = await dataSource.query(
+          `SELECT COUNT(*)::int AS cnt FROM news_category`,
+        );
+        expect(count[0].cnt).toBe(0);
+      });
+
+      it('토큰 없이 요청하면 401을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(CATEGORY_URL)
+          .send({ nameList: [{ languageId: 1, name: '무토큰' }] });
+
+        // Then
+        expect(res.status).toBe(401);
+      });
+    });
+
     describe('GET /admin/news/category', () => {
       it('카테고리가 없을 때 빈 배열을 반환한다', async () => {
         // When
@@ -285,6 +352,70 @@ describe('AdminNewsController - Category/Hashtag CRUD (E2E)', () => {
   // News Hashtag
   // =======================================================================
   describe('News Hashtag', () => {
+    describe('POST /admin/news/hashtag', () => {
+      it('해시태그를 생성하면 201과 id를 반환하고 조회 시 다국어 이름이 반영된다', async () => {
+        // Given
+        const auth = await authHeader(app);
+        const languages = await getLanguages();
+        const koId = languages.find((l) => l.code === 'ko').id;
+        const enId = languages.find((l) => l.code === 'en').id;
+        const zhId = languages.find((l) => l.code === 'zh-TW').id;
+        const names = { ko: '서울', en: 'Seoul', zh: '首爾' };
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(HASHTAG_URL)
+          .set('Authorization', auth)
+          .send({
+            nameList: [
+              { languageId: koId, name: names.ko },
+              { languageId: enId, name: names.en },
+              { languageId: zhId, name: names.zh },
+            ],
+          });
+
+        // Then
+        expect(res.status).toBe(201);
+        expect(typeof res.body.data.id).toBe('number');
+
+        const getRes = await request(app.getHttpServer())
+          .get(`${HASHTAG_URL}/${res.body.data.id}`)
+          .set('Authorization', auth);
+        expect(getRes.status).toBe(200);
+        const nameList = getRes.body.data.nameList;
+        expect(nameList.length).toBe(3);
+        expect(nameList.find((n: any) => n.languageCode === 'en').name).toBe(
+          names.en,
+        );
+      });
+
+      it('nameList가 빈 배열이면 400을 반환하고 해시태그가 생성되지 않는다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(HASHTAG_URL)
+          .set('Authorization', await authHeader(app))
+          .send({ nameList: [] });
+
+        // Then
+        expect(res.status).toBe(400);
+
+        const count = await dataSource.query(
+          `SELECT COUNT(*)::int AS cnt FROM news_hashtag`,
+        );
+        expect(count[0].cnt).toBe(0);
+      });
+
+      it('토큰 없이 요청하면 401을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(HASHTAG_URL)
+          .send({ nameList: [{ languageId: 1, name: '무토큰' }] });
+
+        // Then
+        expect(res.status).toBe(401);
+      });
+    });
+
     describe('GET /admin/news/hashtag', () => {
       it('해시태그가 없을 때 빈 배열을 반환한다', async () => {
         // When

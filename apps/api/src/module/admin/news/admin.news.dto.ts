@@ -8,6 +8,7 @@ import { NewsSearchEnum } from '@app/repository/enum/news.repository.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
   IsOptional,
   IsEnum,
   IsNumber,
@@ -1069,6 +1070,51 @@ export class UpdateAdminNewsNameItem {
   @IsString()
   @IsDefined()
   name: string;
+}
+
+export class PostAdminNewsTaxonomyResponse {
+  @ApiProperty({ description: '생성된 리소스 ID', example: 1 })
+  id: number;
+
+  static from(id: number): PostAdminNewsTaxonomyResponse {
+    return plainToInstance(this, { id });
+  }
+}
+
+export class PostAdminNewsCategoryRequest {
+  @ApiProperty({
+    description: '다국어 이름 리스트 (한국어, 영어, 중국어)',
+    type: [UpdateAdminNewsNameItem],
+    example: [
+      { languageId: 1, name: '브랜드 뉴스' },
+      { languageId: 2, name: 'Brand News' },
+      { languageId: 3, name: '品牌新聞' },
+    ],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminNewsNameItem)
+  @IsDefined()
+  nameList: UpdateAdminNewsNameItem[];
+}
+
+export class PostAdminNewsHashtagRequest {
+  @ApiProperty({
+    description: '다국어 이름 리스트 (한국어, 영어, 중국어)',
+    type: [UpdateAdminNewsNameItem],
+    example: [
+      { languageId: 1, name: '서울' },
+      { languageId: 2, name: 'Seoul' },
+      { languageId: 3, name: '首爾' },
+    ],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAdminNewsNameItem)
+  @IsDefined()
+  nameList: UpdateAdminNewsNameItem[];
 }
 
 export class UpdateAdminNewsCategoryRequest {

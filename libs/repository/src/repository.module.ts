@@ -30,6 +30,8 @@ import { HomeBannerImageEntity } from './entity/home-banner-image.entity';
 import { HomeSectionImageEntity } from './entity/home-section-image.entity';
 import { HomeSectionEntity } from './entity/home-section.entity';
 import { LanguageEntity } from './entity/language.entity';
+import { LookbookCommentEntity } from './entity/lookbook-comment.entity';
+import { LookbookEntity } from './entity/lookbook.entity';
 import { MultilingualTextEntity } from './entity/multilingual-text.entity';
 import { NewsCategoryEntity } from './entity/news-category.entity';
 import { NewsHashtagEntity } from './entity/news-hashtag.entity';
@@ -58,6 +60,7 @@ import { ProductEntity } from './entity/product.entity';
 import { PromotionEntity } from './entity/promotion.entity';
 import { UserBrandLikeEntity } from './entity/user-brand-like.entity';
 import { UserFitEntity } from './entity/user-fit.entity';
+import { UserLookbookLikeEntity } from './entity/user-lookbook-like.entity';
 import { UserProductLikeEntity } from './entity/user-product-like.entity';
 import { UserProfileImageEntity } from './entity/user-profile-image.entity';
 import { UserProfileEntity } from './entity/user-profile.entity';
@@ -157,6 +160,9 @@ import { UserRepositoryService } from './service/user.repository.service';
       UserProductLikeEntity,
       UserBrandLikeEntity,
       UserRecentEntity,
+      LookbookEntity,
+      UserLookbookLikeEntity,
+      LookbookCommentEntity,
     ]),
   ],
   providers: [
