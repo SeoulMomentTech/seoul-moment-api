@@ -1,4 +1,5 @@
 import { RedisKey } from '@app/cache/cache.dto';
+import { SupportEnv } from '@app/config/enum/config.enum';
 import {
   AiConsultAnswerType,
   AiConsultScope,
@@ -32,6 +33,18 @@ export const RATE_LIMIT_USER_WINDOW_SECONDS = 60 * 60;
  */
 export const RATE_LIMIT_PER_IP = 20;
 export const RATE_LIMIT_IP_WINDOW_SECONDS = 60 * 10;
+
+/**
+ * 개인 레이트리밋(유저·IP)을 적용하지 않는 환경.
+ *
+ * 개발 중에는 같은 IP 로 수십 번 두드리게 되는데 20회/10분에 걸리면 테스트가 막힌다.
+ * **전역 일일 예산은 모든 환경에서 그대로 유지**되므로 비용 상한은 여전히 보장된다.
+ * test 는 제외하지 않는다 — 통합 테스트가 이 로직을 실제로 검증해야 하기 때문이다.
+ */
+export const RATE_LIMIT_DISABLED_ENVS: readonly SupportEnv[] = [
+  SupportEnv.LOCAL,
+  SupportEnv.DEV,
+];
 
 /** 전역 일일 LLM 호출 상한. 낮게 시작해 실측 후 상향한다. */
 export const DAILY_LLM_CALL_LIMIT = 1500;

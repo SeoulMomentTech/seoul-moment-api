@@ -36,6 +36,7 @@ import { AdminNewsModule } from './module/admin/news/admin.news.module';
 import { AdminProductModule } from './module/admin/product/admin.product.module';
 import { AdminPromotionModule } from './module/admin/promotion/admin.promotion.module';
 import { AdminUserModule } from './module/admin/user/admin.user.module';
+import { RATE_LIMIT_DISABLED_ENVS } from './module/ai-consult/ai-consult.dto';
 import { AiConsultModule } from './module/ai-consult/ai-consult.module';
 import { AppModule } from './module/api.module';
 import { ArticleModule } from './module/article/article.module';
@@ -209,6 +210,13 @@ async function bootstrap() {
   );
   logger.info(
     `🤖 [Gemini]  : ${config.GEMINI_API_KEY ? `Configured (${config.GEMINI_MODEL})` : 'Not configured'}`,
+  );
+  logger.info(
+    `   AI 상담 개인 레이트리밋 : ${
+      RATE_LIMIT_DISABLED_ENVS.includes(config.NODE_ENV)
+        ? 'OFF (일일 예산 상한은 유지)'
+        : 'ON'
+    }`,
   );
   logger.info(
     `🔎 [Serper]  : ${config.SERPER_API_KEY ? 'Configured' : 'Not configured'}`,

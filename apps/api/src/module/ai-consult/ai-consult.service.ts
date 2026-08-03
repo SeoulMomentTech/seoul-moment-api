@@ -39,6 +39,7 @@ import {
   MAX_SUGGESTION_COUNT,
   PostAiConsultAskRequest,
   PostAiConsultAskResponse,
+  RATE_LIMIT_DISABLED_ENVS,
   RATE_LIMIT_IP_WINDOW_SECONDS,
   RATE_LIMIT_PER_IP,
   RATE_LIMIT_PER_USER,
@@ -81,6 +82,11 @@ export class AiConsultService {
    */
   private readonly systemInstruction = buildSystemInstruction();
   private readonly responseSchema = buildResponseSchema();
+
+  /** local/dev 는 개인 레이트리밋을 끈다. 전역 일일 예산은 환경과 무관하게 적용된다. */
+  private readonly rateLimitEnabled = !RATE_LIMIT_DISABLED_ENVS.includes(
+    Configuration.getConfig().NODE_ENV,
+  );
 
   constructor(
     private readonly geminiService: GeminiService,
@@ -346,6 +352,8 @@ export class AiConsultService {
     userId: number | undefined,
     ip: string | null,
   ): Promise<AiConsultLimitDto> {
+    if (!this.rateLimitEnabled) return AiConsultLimitDto.allow();
+
     if (userId) {
       return (await this.isOverLimit(
         `user:${userId}`,
