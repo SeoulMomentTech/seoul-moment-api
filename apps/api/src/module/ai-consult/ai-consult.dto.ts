@@ -128,6 +128,15 @@ export class PostAiConsultAskResponse {
 
   @ApiProperty({
     description:
+      '답변 종류. 장애·제한 상황도 200 으로 내려가므로 프론트는 이 값으로 구분한다. ' +
+      'UNAVAILABLE/RATE_LIMITED 면 재시도·고객센터 안내 같은 다른 UI 를 띄울 수 있다',
+    enum: AiConsultAnswerType,
+    example: AiConsultAnswerType.FAQ_ANSWER,
+  })
+  tag: AiConsultAnswerType;
+
+  @ApiProperty({
+    description:
       '추천 질문. 그대로 눌러서 message 로 다시 보내면 된다. ' +
       '답변이 확실할 때는 되물을 게 없으므로 빈 배열이다',
     type: [String],
@@ -138,6 +147,7 @@ export class PostAiConsultAskResponse {
   static from(dto: AiConsultAnswerDto) {
     return plainToInstance(this, {
       answer: dto.answer,
+      tag: dto.answerType,
       suggestions: dto.suggestions,
     });
   }
