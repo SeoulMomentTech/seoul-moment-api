@@ -12,7 +12,10 @@
       "Bash(npx eslint *)",
       "Bash(npx prettier *)",
       "Bash(awk '/class V2UpdateAdminNewsRequest/,/^}/' apps/api/src/module/admin/news/admin.news.dto.ts)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx cross-env *)",
+      "Bash(docker exec *)",
+      "WebFetch(domain:ai.google.dev)"
     ]
   },
   "enableAllProjectMcpServers": true,

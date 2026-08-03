@@ -122,6 +122,10 @@
           "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:OPENAI_API_KEY::"
         },
         {
+          "name": "GEMINI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:GEMINI_API_KEY::"
+        },
+        {
           "name": "TWSMS_API_URL",
           "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:TWSMS_API_URL::"
         },

@@ -36,6 +36,7 @@ import { AdminNewsModule } from './module/admin/news/admin.news.module';
 import { AdminProductModule } from './module/admin/product/admin.product.module';
 import { AdminPromotionModule } from './module/admin/promotion/admin.promotion.module';
 import { AdminUserModule } from './module/admin/user/admin.user.module';
+import { AiConsultModule } from './module/ai-consult/ai-consult.module';
 import { AppModule } from './module/api.module';
 import { ArticleModule } from './module/article/article.module';
 import { AuthModule } from './module/auth/auth.module';
@@ -104,6 +105,7 @@ async function bootstrap() {
       AdminBrandPromotionNoticeModule,
       AdminBrandPromotionPopupModule,
       AdminBrandPromotionEventModule,
+      AiConsultModule,
       ArticleModule,
       AuthModule,
       BrandModule,
@@ -120,6 +122,7 @@ async function bootstrap() {
       UserLikeModule,
       UserRecentModule,
       UserModule,
+      AiConsultModule,
     ], // /docs, /docs-json에만 노출 (Plen 제외)
     plenInclude: [
       PlanModule,
@@ -203,6 +206,9 @@ async function bootstrap() {
   logger.info(`----------------------------------------`);
   logger.info(
     `🤖 [OpenAI]  : ${config.OPENAI_API_KEY ? 'Configured' : 'Not configured'}`,
+  );
+  logger.info(
+    `🤖 [Gemini]  : ${config.GEMINI_API_KEY ? `Configured (${config.GEMINI_MODEL})` : 'Not configured'}`,
   );
   logger.info(
     `🔎 [Serper]  : ${config.SERPER_API_KEY ? 'Configured' : 'Not configured'}`,

@@ -39,6 +39,9 @@ const getConfig = (): ConfigImpl => ({
 
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
 
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
+
   OPENSEARCH_HOST: process.env.OPENSEARCH_HOST || '',
   OPENSEARCH_NAME: process.env.OPENSEARCH_NAME || '',
   OPENSEARCH_PASS: process.env.OPENSEARCH_PASS || '',

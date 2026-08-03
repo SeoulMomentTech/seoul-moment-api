@@ -64,6 +64,23 @@ export class CacheService implements OnModuleInit {
     await this.client.incr(key);
   }
 
+  /**
+   * 카운터를 원자적으로 1 증가시키고 증가 후 값을 반환한다.
+   * 최초 생성(=1)일 때만 TTL 을 부여하는 고정 윈도우 카운터.
+   * (Redis INCR 은 기존 TTL 을 보존하므로 윈도우가 밀리지 않는다.)
+   *
+   * incr() 은 반환값이 없어 임계값 비교가 불가능하므로 별도 메서드로 둔다.
+   */
+  async incrementWithExpire(key: string, expireTime: number): Promise<number> {
+    const count = await this.client.incr(key);
+
+    if (count === 1) {
+      await this.client.expire(key, expireTime);
+    }
+
+    return count;
+  }
+
   async decr(key: string) {
     await this.client.decr(key);
   }

@@ -1,6 +1,8 @@
 import { ConfigImpl } from '../configImpl';
 import { SupportEnv } from '../enum/config.enum';
 
+// GEMINI_API_KEY 는 빈 값을 유지한다. GeminiService 가 키 없음을 감지해
+// LLM 미호출 모드로 동작하므로 getTestApp() 부팅이 깨지지 않는다.
 const getConfig = (): ConfigImpl => ({
   NODE_ENV: SupportEnv.TEST,
   PORT: 3001,
@@ -38,6 +40,9 @@ const getConfig = (): ConfigImpl => ({
   GOOGLE_APP_PASS: process.env.GOOGLE_APP_PASS || '',
 
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
 
   OPENSEARCH_HOST: process.env.OPENSEARCH_HOST || '',
   OPENSEARCH_NAME: process.env.OPENSEARCH_NAME || '',

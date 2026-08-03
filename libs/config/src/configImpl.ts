@@ -42,6 +42,10 @@ export interface ConfigImpl {
 
   OPENAI_API_KEY: string;
 
+  // Gemini (AI 상담)
+  GEMINI_API_KEY: string;
+  GEMINI_MODEL: string;
+
   OPENSEARCH_HOST: string;
   OPENSEARCH_NAME: string;
   OPENSEARCH_PASS: string;

@@ -19,6 +19,12 @@ function isSkipUrl(req: IncomingMessage): boolean {
     return true;
   }
 
+  // AI 상담은 유저가 주문번호·전화번호·주소를 자유 텍스트로 입력하므로
+  // body 를 로그에 남기지 않는다. 필요한 지표는 서비스에서 구조화 로그로 남긴다.
+  if (req.url?.startsWith('/ai-consult')) {
+    return true;
+  }
+
   return false;
 }
 

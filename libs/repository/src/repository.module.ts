@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AdminRoleEntity } from './entity/admin-role.entity';
 import { AdminEntity } from './entity/admin.entity';
+import { AiConsultLogEntity } from './entity/ai-consult-log.entity';
 import { ArticleSectionImageEntity } from './entity/article-section-image.entity';
 import { ArticleSectionEntity } from './entity/article-section.entity';
 import { ArticleEntity } from './entity/article.entity';
@@ -71,6 +72,7 @@ import { VariantOptionEntity } from './entity/variant-option.entity';
 import { SortOrderHelper } from './helper/sort-order.helper';
 import { AdminRoleRepositoryService } from './service/admin-role.repository.service';
 import { AdminRepositoryService } from './service/admin.repository.service';
+import { AiConsultLogRepositoryService } from './service/ai-consult-log.repository.service';
 import { ArticleRepositoryService } from './service/article.repository.service';
 import { BrandPromotionRepositoryService } from './service/brand-promotion.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
@@ -163,6 +165,7 @@ import { UserRepositoryService } from './service/user.repository.service';
       LookbookEntity,
       UserLookbookLikeEntity,
       LookbookCommentEntity,
+      AiConsultLogEntity,
     ]),
   ],
   providers: [
@@ -191,6 +194,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     UserLikeRepositoryService,
     UserRecentRepositoryService,
     UserSnsRepositoryService,
+    AiConsultLogRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -217,6 +221,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     UserLikeRepositoryService,
     UserRecentRepositoryService,
     UserSnsRepositoryService,
+    AiConsultLogRepositoryService,
   ],
 })
 export class RepositoryModule {}
