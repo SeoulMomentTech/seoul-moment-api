@@ -1,4 +1,7 @@
-import { AiConsultScope } from '@app/repository/enum/ai-consult.enum';
+import {
+  AiConsultIntent,
+  AiConsultScope,
+} from '@app/repository/enum/ai-consult.enum';
 import { Schema, Type } from '@google/genai';
 
 import {
@@ -45,6 +48,21 @@ const SYSTEM_RULES = `[역할]
 7. 각 메시지는 **독립된 단발 질문**입니다. 이전 대화는 주어지지 않으므로 추측하지 마십시오.
    "그럼 얼마나 걸려요?", "그건요?" 처럼 앞 문맥이 있어야만 뜻이 정해지는 메시지는
    faqCode="${FAQ_NONE}", confidence 0.3 이하로 두십시오.
+8. intent 는 고객이 원하는 **것의 종류**입니다. [FAQ 목록] 매칭과는 별개로 판정하십시오.
+   - "${AiConsultIntent.BRAND_LIST}" : 어떤 브랜드가 입점해 있는지 **목록 자체**를 묻는 질문.
+     예) "브랜드 뭐 있어", "어떤 브랜드 입점했어", "브랜드 목록", "what brands do you have", "有哪些品牌"
+   - "${AiConsultIntent.CATEGORY_LIST}" : 어떤 카테고리·상품 종류를 취급하는지 묻는 질문.
+     예) "카테고리 뭐 있어", "무슨 종류 팔아", "화장품은 뭐가 있어",
+     "what categories do you have", "有哪些類別"
+   - "${AiConsultIntent.FAQ}" : 그 외 모든 쇼핑몰 문의. **특정 브랜드를 언급해도 정책·배송·교환을
+     묻는 것이면 FAQ 입니다.** 예) "서울모먼트 배송 얼마나 걸려?" → FAQ
+   - "${AiConsultIntent.NONE}" : scope 가 ${AiConsultScope.IN_SCOPE} 가 아닐 때
+   판단이 애매하면 "${AiConsultIntent.FAQ}" 를 선택하십시오.
+9. categoryQuery 는 intent 가 "${AiConsultIntent.CATEGORY_LIST}" 일 때만 씁니다.
+   고객이 **특정 카테고리를 이름으로 지목**했으면 고객이 쓴 이름을 그대로 옮기고,
+   전체 목록을 묻는 것이면 빈 문자열로 두십시오.
+   예) "화장품은 뭐가 있어?" → "화장품" / "카테고리 뭐 있어?" → ""
+   존재하지 않는 이름을 지어내지 마십시오. 실제 조회는 서버가 수행합니다.
 
 [confidence 기준]
 - 0.90~1.00 : 해당 FAQ 와 사실상 동일한 질문
@@ -93,33 +111,58 @@ export function buildResponseSchema(): Schema {
         enum: Object.values(AiConsultScope),
         description: '질문이 쇼핑몰 이용 범위 안인지',
       },
-      faqCode: {
+      intent: {
         type: Type.STRING,
-        enum: faqCodes,
-        description: `매칭된 FAQ 코드. 없으면 ${FAQ_NONE}`,
+        enum: Object.values(AiConsultIntent),
+        description: '고객이 원하는 것의 종류. 규칙 8 참고',
       },
-      confidence: {
-        type: Type.NUMBER,
-        description: '매칭 확신도 0.0~1.0',
-      },
-      prefaceId: {
+      /**
+       * 유일한 자유 텍스트 슬롯이다. enum 으로 고정하지 않는 이유는 카테고리가
+       * DB 데이터라서, 스키마에 박으면 카테고리를 추가·수정할 때마다 재기동해야
+       * 하기 때문이다. 대신 이 값은 **DB 조회 키로만** 쓰고 고객 문장에는 절대
+       * 넣지 않는다 — 응답에 나가는 이름은 서버가 DB 에서 다시 읽은 값이다.
+       */
+      categoryQuery: {
         type: Type.STRING,
-        enum: Object.values(AiConsultPrefaceId),
-        description: '답변 앞에 붙일 도입부 종류',
+        description:
+          '고객이 지목한 카테고리 이름. 지목이 없으면 빈 문자열. 규칙 9 참고',
       },
-      alternatives: {
-        type: Type.ARRAY,
-        items: { type: Type.STRING, enum: faqCodes },
-        // SDK 타입 정의상 maxItems 는 number 가 아니라 string 이다.
-        maxItems: String(MAX_SUGGESTION_COUNT),
-        description: '확신이 낮을 때의 대안 후보',
-      },
-      reason: {
-        type: Type.STRING,
-        description: '판정 근거 한국어 20자 이내 (내부용)',
-      },
+      ...buildFaqMatchingProperties(faqCodes),
     },
-    required: ['scope', 'faqCode', 'confidence', 'prefaceId'],
+    required: ['scope', 'intent', 'faqCode', 'confidence', 'prefaceId'],
+  };
+}
+
+/** FAQ 매칭에 관한 필드들. buildResponseSchema 의 길이를 줄이기 위해 분리했다. */
+function buildFaqMatchingProperties(
+  faqCodes: string[],
+): Record<string, Schema> {
+  return {
+    faqCode: {
+      type: Type.STRING,
+      enum: faqCodes,
+      description: `매칭된 FAQ 코드. 없으면 ${FAQ_NONE}`,
+    },
+    confidence: {
+      type: Type.NUMBER,
+      description: '매칭 확신도 0.0~1.0',
+    },
+    prefaceId: {
+      type: Type.STRING,
+      enum: Object.values(AiConsultPrefaceId),
+      description: '답변 앞에 붙일 도입부 종류',
+    },
+    alternatives: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING, enum: faqCodes },
+      // SDK 타입 정의상 maxItems 는 number 가 아니라 string 이다.
+      maxItems: String(MAX_SUGGESTION_COUNT),
+      description: '확신이 낮을 때의 대안 후보',
+    },
+    reason: {
+      type: Type.STRING,
+      description: '판정 근거 한국어 20자 이내 (내부용)',
+    },
   };
 }
 

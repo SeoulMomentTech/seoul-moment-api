@@ -763,6 +763,45 @@ export const AI_CONSULT_CONFIRM_MESSAGE: Record<LanguageCode, string> = {
     '請問您是想了解「{title}」嗎？請從下方選擇，我將為您提供準確的說明。',
 };
 
+/**
+ * 입점 브랜드 목록 안내. {count} 는 DB 에서 읽은 실제 건수로 치환된다.
+ * 브랜드 이름 자체는 이 문구에 들어가지 않고 응답의 brands 배열로 나간다.
+ */
+export const AI_CONSULT_BRAND_LIST_MESSAGE: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]:
+    '현재 서울 모먼트에는 {count}개 브랜드가 입점해 있어요. 아래에서 확인해 보세요.',
+  [LanguageCode.ENGLISH]:
+    'Seoul Moment currently features {count} brands. Take a look below.',
+  [LanguageCode.TAIWAN]:
+    '目前 Seoul Moment 有 {count} 個品牌進駐，請參考以下清單。',
+};
+
+/**
+ * 대분류 목록 안내. {count} 는 DB 에서 읽은 실제 건수로 치환된다.
+ * 카테고리 이름은 이 문구가 아니라 응답의 categories 배열로 나간다.
+ */
+export const AI_CONSULT_CATEGORY_LIST_MESSAGE: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]:
+    '서울 모먼트는 {count}개 카테고리로 나뉘어 있어요. 궁금한 카테고리를 말씀해 주시면 더 자세히 알려드릴게요.',
+  [LanguageCode.ENGLISH]:
+    'Seoul Moment is organised into {count} categories. Tell me which one you are interested in and I will show you more.',
+  [LanguageCode.TAIWAN]:
+    'Seoul Moment 共分為 {count} 個類別。請告訴我您想了解的類別，我會為您進一步說明。',
+};
+
+/**
+ * 특정 대분류의 소분류 목록 안내.
+ * {name} 은 **DB 에서 읽은 이름**으로 치환한다 — 모델이 뱉은 문자열을 쓰면 안 된다.
+ */
+export const AI_CONSULT_PRODUCT_CATEGORY_LIST_MESSAGE: Record<
+  LanguageCode,
+  string
+> = {
+  [LanguageCode.KOREAN]: '{name} 카테고리에는 {count}개 종류가 있어요.',
+  [LanguageCode.ENGLISH]: 'There are {count} types under the {name} category.',
+  [LanguageCode.TAIWAN]: '{name} 類別中共有 {count} 種商品類型。',
+};
+
 export const AI_CONSULT_RATE_LIMITED_MESSAGE: Record<LanguageCode, string> = {
   [LanguageCode.KOREAN]:
     '문의가 잠시 많이 몰렸어요. 잠시 후에 다시 시도해 주시겠어요?',

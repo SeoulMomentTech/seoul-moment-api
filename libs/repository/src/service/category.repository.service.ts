@@ -97,6 +97,17 @@ export class CategoryRepositoryService {
     });
   }
 
+  async findProductCategoryByCategoryId(
+    categoryId: number,
+  ): Promise<ProductCategoryEntity[]> {
+    return this.productCategoryRepository.find({
+      where: { categoryId },
+      order: {
+        sortOrder: 'ASC',
+      },
+    });
+  }
+
   async getProductCategoryById(id: number): Promise<ProductCategoryEntity> {
     const result = await this.productCategoryRepository.findOne({
       where: { id },

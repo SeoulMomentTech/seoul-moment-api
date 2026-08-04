@@ -36,6 +36,13 @@ export interface AiConsultLogMetaObject {
   reason?: string | null;
   /** 답변 앞에 붙은 도입부. faqCode + language 와 함께 answer 를 그대로 재현할 수 있다. */
   prefaceId?: string;
+  /** 모델이 판정한 의도(FAQ / BRAND_LIST / CATEGORY_LIST / NONE). DB 실데이터 조회 비중을 집계한다. */
+  intent?: string;
+  /**
+   * 모델이 지목한 카테고리 이름(원문). 매칭 실패로 FALLBACK 이 난 질문에서
+   * 무엇을 못 찾았는지 보려면 이 값이 필요하다. 고객에게는 노출되지 않는다.
+   */
+  categoryQuery?: string;
   /** 인젝션 마커가 감지됐는지 — 차단하지 않고 관찰만 한다 */
   injectionFlagged?: boolean;
 }

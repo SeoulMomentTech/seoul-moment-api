@@ -9,22 +9,33 @@ import {
 } from '@app/external/gemini/gemini.dto';
 import { GeminiService } from '@app/external/gemini/gemini.service';
 import { maskPii } from '@app/repository/dto/ai-consult.dto';
+import { BrandEntity } from '@app/repository/entity/brand.entity';
+import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import {
   AiConsultAnswerSource,
   AiConsultAnswerType,
+  AiConsultIntent,
   AiConsultScope,
 } from '@app/repository/enum/ai-consult.enum';
+import { EntityType } from '@app/repository/enum/entity.enum';
 import {
   DEFAULT_LANGUAGE,
   LanguageCode,
 } from '@app/repository/enum/language.enum';
 import { AiConsultLogRepositoryService } from '@app/repository/service/ai-consult-log.repository.service';
+import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
+import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
+import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
 
 import {
   AiConsultAnswerDto,
+  AiConsultBrandResponse,
   AiConsultCannedAnswerType,
+  AiConsultCategoryCatalogDto,
+  AiConsultCategoryResponse,
+  AiConsultCategorySource,
   AiConsultClassificationDto,
   AiConsultLimitDto,
   AiConsultRequestContextDto,
@@ -46,10 +57,13 @@ import {
   RATE_LIMIT_USER_WINDOW_SECONDS,
 } from './ai-consult.dto';
 import {
+  AI_CONSULT_BRAND_LIST_MESSAGE,
+  AI_CONSULT_CATEGORY_LIST_MESSAGE,
   AI_CONSULT_CONFIRM_MESSAGE,
   AI_CONSULT_DEFAULT_SUGGESTION_CODES,
   AI_CONSULT_FALLBACK_MESSAGE,
   AI_CONSULT_OFF_TOPIC_MESSAGE,
+  AI_CONSULT_PRODUCT_CATEGORY_LIST_MESSAGE,
   AI_CONSULT_RATE_LIMITED_MESSAGE,
   AI_CONSULT_UNAVAILABLE_MESSAGE,
   AiConsultFaqItem,
@@ -62,6 +76,7 @@ import {
   buildUserContent,
   sanitizeMessage,
 } from './ai-consult.prompt';
+import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
 const CANNED_MESSAGE: Record<
   AiConsultCannedAnswerType,
@@ -92,6 +107,9 @@ export class AiConsultService {
     private readonly geminiService: GeminiService,
     private readonly cacheService: CacheService,
     private readonly aiConsultLogRepositoryService: AiConsultLogRepositoryService,
+    private readonly brandRepositoryService: BrandRepositoryService,
+    private readonly categoryRepositoryService: CategoryRepositoryService,
+    private readonly languageRepositoryService: LanguageRepositoryService,
     private readonly logger: LoggerService,
   ) {}
 
@@ -183,13 +201,13 @@ export class AiConsultService {
       : AiConsultAnswerType.UNAVAILABLE;
   }
 
-  private respondClassified(
+  private async respondClassified(
     context: AiConsultRequestContextDto,
     classification: AiConsultClassificationDto,
     answerSource: AiConsultAnswerSource,
     result: GeminiStructuredResultDto<unknown> | null,
-  ): PostAiConsultAskResponse {
-    const answer = this.buildAnswer(context, classification);
+  ): Promise<PostAiConsultAskResponse> {
+    const answer = await this.buildAnswer(context, classification);
 
     this.writeLog(context, answer, classification, answerSource, result);
 
@@ -214,11 +232,14 @@ export class AiConsultService {
     return PostAiConsultAskResponse.from(answer);
   }
 
-  /** 문장이 만들어지는 유일한 지점. 전부 서버 상수에서 verbatim 으로 꺼낸다. */
-  private buildAnswer(
+  /**
+   * 문장이 만들어지는 유일한 지점.
+   * FAQ 문구는 서버 상수에서, 브랜드 이름은 DB 에서 온다. 어느 쪽도 모델이 생성하지 않는다.
+   */
+  private async buildAnswer(
     context: AiConsultRequestContextDto,
     classification: AiConsultClassificationDto,
-  ): AiConsultAnswerDto {
+  ): Promise<AiConsultAnswerDto> {
     const { language } = context;
 
     if (classification.scope !== AiConsultScope.IN_SCOPE) {
@@ -230,6 +251,15 @@ export class AiConsultService {
         classification.confidence,
         this.buildDefaultSuggestions(language),
       );
+    }
+
+    // scope 를 통과한 뒤에만 DB 를 본다. 범위 외 질문으로 쿼리가 돌면 안 된다.
+    if (classification.intent === AiConsultIntent.BRAND_LIST) {
+      return this.buildBrandListAnswer(context, classification);
+    }
+
+    if (classification.intent === AiConsultIntent.CATEGORY_LIST) {
+      return this.buildCategoryAnswer(context, classification);
     }
 
     const item = findFaqItem(classification.faqCode);
@@ -247,6 +277,225 @@ export class AiConsultService {
     return classification.confidence >= CONFIDENCE_ANSWER_THRESHOLD
       ? this.buildFaqAnswer(context, classification, item)
       : this.buildConfirmAnswer(context, classification, item);
+  }
+
+  /**
+   * 입점 브랜드 목록.
+   * 모델은 "브랜드 목록을 원한다"만 판정했고, 이름·이미지는 전부 여기서 DB 로 재조회한다.
+   * 조회 실패나 0건이면 FALLBACK 으로 degrade 한다 — 상담이 5xx 로 죽으면 안 된다.
+   */
+  private async buildBrandListAnswer(
+    context: AiConsultRequestContextDto,
+    classification: AiConsultClassificationDto,
+  ): Promise<AiConsultAnswerDto> {
+    const { language } = context;
+    const brands = await this.findBrands(language);
+
+    if (brands.length === 0) {
+      return AiConsultAnswerDto.from(
+        AI_CONSULT_FALLBACK_MESSAGE[language],
+        AiConsultAnswerType.FALLBACK,
+        null,
+        classification.confidence,
+        this.buildDefaultSuggestions(language),
+      );
+    }
+
+    return AiConsultAnswerDto.from(
+      AI_CONSULT_BRAND_LIST_MESSAGE[language].replace(
+        '{count}',
+        String(brands.length),
+      ),
+      AiConsultAnswerType.BRAND_LIST,
+      null,
+      classification.confidence,
+      // 브랜드 목록 자체가 다음 행동을 제시하므로 추천 칩과 겹친다.
+      [],
+    ).withBrands(brands);
+  }
+
+  /**
+   * 카테고리 응답.
+   *
+   * intent 는 하나(CATEGORY_LIST)뿐이고, 대분류 목록인지 소분류 목록인지는
+   * `categoryQuery` 가 비었는지로 **서버가** 가른다. 모델에 맡기면 오분류가
+   * 생기는 판단인데 서버는 100% 정확하게 할 수 있다.
+   */
+  private async buildCategoryAnswer(
+    context: AiConsultRequestContextDto,
+    classification: AiConsultClassificationDto,
+  ): Promise<AiConsultAnswerDto> {
+    const { language } = context;
+    const catalog = await this.findCategoryCatalog(language);
+
+    if (catalog.getCount() === 0) return this.buildFallback(context);
+
+    if (!classification.categoryQuery) {
+      return AiConsultAnswerDto.from(
+        AI_CONSULT_CATEGORY_LIST_MESSAGE[language].replace(
+          '{count}',
+          String(catalog.getCount()),
+        ),
+        AiConsultAnswerType.CATEGORY_LIST,
+        null,
+        classification.confidence,
+        [],
+      ).withCategories(catalog.getItems());
+    }
+
+    const parentId = catalog.findIdByQuery(classification.categoryQuery);
+
+    // 없는 카테고리를 지목했으면 억지로 고르지 않고 되묻는다.
+    if (parentId === null) return this.buildFallback(context);
+
+    return this.buildProductCategoryAnswer(
+      context,
+      classification,
+      catalog.findItem(parentId),
+    );
+  }
+
+  private async buildProductCategoryAnswer(
+    context: AiConsultRequestContextDto,
+    classification: AiConsultClassificationDto,
+    parent: AiConsultCategoryResponse,
+  ): Promise<AiConsultAnswerDto> {
+    const { language } = context;
+    const catalog = await this.findProductCategoryCatalog(parent.id, language);
+
+    // 대분류는 있는데 소분류가 하나도 없으면 보여줄 게 없다.
+    if (catalog.getCount() === 0) return this.buildFallback(context);
+
+    return AiConsultAnswerDto.from(
+      AI_CONSULT_PRODUCT_CATEGORY_LIST_MESSAGE[language]
+        // 모델이 뱉은 categoryQuery 가 아니라 DB 에서 읽은 이름을 넣는다.
+        .replace('{name}', parent.name)
+        .replace('{count}', String(catalog.getCount())),
+      AiConsultAnswerType.PRODUCT_CATEGORY_LIST,
+      null,
+      classification.confidence,
+      [],
+    ).withCategories(catalog.getItems(), parent);
+  }
+
+  /** 대분류에는 이미지 컬럼이 없다. */
+  private async findCategoryCatalog(
+    language: LanguageCode,
+  ): Promise<AiConsultCategoryCatalogDto> {
+    const entityList = await this.categoryRepositoryService.findCategory();
+
+    return this.toCategoryCatalog(
+      EntityType.CATEGORY,
+      entityList.map((entity) => ({ id: entity.id, image: null })),
+      language,
+    );
+  }
+
+  /**
+   * `getImage()` 는 imageUrl 이 null 이어도 도메인을 붙여 ".../null" 을 만든다.
+   * 엔티티를 고치면 상품 API 까지 영향을 받으므로 여기서 막는다.
+   */
+  private async findProductCategoryCatalog(
+    categoryId: number,
+    language: LanguageCode,
+  ): Promise<AiConsultCategoryCatalogDto> {
+    const entityList =
+      await this.categoryRepositoryService.findProductCategoryByCategoryId(
+        categoryId,
+      );
+
+    return this.toCategoryCatalog(
+      EntityType.PRODUCT_CATEGORY,
+      entityList.map((entity) => ({
+        id: entity.id,
+        image: entity.imageUrl ? entity.getImage() : null,
+      })),
+      language,
+    );
+  }
+
+  /** 조회 실패는 빈 카탈로그로 degrade 한다 — 상담이 5xx 로 죽으면 안 된다. */
+  private async toCategoryCatalog(
+    entityType: EntityType,
+    sources: AiConsultCategorySource[],
+    language: LanguageCode,
+  ): Promise<AiConsultCategoryCatalogDto> {
+    const empty = AiConsultCategoryCatalogDto.from([], [], language);
+
+    if (sources.length === 0) return empty;
+
+    try {
+      // 언어를 지정하지 않고 전부 읽는다. 노출은 요청 언어로 하되, 이름 매칭은
+      // 모든 언어로 해야 Accept-Language 와 다른 언어로 물어도 잡힌다.
+      const textList =
+        await this.languageRepositoryService.findMultilingualTextsByEntities(
+          entityType,
+          sources.map((source) => source.id),
+        );
+
+      return AiConsultCategoryCatalogDto.from(sources, textList, language);
+    } catch (error: any) {
+      this.logger.warn(`AI consult category lookup failed: ${error.message}`);
+
+      return empty;
+    }
+  }
+
+  private buildFallback(
+    context: AiConsultRequestContextDto,
+  ): AiConsultAnswerDto {
+    return AiConsultAnswerDto.from(
+      AI_CONSULT_FALLBACK_MESSAGE[context.language],
+      AiConsultAnswerType.FALLBACK,
+      null,
+      null,
+      this.buildDefaultSuggestions(context.language),
+    );
+  }
+
+  private async findBrands(
+    language: LanguageCode,
+  ): Promise<AiConsultBrandResponse[]> {
+    try {
+      const entityList =
+        await this.brandRepositoryService.findAllNormalBrandList();
+
+      if (entityList.length === 0) return [];
+
+      const textList =
+        await this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.BRAND,
+          entityList.map((entity) => entity.id),
+          language,
+        );
+
+      return entityList
+        .map((entity) => this.toBrandResponse(entity, textList))
+        .filter((brand): brand is AiConsultBrandResponse => brand !== null);
+    } catch (error: any) {
+      this.logger.warn(`AI consult brand lookup failed: ${error.message}`);
+
+      return [];
+    }
+  }
+
+  /** 해당 언어 이름이 없는 브랜드는 목록에서 뺀다 — 빈 이름 카드가 나가면 안 된다. */
+  private toBrandResponse(
+    entity: BrandEntity,
+    textList: MultilingualTextEntity[],
+  ): AiConsultBrandResponse | null {
+    const name = MultilingualFieldDto.fromByEntityList(
+      textList.filter((text) => text.entityId === entity.id),
+      'name',
+    ).getContent();
+
+    if (!name) return null;
+
+    return AiConsultBrandResponse.from(
+      entity.id,
+      name,
+      entity.getProfileImage() || null,
+    );
   }
 
   private buildFaqAnswer(
@@ -533,6 +782,8 @@ export class AiConsultService {
           reason: classification?.reason,
           // faqCode + languageCode + prefaceId 면 고객이 본 answer 를 그대로 재현할 수 있다.
           prefaceId: classification?.prefaceId,
+          intent: classification?.intent,
+          categoryQuery: classification?.categoryQuery || undefined,
         },
       })
       .catch((error) =>

@@ -1,7 +1,9 @@
 import { RedisKey } from '@app/cache/cache.dto';
 import { SupportEnv } from '@app/config/enum/config.enum';
+import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import {
   AiConsultAnswerType,
+  AiConsultIntent,
   AiConsultScope,
 } from '@app/repository/enum/ai-consult.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
@@ -11,6 +13,7 @@ import { IsString, Length } from 'class-validator';
 import { createHash } from 'crypto';
 
 import { AiConsultPrefaceId, FAQ_NONE, findFaqItem } from './ai-consult.faq';
+import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
 export const AI_CONSULT_MIN_MESSAGE_LENGTH = 2;
 export const AI_CONSULT_MAX_MESSAGE_LENGTH = 300;
@@ -57,6 +60,13 @@ export const DAILY_BUDGET_TTL_SECONDS = 90000;
 export const MAX_SUGGESTION_COUNT = 3;
 
 /**
+ * 모델이 채우는 categoryQuery 의 상한.
+ * 조회 키로만 쓰이므로 카테고리명보다 길 이유가 없고, 길이를 열어두면
+ * 캐시 JSON 과 로그 meta 가 모델 출력만큼 부풀 수 있다.
+ */
+export const AI_CONSULT_MAX_CATEGORY_QUERY_LENGTH = 40;
+
+/**
  * 표기 변형("배송 얼마나 걸려요?" / " 배송  얼마나 걸려요? ")을 한 키로 모은다.
  * 세션이 없어 모든 질문이 자기완결적이므로 문맥 의존 오답 캐시 위험이 없다.
  */
@@ -96,11 +106,137 @@ export class PostAiConsultAskRequest {
   message: string;
 }
 
+export class AiConsultBrandResponse {
+  @ApiProperty({ description: '브랜드 ID', example: 110 })
+  id: number;
+
+  @ApiProperty({ description: '브랜드 이름', example: '서울모먼트' })
+  name: string;
+
+  @ApiProperty({
+    description: '브랜드 프로필 이미지 URL. 없으면 null',
+    example: 'https://image-dev.seoulmoment.com.tw/brand/seoul-moment.png',
+    nullable: true,
+  })
+  image: string | null;
+
+  static from(id: number, name: string, image: string | null) {
+    return plainToInstance(this, { id, name, image });
+  }
+}
+
+export class AiConsultCategoryResponse {
+  @ApiProperty({ description: '카테고리 ID', example: 2 })
+  id: number;
+
+  @ApiProperty({ description: '카테고리 이름', example: '화장품' })
+  name: string;
+
+  @ApiProperty({
+    description:
+      '카테고리 이미지 URL. 대분류에는 이미지가 없어 항상 null 이고, 소분류도 미등록이면 null',
+    example: 'https://image-dev.seoulmoment.com.tw/category/cosmetic.png',
+    nullable: true,
+  })
+  image: string | null;
+
+  static from(id: number, name: string, image: string | null) {
+    return plainToInstance(this, { id, name, image });
+  }
+}
+
+/** 카탈로그 입력. 대분류(CategoryEntity)는 이미지 컬럼이 없어 항상 null 이다. */
+export interface AiConsultCategorySource {
+  id: number;
+  image: string | null;
+}
+
+/**
+ * 표기 차이를 흡수해 이름을 비교 가능한 형태로 만든다.
+ * "화장품 " / "화 장 품" / "Cosmetics" 를 한 키로 모은다.
+ */
+function normalizeCategoryName(value: string): string {
+  return value.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+}
+
+/**
+ * 카테고리 목록 + 이름→ID 색인.
+ *
+ * 모델이 뱉은 자유 텍스트를 DB 실데이터에 붙이는 유일한 지점이라 매칭 규칙을
+ * 한 곳에 가둔다. 색인은 **모든 언어의 이름**으로 만들고 노출용 이름만 요청
+ * 언어로 고른다 — Accept-Language 가 en 이어도 고객이 한국어로 물을 수 있다.
+ */
+export class AiConsultCategoryCatalogDto {
+  private constructor(
+    private readonly items: AiConsultCategoryResponse[],
+    private readonly idByName: ReadonlyMap<string, number>,
+  ) {}
+
+  static from(
+    sources: readonly AiConsultCategorySource[],
+    textList: MultilingualTextEntity[],
+    language: LanguageCode,
+  ): AiConsultCategoryCatalogDto {
+    const items: AiConsultCategoryResponse[] = [];
+    const idByName = new Map<string, number>();
+
+    for (const source of sources) {
+      const field = MultilingualFieldDto.fromByEntityList(
+        textList.filter((text) => text.entityId === source.id),
+        'name',
+      );
+      const name = field.getContentByLanguageWithFallback(language);
+
+      // 이름을 못 찾은 카테고리는 빈 카드가 되므로 목록에서 뺀다.
+      if (!name) continue;
+
+      items.push(AiConsultCategoryResponse.from(source.id, name, source.image));
+
+      for (const text of field.texts) {
+        idByName.set(normalizeCategoryName(text.content), source.id);
+      }
+    }
+
+    return new AiConsultCategoryCatalogDto(items, idByName);
+  }
+
+  getItems(): AiConsultCategoryResponse[] {
+    return this.items;
+  }
+
+  getCount(): number {
+    return this.items.length;
+  }
+
+  findItem(id: number): AiConsultCategoryResponse | null {
+    return this.items.find((item) => item.id === id) ?? null;
+  }
+
+  /** 못 찾으면 null — 호출부는 FALLBACK 으로 떨어뜨린다. 억지로 고르지 않는다. */
+  findIdByQuery(query: string): number | null {
+    const normalized = normalizeCategoryName(query);
+
+    if (!normalized) return null;
+
+    const exact = this.idByName.get(normalized);
+
+    if (exact !== undefined) return exact;
+
+    // "화장품은" / "화장품 카테고리" 처럼 조사·수식어가 붙은 경우를 흡수한다.
+    // 1글자 이름은 우연히 포함될 확률이 높아 부분일치 대상에서 제외한다.
+    for (const [name, id] of this.idByName) {
+      if (name.length >= 2 && normalized.includes(name)) return id;
+    }
+
+    return null;
+  }
+}
+
 /**
  * 서비스 내부 결과.
  *
- * 고객 응답(`PostAiConsultAskResponse`)에는 answer/suggestions 만 나가지만,
- * 로그에는 판정 정보(answerType·faqCode·confidence)가 있어야 튜닝이 가능하다.
+ * 고객 응답(`PostAiConsultAskResponse`)에는 일부만 나가지만, 로그에는 판정 정보
+ * (answerType·faqCode·confidence)가 있어야 튜닝이 가능하다.
  * 그래서 "내부에서 아는 것"과 "밖에 내보내는 것"을 타입으로 분리한다.
  */
 export class AiConsultAnswerDto {
@@ -110,6 +246,12 @@ export class AiConsultAnswerDto {
   confidence: number | null;
   /** 추천 질문 제목. 유저가 칩을 누르면 이 문자열을 그대로 message 로 보내면 된다. */
   suggestions: string[];
+  /** BRAND_LIST 응답에서만 채워진다. 값은 전부 DB 에서 재조회한 것이다. */
+  brands: AiConsultBrandResponse[] = [];
+  /** CATEGORY_LIST(대분류) / PRODUCT_CATEGORY_LIST(소분류) 응답에서만 채워진다. */
+  categories: AiConsultCategoryResponse[] = [];
+  /** 소분류 응답에서 상위 대분류. 그 외에는 null. */
+  parentCategory: AiConsultCategoryResponse | null = null;
 
   static from(
     answer: string,
@@ -127,6 +269,22 @@ export class AiConsultAnswerDto {
     dto.suggestions = suggestions;
 
     return dto;
+  }
+
+  withBrands(brands: AiConsultBrandResponse[]): this {
+    this.brands = brands;
+
+    return this;
+  }
+
+  withCategories(
+    categories: AiConsultCategoryResponse[],
+    parentCategory: AiConsultCategoryResponse | null = null,
+  ): this {
+    this.categories = categories;
+    this.parentCategory = parentCategory;
+
+    return this;
   }
 }
 
@@ -157,11 +315,39 @@ export class PostAiConsultAskResponse {
   })
   suggestions: string[];
 
+  @ApiProperty({
+    description:
+      '입점 브랜드 목록. tag 가 BRAND_LIST 일 때만 채워지고 그 외에는 빈 배열이다. ' +
+      '이름·이미지는 전부 DB 에서 재조회한 값이라 AI 가 지어낼 수 없다',
+    type: [AiConsultBrandResponse],
+  })
+  brands: AiConsultBrandResponse[];
+
+  @ApiProperty({
+    description:
+      '카테고리 목록. tag 가 CATEGORY_LIST 면 대분류, PRODUCT_CATEGORY_LIST 면 ' +
+      'parentCategory 에 속한 소분류가 담긴다. 그 외 tag 에서는 빈 배열이다',
+    type: [AiConsultCategoryResponse],
+  })
+  categories: AiConsultCategoryResponse[];
+
+  @ApiProperty({
+    description:
+      '소분류 목록의 상위 대분류. tag 가 PRODUCT_CATEGORY_LIST 일 때만 채워진다. ' +
+      '브레드크럼이나 "다른 카테고리 보기" 동선에 쓴다',
+    type: AiConsultCategoryResponse,
+    nullable: true,
+  })
+  parentCategory: AiConsultCategoryResponse | null;
+
   static from(dto: AiConsultAnswerDto) {
     return plainToInstance(this, {
       answer: dto.answer,
       tag: dto.answerType,
       suggestions: dto.suggestions,
+      brands: dto.brands,
+      categories: dto.categories,
+      parentCategory: dto.parentCategory,
     });
   }
 }
@@ -184,6 +370,16 @@ function toEnumValue<T extends Record<string, string>>(
  */
 export class AiConsultClassificationDto {
   scope: AiConsultScope = AiConsultScope.OUT_OF_SCOPE;
+  /**
+   * 값이 없으면 FAQ 로 떨어진다.
+   * intent 도입 이전에 저장된 캐시 값에는 이 필드가 없으므로 기본값이 곧 하위 호환이다.
+   */
+  intent: AiConsultIntent = AiConsultIntent.FAQ;
+  /**
+   * 모델이 뱉은 카테고리 이름. **조회 키로만 쓰고 고객 문장에 넣지 않는다.**
+   * 지목이 없으면 빈 문자열이며, 이때는 대분류 전체 목록을 의미한다.
+   */
+  categoryQuery = '';
   /** FAQ_NONE 은 null 로 정규화된다. */
   faqCode: string | null = null;
   confidence = 0;
@@ -208,8 +404,15 @@ export class AiConsultClassificationDto {
       AiConsultPrefaceId.NEUTRAL;
     dto.reason = typeof source.reason === 'string' ? source.reason : null;
 
-    if (scope !== AiConsultScope.IN_SCOPE) return dto;
+    if (scope !== AiConsultScope.IN_SCOPE) {
+      dto.intent = AiConsultIntent.NONE;
 
+      return dto;
+    }
+
+    dto.intent =
+      toEnumValue(AiConsultIntent, source.intent) ?? AiConsultIntent.FAQ;
+    dto.categoryQuery = this.normalizeCategoryQuery(source.categoryQuery);
     dto.faqCode = this.normalizeFaqCode(source.faqCode);
     dto.confidence = dto.faqCode
       ? this.normalizeConfidence(source.confidence)
@@ -217,6 +420,13 @@ export class AiConsultClassificationDto {
     dto.alternatives = this.normalizeAlternatives(source.alternatives);
 
     return dto;
+  }
+
+  /** 자유 텍스트 슬롯이므로 길이만 자른다. 매칭 규칙은 카탈로그가 담당한다. */
+  private static normalizeCategoryQuery(value: unknown): string {
+    if (typeof value !== 'string') return '';
+
+    return value.trim().slice(0, AI_CONSULT_MAX_CATEGORY_QUERY_LENGTH);
   }
 
   private static normalizeFaqCode(value: unknown): string | null {
@@ -244,6 +454,8 @@ export class AiConsultClassificationDto {
   toCacheJson(): string {
     return JSON.stringify({
       scope: this.scope,
+      intent: this.intent,
+      categoryQuery: this.categoryQuery,
       faqCode: this.faqCode,
       confidence: this.confidence,
       prefaceId: this.prefaceId,
