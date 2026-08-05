@@ -4,6 +4,7 @@ import { AiConsultLogEntity } from '../entity/ai-consult-log.entity';
 import {
   AiConsultAnswerSource,
   AiConsultAnswerType,
+  AiConsultCategoryMatchType,
   AiConsultScope,
 } from '../enum/ai-consult.enum';
 import { LanguageCode } from '../enum/language.enum';
@@ -43,8 +44,27 @@ export interface AiConsultLogMetaObject {
    * 무엇을 못 찾았는지 보려면 이 값이 필요하다. 고객에게는 노출되지 않는다.
    */
   categoryQuery?: string;
+  /** 위 categoryQuery 를 DB 이름에 붙이려다 어떻게 됐는지. 임계값 튜닝 근거다. */
+  categoryMatch?: AiConsultCategoryMatchMeta;
   /** 인젝션 마커가 감지됐는지 — 차단하지 않고 관찰만 한다 */
   injectionFlagged?: boolean;
+}
+
+/**
+ * 카테고리 이름 매칭 결과.
+ *
+ * 실패한 건에도 1위 점수를 남기는 것이 요점이다. "0.68 이라 놓쳤다"와
+ * "0.2 라 애초에 다른 단어였다"는 대응이 완전히 다른데, 점수가 없으면
+ * 둘을 구분할 수 없어 임계값을 감으로 만지게 된다.
+ */
+export interface AiConsultCategoryMatchMeta {
+  type: AiConsultCategoryMatchType;
+  /** 유사도 단계까지 간 경우의 1위 점수 (0~1, 소수점 3자리) */
+  score?: number;
+  /** 2위 점수. 1위와 붙어 있으면 AMBIGUOUS 로 떨어진다. */
+  runnerUpScore?: number;
+  /** 1위 후보의 DB 이름. 무엇과 헷갈렸는지 보려면 필요하다. */
+  candidate?: string;
 }
 
 /**

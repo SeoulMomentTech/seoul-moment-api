@@ -1,8 +1,10 @@
 import { RedisKey } from '@app/cache/cache.dto';
 import { SupportEnv } from '@app/config/enum/config.enum';
+import { AiConsultCategoryMatchMeta } from '@app/repository/dto/ai-consult.dto';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import {
   AiConsultAnswerType,
+  AiConsultCategoryMatchType,
   AiConsultIntent,
   AiConsultScope,
 } from '@app/repository/enum/ai-consult.enum';
@@ -13,6 +15,7 @@ import { IsString, Length } from 'class-validator';
 import { createHash } from 'crypto';
 
 import { AiConsultPrefaceId, FAQ_NONE, findFaqItem } from './ai-consult.faq';
+import { findBestSimilarity, toJamo } from './ai-consult.similarity';
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
 
 export const AI_CONSULT_MIN_MESSAGE_LENGTH = 2;
@@ -65,6 +68,24 @@ export const MAX_SUGGESTION_COUNT = 3;
  * 캐시 JSON 과 로그 meta 가 모델 출력만큼 부풀 수 있다.
  */
 export const AI_CONSULT_MAX_CATEGORY_QUERY_LENGTH = 40;
+
+/**
+ * 자모 단위 유사도가 이 값 이상이면 오타로 보고 같은 카테고리로 매칭한다.
+ * 0.7 은 "악세사리→악세서리"(0.89) 같은 한 글자 오타는 통과시키면서
+ * "전자제품→화장품"(0.5) 처럼 아예 다른 이름은 걸러내는 지점이다.
+ */
+export const CATEGORY_FUZZY_MATCH_THRESHOLD = 0.7;
+/**
+ * 1·2위 유사도 차이가 이 값 미만이면 매칭하지 않는다.
+ * "가방"/"가발"처럼 서로 닮은 카테고리가 둘 다 후보로 남았을 때,
+ * 반반 확률로 찍어 엉뚱한 목록을 보여주느니 되묻는 편이 낫다.
+ */
+export const CATEGORY_FUZZY_MATCH_MARGIN = 0.05;
+/**
+ * 유사도 매칭을 적용할 이름의 최소 자모 길이(한글 2음절 상당).
+ * 짧은 이름은 한 글자만 달라도 유사도가 높게 나와 오탐이 된다.
+ */
+export const CATEGORY_FUZZY_MIN_NAME_LENGTH = 4;
 
 /**
  * 표기 변형("배송 얼마나 걸려요?" / " 배송  얼마나 걸려요? ")을 한 키로 모은다.
@@ -151,6 +172,119 @@ export interface AiConsultCategorySource {
   image: string | null;
 }
 
+/** 유사도 순위 한 칸. 어떤 이름과 몇 점으로 붙었는지까지 들고 다닌다. */
+interface AiConsultCategoryCandidate {
+  id: number;
+  name: string;
+  score: number;
+}
+
+/**
+ * 카테고리 이름 매칭 결과.
+ *
+ * `number | null` 만 돌려주면 못 찾은 이유가 사라져 로그로 임계값을 조정할 수
+ * 없다. 매칭된 id 와 함께 "어느 단계에서, 몇 점으로" 결판났는지를 같이 옮긴다.
+ */
+export class AiConsultCategoryMatchDto {
+  private constructor(
+    private readonly id: number | null,
+    private readonly type: AiConsultCategoryMatchType,
+    private readonly score: number | null,
+    private readonly runnerUpScore: number | null,
+    private readonly candidate: string | null,
+  ) {}
+
+  static exact(id: number, name: string): AiConsultCategoryMatchDto {
+    return new AiConsultCategoryMatchDto(
+      id,
+      AiConsultCategoryMatchType.EXACT,
+      null,
+      null,
+      name,
+    );
+  }
+
+  static partial(id: number, name: string): AiConsultCategoryMatchDto {
+    return new AiConsultCategoryMatchDto(
+      id,
+      AiConsultCategoryMatchType.PARTIAL,
+      null,
+      null,
+      name,
+    );
+  }
+
+  static noCandidate(): AiConsultCategoryMatchDto {
+    return new AiConsultCategoryMatchDto(
+      null,
+      AiConsultCategoryMatchType.NO_CANDIDATE,
+      null,
+      null,
+      null,
+    );
+  }
+
+  static emptyCatalog(): AiConsultCategoryMatchDto {
+    return new AiConsultCategoryMatchDto(
+      null,
+      AiConsultCategoryMatchType.EMPTY_CATALOG,
+      null,
+      null,
+      null,
+    );
+  }
+
+  /** 임계값·마진 판정을 여기 가둬 호출부가 점수를 직접 비교하지 않게 한다. */
+  static fromSimilarity(
+    best: AiConsultCategoryCandidate,
+    runnerUp: AiConsultCategoryCandidate | null,
+  ): AiConsultCategoryMatchDto {
+    const runnerUpScore = runnerUp?.score ?? null;
+    const build = (
+      id: number | null,
+      type: AiConsultCategoryMatchType,
+    ): AiConsultCategoryMatchDto =>
+      new AiConsultCategoryMatchDto(
+        id,
+        type,
+        best.score,
+        runnerUpScore,
+        best.name,
+      );
+
+    if (best.score < CATEGORY_FUZZY_MATCH_THRESHOLD) {
+      return build(null, AiConsultCategoryMatchType.BELOW_THRESHOLD);
+    }
+
+    if (
+      runnerUpScore !== null &&
+      best.score - runnerUpScore < CATEGORY_FUZZY_MATCH_MARGIN
+    ) {
+      return build(null, AiConsultCategoryMatchType.AMBIGUOUS);
+    }
+
+    return build(best.id, AiConsultCategoryMatchType.SIMILARITY);
+  }
+
+  /** 못 찾았으면 null. 호출부는 이 값으로 FALLBACK 여부를 가른다. */
+  getId(): number | null {
+    return this.id;
+  }
+
+  /** 점수는 로그 가독성을 위해 소수점 3자리로 자른다. */
+  toLogMeta(): AiConsultCategoryMatchMeta {
+    const round = (value: number | null): number | undefined =>
+      value === null ? undefined : Math.round(value * 1000) / 1000;
+
+    return {
+      type: this.type,
+      score: round(this.score),
+      runnerUpScore: round(this.runnerUpScore),
+      candidate: this.candidate ?? undefined,
+    };
+  }
+}
+
 /**
  * 표기 차이를 흡수해 이름을 비교 가능한 형태로 만든다.
  * "화장품 " / "화 장 품" / "Cosmetics" 를 한 키로 모은다.
@@ -212,23 +346,63 @@ export class AiConsultCategoryCatalogDto {
     return this.items.find((item) => item.id === id) ?? null;
   }
 
-  /** 못 찾으면 null — 호출부는 FALLBACK 으로 떨어뜨린다. 억지로 고르지 않는다. */
-  findIdByQuery(query: string): number | null {
+  /**
+   * 완전일치 → 부분일치 → 자모 유사도 순으로 내려간다.
+   * 못 찾아도 "어디까지 갔는지"를 담은 결과를 돌려준다 — 호출부가 FALLBACK 을
+   * 내면서 그 이유를 로그에 남길 수 있어야 임계값을 근거 있게 조정한다.
+   */
+  findMatch(query: string): AiConsultCategoryMatchDto {
     const normalized = normalizeCategoryName(query);
 
-    if (!normalized) return null;
+    if (!normalized) return AiConsultCategoryMatchDto.noCandidate();
 
     const exact = this.idByName.get(normalized);
 
-    if (exact !== undefined) return exact;
+    if (exact !== undefined) {
+      return AiConsultCategoryMatchDto.exact(exact, normalized);
+    }
 
     // "화장품은" / "화장품 카테고리" 처럼 조사·수식어가 붙은 경우를 흡수한다.
     // 1글자 이름은 우연히 포함될 확률이 높아 부분일치 대상에서 제외한다.
     for (const [name, id] of this.idByName) {
-      if (name.length >= 2 && normalized.includes(name)) return id;
+      if (name.length >= 2 && normalized.includes(name)) {
+        return AiConsultCategoryMatchDto.partial(id, name);
+      }
     }
 
-    return null;
+    const ranked = this.rankBySimilarity(normalized);
+
+    if (ranked.length === 0) return AiConsultCategoryMatchDto.noCandidate();
+
+    return AiConsultCategoryMatchDto.fromSimilarity(
+      ranked[0],
+      ranked[1] ?? null,
+    );
+  }
+
+  /**
+   * 마지막 구제 단계.
+   *
+   * 고객이 "악세사리"라고 써서 실제 이름 "악세서리"와 글자 단위로는 어긋나는
+   * 경우까지 잡는다. 표기 흔들림은 고객 잘못이 아닌데 "그런 카테고리 없다"로
+   * 되묻는 것은 나쁜 경험이라 여기서 흡수한다.
+   */
+  private rankBySimilarity(normalized: string): AiConsultCategoryCandidate[] {
+    const bestById = new Map<number, AiConsultCategoryCandidate>();
+
+    for (const [name, id] of this.idByName) {
+      if (toJamo(name).length < CATEGORY_FUZZY_MIN_NAME_LENGTH) continue;
+
+      const score = findBestSimilarity(normalized, name);
+      const current = bestById.get(id);
+
+      // 같은 카테고리의 다국어 이름 중 가장 잘 맞는 하나만 대표로 남긴다.
+      if (!current || score > current.score) {
+        bestById.set(id, { id, name, score });
+      }
+    }
+
+    return [...bestById.values()].sort((a, b) => b.score - a.score);
   }
 }
 
@@ -252,6 +426,11 @@ export class AiConsultAnswerDto {
   categories: AiConsultCategoryResponse[] = [];
   /** 소분류 응답에서 상위 대분류. 그 외에는 null. */
   parentCategory: AiConsultCategoryResponse | null = null;
+  /**
+   * 카테고리 이름 매칭 결과. **로그 전용이며 고객 응답에는 나가지 않는다.**
+   * 실패한 건에도 채워야 FALLBACK 의 원인을 사후에 가를 수 있다.
+   */
+  categoryMatch: AiConsultCategoryMatchDto | null = null;
 
   static from(
     answer: string,
@@ -283,6 +462,12 @@ export class AiConsultAnswerDto {
   ): this {
     this.categories = categories;
     this.parentCategory = parentCategory;
+
+    return this;
+  }
+
+  withCategoryMatch(match: AiConsultCategoryMatchDto): this {
+    this.categoryMatch = match;
 
     return this;
   }

@@ -34,6 +34,7 @@ import {
   AiConsultBrandResponse,
   AiConsultCannedAnswerType,
   AiConsultCategoryCatalogDto,
+  AiConsultCategoryMatchDto,
   AiConsultCategoryResponse,
   AiConsultCategorySource,
   AiConsultClassificationDto,
@@ -328,7 +329,12 @@ export class AiConsultService {
     const { language } = context;
     const catalog = await this.findCategoryCatalog(language);
 
-    if (catalog.getCount() === 0) return this.buildFallback(context);
+    // 데이터가 없는 것과 이름을 못 붙인 것은 대응이 다르므로 로그에서 갈라 남긴다.
+    if (catalog.getCount() === 0) {
+      return this.buildFallback(context).withCategoryMatch(
+        AiConsultCategoryMatchDto.emptyCatalog(),
+      );
+    }
 
     if (!classification.categoryQuery) {
       return AiConsultAnswerDto.from(
@@ -343,16 +349,22 @@ export class AiConsultService {
       ).withCategories(catalog.getItems());
     }
 
-    const parentId = catalog.findIdByQuery(classification.categoryQuery);
+    const match = catalog.findMatch(classification.categoryQuery);
+    const parentId = match.getId();
 
     // 없는 카테고리를 지목했으면 억지로 고르지 않고 되묻는다.
-    if (parentId === null) return this.buildFallback(context);
+    // 실패한 건에도 매칭 결과를 실어야 로그에서 원인이 남는다.
+    if (parentId === null) {
+      return this.buildFallback(context).withCategoryMatch(match);
+    }
 
-    return this.buildProductCategoryAnswer(
+    const answer = await this.buildProductCategoryAnswer(
       context,
       classification,
       catalog.findItem(parentId),
     );
+
+    return answer.withCategoryMatch(match);
   }
 
   private async buildProductCategoryAnswer(
@@ -712,26 +724,15 @@ export class AiConsultService {
 
     const usage = result?.usage ?? null;
 
-    this.logger.info('AI_CONSULT', {
-      userId: context.userId ?? null,
-      languageCode: context.language,
-      scope: classification?.scope ?? null,
-      faqCode: response.faqCode,
-      confidence: response.confidence,
-      answerType: response.answerType,
+    this.writeStructuredLog(
+      maskedQuestion,
+      context,
+      response,
+      classification,
       answerSource,
-      latencyMs: result?.latencyMs ?? 0,
-      errorKind: result?.errorKind ?? null,
-      // answerSource 가 LLM 이 아니면(캐시·canned) 호출을 안 했으므로 전부 0 이다.
-      promptTokens: usage?.promptTokenCount ?? 0,
-      outputTokens: usage?.getOutputTokenCount() ?? 0,
-      estimatedCostMicroUsd: usage?.getEstimatedCostMicroUsd() ?? 0,
-      // 매칭 실패 질문만 남겨 FAQ 보강 근거로 쓴다(전건 원문 적재 방지).
-      question:
-        response.answerType === AiConsultAnswerType.FAQ_ANSWER
-          ? undefined
-          : maskedQuestion,
-    });
+      result,
+      usage,
+    );
 
     // 레이트리밋에 걸린 요청만 DB 에서 뺀다. 이미 차단된 뒤에도 계속 때리면
     // 요청 수만큼 INSERT 가 늘어 DB 가 증폭 공격 대상이 된다(게스트는 상한이 없다).
@@ -747,6 +748,46 @@ export class AiConsultService {
       result,
       usage,
     );
+  }
+
+  /**
+   * Winston 구조화 로그. DB 적재와 달리 레이트리밋 건까지 전건 남는다.
+   * categoryQuery·categoryMatch 를 함께 남겨야 FALLBACK 한 건만 보고도
+   * 어느 단계에서 무슨 점수로 떨어졌는지 알 수 있다.
+   */
+  private writeStructuredLog(
+    maskedQuestion: string,
+    context: AiConsultRequestContextDto,
+    response: AiConsultAnswerDto,
+    classification: AiConsultClassificationDto | null,
+    answerSource: AiConsultAnswerSource,
+    result: GeminiStructuredResultDto<unknown> | null,
+    usage: GeminiUsageDto | null,
+  ): void {
+    this.logger.info('AI_CONSULT', {
+      userId: context.userId ?? null,
+      languageCode: context.language,
+      scope: classification?.scope ?? null,
+      faqCode: response.faqCode,
+      confidence: response.confidence,
+      answerType: response.answerType,
+      answerSource,
+      latencyMs: result?.latencyMs ?? 0,
+      errorKind: result?.errorKind ?? null,
+      intent: classification?.intent ?? null,
+      categoryQuery: classification?.categoryQuery || null,
+      // FALLBACK 이 "카테고리 질문이 아니었다"인지 "이름을 못 붙였다"인지 가른다.
+      categoryMatch: response.categoryMatch?.toLogMeta() ?? null,
+      // answerSource 가 LLM 이 아니면(캐시·canned) 호출을 안 했으므로 전부 0 이다.
+      promptTokens: usage?.promptTokenCount ?? 0,
+      outputTokens: usage?.getOutputTokenCount() ?? 0,
+      estimatedCostMicroUsd: usage?.getEstimatedCostMicroUsd() ?? 0,
+      // 매칭 실패 질문만 남겨 FAQ 보강 근거로 쓴다(전건 원문 적재 방지).
+      question:
+        response.answerType === AiConsultAnswerType.FAQ_ANSWER
+          ? undefined
+          : maskedQuestion,
+    });
   }
 
   private persistLog(
@@ -784,6 +825,7 @@ export class AiConsultService {
           prefaceId: classification?.prefaceId,
           intent: classification?.intent,
           categoryQuery: classification?.categoryQuery || undefined,
+          categoryMatch: response.categoryMatch?.toLogMeta(),
         },
       })
       .catch((error) =>

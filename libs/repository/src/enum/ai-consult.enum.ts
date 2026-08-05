@@ -31,6 +31,34 @@ export enum AiConsultIntent {
   NONE = 'NONE',
 }
 
+/**
+ * 모델이 넘긴 카테고리 이름을 DB 실데이터에 붙일 때 어느 단계에서 결판났는지.
+ *
+ * FALLBACK 하나만 보면 "모델이 카테고리 질문으로 안 봤다"와 "봤는데 이름을
+ * 못 붙였다"가 구분되지 않는다. 임계값을 조정할 근거도 남지 않으므로
+ * 실패한 이유까지 값으로 남긴다.
+ */
+export enum AiConsultCategoryMatchType {
+  /** 정규화 후 이름이 그대로 일치 */
+  EXACT = 'EXACT',
+  /** 질의가 이름을 통째로 포함 ("화장품 카테고리") */
+  PARTIAL = 'PARTIAL',
+  /** 자모 유사도로 구제 ("악세사리" → "악세서리") */
+  SIMILARITY = 'SIMILARITY',
+  /** 유사도 1위가 임계값 미달 — 아예 다른 단어였다 */
+  BELOW_THRESHOLD = 'BELOW_THRESHOLD',
+  /** 1·2위가 붙어 있어 찍지 않고 되물었다 */
+  AMBIGUOUS = 'AMBIGUOUS',
+  /** 비교할 대상이 없었다 — 질의가 정규화 후 비었거나 후보 이름이 모두 너무 짧다 */
+  NO_CANDIDATE = 'NO_CANDIDATE',
+  /**
+   * 대분류 카탈로그 자체가 0건이라 비교를 시작도 못 했다.
+   * 매칭 문제가 아니라 데이터 문제(카테고리 미등록·다국어 이름 누락)라서
+   * 임계값을 아무리 낮춰도 해결되지 않는다. 반드시 구분해서 남긴다.
+   */
+  EMPTY_CATALOG = 'EMPTY_CATALOG',
+}
+
 /** 고객에게 실제로 어떤 종류의 답변이 나갔는지 */
 export enum AiConsultAnswerType {
   /** 임계값을 넘겨 저장된 FAQ 답변을 그대로 반환 */

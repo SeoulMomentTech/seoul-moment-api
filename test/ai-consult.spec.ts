@@ -33,9 +33,11 @@ import {
   findFaqItem,
   PREFACES,
 } from '../apps/api/src/module/ai-consult/ai-consult.faq';
+import { AiConsultLogMetaObject } from '../libs/repository/src/dto/ai-consult.dto';
 import {
   AiConsultAnswerSource,
   AiConsultAnswerType,
+  AiConsultCategoryMatchType,
   AiConsultIntent,
   AiConsultScope,
 } from '../libs/repository/src/enum/ai-consult.enum';
@@ -781,6 +783,48 @@ describe('AiConsultController (E2E)', () => {
       expect(res.body.data.categories.map((v) => v.name)).toEqual(['핸드크림']);
     });
 
+    it('한 글자 오타("화장픔")도 유사도 매칭으로 흡수한다', async () => {
+      // Given - 완전일치·부분일치가 모두 빗나가는 표기 흔들림
+      await seedCategories();
+      geminiSpy.mockResolvedValue(categoryStub('화장픔'));
+
+      // When
+      const res = await ask('화장픔은 뭐가 있어?');
+
+      // Then - FALLBACK 이 아니라 실제 카테고리로 이어진다
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.PRODUCT_CATEGORY_LIST);
+      expect(res.body.data.categories.map((v) => v.name)).toEqual(['핸드크림']);
+      // 문구에는 고객이 쓴 오타가 아니라 DB 이름이 들어간다
+      expect(res.body.data.answer).toContain('화장품');
+      expect(res.body.data.answer).not.toContain('화장픔');
+    });
+
+    it('오타에 조사·수식어가 함께 붙어도 매칭된다', async () => {
+      // Given
+      await seedCategories();
+      geminiSpy.mockResolvedValue(categoryStub('화장픔 카테고리'));
+
+      // When
+      const res = await ask('화장픔 카테고리에는 뭐가 있어?');
+
+      // Then
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.PRODUCT_CATEGORY_LIST);
+      expect(res.body.data.categories.map((v) => v.name)).toEqual(['핸드크림']);
+    });
+
+    it('영문 이름의 표기 차이("cosmetic")도 유사도로 흡수한다', async () => {
+      // Given - 단복수 차이. 색인은 모든 언어의 이름으로 만들어져 있다
+      await seedCategories();
+      geminiSpy.mockResolvedValue(categoryStub('cosmetic'));
+
+      // When
+      const res = await ask('what cosmetic do you have?');
+
+      // Then
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.PRODUCT_CATEGORY_LIST);
+      expect(res.body.data.parentCategory.name).toBe('화장품');
+    });
+
     it('Accept-language 가 달라도 한국어 이름으로 매칭되고 응답은 영어다', async () => {
       // Given - 모델은 고객이 쓴 한국어를 그대로 넘기고, 노출은 요청 언어를 따른다
       await seedCategories();
@@ -832,6 +876,23 @@ describe('AiConsultController (E2E)', () => {
       // Then
       expect(res.body.data.tag).toBe(AiConsultAnswerType.FALLBACK);
       expect(res.body.data.categories).toEqual([]);
+    });
+
+    it('카탈로그가 0건이면 meta 에 EMPTY_CATALOG 로 구분돼 남는다', async () => {
+      // Given - 카테고리를 시드하지 않는다
+      geminiSpy.mockResolvedValue(categoryStub('악세사리'));
+
+      // When
+      const res = await ask('악세사리는 머가 잇어?');
+
+      // Then - 임계값 문제가 아니라 데이터 문제임이 로그로 구분된다
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.FALLBACK);
+      const rows = await waitForLogRows(1);
+      const meta = rows[0].meta as AiConsultLogMetaObject;
+      expect(meta.categoryMatch.type).toBe(
+        AiConsultCategoryMatchType.EMPTY_CATALOG,
+      );
+      expect(meta.categoryMatch.score).toBeUndefined();
     });
 
     it('카테고리가 0건이면 FALLBACK 으로 degrade 한다', async () => {
@@ -897,7 +958,44 @@ describe('AiConsultController (E2E)', () => {
       expect(rows[0].meta).toMatchObject({
         intent: AiConsultIntent.CATEGORY_LIST,
         categoryQuery: '화장품',
+        categoryMatch: { type: AiConsultCategoryMatchType.EXACT },
       });
+    });
+
+    it('유사도로 매칭된 건은 meta.categoryMatch 에 점수가 남는다', async () => {
+      // Given
+      await seedCategories();
+      geminiSpy.mockResolvedValue(categoryStub('화장픔'));
+
+      // When
+      const res = await ask('화장픔은 뭐가 있어?');
+      expect(res.status).toBe(200);
+
+      // Then - 무엇과 몇 점으로 붙었는지가 남아야 임계값을 조정할 수 있다
+      const rows = await waitForLogRows(1);
+      const match = (rows[0].meta as AiConsultLogMetaObject).categoryMatch;
+      expect(match.type).toBe(AiConsultCategoryMatchType.SIMILARITY);
+      expect(match.candidate).toBe('화장품');
+      expect(match.score).toBeGreaterThanOrEqual(0.7);
+    });
+
+    it('매칭 실패 건도 1위 점수를 남겨 FALLBACK 원인을 남긴다', async () => {
+      // Given
+      await seedCategories();
+      geminiSpy.mockResolvedValue(categoryStub('전자제품'));
+
+      // When
+      const res = await ask('전자제품은 뭐가 있어?');
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.FALLBACK);
+
+      // Then - "카테고리 질문이 아니었다"와 구분되는 근거가 남는다
+      const rows = await waitForLogRows(1);
+      const meta = rows[0].meta as AiConsultLogMetaObject;
+      expect(meta.categoryMatch.type).toBe(
+        AiConsultCategoryMatchType.BELOW_THRESHOLD,
+      );
+      expect(meta.categoryMatch.score).toBeLessThan(0.7);
+      expect(meta.categoryQuery).toBe('전자제품');
     });
 
     it('categoryQuery 는 캐시에도 보존돼 2회차에 같은 답이 나온다', async () => {
