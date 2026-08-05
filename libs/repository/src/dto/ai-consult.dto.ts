@@ -4,7 +4,7 @@ import { AiConsultLogEntity } from '../entity/ai-consult-log.entity';
 import {
   AiConsultAnswerSource,
   AiConsultAnswerType,
-  AiConsultCategoryMatchType,
+  AiConsultNameMatchType,
   AiConsultScope,
 } from '../enum/ai-consult.enum';
 import { LanguageCode } from '../enum/language.enum';
@@ -45,7 +45,15 @@ export interface AiConsultLogMetaObject {
    */
   categoryQuery?: string;
   /** 위 categoryQuery 를 DB 이름에 붙이려다 어떻게 됐는지. 임계값 튜닝 근거다. */
-  categoryMatch?: AiConsultCategoryMatchMeta;
+  categoryMatch?: AiConsultNameMatchMeta;
+  /** 모델이 지목한 색상 이름(원문). PRODUCT_SEARCH 에서만 채워진다. */
+  colorQuery?: string;
+  /** 위 colorQuery 의 매칭 결과. 색상만 따로 봐야 어느 슬롯이 샜는지 안다. */
+  colorMatch?: AiConsultNameMatchMeta;
+  /** 상품명 검색어. id 해석 없이 ILIKE 로 바로 들어가므로 매칭 결과가 없다. */
+  keywordQuery?: string;
+  /** 상품 검색 결과 건수. 0 건이면 조건은 붙었는데 재고가 없다는 뜻이다. */
+  productCount?: number;
   /** 인젝션 마커가 감지됐는지 — 차단하지 않고 관찰만 한다 */
   injectionFlagged?: boolean;
 }
@@ -57,8 +65,8 @@ export interface AiConsultLogMetaObject {
  * "0.2 라 애초에 다른 단어였다"는 대응이 완전히 다른데, 점수가 없으면
  * 둘을 구분할 수 없어 임계값을 감으로 만지게 된다.
  */
-export interface AiConsultCategoryMatchMeta {
-  type: AiConsultCategoryMatchType;
+export interface AiConsultNameMatchMeta {
+  type: AiConsultNameMatchType;
   /** 유사도 단계까지 간 경우의 1위 점수 (0~1, 소수점 3자리) */
   score?: number;
   /** 2위 점수. 1위와 붙어 있으면 AMBIGUOUS 로 떨어진다. */

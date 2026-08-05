@@ -780,6 +780,64 @@ export const AI_CONSULT_BRAND_LIST_MESSAGE: Record<LanguageCode, string> = {
  * 대분류 목록 안내. {count} 는 DB 에서 읽은 실제 건수로 치환된다.
  * 카테고리 이름은 이 문구가 아니라 응답의 categories 배열로 나간다.
  */
+/**
+ * 이해는 했지만 취급하지 않는 것을 물었을 때.
+ *
+ * 고객이 쓴 말을 되풀이하지 않는다 — categoryQuery 는 모델 출력이라 그대로
+ * 문장에 넣으면 인젝션 문구가 고객 화면에 그대로 찍힐 수 있다.
+ * 없다는 사실만 말하고 끝낸다.
+ */
+export const AI_CONSULT_NOT_FOUND_MESSAGE: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]:
+    '찾으시는 상품은 아직 서울 모먼트에서 취급하지 않아요.',
+  [LanguageCode.ENGLISH]:
+    'We do not carry what you are looking for at Seoul Moment yet.',
+  [LanguageCode.TAIWAN]: '您想找的商品目前 Seoul Moment 尚未販售。',
+};
+
+/**
+ * 상품 검색 결과.
+ *
+ * {filter} 에는 **DB 에서 읽은** 조건 이름만 들어간다(예: "검정", "패션 · 검정").
+ * 모델이 뱉은 문자열은 절대 들어가지 않는다.
+ */
+export const AI_CONSULT_PRODUCT_LIST_MESSAGE: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]: '{filter} 상품 {count}개를 찾았어요.',
+  [LanguageCode.ENGLISH]: 'I found {count} items matching {filter}.',
+  [LanguageCode.TAIWAN]: '為您找到 {filter} 商品 {count} 件。',
+};
+
+/** 상품명 검색어만 걸렸을 때. 검색어는 모델 출력이라 문장에 넣지 않는다. */
+export const AI_CONSULT_PRODUCT_FOUND_MESSAGE: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]: '말씀하신 상품 {count}개를 찾았어요.',
+  [LanguageCode.ENGLISH]: 'I found {count} items matching your search.',
+  [LanguageCode.TAIWAN]: '為您找到 {count} 件相關商品。',
+};
+
+/** 조건 없이 그냥 추천해 달라고 했을 때. */
+export const AI_CONSULT_PRODUCT_PICK_MESSAGE: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]: '최근 들어온 상품이에요. 이런 건 어떠세요?',
+  [LanguageCode.ENGLISH]:
+    'Here are some of our newest arrivals. How about these?',
+  [LanguageCode.TAIWAN]: '這些是最新上架的商品，您覺得如何？',
+};
+
+/** 조건은 붙였는데 해당하는 상품이 0건일 때. */
+export const AI_CONSULT_PRODUCT_EMPTY_MESSAGE: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]: '{filter} 상품은 지금 준비된 게 없어요.',
+  [LanguageCode.ENGLISH]: 'We do not have any {filter} items available now.',
+  [LanguageCode.TAIWAN]: '目前沒有 {filter} 的商品。',
+};
+
+/** 대분류는 찾았는데 그 아래 상품 분류가 아직 하나도 없을 때. */
+export const AI_CONSULT_CATEGORY_EMPTY_MESSAGE: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]:
+    '{name} 카테고리는 아직 준비 중이라 보여드릴 상품이 없어요.',
+  [LanguageCode.ENGLISH]:
+    'The {name} category is still being prepared, so there is nothing to show yet.',
+  [LanguageCode.TAIWAN]: '{name} 類別仍在準備中，目前沒有可顯示的商品。',
+};
+
 export const AI_CONSULT_CATEGORY_LIST_MESSAGE: Record<LanguageCode, string> = {
   [LanguageCode.KOREAN]:
     '서울 모먼트는 {count}개 카테고리로 나뉘어 있어요. 궁금한 카테고리를 말씀해 주시면 더 자세히 알려드릴게요.',

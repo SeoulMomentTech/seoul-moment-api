@@ -26,6 +26,7 @@ import { AiConsultLogRepositoryService } from '@app/repository/service/ai-consul
 import { BrandRepositoryService } from '@app/repository/service/brand.repository.service';
 import { CategoryRepositoryService } from '@app/repository/service/category.repository.service';
 import { LanguageRepositoryService } from '@app/repository/service/language.repository.service';
+import { OptionRepositoryService } from '@app/repository/service/option.repository.service';
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
 
@@ -34,10 +35,14 @@ import {
   AiConsultBrandResponse,
   AiConsultCannedAnswerType,
   AiConsultCategoryCatalogDto,
-  AiConsultCategoryMatchDto,
+  AiConsultNameMatchDto,
   AiConsultCategoryResponse,
   AiConsultCategorySource,
   AiConsultClassificationDto,
+  AiConsultColorCatalogDto,
+  AiConsultProductFilterDto,
+  AiConsultProductResponse,
+  AiConsultResolvedSlotDto,
   AiConsultLimitDto,
   AiConsultRequestContextDto,
   ANSWER_CACHE_MIN_LENGTH,
@@ -59,12 +64,18 @@ import {
 } from './ai-consult.dto';
 import {
   AI_CONSULT_BRAND_LIST_MESSAGE,
+  AI_CONSULT_CATEGORY_EMPTY_MESSAGE,
   AI_CONSULT_CATEGORY_LIST_MESSAGE,
   AI_CONSULT_CONFIRM_MESSAGE,
   AI_CONSULT_DEFAULT_SUGGESTION_CODES,
   AI_CONSULT_FALLBACK_MESSAGE,
+  AI_CONSULT_NOT_FOUND_MESSAGE,
   AI_CONSULT_OFF_TOPIC_MESSAGE,
   AI_CONSULT_PRODUCT_CATEGORY_LIST_MESSAGE,
+  AI_CONSULT_PRODUCT_EMPTY_MESSAGE,
+  AI_CONSULT_PRODUCT_FOUND_MESSAGE,
+  AI_CONSULT_PRODUCT_LIST_MESSAGE,
+  AI_CONSULT_PRODUCT_PICK_MESSAGE,
   AI_CONSULT_RATE_LIMITED_MESSAGE,
   AI_CONSULT_UNAVAILABLE_MESSAGE,
   AiConsultFaqItem,
@@ -72,12 +83,15 @@ import {
   PREFACES,
 } from './ai-consult.faq';
 import {
+  buildPromptFingerprint,
   buildResponseSchema,
   buildSystemInstruction,
   buildUserContent,
   sanitizeMessage,
 } from './ai-consult.prompt';
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
+import { GetProductResponse } from '../product/product.dto';
+import { ProductService } from '../product/product.service';
 
 const CANNED_MESSAGE: Record<
   AiConsultCannedAnswerType,
@@ -98,6 +112,15 @@ export class AiConsultService {
    */
   private readonly systemInstruction = buildSystemInstruction();
   private readonly responseSchema = buildResponseSchema();
+  /**
+   * 프롬프트가 바뀌면 캐시 키 공간이 통째로 갈린다.
+   * 규칙을 고쳤는데 옛 판정이 24시간 살아남아 "프롬프트가 안 먹는다"고
+   * 오진하는 일을 막는다.
+   */
+  private readonly promptFingerprint = buildPromptFingerprint(
+    this.systemInstruction,
+    this.responseSchema,
+  );
 
   /** local/dev 는 개인 레이트리밋을 끈다. 전역 일일 예산은 환경과 무관하게 적용된다. */
   private readonly rateLimitEnabled = !RATE_LIMIT_DISABLED_ENVS.includes(
@@ -111,6 +134,8 @@ export class AiConsultService {
     private readonly brandRepositoryService: BrandRepositoryService,
     private readonly categoryRepositoryService: CategoryRepositoryService,
     private readonly languageRepositoryService: LanguageRepositoryService,
+    private readonly optionRepositoryService: OptionRepositoryService,
+    private readonly productService: ProductService,
     private readonly logger: LoggerService,
   ) {}
 
@@ -263,6 +288,10 @@ export class AiConsultService {
       return this.buildCategoryAnswer(context, classification);
     }
 
+    if (classification.intent === AiConsultIntent.PRODUCT_SEARCH) {
+      return this.buildProductSearchAnswer(context, classification);
+    }
+
     const item = findFaqItem(classification.faqCode);
 
     if (!item || classification.confidence < CONFIDENCE_CONFIRM_THRESHOLD) {
@@ -332,7 +361,7 @@ export class AiConsultService {
     // 데이터가 없는 것과 이름을 못 붙인 것은 대응이 다르므로 로그에서 갈라 남긴다.
     if (catalog.getCount() === 0) {
       return this.buildFallback(context).withCategoryMatch(
-        AiConsultCategoryMatchDto.emptyCatalog(),
+        AiConsultNameMatchDto.emptyCatalog(),
       );
     }
 
@@ -352,10 +381,11 @@ export class AiConsultService {
     const match = catalog.findMatch(classification.categoryQuery);
     const parentId = match.getId();
 
-    // 없는 카테고리를 지목했으면 억지로 고르지 않고 되묻는다.
+    // 이해는 했는데 취급하지 않는 것을 물은 경우다. "이해하지 못했다"(FALLBACK)로
+    // 답하면 고객은 자기 표현이 잘못된 줄 알고 같은 질문을 반복한다.
     // 실패한 건에도 매칭 결과를 실어야 로그에서 원인이 남는다.
     if (parentId === null) {
-      return this.buildFallback(context).withCategoryMatch(match);
+      return this.buildNotFound(context).withCategoryMatch(match);
     }
 
     const answer = await this.buildProductCategoryAnswer(
@@ -367,6 +397,25 @@ export class AiConsultService {
     return answer.withCategoryMatch(match);
   }
 
+  /**
+   * "그런 건 아직 없어요" 한 문장으로 끝낸다.
+   *
+   * 고객이 쓴 말을 되풀이하지 않는다 — categoryQuery 는 모델 출력이라 그대로
+   * 넣으면 인젝션 문구가 고객 화면에 찍힐 수 있다.
+   * 취급 목록도 붙이지 않는다. 없다는 답에 곁들이면 동문서답이 된다.
+   */
+  private buildNotFound(
+    context: AiConsultRequestContextDto,
+  ): AiConsultAnswerDto {
+    return AiConsultAnswerDto.from(
+      AI_CONSULT_NOT_FOUND_MESSAGE[context.language],
+      AiConsultAnswerType.NOT_FOUND,
+      null,
+      null,
+      [],
+    );
+  }
+
   private async buildProductCategoryAnswer(
     context: AiConsultRequestContextDto,
     classification: AiConsultClassificationDto,
@@ -375,8 +424,20 @@ export class AiConsultService {
     const { language } = context;
     const catalog = await this.findProductCategoryCatalog(parent.id, language);
 
-    // 대분류는 있는데 소분류가 하나도 없으면 보여줄 게 없다.
-    if (catalog.getCount() === 0) return this.buildFallback(context);
+    // 대분류는 맞게 찾았고 아래가 비어있을 뿐이다. 이것도 이해 실패가 아니다.
+    // 이름은 모델 출력이 아니라 DB 에서 읽은 값이라 문장에 넣어도 안전하다.
+    if (catalog.getCount() === 0) {
+      return AiConsultAnswerDto.from(
+        AI_CONSULT_CATEGORY_EMPTY_MESSAGE[language].replace(
+          '{name}',
+          parent.name,
+        ),
+        AiConsultAnswerType.NOT_FOUND,
+        null,
+        classification.confidence,
+        [],
+      );
+    }
 
     return AiConsultAnswerDto.from(
       AI_CONSULT_PRODUCT_CATEGORY_LIST_MESSAGE[language]
@@ -388,6 +449,237 @@ export class AiConsultService {
       classification.confidence,
       [],
     ).withCategories(catalog.getItems(), parent);
+  }
+
+  /**
+   * 상품 검색.
+   *
+   * 모델이 지목한 조건 중 **DB 에 붙은 것만** 필터로 쓴다. 못 붙인 조건을
+   * 조용히 무시하면 "검정 옷"에 아무 옷이나 보여주게 되므로, 실제로 적용된
+   * 조건을 appliedFilter 로 함께 내보내 결과를 좁게 오해하지 않도록 한다.
+   */
+  private async buildProductSearchAnswer(
+    context: AiConsultRequestContextDto,
+    classification: AiConsultClassificationDto,
+  ): Promise<AiConsultAnswerDto> {
+    const slot = await this.resolveProductFilter(context, classification);
+
+    // 조건을 말했는데 하나도 못 붙였으면 전체 목록을 보여주는 대신 없다고 답한다.
+    if (slot.isRequestedButUnresolved()) {
+      return this.buildNotFound(context).withProductSearch(
+        [],
+        slot.applied,
+        0,
+        slot.categoryMatch,
+        slot.colorMatch,
+      );
+    }
+
+    const [products, total] = await this.findProducts(context, slot);
+
+    if (products.length === 0) {
+      return this.buildProductEmpty(context, slot);
+    }
+
+    return AiConsultAnswerDto.from(
+      this.buildProductListMessage(context, slot, total),
+      AiConsultAnswerType.PRODUCT_LIST,
+      null,
+      classification.confidence,
+      // 상품 카드 자체가 다음 행동을 제시하므로 추천 칩과 겹친다.
+      [],
+    ).withProductSearch(
+      products,
+      slot.applied,
+      total,
+      slot.categoryMatch,
+      slot.colorMatch,
+    );
+  }
+
+  /** 조건은 붙었는데 재고가 없는 경우. 이해 실패가 아니므로 NOT_FOUND 다. */
+  private buildProductEmpty(
+    context: AiConsultRequestContextDto,
+    slot: AiConsultProductFilterDto,
+  ): AiConsultAnswerDto {
+    const { language } = context;
+    // 말할 수 있는 조건이 있을 때만 조건을 되짚는다(keyword 는 모델 출력이라 제외).
+    const message = slot.applied.hasDisplayable()
+      ? AI_CONSULT_PRODUCT_EMPTY_MESSAGE[language].replace(
+          '{filter}',
+          slot.describeFilter(),
+        )
+      : AI_CONSULT_NOT_FOUND_MESSAGE[language];
+
+    return AiConsultAnswerDto.from(
+      message,
+      AiConsultAnswerType.NOT_FOUND,
+      null,
+      null,
+      [],
+    ).withProductSearch(
+      [],
+      slot.applied,
+      0,
+      slot.categoryMatch,
+      slot.colorMatch,
+    );
+  }
+
+  private buildProductListMessage(
+    context: AiConsultRequestContextDto,
+    slot: AiConsultProductFilterDto,
+    total: number,
+  ): string {
+    const { language } = context;
+
+    // 조건 없이 "추천해줘" 라고만 한 경우엔 조건을 말할 수 없다.
+    if (!slot.applied.hasAny()) {
+      return AI_CONSULT_PRODUCT_PICK_MESSAGE[language];
+    }
+
+    // 키워드만 걸린 경우. 키워드는 모델 출력이라 문장에 넣지 않는다.
+    if (!slot.applied.hasDisplayable()) {
+      return AI_CONSULT_PRODUCT_FOUND_MESSAGE[language].replace(
+        '{count}',
+        String(total),
+      );
+    }
+
+    return AI_CONSULT_PRODUCT_LIST_MESSAGE[language]
+      .replace('{filter}', slot.describeFilter())
+      .replace('{count}', String(total));
+  }
+
+  /**
+   * 모델이 뱉은 이름을 DB id 로 바꾼다.
+   * 카테고리·색상 모두 같은 매칭 규칙(완전일치→부분일치→자모 유사도)을 탄다.
+   */
+  private async resolveProductFilter(
+    context: AiConsultRequestContextDto,
+    classification: AiConsultClassificationDto,
+  ): Promise<AiConsultProductFilterDto> {
+    const { language } = context;
+    const [category, color] = await Promise.all([
+      this.resolveCategorySlot(classification.categoryQuery, language),
+      this.resolveColorSlot(classification.colorQuery, language),
+    ]);
+
+    return AiConsultProductFilterDto.from(
+      Boolean(classification.categoryQuery),
+      Boolean(classification.colorQuery),
+      category,
+      color,
+      classification.keywordQuery,
+    );
+  }
+
+  private async resolveCategorySlot(
+    query: string,
+    language: LanguageCode,
+  ): Promise<AiConsultResolvedSlotDto | null> {
+    if (!query) return null;
+
+    const catalog = await this.findCategoryCatalog(language);
+
+    if (catalog.getCount() === 0) {
+      return AiConsultResolvedSlotDto.unresolved(
+        AiConsultNameMatchDto.emptyCatalog(),
+      );
+    }
+
+    const match = catalog.findMatch(query);
+    const id = match.getId();
+
+    return id === null
+      ? AiConsultResolvedSlotDto.unresolved(match)
+      : AiConsultResolvedSlotDto.resolved(id, catalog.findItem(id).name, match);
+  }
+
+  private async resolveColorSlot(
+    query: string,
+    language: LanguageCode,
+  ): Promise<AiConsultResolvedSlotDto | null> {
+    if (!query) return null;
+
+    const catalog = await this.findColorCatalog(language);
+
+    if (catalog.getCount() === 0) {
+      return AiConsultResolvedSlotDto.unresolved(
+        AiConsultNameMatchDto.emptyCatalog(),
+      );
+    }
+
+    const match = catalog.findMatch(query);
+    const id = match.getId();
+
+    return id === null
+      ? AiConsultResolvedSlotDto.unresolved(match)
+      : AiConsultResolvedSlotDto.resolved(id, catalog.findItem(id).name, match);
+  }
+
+  /** 조회 실패는 빈 목록으로 degrade 한다 — 상담이 5xx 로 죽으면 안 된다. */
+  private async findProducts(
+    context: AiConsultRequestContextDto,
+    slot: AiConsultProductFilterDto,
+  ): Promise<[AiConsultProductResponse[], number]> {
+    try {
+      const [items, total] = await this.productService.getProduct(
+        slot.toProductRequest(),
+        context.language,
+      );
+
+      return [items.map((item) => this.toProductResponse(item)), total];
+    } catch (error: any) {
+      this.logger.warn(`AI consult product lookup failed: ${error.message}`);
+
+      return [[], 0];
+    }
+  }
+
+  /** 리뷰 수·평점은 아직 임시값이라 상담 답변에 싣지 않는다. */
+  private toProductResponse(
+    item: GetProductResponse,
+  ): AiConsultProductResponse {
+    return AiConsultProductResponse.from(
+      item.id,
+      item.productName,
+      item.brandName,
+      item.price,
+      item.image || null,
+    );
+  }
+
+  private async findColorCatalog(
+    language: LanguageCode,
+  ): Promise<AiConsultColorCatalogDto> {
+    const empty = AiConsultColorCatalogDto.from([], [], language);
+
+    try {
+      const entityList =
+        await this.optionRepositoryService.findColorOptionValues();
+
+      if (entityList.length === 0) return empty;
+
+      const textList =
+        await this.languageRepositoryService.findMultilingualTextsByEntities(
+          EntityType.OPTION_VALUE,
+          entityList.map((entity) => entity.id),
+        );
+
+      return AiConsultColorCatalogDto.from(
+        entityList.map((entity) => ({
+          id: entity.id,
+          code: entity.colorCode ?? null,
+        })),
+        textList,
+        language,
+      );
+    } catch (error: any) {
+      this.logger.warn(`AI consult color lookup failed: ${error.message}`);
+
+      return empty;
+    }
   }
 
   /** 대분류에는 이미지 컬럼이 없다. */
@@ -681,7 +973,11 @@ export class AiConsultService {
 
     try {
       const cached = await this.cacheService.find(
-        buildAnswerCacheKey(context.question, context.language),
+        buildAnswerCacheKey(
+          context.question,
+          context.language,
+          this.promptFingerprint,
+        ),
       );
 
       return AiConsultClassificationDto.parseCache(cached);
@@ -700,7 +996,11 @@ export class AiConsultService {
 
     try {
       await this.cacheService.set(
-        buildAnswerCacheKey(context.question, context.language),
+        buildAnswerCacheKey(
+          context.question,
+          context.language,
+          this.promptFingerprint,
+        ),
         classification.toCacheJson(),
         ANSWER_CACHE_TTL_SECONDS,
       );
@@ -778,6 +1078,10 @@ export class AiConsultService {
       categoryQuery: classification?.categoryQuery || null,
       // FALLBACK 이 "카테고리 질문이 아니었다"인지 "이름을 못 붙였다"인지 가른다.
       categoryMatch: response.categoryMatch?.toLogMeta() ?? null,
+      colorQuery: classification?.colorQuery || null,
+      colorMatch: response.colorMatch?.toLogMeta() ?? null,
+      keywordQuery: classification?.keywordQuery || null,
+      productCount: response.productCount,
       // answerSource 가 LLM 이 아니면(캐시·canned) 호출을 안 했으므로 전부 0 이다.
       promptTokens: usage?.promptTokenCount ?? 0,
       outputTokens: usage?.getOutputTokenCount() ?? 0,
@@ -826,6 +1130,10 @@ export class AiConsultService {
           intent: classification?.intent,
           categoryQuery: classification?.categoryQuery || undefined,
           categoryMatch: response.categoryMatch?.toLogMeta(),
+          colorQuery: classification?.colorQuery || undefined,
+          colorMatch: response.colorMatch?.toLogMeta(),
+          keywordQuery: classification?.keywordQuery || undefined,
+          productCount: response.productCount ?? undefined,
         },
       })
       .catch((error) =>

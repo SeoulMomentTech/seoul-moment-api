@@ -1,10 +1,10 @@
 import { RedisKey } from '@app/cache/cache.dto';
 import { SupportEnv } from '@app/config/enum/config.enum';
-import { AiConsultCategoryMatchMeta } from '@app/repository/dto/ai-consult.dto';
+import { AiConsultNameMatchMeta } from '@app/repository/dto/ai-consult.dto';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import {
   AiConsultAnswerType,
-  AiConsultCategoryMatchType,
+  AiConsultNameMatchType,
   AiConsultIntent,
   AiConsultScope,
 } from '@app/repository/enum/ai-consult.enum';
@@ -17,6 +17,7 @@ import { createHash } from 'crypto';
 import { AiConsultPrefaceId, FAQ_NONE, findFaqItem } from './ai-consult.faq';
 import { findBestSimilarity, toJamo } from './ai-consult.similarity';
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
+import { GetProductRequest } from '../product/product.dto';
 
 export const AI_CONSULT_MIN_MESSAGE_LENGTH = 2;
 export const AI_CONSULT_MAX_MESSAGE_LENGTH = 300;
@@ -74,26 +75,33 @@ export const AI_CONSULT_MAX_CATEGORY_QUERY_LENGTH = 40;
  * 0.7 은 "악세사리→악세서리"(0.89) 같은 한 글자 오타는 통과시키면서
  * "전자제품→화장품"(0.5) 처럼 아예 다른 이름은 걸러내는 지점이다.
  */
-export const CATEGORY_FUZZY_MATCH_THRESHOLD = 0.7;
+export const NAME_FUZZY_MATCH_THRESHOLD = 0.7;
 /**
  * 1·2위 유사도 차이가 이 값 미만이면 매칭하지 않는다.
  * "가방"/"가발"처럼 서로 닮은 카테고리가 둘 다 후보로 남았을 때,
  * 반반 확률로 찍어 엉뚱한 목록을 보여주느니 되묻는 편이 낫다.
  */
-export const CATEGORY_FUZZY_MATCH_MARGIN = 0.05;
+export const NAME_FUZZY_MATCH_MARGIN = 0.05;
 /**
  * 유사도 매칭을 적용할 이름의 최소 자모 길이(한글 2음절 상당).
  * 짧은 이름은 한 글자만 달라도 유사도가 높게 나와 오탐이 된다.
  */
-export const CATEGORY_FUZZY_MIN_NAME_LENGTH = 4;
+export const NAME_FUZZY_MIN_LENGTH = 4;
+
+/** option_value 의 다국어 이름은 'name' 이 아니라 'value' 필드에 들어있다. */
+export const OPTION_VALUE_NAME_FIELD = 'value';
 
 /**
  * 표기 변형("배송 얼마나 걸려요?" / " 배송  얼마나 걸려요? ")을 한 키로 모은다.
  * 세션이 없어 모든 질문이 자기완결적이므로 문맥 의존 오답 캐시 위험이 없다.
+ *
+ * `promptFingerprint` 는 프롬프트가 바뀌면 키 공간을 통째로 갈아 옛 판정을
+ * 버리기 위한 것이다. 이게 없으면 규칙을 고쳐도 캐시된 판정이 24시간 남는다.
  */
 export function buildAnswerCacheKey(
   question: string,
   language: LanguageCode,
+  promptFingerprint: string,
 ): string {
   const normalized = question
     .normalize('NFKC')
@@ -107,7 +115,7 @@ export function buildAnswerCacheKey(
     .digest('hex')
     .slice(0, 32);
 
-  return `${RedisKey.AI_CONSULT_ANSWER}:${language}:${hash}`;
+  return `${RedisKey.AI_CONSULT_ANSWER}:${promptFingerprint}:${language}:${hash}`;
 }
 
 /** 전역 일일 예산 카운터 키. UTC 날짜 기준으로 하루를 나눈다. */
@@ -172,8 +180,126 @@ export interface AiConsultCategorySource {
   image: string | null;
 }
 
+export class AiConsultColorResponse {
+  @ApiProperty({ description: '옵션값(색상) ID', example: 17 })
+  id: number;
+
+  @ApiProperty({ description: '색상 이름', example: '빨강' })
+  name: string;
+
+  @ApiProperty({
+    description: '색상 코드. 미등록이면 null',
+    example: '#FF0000',
+    nullable: true,
+  })
+  code: string | null;
+
+  static from(id: number, name: string, code: string | null) {
+    return plainToInstance(this, { id, name, code });
+  }
+}
+
+/** 카탈로그 입력. option_value 는 색상 코드를 갖는다. */
+export interface AiConsultColorSource {
+  id: number;
+  code: string | null;
+}
+
+/**
+ * 채팅에 뿌릴 상품 카드.
+ *
+ * `GetProductResponse` 를 그대로 내보내지 않는다 — 거기엔 아직 리뷰 수·평점이
+ * 임시값으로 채워져 있어서 상담 답변에 실리면 사실이 아닌 수치를 말하게 된다.
+ * 확정된 값만 골라 담는다.
+ */
+export class AiConsultProductResponse {
+  @ApiProperty({ description: '상품 아이템 ID', example: 91 })
+  id: number;
+
+  @ApiProperty({ description: '상품 이름', example: '코튼 오버핏 셔츠' })
+  name: string;
+
+  @ApiProperty({ description: '브랜드 이름', example: '서울모먼트' })
+  brandName: string;
+
+  @ApiProperty({ description: '가격(할인가가 있으면 할인가)', example: 39000 })
+  price: number;
+
+  @ApiProperty({
+    description: '대표 이미지 URL',
+    example: 'https://image-dev.seoulmoment.com.tw/product/shirt.png',
+    nullable: true,
+  })
+  image: string | null;
+
+  static from(
+    id: number,
+    name: string,
+    brandName: string,
+    price: number,
+    image: string | null,
+  ) {
+    return plainToInstance(this, { id, name, brandName, price, image });
+  }
+}
+
+/**
+ * 실제로 적용된 검색 조건.
+ *
+ * 모델이 지목한 조건 중 DB 에 붙지 못한 것은 여기 빠진다. "검정 옷"에서
+ * 색상만 붙고 카테고리가 빠졌다면 고객·프론트가 그걸 알아야 결과를
+ * 오해하지 않는다. 값은 전부 DB 에서 읽은 이름이다.
+ */
+export class AiConsultAppliedFilterResponse {
+  @ApiProperty({
+    description: '적용된 카테고리 이름. 못 붙였으면 null',
+    example: '패션',
+    nullable: true,
+  })
+  category: string | null;
+
+  @ApiProperty({
+    description: '적용된 색상 이름. 못 붙였으면 null',
+    example: '검정',
+    nullable: true,
+  })
+  color: string | null;
+
+  @ApiProperty({
+    description:
+      '적용된 상품명 검색어. 없으면 null. 카테고리·색상과 달리 DB 이름이 아니라 ' +
+      '모델이 뽑은 검색어이므로 화면에 그대로 렌더링할 때 이스케이프가 필요하다',
+    example: '드라이핏',
+    nullable: true,
+  })
+  keyword: string | null;
+
+  static from(
+    category: string | null,
+    color: string | null,
+    keyword: string | null,
+  ) {
+    return plainToInstance(this, { category, color, keyword });
+  }
+
+  /** 실제로 필터가 하나라도 걸렸는가. */
+  hasAny(): boolean {
+    return (
+      this.category !== null || this.color !== null || this.keyword !== null
+    );
+  }
+
+  /**
+   * 고객 문장에 넣어도 되는 조건이 있는가.
+   * keyword 는 모델 출력이라 제외한다 — 인젝션 문구가 답변에 실릴 수 있다.
+   */
+  hasDisplayable(): boolean {
+    return this.category !== null || this.color !== null;
+  }
+}
+
 /** 유사도 순위 한 칸. 어떤 이름과 몇 점으로 붙었는지까지 들고 다닌다. */
-interface AiConsultCategoryCandidate {
+interface AiConsultNameCandidate {
   id: number;
   name: string;
   score: number;
@@ -185,49 +311,49 @@ interface AiConsultCategoryCandidate {
  * `number | null` 만 돌려주면 못 찾은 이유가 사라져 로그로 임계값을 조정할 수
  * 없다. 매칭된 id 와 함께 "어느 단계에서, 몇 점으로" 결판났는지를 같이 옮긴다.
  */
-export class AiConsultCategoryMatchDto {
+export class AiConsultNameMatchDto {
   private constructor(
     private readonly id: number | null,
-    private readonly type: AiConsultCategoryMatchType,
+    private readonly type: AiConsultNameMatchType,
     private readonly score: number | null,
     private readonly runnerUpScore: number | null,
     private readonly candidate: string | null,
   ) {}
 
-  static exact(id: number, name: string): AiConsultCategoryMatchDto {
-    return new AiConsultCategoryMatchDto(
+  static exact(id: number, name: string): AiConsultNameMatchDto {
+    return new AiConsultNameMatchDto(
       id,
-      AiConsultCategoryMatchType.EXACT,
+      AiConsultNameMatchType.EXACT,
       null,
       null,
       name,
     );
   }
 
-  static partial(id: number, name: string): AiConsultCategoryMatchDto {
-    return new AiConsultCategoryMatchDto(
+  static partial(id: number, name: string): AiConsultNameMatchDto {
+    return new AiConsultNameMatchDto(
       id,
-      AiConsultCategoryMatchType.PARTIAL,
+      AiConsultNameMatchType.PARTIAL,
       null,
       null,
       name,
     );
   }
 
-  static noCandidate(): AiConsultCategoryMatchDto {
-    return new AiConsultCategoryMatchDto(
+  static noCandidate(): AiConsultNameMatchDto {
+    return new AiConsultNameMatchDto(
       null,
-      AiConsultCategoryMatchType.NO_CANDIDATE,
+      AiConsultNameMatchType.NO_CANDIDATE,
       null,
       null,
       null,
     );
   }
 
-  static emptyCatalog(): AiConsultCategoryMatchDto {
-    return new AiConsultCategoryMatchDto(
+  static emptyCatalog(): AiConsultNameMatchDto {
+    return new AiConsultNameMatchDto(
       null,
-      AiConsultCategoryMatchType.EMPTY_CATALOG,
+      AiConsultNameMatchType.EMPTY_CATALOG,
       null,
       null,
       null,
@@ -236,34 +362,28 @@ export class AiConsultCategoryMatchDto {
 
   /** 임계값·마진 판정을 여기 가둬 호출부가 점수를 직접 비교하지 않게 한다. */
   static fromSimilarity(
-    best: AiConsultCategoryCandidate,
-    runnerUp: AiConsultCategoryCandidate | null,
-  ): AiConsultCategoryMatchDto {
+    best: AiConsultNameCandidate,
+    runnerUp: AiConsultNameCandidate | null,
+  ): AiConsultNameMatchDto {
     const runnerUpScore = runnerUp?.score ?? null;
     const build = (
       id: number | null,
-      type: AiConsultCategoryMatchType,
-    ): AiConsultCategoryMatchDto =>
-      new AiConsultCategoryMatchDto(
-        id,
-        type,
-        best.score,
-        runnerUpScore,
-        best.name,
-      );
+      type: AiConsultNameMatchType,
+    ): AiConsultNameMatchDto =>
+      new AiConsultNameMatchDto(id, type, best.score, runnerUpScore, best.name);
 
-    if (best.score < CATEGORY_FUZZY_MATCH_THRESHOLD) {
-      return build(null, AiConsultCategoryMatchType.BELOW_THRESHOLD);
+    if (best.score < NAME_FUZZY_MATCH_THRESHOLD) {
+      return build(null, AiConsultNameMatchType.BELOW_THRESHOLD);
     }
 
     if (
       runnerUpScore !== null &&
-      best.score - runnerUpScore < CATEGORY_FUZZY_MATCH_MARGIN
+      best.score - runnerUpScore < NAME_FUZZY_MATCH_MARGIN
     ) {
-      return build(null, AiConsultCategoryMatchType.AMBIGUOUS);
+      return build(null, AiConsultNameMatchType.AMBIGUOUS);
     }
 
-    return build(best.id, AiConsultCategoryMatchType.SIMILARITY);
+    return build(best.id, AiConsultNameMatchType.SIMILARITY);
   }
 
   /** 못 찾았으면 null. 호출부는 이 값으로 FALLBACK 여부를 가른다. */
@@ -272,7 +392,7 @@ export class AiConsultCategoryMatchDto {
   }
 
   /** 점수는 로그 가독성을 위해 소수점 3자리로 자른다. */
-  toLogMeta(): AiConsultCategoryMatchMeta {
+  toLogMeta(): AiConsultNameMatchMeta {
     const round = (value: number | null): number | undefined =>
       value === null ? undefined : Math.round(value * 1000) / 1000;
 
@@ -289,21 +409,92 @@ export class AiConsultCategoryMatchDto {
  * 표기 차이를 흡수해 이름을 비교 가능한 형태로 만든다.
  * "화장품 " / "화 장 품" / "Cosmetics" 를 한 키로 모은다.
  */
-function normalizeCategoryName(value: string): string {
+export function normalizeMatchName(value: string): string {
   return value.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
 }
 
 /**
- * 카테고리 목록 + 이름→ID 색인.
+ * 이름 → ID 색인.
  *
  * 모델이 뱉은 자유 텍스트를 DB 실데이터에 붙이는 유일한 지점이라 매칭 규칙을
- * 한 곳에 가둔다. 색인은 **모든 언어의 이름**으로 만들고 노출용 이름만 요청
- * 언어로 고른다 — Accept-Language 가 en 이어도 고객이 한국어로 물을 수 있다.
+ * 여기 한 곳에 가둔다. 카테고리든 색상이든 규칙이 같아야 "악세사리"는 잡히고
+ * "빨강"은 안 잡히는 식의 비대칭이 생기지 않는다.
+ *
+ * 색인은 **모든 언어의 이름**으로 만든다 — Accept-Language 가 en 이어도
+ * 고객은 한국어로 물을 수 있다.
+ */
+export class AiConsultNameIndexDto {
+  private constructor(private readonly idByName: ReadonlyMap<string, number>) {}
+
+  static from(entries: ReadonlyMap<string, number>): AiConsultNameIndexDto {
+    return new AiConsultNameIndexDto(entries);
+  }
+
+  /**
+   * 완전일치 → 부분일치 → 자모 유사도 순으로 내려간다.
+   * 못 찾아도 "어디까지 갔는지"를 담은 결과를 돌려준다 — 호출부가 FALLBACK 을
+   * 내면서 그 이유를 로그에 남길 수 있어야 임계값을 근거 있게 조정한다.
+   */
+  findMatch(query: string): AiConsultNameMatchDto {
+    const normalized = normalizeMatchName(query);
+
+    if (!normalized) return AiConsultNameMatchDto.noCandidate();
+
+    const exact = this.idByName.get(normalized);
+
+    if (exact !== undefined) {
+      return AiConsultNameMatchDto.exact(exact, normalized);
+    }
+
+    // "화장품은" / "화장품 카테고리" 처럼 조사·수식어가 붙은 경우를 흡수한다.
+    // 1글자 이름은 우연히 포함될 확률이 높아 부분일치 대상에서 제외한다.
+    for (const [name, id] of this.idByName) {
+      if (name.length >= 2 && normalized.includes(name)) {
+        return AiConsultNameMatchDto.partial(id, name);
+      }
+    }
+
+    const ranked = this.rankBySimilarity(normalized);
+
+    if (ranked.length === 0) return AiConsultNameMatchDto.noCandidate();
+
+    return AiConsultNameMatchDto.fromSimilarity(ranked[0], ranked[1] ?? null);
+  }
+
+  /**
+   * 마지막 구제 단계.
+   *
+   * 고객이 "악세사리"라고 써서 실제 이름 "악세서리"와 글자 단위로는 어긋나는
+   * 경우까지 잡는다. 표기 흔들림은 고객 잘못이 아닌데 "그런 건 없다"로
+   * 되묻는 것은 나쁜 경험이라 여기서 흡수한다.
+   */
+  private rankBySimilarity(normalized: string): AiConsultNameCandidate[] {
+    const bestById = new Map<number, AiConsultNameCandidate>();
+
+    for (const [name, id] of this.idByName) {
+      if (toJamo(name).length < NAME_FUZZY_MIN_LENGTH) continue;
+
+      const score = findBestSimilarity(normalized, name);
+      const current = bestById.get(id);
+
+      // 같은 대상의 다국어 이름 중 가장 잘 맞는 하나만 대표로 남긴다.
+      if (!current || score > current.score) {
+        bestById.set(id, { id, name, score });
+      }
+    }
+
+    return [...bestById.values()].sort((a, b) => b.score - a.score);
+  }
+}
+
+/**
+ * 카테고리 목록 + 이름 색인.
+ * 노출용 이름만 요청 언어로 고르고, 매칭은 `AiConsultNameIndexDto` 에 맡긴다.
  */
 export class AiConsultCategoryCatalogDto {
   private constructor(
     private readonly items: AiConsultCategoryResponse[],
-    private readonly idByName: ReadonlyMap<string, number>,
+    private readonly index: AiConsultNameIndexDto,
   ) {}
 
   static from(
@@ -327,11 +518,14 @@ export class AiConsultCategoryCatalogDto {
       items.push(AiConsultCategoryResponse.from(source.id, name, source.image));
 
       for (const text of field.texts) {
-        idByName.set(normalizeCategoryName(text.content), source.id);
+        idByName.set(normalizeMatchName(text.content), source.id);
       }
     }
 
-    return new AiConsultCategoryCatalogDto(items, idByName);
+    return new AiConsultCategoryCatalogDto(
+      items,
+      AiConsultNameIndexDto.from(idByName),
+    );
   }
 
   getItems(): AiConsultCategoryResponse[] {
@@ -346,63 +540,188 @@ export class AiConsultCategoryCatalogDto {
     return this.items.find((item) => item.id === id) ?? null;
   }
 
-  /**
-   * 완전일치 → 부분일치 → 자모 유사도 순으로 내려간다.
-   * 못 찾아도 "어디까지 갔는지"를 담은 결과를 돌려준다 — 호출부가 FALLBACK 을
-   * 내면서 그 이유를 로그에 남길 수 있어야 임계값을 근거 있게 조정한다.
-   */
-  findMatch(query: string): AiConsultCategoryMatchDto {
-    const normalized = normalizeCategoryName(query);
+  findMatch(query: string): AiConsultNameMatchDto {
+    return this.index.findMatch(query);
+  }
+}
 
-    if (!normalized) return AiConsultCategoryMatchDto.noCandidate();
+/**
+ * 색상 옵션값 목록 + 이름 색인.
+ *
+ * 카테고리와 구조가 같지만 다국어 필드명이 다르다 — option_value 의 이름은
+ * `name` 이 아니라 `value` 에 들어있다. 이걸 틀리면 색인이 통째로 비어
+ * 모든 색상 질의가 조용히 EMPTY_CATALOG 로 떨어진다.
+ */
+export class AiConsultColorCatalogDto {
+  private constructor(
+    private readonly items: AiConsultColorResponse[],
+    private readonly index: AiConsultNameIndexDto,
+  ) {}
 
-    const exact = this.idByName.get(normalized);
+  static from(
+    sources: readonly AiConsultColorSource[],
+    textList: MultilingualTextEntity[],
+    language: LanguageCode,
+  ): AiConsultColorCatalogDto {
+    const items: AiConsultColorResponse[] = [];
+    const idByName = new Map<string, number>();
 
-    if (exact !== undefined) {
-      return AiConsultCategoryMatchDto.exact(exact, normalized);
-    }
+    for (const source of sources) {
+      const field = MultilingualFieldDto.fromByEntityList(
+        textList.filter((text) => text.entityId === source.id),
+        OPTION_VALUE_NAME_FIELD,
+      );
+      const name = field.getContentByLanguageWithFallback(language);
 
-    // "화장품은" / "화장품 카테고리" 처럼 조사·수식어가 붙은 경우를 흡수한다.
-    // 1글자 이름은 우연히 포함될 확률이 높아 부분일치 대상에서 제외한다.
-    for (const [name, id] of this.idByName) {
-      if (name.length >= 2 && normalized.includes(name)) {
-        return AiConsultCategoryMatchDto.partial(id, name);
+      // 이름이 없는 색상은 매칭도 노출도 불가능하다.
+      if (!name) continue;
+
+      items.push(AiConsultColorResponse.from(source.id, name, source.code));
+
+      for (const text of field.texts) {
+        idByName.set(normalizeMatchName(text.content), source.id);
       }
     }
 
-    const ranked = this.rankBySimilarity(normalized);
-
-    if (ranked.length === 0) return AiConsultCategoryMatchDto.noCandidate();
-
-    return AiConsultCategoryMatchDto.fromSimilarity(
-      ranked[0],
-      ranked[1] ?? null,
+    return new AiConsultColorCatalogDto(
+      items,
+      AiConsultNameIndexDto.from(idByName),
     );
   }
 
+  getItems(): AiConsultColorResponse[] {
+    return this.items;
+  }
+
+  getCount(): number {
+    return this.items.length;
+  }
+
+  findItem(id: number): AiConsultColorResponse | null {
+    return this.items.find((item) => item.id === id) ?? null;
+  }
+
+  findMatch(query: string): AiConsultNameMatchDto {
+    return this.index.findMatch(query);
+  }
+}
+
+/** 상품 검색 시 한 번에 가져올 카드 수. 채팅 말풍선에 들어갈 만큼만. */
+export const AI_CONSULT_PRODUCT_PAGE_SIZE = 8;
+
+/**
+ * 슬롯 하나(카테고리 또는 색상)의 해석 결과.
+ * 붙은 id 와 DB 이름, 그리고 어떻게 붙었는지(로그용)를 함께 옮긴다.
+ */
+export class AiConsultResolvedSlotDto {
+  private constructor(
+    private readonly id: number | null,
+    private readonly name: string | null,
+    readonly match: AiConsultNameMatchDto,
+  ) {}
+
+  static resolved(
+    id: number,
+    name: string,
+    match: AiConsultNameMatchDto,
+  ): AiConsultResolvedSlotDto {
+    return new AiConsultResolvedSlotDto(id, name, match);
+  }
+
+  static unresolved(match: AiConsultNameMatchDto): AiConsultResolvedSlotDto {
+    return new AiConsultResolvedSlotDto(null, null, match);
+  }
+
+  getId(): number | null {
+    return this.id;
+  }
+
+  /** DB 에서 읽은 이름. 고객 문장에 넣어도 안전한 유일한 값이다. */
+  getName(): string | null {
+    return this.name;
+  }
+}
+
+/**
+ * 상품 검색 조건 한 묶음.
+ *
+ * "고객이 말한 것"과 "실제로 DB 에 붙은 것"을 분리해서 들고 있는 게 요점이다.
+ * 둘을 뭉치면 조건을 못 붙였는데 붙은 척하고 전체 목록을 보여주게 된다.
+ */
+export class AiConsultProductFilterDto {
+  private constructor(
+    private readonly categoryRequested: boolean,
+    private readonly colorRequested: boolean,
+    private readonly category: AiConsultResolvedSlotDto | null,
+    private readonly color: AiConsultResolvedSlotDto | null,
+    private readonly keyword: string,
+    readonly applied: AiConsultAppliedFilterResponse,
+  ) {}
+
+  static from(
+    categoryRequested: boolean,
+    colorRequested: boolean,
+    category: AiConsultResolvedSlotDto | null,
+    color: AiConsultResolvedSlotDto | null,
+    keyword: string,
+  ): AiConsultProductFilterDto {
+    return new AiConsultProductFilterDto(
+      categoryRequested,
+      colorRequested,
+      category,
+      color,
+      keyword,
+      AiConsultAppliedFilterResponse.from(
+        category?.getName() ?? null,
+        color?.getName() ?? null,
+        // 키워드는 id 해석이 필요 없다 — 상품명 검색에 그대로 들어간다.
+        keyword || null,
+      ),
+    );
+  }
+
+  get categoryMatch(): AiConsultNameMatchDto | null {
+    return this.category?.match ?? null;
+  }
+
+  get colorMatch(): AiConsultNameMatchDto | null {
+    return this.color?.match ?? null;
+  }
+
   /**
-   * 마지막 구제 단계.
-   *
-   * 고객이 "악세사리"라고 써서 실제 이름 "악세서리"와 글자 단위로는 어긋나는
-   * 경우까지 잡는다. 표기 흔들림은 고객 잘못이 아닌데 "그런 카테고리 없다"로
-   * 되묻는 것은 나쁜 경험이라 여기서 흡수한다.
+   * 조건을 말했는데 하나도 못 붙인 상태.
+   * 이때 필터 없이 조회하면 "검정 옷"에 아무 상품이나 나가므로 검색 자체를 막는다.
    */
-  private rankBySimilarity(normalized: string): AiConsultCategoryCandidate[] {
-    const bestById = new Map<number, AiConsultCategoryCandidate>();
+  isRequestedButUnresolved(): boolean {
+    const requested = this.categoryRequested || this.colorRequested;
 
-    for (const [name, id] of this.idByName) {
-      if (toJamo(name).length < CATEGORY_FUZZY_MIN_NAME_LENGTH) continue;
+    return requested && !this.applied.hasAny();
+  }
 
-      const score = findBestSimilarity(normalized, name);
-      const current = bestById.get(id);
+  /** 고객 문장에 넣을 조건 표기. DB 이름만 쓰고 keyword 는 뺀다. */
+  describeFilter(): string {
+    return [this.applied.category, this.applied.color]
+      .filter((value): value is string => Boolean(value))
+      .join(' · ');
+  }
 
-      // 같은 카테고리의 다국어 이름 중 가장 잘 맞는 하나만 대표로 남긴다.
-      if (!current || score > current.score) {
-        bestById.set(id, { id, name, score });
-      }
-    }
+  toProductRequest(): GetProductRequest {
+    const colorId = this.color?.getId() ?? null;
 
-    return [...bestById.values()].sort((a, b) => b.score - a.score);
+    return GetProductRequest.from(
+      1,
+      AI_CONSULT_PRODUCT_PAGE_SIZE,
+      undefined,
+      undefined,
+      // 상품명 ILIKE 검색. multilingual_text(entityType='product') 를 뒤진다.
+      this.keyword || undefined,
+      undefined,
+      this.category?.getId() ?? undefined,
+      undefined,
+      // optionIdList 는 이름과 달리 option_value_id 목록이다.
+      colorId === null ? undefined : [colorId],
+      undefined,
+    );
   }
 }
 
@@ -426,11 +745,19 @@ export class AiConsultAnswerDto {
   categories: AiConsultCategoryResponse[] = [];
   /** 소분류 응답에서 상위 대분류. 그 외에는 null. */
   parentCategory: AiConsultCategoryResponse | null = null;
+  /** PRODUCT_LIST 응답에서만 채워진다. */
+  products: AiConsultProductResponse[] = [];
+  /** PRODUCT_LIST / NOT_FOUND(상품 검색) 에서 실제로 적용된 조건. */
+  appliedFilter: AiConsultAppliedFilterResponse | null = null;
+  /** 상품 검색 결과 총 건수. 로그 전용. */
+  productCount: number | null = null;
+  /** 색상 이름 매칭 결과. **로그 전용이며 고객 응답에는 나가지 않는다.** */
+  colorMatch: AiConsultNameMatchDto | null = null;
   /**
    * 카테고리 이름 매칭 결과. **로그 전용이며 고객 응답에는 나가지 않는다.**
    * 실패한 건에도 채워야 FALLBACK 의 원인을 사후에 가를 수 있다.
    */
-  categoryMatch: AiConsultCategoryMatchDto | null = null;
+  categoryMatch: AiConsultNameMatchDto | null = null;
 
   static from(
     answer: string,
@@ -466,8 +793,25 @@ export class AiConsultAnswerDto {
     return this;
   }
 
-  withCategoryMatch(match: AiConsultCategoryMatchDto): this {
+  withCategoryMatch(match: AiConsultNameMatchDto): this {
     this.categoryMatch = match;
+
+    return this;
+  }
+
+  /** 상품 검색 결과 한 묶음. 실패(0건)일 때도 조건·건수를 실어 로그에 남긴다. */
+  withProductSearch(
+    products: AiConsultProductResponse[],
+    appliedFilter: AiConsultAppliedFilterResponse,
+    productCount: number,
+    categoryMatch: AiConsultNameMatchDto | null,
+    colorMatch: AiConsultNameMatchDto | null,
+  ): this {
+    this.products = products;
+    this.appliedFilter = appliedFilter;
+    this.productCount = productCount;
+    this.categoryMatch = categoryMatch;
+    this.colorMatch = colorMatch;
 
     return this;
   }
@@ -525,6 +869,23 @@ export class PostAiConsultAskResponse {
   })
   parentCategory: AiConsultCategoryResponse | null;
 
+  @ApiProperty({
+    description:
+      '상품 카드 목록. tag 가 PRODUCT_LIST 일 때만 채워지고 그 외에는 빈 배열이다. ' +
+      '이름·가격·이미지는 전부 DB 에서 읽은 값이라 AI 가 지어낼 수 없다',
+    type: [AiConsultProductResponse],
+  })
+  products: AiConsultProductResponse[];
+
+  @ApiProperty({
+    description:
+      '실제로 적용된 검색 조건. 모델이 지목했어도 DB 에 붙지 못한 조건은 null 이다. ' +
+      '"검정 옷"에서 색상만 붙었다면 category 가 null 이므로 결과를 좁게 해석하면 안 된다',
+    type: AiConsultAppliedFilterResponse,
+    nullable: true,
+  })
+  appliedFilter: AiConsultAppliedFilterResponse | null;
+
   static from(dto: AiConsultAnswerDto) {
     return plainToInstance(this, {
       answer: dto.answer,
@@ -533,6 +894,8 @@ export class PostAiConsultAskResponse {
       brands: dto.brands,
       categories: dto.categories,
       parentCategory: dto.parentCategory,
+      products: dto.products,
+      appliedFilter: dto.appliedFilter,
     });
   }
 }
@@ -565,6 +928,16 @@ export class AiConsultClassificationDto {
    * 지목이 없으면 빈 문자열이며, 이때는 대분류 전체 목록을 의미한다.
    */
   categoryQuery = '';
+  /**
+   * 모델이 뱉은 색상 이름. categoryQuery 와 같은 규칙으로 조회 키로만 쓴다.
+   * PRODUCT_SEARCH 가 아닌 intent 에서는 비어 있다.
+   */
+  colorQuery = '';
+  /**
+   * 카테고리·색상이 아닌 상품 검색어. 상품명 ILIKE 검색에 그대로 쓰인다.
+   * **고객 문장에는 넣지 않는다** — 모델 출력이라 인젝션 문구가 섞일 수 있다.
+   */
+  keywordQuery = '';
   /** FAQ_NONE 은 null 로 정규화된다. */
   faqCode: string | null = null;
   confidence = 0;
@@ -597,7 +970,9 @@ export class AiConsultClassificationDto {
 
     dto.intent =
       toEnumValue(AiConsultIntent, source.intent) ?? AiConsultIntent.FAQ;
-    dto.categoryQuery = this.normalizeCategoryQuery(source.categoryQuery);
+    dto.categoryQuery = this.normalizeFreeTextSlot(source.categoryQuery);
+    dto.colorQuery = this.normalizeFreeTextSlot(source.colorQuery);
+    dto.keywordQuery = this.normalizeFreeTextSlot(source.keywordQuery);
     dto.faqCode = this.normalizeFaqCode(source.faqCode);
     dto.confidence = dto.faqCode
       ? this.normalizeConfidence(source.confidence)
@@ -608,7 +983,7 @@ export class AiConsultClassificationDto {
   }
 
   /** 자유 텍스트 슬롯이므로 길이만 자른다. 매칭 규칙은 카탈로그가 담당한다. */
-  private static normalizeCategoryQuery(value: unknown): string {
+  private static normalizeFreeTextSlot(value: unknown): string {
     if (typeof value !== 'string') return '';
 
     return value.trim().slice(0, AI_CONSULT_MAX_CATEGORY_QUERY_LENGTH);
@@ -641,6 +1016,8 @@ export class AiConsultClassificationDto {
       scope: this.scope,
       intent: this.intent,
       categoryQuery: this.categoryQuery,
+      colorQuery: this.colorQuery,
+      keywordQuery: this.keywordQuery,
       faqCode: this.faqCode,
       confidence: this.confidence,
       prefaceId: this.prefaceId,

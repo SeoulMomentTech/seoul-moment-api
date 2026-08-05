@@ -15,7 +15,8 @@
       "WebSearch",
       "Bash(npx cross-env *)",
       "Bash(docker exec *)",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(npx tsc *)"
     ]
   },
   "enableAllProjectMcpServers": true,

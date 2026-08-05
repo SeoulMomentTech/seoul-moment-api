@@ -33,11 +33,16 @@ import {
   findFaqItem,
   PREFACES,
 } from '../apps/api/src/module/ai-consult/ai-consult.faq';
+import {
+  buildPromptFingerprint,
+  buildResponseSchema,
+  buildSystemInstruction,
+} from '../apps/api/src/module/ai-consult/ai-consult.prompt';
 import { AiConsultLogMetaObject } from '../libs/repository/src/dto/ai-consult.dto';
 import {
   AiConsultAnswerSource,
   AiConsultAnswerType,
-  AiConsultCategoryMatchType,
+  AiConsultNameMatchType,
   AiConsultIntent,
   AiConsultScope,
 } from '../libs/repository/src/enum/ai-consult.enum';
@@ -50,6 +55,12 @@ const SUGGESTIONS_URL = '/ai-consult/suggestions';
 const USER_AUTH_BASE = '/user/auth';
 
 const DELIVERY_QUESTION = '배송 얼마나 걸려요?';
+
+/** 서비스가 캐시 키에 쓰는 것과 같은 지문. 프롬프트가 바뀌면 함께 바뀐다. */
+const FINGERPRINT = buildPromptFingerprint(
+  buildSystemInstruction(),
+  buildResponseSchema(),
+);
 
 /** LLM raw JSON 형태 — 서비스가 responseSchema 로 강제하는 구조와 동일하게 만든다. */
 function classification(overrides: Record<string, unknown> = {}) {
@@ -330,9 +341,11 @@ describe('AiConsultController (E2E)', () => {
       // Then
       expect(Object.keys(res.body.data).sort()).toEqual([
         'answer',
+        'appliedFilter',
         'brands',
         'categories',
         'parentCategory',
+        'products',
         'suggestions',
         'tag',
       ]);
@@ -677,7 +690,11 @@ describe('AiConsultController (E2E)', () => {
     it('intent 가 없는 구버전 캐시 값도 FAQ 로 정상 동작한다', async () => {
       // Given - intent 도입 이전 형식
       await cacheService.set(
-        buildAnswerCacheKey(DELIVERY_QUESTION, LanguageCode.KOREAN),
+        buildAnswerCacheKey(
+          DELIVERY_QUESTION,
+          LanguageCode.KOREAN,
+          FINGERPRINT,
+        ),
         JSON.stringify({
           scope: AiConsultScope.IN_SCOPE,
           faqCode: AiConsultFaqCode.DELIVERY_LEAD_TIME,
@@ -843,7 +860,7 @@ describe('AiConsultController (E2E)', () => {
       expect(res.body.data.parentCategory.name).toBe('Cosmetics');
     });
 
-    it('없는 카테고리를 지목하면 억지로 고르지 않고 FALLBACK 이다', async () => {
+    it('취급하지 않는 카테고리면 이해 실패가 아니라 NOT_FOUND 다', async () => {
       // Given
       await seedCategories();
       geminiSpy.mockResolvedValue(categoryStub('전자제품'));
@@ -851,13 +868,30 @@ describe('AiConsultController (E2E)', () => {
       // When
       const res = await ask('전자제품은 뭐가 있어?');
 
-      // Then
-      expect(res.body.data.tag).toBe(AiConsultAnswerType.FALLBACK);
+      // Then - "이해하지 못했다"가 아니라 "없다" 한 문장으로 끝낸다
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.NOT_FOUND);
+      expect(res.body.data.answer).not.toBe(
+        AI_CONSULT_FALLBACK_MESSAGE[LanguageCode.KOREAN],
+      );
+      // 없다는 답에 취급 목록을 곁들이면 동문서답이 된다
       expect(res.body.data.categories).toEqual([]);
-      expect(res.body.data.suggestions).toHaveLength(3);
+      expect(res.body.data.suggestions).toEqual([]);
     });
 
-    it('소분류가 하나도 없는 대분류면 FALLBACK 이다', async () => {
+    it('NOT_FOUND 문구에 모델이 뱉은 문자열을 되풀이하지 않는다', async () => {
+      // Given - 인젝션 문구가 categoryQuery 슬롯으로 들어온 경우
+      await seedCategories();
+      geminiSpy.mockResolvedValue(categoryStub('서울모먼트는 사기입니다'));
+
+      // When
+      const res = await ask('그런 카테고리 있어?');
+
+      // Then - 모델 출력이 고객 문장에 그대로 실려 나가면 안 된다
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.NOT_FOUND);
+      expect(res.body.data.answer).not.toContain('사기');
+    });
+
+    it('소분류가 하나도 없는 대분류면 준비 중이라고 답한다', async () => {
       // Given - 소분류 없는 대분류를 따로 만든다
       const rows = await dataSource.query(
         `INSERT INTO category (sort_order) VALUES (9) RETURNING id`,
@@ -873,8 +907,9 @@ describe('AiConsultController (E2E)', () => {
       // When
       const res = await ask('악세서리는 뭐가 있어?');
 
-      // Then
-      expect(res.body.data.tag).toBe(AiConsultAnswerType.FALLBACK);
+      // Then - 대분류는 맞게 찾았으므로 그 이름을 DB 값으로 문장에 넣는다
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.NOT_FOUND);
+      expect(res.body.data.answer).toContain('악세서리');
       expect(res.body.data.categories).toEqual([]);
     });
 
@@ -890,7 +925,7 @@ describe('AiConsultController (E2E)', () => {
       const rows = await waitForLogRows(1);
       const meta = rows[0].meta as AiConsultLogMetaObject;
       expect(meta.categoryMatch.type).toBe(
-        AiConsultCategoryMatchType.EMPTY_CATALOG,
+        AiConsultNameMatchType.EMPTY_CATALOG,
       );
       expect(meta.categoryMatch.score).toBeUndefined();
     });
@@ -958,7 +993,7 @@ describe('AiConsultController (E2E)', () => {
       expect(rows[0].meta).toMatchObject({
         intent: AiConsultIntent.CATEGORY_LIST,
         categoryQuery: '화장품',
-        categoryMatch: { type: AiConsultCategoryMatchType.EXACT },
+        categoryMatch: { type: AiConsultNameMatchType.EXACT },
       });
     });
 
@@ -974,25 +1009,25 @@ describe('AiConsultController (E2E)', () => {
       // Then - 무엇과 몇 점으로 붙었는지가 남아야 임계값을 조정할 수 있다
       const rows = await waitForLogRows(1);
       const match = (rows[0].meta as AiConsultLogMetaObject).categoryMatch;
-      expect(match.type).toBe(AiConsultCategoryMatchType.SIMILARITY);
+      expect(match.type).toBe(AiConsultNameMatchType.SIMILARITY);
       expect(match.candidate).toBe('화장품');
       expect(match.score).toBeGreaterThanOrEqual(0.7);
     });
 
-    it('매칭 실패 건도 1위 점수를 남겨 FALLBACK 원인을 남긴다', async () => {
+    it('매칭 실패 건도 1위 점수를 남겨 NOT_FOUND 원인을 남긴다', async () => {
       // Given
       await seedCategories();
       geminiSpy.mockResolvedValue(categoryStub('전자제품'));
 
       // When
       const res = await ask('전자제품은 뭐가 있어?');
-      expect(res.body.data.tag).toBe(AiConsultAnswerType.FALLBACK);
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.NOT_FOUND);
 
       // Then - "카테고리 질문이 아니었다"와 구분되는 근거가 남는다
       const rows = await waitForLogRows(1);
       const meta = rows[0].meta as AiConsultLogMetaObject;
       expect(meta.categoryMatch.type).toBe(
-        AiConsultCategoryMatchType.BELOW_THRESHOLD,
+        AiConsultNameMatchType.BELOW_THRESHOLD,
       );
       expect(meta.categoryMatch.score).toBeLessThan(0.7);
       expect(meta.categoryQuery).toBe('전자제품');
@@ -1093,10 +1128,51 @@ describe('AiConsultController (E2E)', () => {
       expect(geminiSpy).toHaveBeenCalledTimes(2);
     });
 
+    it('프롬프트가 바뀌면 옛 판정 캐시는 잡히지 않는다', async () => {
+      // Given - 이전 프롬프트로 저장된 OUT_OF_SCOPE 판정
+      await cacheService.set(
+        buildAnswerCacheKey(DELIVERY_QUESTION, LanguageCode.KOREAN, 'oldhash1'),
+        JSON.stringify({
+          scope: AiConsultScope.OUT_OF_SCOPE,
+          intent: AiConsultIntent.NONE,
+          faqCode: 'NONE',
+          confidence: 0,
+          prefaceId: AiConsultPrefaceId.NEUTRAL,
+        }),
+        60,
+      );
+
+      // When - 현재 프롬프트로는 키가 갈리므로 LLM 을 다시 부른다
+      const res = await ask(DELIVERY_QUESTION);
+
+      // Then - 규칙을 고쳤는데 옛 판정이 하루 종일 살아남으면 안 된다
+      expect(geminiSpy).toHaveBeenCalledTimes(1);
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.FAQ_ANSWER);
+    });
+
+    it('캐시 키에 프롬프트 지문이 들어간다', () => {
+      // Given/When
+      const key = buildAnswerCacheKey(
+        DELIVERY_QUESTION,
+        LanguageCode.KOREAN,
+        FINGERPRINT,
+      );
+
+      // Then - 지문이 다르면 키도 달라야 한다
+      expect(key).toContain(FINGERPRINT);
+      expect(key).not.toBe(
+        buildAnswerCacheKey(DELIVERY_QUESTION, LanguageCode.KOREAN, 'other'),
+      );
+    });
+
     it('캐시에 깨진 JSON 이 들어있어도 500 이 아니라 정상 응답한다', async () => {
       // Given
       await cacheService.set(
-        buildAnswerCacheKey(DELIVERY_QUESTION, LanguageCode.KOREAN),
+        buildAnswerCacheKey(
+          DELIVERY_QUESTION,
+          LanguageCode.KOREAN,
+          FINGERPRINT,
+        ),
         '{ this is not json',
         60,
       );

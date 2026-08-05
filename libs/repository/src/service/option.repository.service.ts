@@ -18,6 +18,7 @@ import { OptionValueEntity } from '../entity/option-value.entity';
 import { OptionEntity } from '../entity/option.entity';
 import { VariantOptionEntity } from '../entity/variant-option.entity';
 import { EntityType } from '../enum/entity.enum';
+import { COLOR_OPTION_TYPE } from '../enum/option.enum';
 import { OptionSortColumn } from '../enum/option.repository.enum';
 import { SortOrderHelper } from '../helper/sort-order.helper';
 
@@ -60,6 +61,23 @@ export class OptionRepositoryService {
       order: {
         sortOrder: 'ASC',
       },
+    });
+  }
+
+  /**
+   * 색상 옵션값 전체.
+   *
+   * AI 상담이 "빨강" 같은 자유 텍스트를 option_value_id 로 바꾸려면 후보 전체가
+   * 필요하다. 색상은 수십 건 규모라 매번 전량 조회해도 부담이 없고, 페이징을
+   * 두면 뒤쪽 색상이 조용히 매칭에서 빠지므로 일부러 전량으로 둔다.
+   */
+  async findColorOptionValues(): Promise<OptionValueEntity[]> {
+    return this.optionValueRepository.find({
+      where: {
+        isActive: true,
+        option: { type: COLOR_OPTION_TYPE },
+      },
+      order: { sortOrder: 'ASC' },
     });
   }
 

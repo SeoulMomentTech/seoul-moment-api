@@ -3,6 +3,7 @@ import {
   AiConsultScope,
 } from '@app/repository/enum/ai-consult.enum';
 import { Schema, Type } from '@google/genai';
+import { createHash } from 'crypto';
 
 import {
   AI_CONSULT_MAX_MESSAGE_LENGTH,
@@ -41,8 +42,11 @@ const SYSTEM_RULES = `[역할]
 4. 배송 기간·환불 조건·교환 가능 여부·결제 수단·재고·가격 등 정책과 수치를
    추측하거나 서술하지 마십시오. 실제 답변 문장은 서버가 붙입니다.
 5. 쇼핑몰 이용과 무관하면 scope="${AiConsultScope.OUT_OF_SCOPE}": 날씨·시사·정치, 코딩·번역·글쓰기 대행,
-   의료/법률/투자 상담, 타 쇼핑몰 비교나 추천, 잡담·역할극.
+   의료/법률/투자 상담, **다른 쇼핑몰**과의 비교나 **다른 쇼핑몰** 추천, 잡담·역할극.
    경쟁사에 대해서는 어떤 평가도 하지 말고 ${AiConsultScope.OUT_OF_SCOPE} 로만 분류하십시오.
+   ※ **서울 모먼트에서 파는 상품을 찾거나 추천해 달라는 요청은 ${AiConsultScope.IN_SCOPE} 입니다.**
+     "추천"이라는 단어가 있다고 범위 외로 보내지 마십시오.
+     예) "검정 옷 추천좀", "빨간 원피스 있어?", "선물할 만한 거 뭐 있어" → 모두 ${AiConsultScope.IN_SCOPE}
    판단이 애매하면 ${AiConsultScope.OUT_OF_SCOPE} 를 선택하십시오.
 6. 사용자가 어떤 언어로 물어도 의미로 판정하십시오. 답변 언어는 시스템이 처리합니다.
 7. 각 메시지는 **독립된 단발 질문**입니다. 이전 대화는 주어지지 않으므로 추측하지 마십시오.
@@ -54,15 +58,37 @@ const SYSTEM_RULES = `[역할]
    - "${AiConsultIntent.CATEGORY_LIST}" : 어떤 카테고리·상품 종류를 취급하는지 묻는 질문.
      예) "카테고리 뭐 있어", "무슨 종류 팔아", "화장품은 뭐가 있어",
      "what categories do you have", "有哪些類別"
+   - "${AiConsultIntent.PRODUCT_SEARCH}" : 조건을 붙여 **상품 자체**를 찾거나 추천해 달라는 질문.
+     예) "검정 옷 추천좀", "빨간색 가방 있어?", "무난한 티셔츠 보여줘",
+     "recommend a black dress", "有沒有黑色的衣服"
    - "${AiConsultIntent.FAQ}" : 그 외 모든 쇼핑몰 문의. **특정 브랜드를 언급해도 정책·배송·교환을
      묻는 것이면 FAQ 입니다.** 예) "서울모먼트 배송 얼마나 걸려?" → FAQ
    - "${AiConsultIntent.NONE}" : scope 가 ${AiConsultScope.IN_SCOPE} 가 아닐 때
+   ${AiConsultIntent.CATEGORY_LIST} 와 ${AiConsultIntent.PRODUCT_SEARCH} 의 경계:
+   어떤 **분류**를 취급하는지 물으면 ${AiConsultIntent.CATEGORY_LIST},
+   구체적인 **상품**을 보여 달라면 ${AiConsultIntent.PRODUCT_SEARCH} 입니다.
+   색상 같은 상품 속성이 함께 나오면 ${AiConsultIntent.PRODUCT_SEARCH} 입니다.
+   예) "화장품 뭐 있어?" → ${AiConsultIntent.CATEGORY_LIST} / "검정 옷 추천좀" → ${AiConsultIntent.PRODUCT_SEARCH}
    판단이 애매하면 "${AiConsultIntent.FAQ}" 를 선택하십시오.
-9. categoryQuery 는 intent 가 "${AiConsultIntent.CATEGORY_LIST}" 일 때만 씁니다.
-   고객이 **특정 카테고리를 이름으로 지목**했으면 고객이 쓴 이름을 그대로 옮기고,
-   전체 목록을 묻는 것이면 빈 문자열로 두십시오.
+9. categoryQuery 는 intent 가 "${AiConsultIntent.CATEGORY_LIST}" 또는
+   "${AiConsultIntent.PRODUCT_SEARCH}" 일 때 씁니다.
+   고객이 **분류를 이름으로 지목**했으면 고객이 쓴 이름을 그대로 옮기고,
+   지목이 없으면 빈 문자열로 두십시오. 색상은 여기 넣지 마십시오.
    예) "화장품은 뭐가 있어?" → "화장품" / "카테고리 뭐 있어?" → ""
+       "검정 옷 추천좀" → "옷" (색상 "검정"은 colorQuery 로)
    존재하지 않는 이름을 지어내지 마십시오. 실제 조회는 서버가 수행합니다.
+10. colorQuery 는 intent 가 "${AiConsultIntent.PRODUCT_SEARCH}" 일 때만 씁니다.
+    고객이 색을 말했으면 **색 이름만** 옮기고, 언급이 없으면 빈 문자열로 두십시오.
+    예) "빨간색 원피스" → "빨강" / "검정옷 추천좀" → "검정" / "원피스 보여줘" → ""
+    수식어("진한", "파스텔")는 빼고 색 이름만 남기십시오.
+11. keywordQuery 는 intent 가 "${AiConsultIntent.PRODUCT_SEARCH}" 일 때,
+    **카테고리도 색상도 아닌 검색어**(브랜드명·제품명·소재·핏·기능 등)를 담습니다.
+    상품 이름에 들어갈 만한 낱말만 남기고, "있어?", "추천좀" 같은 말은 빼십시오.
+    예) "드라이핏 옷 있어?"      → keywordQuery "드라이핏", categoryQuery ""
+        "나이키 티셔츠 보여줘"    → keywordQuery "나이키", categoryQuery "티셔츠"
+        "검정 원피스 추천좀"      → keywordQuery "", colorQuery "검정"
+    카테고리 이름이 확실하지 않으면 categoryQuery 대신 여기에 넣으십시오.
+    분류인지 상품명인지 헷갈리는 낱말은 keywordQuery 가 안전합니다.
 
 [confidence 기준]
 - 0.90~1.00 : 해당 FAQ 와 사실상 동일한 질문
@@ -127,6 +153,16 @@ export function buildResponseSchema(): Schema {
         description:
           '고객이 지목한 카테고리 이름. 지목이 없으면 빈 문자열. 규칙 9 참고',
       },
+      colorQuery: {
+        type: Type.STRING,
+        description:
+          '고객이 지목한 색상 이름. 언급이 없으면 빈 문자열. 규칙 10 참고',
+      },
+      keywordQuery: {
+        type: Type.STRING,
+        description:
+          '카테고리·색상이 아닌 상품 검색어(브랜드·제품명·소재 등). 없으면 빈 문자열. 규칙 11 참고',
+      },
       ...buildFaqMatchingProperties(faqCodes),
     },
     required: ['scope', 'intent', 'faqCode', 'confidence', 'prefaceId'],
@@ -164,6 +200,25 @@ function buildFaqMatchingProperties(
       description: '판정 근거 한국어 20자 이내 (내부용)',
     },
   };
+}
+
+/**
+ * 프롬프트 지문. 캐시 키에 섞어 **프롬프트를 고치면 옛 판정이 자동으로 버려지게** 한다.
+ *
+ * 이게 없으면 규칙을 고쳐도 캐시된 판정이 TTL(24시간)만큼 그대로 살아남는다.
+ * "검정 옷 추천좀"을 IN_SCOPE 로 고쳐도 어제 OUT_OF_SCOPE 로 캐시된 고객은
+ * 하루 종일 옛 답을 받는데, 로그만 봐서는 프롬프트가 안 먹은 것처럼 보인다.
+ * 구 키는 그대로 두고 TTL 로 만료시킨다 — 배포 시 캐시를 비울 필요가 없다.
+ */
+export function buildPromptFingerprint(
+  systemInstruction: string,
+  responseSchema: Schema,
+): string {
+  return createHash('sha256')
+    .update(systemInstruction)
+    .update(JSON.stringify(responseSchema))
+    .digest('hex')
+    .slice(0, 8);
 }
 
 export function buildUserContent(message: string): string {

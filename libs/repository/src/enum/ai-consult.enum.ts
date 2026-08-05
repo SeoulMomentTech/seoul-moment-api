@@ -27,18 +27,26 @@ export enum AiConsultIntent {
    * 모델이 아니라 `categoryQuery` 슬롯이 비었는지로 서버가 가른다.
    */
   CATEGORY_LIST = 'CATEGORY_LIST',
+  /**
+   * 조건을 붙여 상품 자체를 찾거나 추천해 달라는 질문("검정 옷 추천좀").
+   *
+   * CATEGORY_LIST 와의 경계는 "분류를 묻는가 / 상품을 보여 달라는가" 다.
+   * 색상 같은 상품 속성이 함께 나오면 이쪽이다.
+   */
+  PRODUCT_SEARCH = 'PRODUCT_SEARCH',
   /** 범위 외 질문이라 의도 자체가 없다 */
   NONE = 'NONE',
 }
 
 /**
- * 모델이 넘긴 카테고리 이름을 DB 실데이터에 붙일 때 어느 단계에서 결판났는지.
+ * 모델이 넘긴 자유 텍스트(카테고리·색상 등)를 DB 실데이터의 이름에 붙일 때
+ * 어느 단계에서 결판났는지.
  *
- * FALLBACK 하나만 보면 "모델이 카테고리 질문으로 안 봤다"와 "봤는데 이름을
- * 못 붙였다"가 구분되지 않는다. 임계값을 조정할 근거도 남지 않으므로
+ * FALLBACK 하나만 보면 "모델이 그 질문으로 안 봤다"와 "봤는데 이름을 못
+ * 붙였다"가 구분되지 않는다. 임계값을 조정할 근거도 남지 않으므로
  * 실패한 이유까지 값으로 남긴다.
  */
-export enum AiConsultCategoryMatchType {
+export enum AiConsultNameMatchType {
   /** 정규화 후 이름이 그대로 일치 */
   EXACT = 'EXACT',
   /** 질의가 이름을 통째로 포함 ("화장품 카테고리") */
@@ -69,8 +77,18 @@ export enum AiConsultAnswerType {
   CATEGORY_LIST = 'CATEGORY_LIST',
   /** 특정 대분류에 속한 소분류(product_category) 목록을 반환 */
   PRODUCT_CATEGORY_LIST = 'PRODUCT_CATEGORY_LIST',
+  /** 조건에 맞는 상품 카드 목록을 반환 */
+  PRODUCT_LIST = 'PRODUCT_LIST',
   /** 애매한 매칭 — 후보를 제시하고 되물음 */
   CONFIRM_SUGGESTION = 'CONFIRM_SUGGESTION',
+  /**
+   * 질문은 이해했으나 해당하는 상품·카테고리가 실제로 없음.
+   *
+   * FALLBACK 과 반드시 구분한다. "노랑 옷 있어?" 에 "이해하지 못했어요" 라고
+   * 답하면 고객은 자기 말이 잘못됐다고 생각해 같은 질문을 바꿔가며 반복한다.
+   * 없는 것은 없다고 말해야 다음 행동으로 넘어갈 수 있다.
+   */
+  NOT_FOUND = 'NOT_FOUND',
   /** 매칭 실패 — 고객센터 유도 */
   FALLBACK = 'FALLBACK',
   /** 범위 외 질문 또는 인젝션 시도 */
