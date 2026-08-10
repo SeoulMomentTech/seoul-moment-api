@@ -34,6 +34,18 @@ export enum AiConsultIntent {
    * 색상 같은 상품 속성이 함께 나오면 이쪽이다.
    */
   PRODUCT_SEARCH = 'PRODUCT_SEARCH',
+  /**
+   * 어떤 색상을 취급하는지 **목록 자체**를 묻는다("무슨 색 있어?").
+   *
+   * CATEGORY_LIST 와 반드시 갈라야 한다. 하나로 묶으면 색상을 물었는데 카테고리
+   * 목록이 나가고, 고객은 답이 어긋난 이유를 알 수 없다.
+   */
+  COLOR_LIST = 'COLOR_LIST',
+  /**
+   * 인사·응원·감탄처럼 이해는 되지만 답할 정보가 없는 말("안녕하세요", "신기하네").
+   * 범위 외로 밀어내면 잡담에 "쇼핑 문의만 가능합니다"로 응수하게 된다.
+   */
+  SMALL_TALK = 'SMALL_TALK',
   /** 범위 외 질문이라 의도 자체가 없다 */
   NONE = 'NONE',
 }
@@ -53,6 +65,14 @@ export enum AiConsultNameMatchType {
   PARTIAL = 'PARTIAL',
   /** 자모 유사도로 구제 ("악세사리" → "악세서리") */
   SIMILARITY = 'SIMILARITY',
+  /**
+   * 색공간 거리로 구제 ("빨강" → 레드). 색상 전용 경로다.
+   *
+   * 자모 유사도는 표기 흔들림만 흡수할 수 있어 어휘가 다른 같은 색("빨강" vs "레드",
+   * 유사도 0.167)은 못 붙인다. 이름 대신 `color_code` 의 hex 를 색공간에서 비교한
+   * 결과이며, 같은 계열 색이 여러 개면 전부 매칭된다.
+   */
+  HEX_NEAREST = 'HEX_NEAREST',
   /** 유사도 1위가 임계값 미달 — 아예 다른 단어였다 */
   BELOW_THRESHOLD = 'BELOW_THRESHOLD',
   /** 1·2위가 붙어 있어 찍지 않고 되물었다 */
@@ -79,6 +99,15 @@ export enum AiConsultAnswerType {
   PRODUCT_CATEGORY_LIST = 'PRODUCT_CATEGORY_LIST',
   /** 조건에 맞는 상품 카드 목록을 반환 */
   PRODUCT_LIST = 'PRODUCT_LIST',
+  /** DB 에서 읽은 취급 색상 목록을 반환 */
+  COLOR_LIST = 'COLOR_LIST',
+  /**
+   * 인사·응원·감탄에 짧게 응대.
+   *
+   * FALLBACK 과 구분한다. "서울모먼트 화이팅"에 "이해하지 못했어요"로 답하면
+   * 고객은 자기 표현이 잘못된 줄 알고 같은 말을 반복한다.
+   */
+  SMALL_TALK = 'SMALL_TALK',
   /** 애매한 매칭 — 후보를 제시하고 되물음 */
   CONFIRM_SUGGESTION = 'CONFIRM_SUGGESTION',
   /**

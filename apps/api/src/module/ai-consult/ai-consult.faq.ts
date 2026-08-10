@@ -61,6 +61,8 @@ export enum AiConsultFaqCode {
   // 기타
   CS_CONTACT = 'CS_CONTACT',
   TAX_REFUND = 'TAX_REFUND',
+  ABOUT_SHOP = 'ABOUT_SHOP',
+  SUGGESTED_QUESTIONS = 'SUGGESTED_QUESTIONS',
 }
 
 /** 매칭되는 항목이 없음을 나타내는 센티넬. responseSchema 의 required 필드는 null 을 못 쓴다. */
@@ -700,6 +702,63 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
       [LanguageCode.TAIWAN]: '收據與退稅',
     },
   },
+  {
+    /**
+     * 자사 소개. 이게 없으면 "서울모먼트에 대해 알려줘" 가 범위 외로 나간다 —
+     * 자기 쇼핑몰을 묻는 질문을 거절하는 것은 명백한 오류라 별도 항목을 둔다.
+     */
+    code: AiConsultFaqCode.ABOUT_SHOP,
+    intent: '서울 모먼트가 어떤 쇼핑몰인지, 무엇을 파는 곳인지에 대한 소개',
+    hints: [
+      '서울모먼트가 뭐야',
+      '어떤 쇼핑몰이야',
+      '여기 뭐 하는 곳',
+      '소개해줘',
+      'what is seoul moment',
+      'about you',
+      '這是什麼網站',
+    ],
+    answer: {
+      [LanguageCode.KOREAN]:
+        '서울 모먼트는 한국의 패션·뷰티 브랜드를 한곳에서 만나볼 수 있는 온라인 편집숍이에요. 입점 브랜드와 취급 카테고리는 "브랜드 목록", "카테고리 알려줘"라고 물어보시면 바로 보여드릴게요.',
+      [LanguageCode.ENGLISH]:
+        'Seoul Moment is an online concept store where you can discover Korean fashion and beauty brands in one place. Just ask for the "brand list" or "categories" and I will show you what we carry.',
+      [LanguageCode.TAIWAN]:
+        'Seoul Moment 是一個能一次認識韓國時尚與美妝品牌的線上選物店。您可以直接詢問「品牌列表」或「有哪些類別」，我會立即為您顯示。',
+    },
+    title: {
+      [LanguageCode.KOREAN]: '서울 모먼트 소개',
+      [LanguageCode.ENGLISH]: 'About Seoul Moment',
+      [LanguageCode.TAIWAN]: '關於 Seoul Moment',
+    },
+  },
+  {
+    /** "다른 질문 추천해줘" 류. 답변보다 함께 붙는 추천 칩이 본체다. */
+    code: AiConsultFaqCode.SUGGESTED_QUESTIONS,
+    intent: '무엇을 물어볼 수 있는지, 다른 질문을 추천해 달라는 요청',
+    hints: [
+      '뭘 물어볼 수 있어',
+      '다른 질문 추천',
+      '질문 예시',
+      '도움말',
+      'what can you do',
+      'help',
+      '可以問什麼',
+    ],
+    answer: {
+      [LanguageCode.KOREAN]:
+        '주문·배송·교환·환불·사이즈 같은 이용 안내를 도와드리고, 입점 브랜드나 카테고리 목록, 색상별 상품 찾기도 가능해요. 아래에서 골라 보세요.',
+      [LanguageCode.ENGLISH]:
+        'I can help with orders, delivery, exchanges, refunds and sizing, and I can also show you our brands, categories, and products by colour. Pick one below.',
+      [LanguageCode.TAIWAN]:
+        '我可以協助訂單、配送、換貨、退款與尺寸等問題，也能為您顯示品牌、類別列表或依顏色尋找商品。請從下方選擇。',
+    },
+    title: {
+      [LanguageCode.KOREAN]: '무엇을 물어볼까요?',
+      [LanguageCode.ENGLISH]: 'What can I ask?',
+      [LanguageCode.TAIWAN]: '可以問什麼？',
+    },
+  },
 ];
 
 export const PREFACES: Record<
@@ -751,6 +810,22 @@ export const AI_CONSULT_FALLBACK_MESSAGE: Record<LanguageCode, string> = {
     'Sorry, I could not quite understand your question. Please pick one of the common topics below or describe your question in a little more detail. If it is urgent, please contact our customer service.',
   [LanguageCode.TAIWAN]:
     '抱歉，我未能完全理解您的問題。請從下方常見問題中選擇，或再詳細描述一些。若情況緊急，請聯繫客服。',
+};
+
+/**
+ * 인사·응원·감탄 등 답할 내용은 없지만 이해는 한 말.
+ *
+ * FALLBACK("이해하지 못했어요")과 반드시 구분한다. "서울모먼트 화이팅"에 이해 실패로
+ * 답하면 고객은 자기 표현이 잘못된 줄 알고 같은 말을 바꿔가며 반복하게 된다.
+ * 짧게 받아주고 추천 칩으로 다음 행동을 제시한다.
+ */
+export const AI_CONSULT_SMALL_TALK_MESSAGE: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]:
+    '감사합니다! 쇼핑에 도움이 필요하시면 언제든 말씀해 주세요. 아래 주제로 시작하셔도 좋아요.',
+  [LanguageCode.ENGLISH]:
+    'Thank you! Let me know whenever you need help with your shopping. Feel free to start with one of the topics below.',
+  [LanguageCode.TAIWAN]:
+    '謝謝您！購物上有任何需要都歡迎告訴我。也可以從下方主題開始。',
 };
 
 /** 애매한 매칭 — 되묻는다. {title} 은 매칭 후보 제목으로 치환된다. */
@@ -836,6 +911,19 @@ export const AI_CONSULT_CATEGORY_EMPTY_MESSAGE: Record<LanguageCode, string> = {
   [LanguageCode.ENGLISH]:
     'The {name} category is still being prepared, so there is nothing to show yet.',
   [LanguageCode.TAIWAN]: '{name} 類別仍在準備中，目前沒有可顯示的商品。',
+};
+
+/**
+ * 취급 색상 목록. {count} 는 DB 에서 읽은 실제 건수로 치환된다.
+ * 색상 이름은 이 문구가 아니라 응답의 colors 배열로 나간다.
+ */
+export const AI_CONSULT_COLOR_LIST_MESSAGE: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]:
+    '현재 {count}가지 색상의 상품이 있어요. 원하는 색을 말씀해 주시면 해당 상품을 찾아드릴게요.',
+  [LanguageCode.ENGLISH]:
+    'We currently carry items in {count} colours. Tell me which colour you want and I will find matching products.',
+  [LanguageCode.TAIWAN]:
+    '目前共有 {count} 種顏色的商品。告訴我您想要的顏色，我將為您尋找相關商品。',
 };
 
 export const AI_CONSULT_CATEGORY_LIST_MESSAGE: Record<LanguageCode, string> = {

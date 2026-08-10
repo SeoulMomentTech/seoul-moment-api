@@ -11,6 +11,7 @@ import { GeminiService } from '@app/external/gemini/gemini.service';
 import { maskPii } from '@app/repository/dto/ai-consult.dto';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
+import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
 import {
   AiConsultAnswerSource,
   AiConsultAnswerType,
@@ -35,6 +36,7 @@ import {
   AiConsultBrandResponse,
   AiConsultCannedAnswerType,
   AiConsultCategoryCatalogDto,
+  AiConsultCategoryLevel,
   AiConsultNameMatchDto,
   AiConsultCategoryResponse,
   AiConsultCategorySource,
@@ -66,6 +68,7 @@ import {
   AI_CONSULT_BRAND_LIST_MESSAGE,
   AI_CONSULT_CATEGORY_EMPTY_MESSAGE,
   AI_CONSULT_CATEGORY_LIST_MESSAGE,
+  AI_CONSULT_COLOR_LIST_MESSAGE,
   AI_CONSULT_CONFIRM_MESSAGE,
   AI_CONSULT_DEFAULT_SUGGESTION_CODES,
   AI_CONSULT_FALLBACK_MESSAGE,
@@ -77,7 +80,9 @@ import {
   AI_CONSULT_PRODUCT_LIST_MESSAGE,
   AI_CONSULT_PRODUCT_PICK_MESSAGE,
   AI_CONSULT_RATE_LIMITED_MESSAGE,
+  AI_CONSULT_SMALL_TALK_MESSAGE,
   AI_CONSULT_UNAVAILABLE_MESSAGE,
+  AiConsultFaqCode,
   AiConsultFaqItem,
   findFaqItem,
   PREFACES,
@@ -266,42 +271,64 @@ export class AiConsultService {
     context: AiConsultRequestContextDto,
     classification: AiConsultClassificationDto,
   ): Promise<AiConsultAnswerDto> {
-    const { language } = context;
-
     if (classification.scope !== AiConsultScope.IN_SCOPE) {
       // 인젝션 시도에도 OFF_TOPIC 과 똑같이 응답해 탐지 여부를 노출하지 않는다.
       return AiConsultAnswerDto.from(
-        AI_CONSULT_OFF_TOPIC_MESSAGE[language],
+        AI_CONSULT_OFF_TOPIC_MESSAGE[context.language],
         AiConsultAnswerType.OFF_TOPIC,
         null,
         classification.confidence,
-        this.buildDefaultSuggestions(language),
+        this.buildDefaultSuggestions(context.language),
       );
     }
 
     // scope 를 통과한 뒤에만 DB 를 본다. 범위 외 질문으로 쿼리가 돌면 안 된다.
-    if (classification.intent === AiConsultIntent.BRAND_LIST) {
-      return this.buildBrandListAnswer(context, classification);
-    }
+    return (
+      (await this.buildIntentAnswer(context, classification)) ??
+      this.buildFaqMatchedAnswer(context, classification)
+    );
+  }
 
-    if (classification.intent === AiConsultIntent.CATEGORY_LIST) {
-      return this.buildCategoryAnswer(context, classification);
+  /**
+   * 정적 FAQ 가 아니라 DB 실데이터·상수로 답하는 intent 들.
+   * FAQ 매칭으로 내려보내야 하면 null 을 돌려준다.
+   */
+  private async buildIntentAnswer(
+    context: AiConsultRequestContextDto,
+    classification: AiConsultClassificationDto,
+  ): Promise<AiConsultAnswerDto | null> {
+    switch (classification.intent) {
+      // 인사·응원은 DB 를 볼 것도 없다. FAQ 로 내려보내면 "이해하지 못했어요"가 나간다.
+      case AiConsultIntent.SMALL_TALK:
+        return AiConsultAnswerDto.from(
+          AI_CONSULT_SMALL_TALK_MESSAGE[context.language],
+          AiConsultAnswerType.SMALL_TALK,
+          null,
+          classification.confidence,
+          this.buildDefaultSuggestions(context.language),
+        );
+      case AiConsultIntent.BRAND_LIST:
+        return this.buildBrandListAnswer(context, classification);
+      case AiConsultIntent.CATEGORY_LIST:
+        return this.buildCategoryAnswer(context, classification);
+      case AiConsultIntent.COLOR_LIST:
+        return this.buildColorListAnswer(context, classification);
+      case AiConsultIntent.PRODUCT_SEARCH:
+        return this.buildProductSearchAnswer(context, classification);
+      default:
+        return null;
     }
+  }
 
-    if (classification.intent === AiConsultIntent.PRODUCT_SEARCH) {
-      return this.buildProductSearchAnswer(context, classification);
-    }
-
+  /** 정적 FAQ 카탈로그에서 답을 고르는 기본 경로. */
+  private buildFaqMatchedAnswer(
+    context: AiConsultRequestContextDto,
+    classification: AiConsultClassificationDto,
+  ): AiConsultAnswerDto {
     const item = findFaqItem(classification.faqCode);
 
     if (!item || classification.confidence < CONFIDENCE_CONFIRM_THRESHOLD) {
-      return AiConsultAnswerDto.from(
-        AI_CONSULT_FALLBACK_MESSAGE[language],
-        AiConsultAnswerType.FALLBACK,
-        null,
-        classification.confidence,
-        this.buildDefaultSuggestions(language),
-      );
+      return this.buildFallback(context, classification.confidence);
     }
 
     return classification.confidence >= CONFIDENCE_ANSWER_THRESHOLD
@@ -345,11 +372,45 @@ export class AiConsultService {
   }
 
   /**
+   * 취급 색상 목록.
+   *
+   * 브랜드 목록과 같은 모양이다 — 모델은 "색상 목록을 원한다"만 판정했고
+   * 이름·색상 코드는 전부 DB 에서 재조회한다.
+   */
+  private async buildColorListAnswer(
+    context: AiConsultRequestContextDto,
+    classification: AiConsultClassificationDto,
+  ): Promise<AiConsultAnswerDto> {
+    const { language } = context;
+    const catalog = await this.findColorCatalog(language);
+
+    if (catalog.getCount() === 0) {
+      return this.buildFallback(context);
+    }
+
+    return AiConsultAnswerDto.from(
+      AI_CONSULT_COLOR_LIST_MESSAGE[language].replace(
+        '{count}',
+        String(catalog.getCount()),
+      ),
+      AiConsultAnswerType.COLOR_LIST,
+      null,
+      classification.confidence,
+      // 색상 칩 자체가 다음 행동을 제시하므로 추천 칩과 겹친다.
+      [],
+    ).withColors(catalog.getItems());
+  }
+
+  /**
    * 카테고리 응답.
    *
-   * intent 는 하나(CATEGORY_LIST)뿐이고, 대분류 목록인지 소분류 목록인지는
-   * `categoryQuery` 가 비었는지로 **서버가** 가른다. 모델에 맡기면 오분류가
-   * 생기는 판단인데 서버는 100% 정확하게 할 수 있다.
+   * intent 는 하나(CATEGORY_LIST)뿐이고, 무엇을 보여줄지는 `categoryQuery` 가
+   * 어디에 붙는지로 **서버가** 가른다. 모델에 맡기면 오분류가 생기는 판단인데
+   * 서버는 100% 정확하게 할 수 있다.
+   *
+   * - 지목 없음   → 대분류 목록
+   * - 대분류 지목 → 그 아래 소분류 목록
+   * - 소분류 지목 → **상품 카드** (더 쪼갤 분류가 없으니 목록이 답이 될 수 없다)
    */
   private async buildCategoryAnswer(
     context: AiConsultRequestContextDto,
@@ -381,11 +442,12 @@ export class AiConsultService {
     const match = catalog.findMatch(classification.categoryQuery);
     const parentId = match.getId();
 
-    // 이해는 했는데 취급하지 않는 것을 물은 경우다. "이해하지 못했다"(FALLBACK)로
-    // 답하면 고객은 자기 표현이 잘못된 줄 알고 같은 질문을 반복한다.
-    // 실패한 건에도 매칭 결과를 실어야 로그에서 원인이 남는다.
     if (parentId === null) {
-      return this.buildNotFound(context).withCategoryMatch(match);
+      return this.buildProductCategoryProductsAnswer(
+        context,
+        classification,
+        match,
+      );
     }
 
     const answer = await this.buildProductCategoryAnswer(
@@ -395,6 +457,46 @@ export class AiConsultService {
     );
 
     return answer.withCategoryMatch(match);
+  }
+
+  /**
+   * 대분류가 아니었다면 소분류일 수 있다.
+   *
+   * "반팔은 뭐 있어?" 의 답은 목록이 아니라 상품이다 — 소분류 아래에는 더 쪼갤
+   * 분류가 없어서 보여줄 목록 자체가 없다. 대분류만 보고 NOT_FOUND 로 끝내면
+   * 실제로 취급하는 것을 "취급하지 않는다"고 답하게 된다.
+   */
+  private async buildProductCategoryProductsAnswer(
+    context: AiConsultRequestContextDto,
+    classification: AiConsultClassificationDto,
+    categoryMatch: AiConsultNameMatchDto,
+  ): Promise<AiConsultAnswerDto> {
+    const catalog = await this.findAllProductCategoryCatalog(context.language);
+    const match = catalog.findMatch(classification.categoryQuery);
+    const id = match.getId();
+
+    // 대분류에도 소분류에도 없다. 고객이 쓴 말은 보통 대분류 수준이라
+    // 그쪽 실패 사유를 남겨야 로그로 임계값을 조정할 수 있다.
+    if (id === null) {
+      return this.buildNotFound(context).withCategoryMatch(categoryMatch);
+    }
+
+    return this.buildProductListAnswer(
+      context,
+      AiConsultProductFilterDto.from(
+        classification.categoryQuery,
+        '',
+        AiConsultResolvedSlotDto.resolved(
+          id,
+          catalog.findItem(id).name,
+          match,
+          AiConsultCategoryLevel.PRODUCT_CATEGORY,
+        ),
+        null,
+        '',
+      ),
+      classification.confidence,
+    );
   }
 
   /**
@@ -475,6 +577,22 @@ export class AiConsultService {
       );
     }
 
+    return this.buildProductListAnswer(
+      context,
+      slot,
+      classification.confidence,
+    );
+  }
+
+  /**
+   * 조건이 정해진 뒤의 조회·렌더링.
+   * 상품 검색과 "소분류를 지목한 카테고리 질문"이 같은 답을 내야 하므로 공유한다.
+   */
+  private async buildProductListAnswer(
+    context: AiConsultRequestContextDto,
+    slot: AiConsultProductFilterDto,
+    confidence: number | null,
+  ): Promise<AiConsultAnswerDto> {
     const [products, total] = await this.findProducts(context, slot);
 
     if (products.length === 0) {
@@ -485,7 +603,7 @@ export class AiConsultService {
       this.buildProductListMessage(context, slot, total),
       AiConsultAnswerType.PRODUCT_LIST,
       null,
-      classification.confidence,
+      confidence,
       // 상품 카드 자체가 다음 행동을 제시하므로 추천 칩과 겹친다.
       [],
     ).withProductSearch(
@@ -566,14 +684,21 @@ export class AiConsultService {
     ]);
 
     return AiConsultProductFilterDto.from(
-      Boolean(classification.categoryQuery),
-      Boolean(classification.colorQuery),
+      classification.categoryQuery,
+      classification.colorQuery,
       category,
       color,
       classification.keywordQuery,
     );
   }
 
+  /**
+   * 카테고리 이름을 대분류 → 소분류 순으로 붙인다.
+   *
+   * 대분류만 보면 "반팔"·"모자"·"티셔츠" 처럼 **소분류에만 있는 말**이 영원히 안 붙는다.
+   * 운영 로그에서 상품 검색 실패의 큰 축이 이것이었다. 대분류를 먼저 보는 이유는
+   * "화장품"처럼 양쪽에 다 있을 수 있는 이름을 넓은 쪽으로 해석해야 결과가 많기 때문이다.
+   */
   private async resolveCategorySlot(
     query: string,
     language: LanguageCode,
@@ -581,19 +706,52 @@ export class AiConsultService {
     if (!query) return null;
 
     const catalog = await this.findCategoryCatalog(language);
+    const productCatalog = await this.findAllProductCategoryCatalog(language);
 
-    if (catalog.getCount() === 0) {
+    if (catalog.getCount() === 0 && productCatalog.getCount() === 0) {
       return AiConsultResolvedSlotDto.unresolved(
         AiConsultNameMatchDto.emptyCatalog(),
       );
     }
 
     const match = catalog.findMatch(query);
+
+    if (match.getId() !== null) {
+      return this.toResolvedCategory(
+        match,
+        catalog,
+        AiConsultCategoryLevel.CATEGORY,
+      );
+    }
+
+    const productMatch = productCatalog.findMatch(query);
+
+    // 소분류에서도 못 찾았으면 대분류 쪽 실패 사유를 남긴다 — 고객이 말한 것은
+    // 보통 대분류 수준의 단어라 그쪽 점수가 원인 분석에 쓸모 있다.
+    if (productMatch.getId() === null) {
+      return AiConsultResolvedSlotDto.unresolved(match);
+    }
+
+    return this.toResolvedCategory(
+      productMatch,
+      productCatalog,
+      AiConsultCategoryLevel.PRODUCT_CATEGORY,
+    );
+  }
+
+  private toResolvedCategory(
+    match: AiConsultNameMatchDto,
+    catalog: AiConsultCategoryCatalogDto,
+    level: AiConsultCategoryLevel,
+  ): AiConsultResolvedSlotDto {
     const id = match.getId();
 
-    return id === null
-      ? AiConsultResolvedSlotDto.unresolved(match)
-      : AiConsultResolvedSlotDto.resolved(id, catalog.findItem(id).name, match);
+    return AiConsultResolvedSlotDto.resolved(
+      id,
+      catalog.findItem(id).name,
+      match,
+      level,
+    );
   }
 
   private async resolveColorSlot(
@@ -696,6 +854,36 @@ export class AiConsultService {
   }
 
   /**
+   * 대분류를 가리지 않은 소분류 전체.
+   *
+   * 상품 검색에서 "반팔"처럼 소분류 이름만 말한 경우, 어느 대분류에 속하는지
+   * 모르는 상태로 이름을 붙여야 하므로 전량을 색인한다.
+   */
+  private async findAllProductCategoryCatalog(
+    language: LanguageCode,
+  ): Promise<AiConsultCategoryCatalogDto> {
+    let entityList: ProductCategoryEntity[] = [];
+
+    try {
+      entityList = await this.categoryRepositoryService.findProductCategory();
+    } catch (error: any) {
+      // 조회 실패는 빈 카탈로그로 degrade 한다 — 상담이 5xx 로 죽으면 안 된다.
+      this.logger.warn(
+        `AI consult product category lookup failed: ${error.message}`,
+      );
+    }
+
+    return this.toCategoryCatalog(
+      EntityType.PRODUCT_CATEGORY,
+      entityList.map((entity) => ({
+        id: entity.id,
+        image: entity.imageUrl ? entity.getImage() : null,
+      })),
+      language,
+    );
+  }
+
+  /**
    * `getImage()` 는 imageUrl 이 null 이어도 도메인을 붙여 ".../null" 을 만든다.
    * 엔티티를 고치면 상품 API 까지 영향을 받으므로 여기서 막는다.
    */
@@ -745,14 +933,19 @@ export class AiConsultService {
     }
   }
 
+  /**
+   * confidence 는 로그 전용이다. FAQ 매칭이 임계값에 못 미쳐 떨어진 경우 그 점수를
+   * 남겨야 "몇 점에서 놓쳤는지"로 임계값을 조정할 수 있다.
+   */
   private buildFallback(
     context: AiConsultRequestContextDto,
+    confidence: number | null = null,
   ): AiConsultAnswerDto {
     return AiConsultAnswerDto.from(
       AI_CONSULT_FALLBACK_MESSAGE[context.language],
       AiConsultAnswerType.FALLBACK,
       null,
-      null,
+      confidence,
       this.buildDefaultSuggestions(context.language),
     );
   }
@@ -815,7 +1008,11 @@ export class AiConsultService {
       AiConsultAnswerType.FAQ_ANSWER,
       item.code,
       classification.confidence,
-      [],
+      // 답이 확실할 때는 되물을 게 없어 칩을 붙이지 않는다. 단 "무엇을 물어볼까요"는
+      // 칩 자체가 답이라 예외다 — 안 붙이면 "아래에서 고르세요" 뒤가 비어버린다.
+      item.code === AiConsultFaqCode.SUGGESTED_QUESTIONS
+        ? this.buildDefaultSuggestions(language)
+        : [],
     );
   }
 

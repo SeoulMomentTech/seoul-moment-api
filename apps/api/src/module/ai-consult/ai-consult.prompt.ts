@@ -42,11 +42,15 @@ const SYSTEM_RULES = `[역할]
 4. 배송 기간·환불 조건·교환 가능 여부·결제 수단·재고·가격 등 정책과 수치를
    추측하거나 서술하지 마십시오. 실제 답변 문장은 서버가 붙입니다.
 5. 쇼핑몰 이용과 무관하면 scope="${AiConsultScope.OUT_OF_SCOPE}": 날씨·시사·정치, 코딩·번역·글쓰기 대행,
-   의료/법률/투자 상담, **다른 쇼핑몰**과의 비교나 **다른 쇼핑몰** 추천, 잡담·역할극.
+   의료/법률/투자 상담, **다른 쇼핑몰**과의 비교나 **다른 쇼핑몰** 추천, 역할극.
    경쟁사에 대해서는 어떤 평가도 하지 말고 ${AiConsultScope.OUT_OF_SCOPE} 로만 분류하십시오.
    ※ **서울 모먼트에서 파는 상품을 찾거나 추천해 달라는 요청은 ${AiConsultScope.IN_SCOPE} 입니다.**
      "추천"이라는 단어가 있다고 범위 외로 보내지 마십시오.
      예) "검정 옷 추천좀", "빨간 원피스 있어?", "선물할 만한 거 뭐 있어" → 모두 ${AiConsultScope.IN_SCOPE}
+   ※ **서울 모먼트 자신에 대한 질문도 ${AiConsultScope.IN_SCOPE} 입니다.**
+     예) "서울모먼트가 뭐야", "여기 뭐 하는 곳이야", "뭘 물어볼 수 있어?"
+   ※ **인사·응원·감탄은 ${AiConsultScope.IN_SCOPE} 이고 intent="${AiConsultIntent.SMALL_TALK}" 입니다.**
+     예) "안녕하세요", "서울모먼트 화이팅", "신기하네", "고마워"
    판단이 애매하면 ${AiConsultScope.OUT_OF_SCOPE} 를 선택하십시오.
 6. 사용자가 어떤 언어로 물어도 의미로 판정하십시오. 답변 언어는 시스템이 처리합니다.
 7. 각 메시지는 **독립된 단발 질문**입니다. 이전 대화는 주어지지 않으므로 추측하지 마십시오.
@@ -61,6 +65,11 @@ const SYSTEM_RULES = `[역할]
    - "${AiConsultIntent.PRODUCT_SEARCH}" : 조건을 붙여 **상품 자체**를 찾거나 추천해 달라는 질문.
      예) "검정 옷 추천좀", "빨간색 가방 있어?", "무난한 티셔츠 보여줘",
      "recommend a black dress", "有沒有黑色的衣服"
+   - "${AiConsultIntent.COLOR_LIST}" : 어떤 **색상**을 취급하는지 목록 자체를 묻는 질문.
+     예) "무슨 색 있어", "어떤 색상들이 있니", "색상 종류 알려줘",
+     "what colours do you have", "有哪些顏色"
+   - "${AiConsultIntent.SMALL_TALK}" : 인사·응원·감탄·감사처럼 답할 정보가 없는 말.
+     예) "안녕하세요", "서울모먼트 화이팅", "신기하네", "고마워", "hello", "你好"
    - "${AiConsultIntent.FAQ}" : 그 외 모든 쇼핑몰 문의. **특정 브랜드를 언급해도 정책·배송·교환을
      묻는 것이면 FAQ 입니다.** 예) "서울모먼트 배송 얼마나 걸려?" → FAQ
    - "${AiConsultIntent.NONE}" : scope 가 ${AiConsultScope.IN_SCOPE} 가 아닐 때
@@ -69,6 +78,10 @@ const SYSTEM_RULES = `[역할]
    구체적인 **상품**을 보여 달라면 ${AiConsultIntent.PRODUCT_SEARCH} 입니다.
    색상 같은 상품 속성이 함께 나오면 ${AiConsultIntent.PRODUCT_SEARCH} 입니다.
    예) "화장품 뭐 있어?" → ${AiConsultIntent.CATEGORY_LIST} / "검정 옷 추천좀" → ${AiConsultIntent.PRODUCT_SEARCH}
+   ${AiConsultIntent.COLOR_LIST} 와 ${AiConsultIntent.PRODUCT_SEARCH} 의 경계:
+   색 **목록**을 물으면 ${AiConsultIntent.COLOR_LIST}, 특정 색의 **상품**을 찾으면
+   ${AiConsultIntent.PRODUCT_SEARCH} 입니다.
+   예) "무슨 색 있어?" → ${AiConsultIntent.COLOR_LIST} / "빨간 옷 있어?" → ${AiConsultIntent.PRODUCT_SEARCH}
    판단이 애매하면 "${AiConsultIntent.FAQ}" 를 선택하십시오.
 9. categoryQuery 는 intent 가 "${AiConsultIntent.CATEGORY_LIST}" 또는
    "${AiConsultIntent.PRODUCT_SEARCH}" 일 때 씁니다.
@@ -78,9 +91,12 @@ const SYSTEM_RULES = `[역할]
        "검정 옷 추천좀" → "옷" (색상 "검정"은 colorQuery 로)
    존재하지 않는 이름을 지어내지 마십시오. 실제 조회는 서버가 수행합니다.
 10. colorQuery 는 intent 가 "${AiConsultIntent.PRODUCT_SEARCH}" 일 때만 씁니다.
-    고객이 색을 말했으면 **색 이름만** 옮기고, 언급이 없으면 빈 문자열로 두십시오.
-    예) "빨간색 원피스" → "빨강" / "검정옷 추천좀" → "검정" / "원피스 보여줘" → ""
-    수식어("진한", "파스텔")는 빼고 색 이름만 남기십시오.
+    **고객이 쓴 색 이름을 그대로** 옮기고, 언급이 없으면 빈 문자열로 두십시오.
+    다른 색 이름으로 **바꾸지 마십시오** — "레드"를 "빨강"으로, "블랙"을 "검정"으로
+    옮기면 안 됩니다. 표기를 정리하는 것은 서버가 합니다.
+    예) "레드색상 옷" → "레드" / "빨간색 원피스" → "빨간색" / "검정옷 추천좀" → "검정"
+        "원피스 보여줘" → ""
+    수식어("진한", "파스텔")만 빼고 색 이름은 손대지 마십시오.
 11. keywordQuery 는 intent 가 "${AiConsultIntent.PRODUCT_SEARCH}" 일 때,
     **카테고리도 색상도 아닌 검색어**(브랜드명·제품명·소재·핏·기능 등)를 담습니다.
     상품 이름에 들어갈 만한 낱말만 남기고, "있어?", "추천좀" 같은 말은 빼십시오.

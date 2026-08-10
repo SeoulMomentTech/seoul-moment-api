@@ -14,6 +14,7 @@ import { plainToInstance } from 'class-transformer';
 import { IsString, Length } from 'class-validator';
 import { createHash } from 'crypto';
 
+import { findBasicColorHex, parseHexToLab } from './ai-consult.color';
 import { AiConsultPrefaceId, FAQ_NONE, findFaqItem } from './ai-consult.faq';
 import { findBestSimilarity, toJamo } from './ai-consult.similarity';
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
@@ -28,8 +29,14 @@ export const CONFIDENCE_ANSWER_THRESHOLD = 0.7;
 export const CONFIDENCE_CONFIRM_THRESHOLD = 0.45;
 
 export const ANSWER_CACHE_TTL_SECONDS = 60 * 60 * 24;
-/** "네", "?" 같은 무의미 입력까지 캐시해 키 공간을 오염시키지 않도록 하한을 둔다. */
-export const ANSWER_CACHE_MIN_LENGTH = 6;
+/**
+ * "네", "?" 같은 무의미 입력까지 캐시해 키 공간을 오염시키지 않도록 둔 하한.
+ *
+ * 6 이면 실사용 최다 질문인 "배송 기간"·"환불 방법"(각 5자)이 걸려 **한 번도 캐시되지
+ * 않는다.** 운영 로그에서 이 두 질문은 전건 LLM 을 탔다. 입력 최소 길이가 2자이므로
+ * 4 로 낮춰도 한두 글자 잡음은 그대로 걸러진다.
+ */
+export const ANSWER_CACHE_MIN_LENGTH = 4;
 
 export const RATE_LIMIT_PER_USER = 60;
 export const RATE_LIMIT_USER_WINDOW_SECONDS = 60 * 60;
@@ -305,6 +312,13 @@ interface AiConsultNameCandidate {
   score: number;
 }
 
+/** 색공간 거리로 걸린 색상 후보 한 칸. */
+export interface AiConsultColorHexCandidate {
+  id: number;
+  name: string;
+  deltaE: number;
+}
+
 /**
  * 카테고리 이름 매칭 결과.
  *
@@ -318,6 +332,12 @@ export class AiConsultNameMatchDto {
     private readonly score: number | null,
     private readonly runnerUpScore: number | null,
     private readonly candidate: string | null,
+    /**
+     * 같은 계열로 함께 걸린 나머지 id. 색상 hex 경로에서만 채워진다.
+     * 이름 매칭은 정의상 하나로 좁히는 작업이라 항상 비어 있다.
+     */
+    private readonly siblingIds: readonly number[] = [],
+    private readonly deltaE: number | null = null,
   ) {}
 
   static exact(id: number, name: string): AiConsultNameMatchDto {
@@ -360,6 +380,28 @@ export class AiConsultNameMatchDto {
     );
   }
 
+  /**
+   * 색공간 거리로 붙은 결과.
+   *
+   * 가장 가까운 색을 대표로 두되 같은 계열 색을 전부 들고 간다 — "하늘색 옷"에
+   * 스카이블루만 주고 라이트블루를 빼면 고객 눈에는 재고가 없는 것처럼 보인다.
+   */
+  static hexNearest(
+    candidates: readonly AiConsultColorHexCandidate[],
+  ): AiConsultNameMatchDto {
+    const [best, ...siblings] = candidates;
+
+    return new AiConsultNameMatchDto(
+      best.id,
+      AiConsultNameMatchType.HEX_NEAREST,
+      null,
+      null,
+      best.name,
+      siblings.map((candidate) => candidate.id),
+      best.deltaE,
+    );
+  }
+
   /** 임계값·마진 판정을 여기 가둬 호출부가 점수를 직접 비교하지 않게 한다. */
   static fromSimilarity(
     best: AiConsultNameCandidate,
@@ -391,6 +433,14 @@ export class AiConsultNameMatchDto {
     return this.id;
   }
 
+  /**
+   * 매칭된 id 전부. 이름 매칭은 항상 1개, 색상 hex 매칭은 같은 계열 개수만큼이다.
+   * 못 찾았으면 빈 배열이라 호출부가 그대로 필터에 넘길 수 있다.
+   */
+  getIds(): number[] {
+    return this.id === null ? [] : [this.id, ...this.siblingIds];
+  }
+
   /** 점수는 로그 가독성을 위해 소수점 3자리로 자른다. */
   toLogMeta(): AiConsultNameMatchMeta {
     const round = (value: number | null): number | undefined =>
@@ -401,6 +451,10 @@ export class AiConsultNameMatchDto {
       score: round(this.score),
       runnerUpScore: round(this.runnerUpScore),
       candidate: this.candidate ?? undefined,
+      deltaE:
+        this.deltaE === null ? undefined : Math.round(this.deltaE * 10) / 10,
+      // 1개면 이름 매칭과 다를 게 없으므로 여러 개 걸렸을 때만 남긴다.
+      matchedCount: this.siblingIds.length ? this.getIds().length : undefined,
     };
   }
 }
@@ -436,9 +490,19 @@ export class AiConsultNameIndexDto {
    * 내면서 그 이유를 로그에 남길 수 있어야 임계값을 근거 있게 조정한다.
    */
   findMatch(query: string): AiConsultNameMatchDto {
+    return this.findExactOrPartial(query) ?? this.findBySimilarity(query);
+  }
+
+  /**
+   * 확실한 단계만. 못 찾으면 null 을 돌려 호출부가 다른 수단을 먼저 시도할 수 있게 한다.
+   *
+   * 색상은 이 뒤에 색공간 비교를 끼워 넣는다 — 자모 유사도가 짧은 이름에서
+   * "보라"를 "소라"에 0.75 로 붙여버리기 때문이다.
+   */
+  findExactOrPartial(query: string): AiConsultNameMatchDto | null {
     const normalized = normalizeMatchName(query);
 
-    if (!normalized) return AiConsultNameMatchDto.noCandidate();
+    if (!normalized) return null;
 
     const exact = this.idByName.get(normalized);
 
@@ -453,6 +517,15 @@ export class AiConsultNameIndexDto {
         return AiConsultNameMatchDto.partial(id, name);
       }
     }
+
+    return null;
+  }
+
+  /** 표기 흔들림 구제 단계. 이름이 짧을수록 오탐이 늘어 마지막에 둔다. */
+  findBySimilarity(query: string): AiConsultNameMatchDto {
+    const normalized = normalizeMatchName(query);
+
+    if (!normalized) return AiConsultNameMatchDto.noCandidate();
 
     const ranked = this.rankBySimilarity(normalized);
 
@@ -601,13 +674,71 @@ export class AiConsultColorCatalogDto {
     return this.items.find((item) => item.id === id) ?? null;
   }
 
+  /**
+   * 완전·부분일치 → **색공간 거리** → 자모 유사도 순으로 내려간다.
+   *
+   * 색공간을 자모보다 **먼저** 두는 것이 요점이다. 색 이름은 짧아서 자모 유사도가
+   * 쉽게 오답을 낸다 — "보라"와 "소라"는 자모 4개 중 1개 차이(0.75)로 임계값을 넘어,
+   * 자모를 먼저 태우면 보라색 질의에 하늘색 상품이 나간다.
+   * 반면 색공간 경로는 질의가 **보편 색이름일 때만** 발동하므로 신호가 훨씬 강하다.
+   * 자모는 "네이비색" 같은 DB 고유 이름의 표기 흔들림을 받아내는 자리에 남는다.
+   */
   findMatch(query: string): AiConsultNameMatchDto {
-    return this.index.findMatch(query);
+    const matched = this.index.findExactOrPartial(query);
+
+    if (matched) return matched;
+
+    const candidates = this.findHexCandidates(query);
+
+    if (candidates.length > 0) {
+      return AiConsultNameMatchDto.hexNearest(candidates);
+    }
+
+    // 색으로도 못 붙었으면 이름 유사도로 마지막 구제를 시도한다.
+    // 실패해도 점수가 남아야 로그에서 임계값을 조정할 수 있다.
+    return this.index.findBySimilarity(query);
+  }
+
+  /** 같은 계열로 판정된 색상을 가까운 순으로. DB 색 추가에 코드 변경이 필요 없는 지점이다. */
+  private findHexCandidates(query: string): AiConsultColorHexCandidate[] {
+    const queryLab = parseHexToLab(
+      findBasicColorHex(normalizeMatchName(query)),
+    );
+
+    if (!queryLab) return [];
+
+    const candidates: AiConsultColorHexCandidate[] = [];
+
+    for (const item of this.items) {
+      const lab = parseHexToLab(item.code);
+
+      // color_code 가 비어 있으면 색으로 비교할 방법이 없다. 이름 경로에만 남는다.
+      if (!lab || !queryLab.isSameFamily(lab)) continue;
+
+      candidates.push({
+        id: item.id,
+        name: item.name,
+        deltaE: queryLab.distanceTo(lab),
+      });
+    }
+
+    return candidates.sort((a, b) => a.deltaE - b.deltaE);
   }
 }
 
 /** 상품 검색 시 한 번에 가져올 카드 수. 채팅 말풍선에 들어갈 만큼만. */
 export const AI_CONSULT_PRODUCT_PAGE_SIZE = 8;
+
+/**
+ * 카테고리 슬롯이 어느 계층에 붙었는지.
+ *
+ * 상품 조회 파라미터가 계층마다 다르다(`categoryId` vs `productCategoryId`).
+ * id 만 들고 다니면 "반팔"(소분류)을 대분류 파라미터에 넣어 조용히 0건이 나온다.
+ */
+export enum AiConsultCategoryLevel {
+  CATEGORY = 'CATEGORY',
+  PRODUCT_CATEGORY = 'PRODUCT_CATEGORY',
+}
 
 /**
  * 슬롯 하나(카테고리 또는 색상)의 해석 결과.
@@ -618,22 +749,45 @@ export class AiConsultResolvedSlotDto {
     private readonly id: number | null,
     private readonly name: string | null,
     readonly match: AiConsultNameMatchDto,
+    private readonly level: AiConsultCategoryLevel | null,
   ) {}
 
   static resolved(
     id: number,
     name: string,
     match: AiConsultNameMatchDto,
+    level: AiConsultCategoryLevel | null = null,
   ): AiConsultResolvedSlotDto {
-    return new AiConsultResolvedSlotDto(id, name, match);
+    return new AiConsultResolvedSlotDto(id, name, match, level);
   }
 
   static unresolved(match: AiConsultNameMatchDto): AiConsultResolvedSlotDto {
-    return new AiConsultResolvedSlotDto(null, null, match);
+    return new AiConsultResolvedSlotDto(null, null, match, null);
   }
 
   getId(): number | null {
     return this.id;
+  }
+
+  /**
+   * 필터에 걸 id 전부.
+   * 색상은 같은 계열이 여러 개 붙을 수 있다 — "하늘색"에 스카이블루만 걸고
+   * 라이트블루를 빼면 고객 눈에는 재고가 없는 것처럼 보인다.
+   */
+  getIds(): number[] {
+    return this.match.getIds();
+  }
+
+  /** 대분류로 붙었을 때만 id. 계층을 안 가리면 조회 파라미터가 어긋난다. */
+  getCategoryId(): number | null {
+    return this.level === AiConsultCategoryLevel.CATEGORY ? this.id : null;
+  }
+
+  /** 소분류("반팔"·"모자")로 붙었을 때만 id. */
+  getProductCategoryId(): number | null {
+    return this.level === AiConsultCategoryLevel.PRODUCT_CATEGORY
+      ? this.id
+      : null;
   }
 
   /** DB 에서 읽은 이름. 고객 문장에 넣어도 안전한 유일한 값이다. */
@@ -659,25 +813,51 @@ export class AiConsultProductFilterDto {
   ) {}
 
   static from(
-    categoryRequested: boolean,
-    colorRequested: boolean,
+    categoryQuery: string,
+    colorQuery: string,
     category: AiConsultResolvedSlotDto | null,
     color: AiConsultResolvedSlotDto | null,
     keyword: string,
   ): AiConsultProductFilterDto {
+    const resolvedKeyword =
+      keyword ||
+      this.buildRelaxedKeyword(categoryQuery, colorQuery, category, color);
+
     return new AiConsultProductFilterDto(
-      categoryRequested,
-      colorRequested,
+      Boolean(categoryQuery),
+      Boolean(colorQuery),
       category,
       color,
-      keyword,
+      resolvedKeyword,
       AiConsultAppliedFilterResponse.from(
         category?.getName() ?? null,
         color?.getName() ?? null,
         // 키워드는 id 해석이 필요 없다 — 상품명 검색에 그대로 들어간다.
-        keyword || null,
+        resolvedKeyword || null,
       ),
     );
+  }
+
+  /**
+   * 조건을 하나도 못 붙였을 때 고객이 쓴 말을 상품명 검색어로 재활용한다.
+   *
+   * 이게 없으면 "반팔 추천"처럼 카탈로그 이름에 없는 말을 쓴 순간 바로 "없습니다"가
+   * 나간다. 상품명에는 들어있을 수 있으므로 한 번 더 찾아보고 그래도 0건일 때
+   * 없다고 답하는 편이 맞다.
+   *
+   * 하나라도 붙었으면 손대지 않는다 — 붙은 조건에 키워드까지 얹으면 오히려 좁아진다.
+   * 검색어는 `ILIKE '%...%'` 한 방이라 여러 낱말을 이어붙이면 아무것도 안 걸리므로
+   * 하나만 고른다. 카테고리 쪽 말이 상품명에 등장할 확률이 높아 우선한다.
+   */
+  private static buildRelaxedKeyword(
+    categoryQuery: string,
+    colorQuery: string,
+    category: AiConsultResolvedSlotDto | null,
+    color: AiConsultResolvedSlotDto | null,
+  ): string {
+    if (category?.getId() != null || color?.getId() != null) return '';
+
+    return categoryQuery || colorQuery || '';
   }
 
   get categoryMatch(): AiConsultNameMatchDto | null {
@@ -689,8 +869,11 @@ export class AiConsultProductFilterDto {
   }
 
   /**
-   * 조건을 말했는데 하나도 못 붙인 상태.
+   * 조건을 말했는데 붙일 것이 하나도 남지 않은 상태.
+   *
    * 이때 필터 없이 조회하면 "검정 옷"에 아무 상품이나 나가므로 검색 자체를 막는다.
+   * 완화 검색어(`buildRelaxedKeyword`)까지 비었을 때만 해당하므로 실제로는 드물다 —
+   * 마지막 안전망이다.
    */
   isRequestedButUnresolved(): boolean {
     const requested = this.categoryRequested || this.colorRequested;
@@ -706,7 +889,8 @@ export class AiConsultProductFilterDto {
   }
 
   toProductRequest(): GetProductRequest {
-    const colorId = this.color?.getId() ?? null;
+    // 같은 계열 색이 여러 개 붙었으면 전부 건다("하늘색"→스카이블루·라이트블루).
+    const colorIds = this.color?.getIds() ?? [];
 
     return GetProductRequest.from(
       1,
@@ -716,10 +900,10 @@ export class AiConsultProductFilterDto {
       // 상품명 ILIKE 검색. multilingual_text(entityType='product') 를 뒤진다.
       this.keyword || undefined,
       undefined,
-      this.category?.getId() ?? undefined,
-      undefined,
+      this.category?.getCategoryId() ?? undefined,
+      this.category?.getProductCategoryId() ?? undefined,
       // optionIdList 는 이름과 달리 option_value_id 목록이다.
-      colorId === null ? undefined : [colorId],
+      colorIds.length ? colorIds : undefined,
       undefined,
     );
   }
@@ -743,6 +927,8 @@ export class AiConsultAnswerDto {
   brands: AiConsultBrandResponse[] = [];
   /** CATEGORY_LIST(대분류) / PRODUCT_CATEGORY_LIST(소분류) 응답에서만 채워진다. */
   categories: AiConsultCategoryResponse[] = [];
+  /** COLOR_LIST 응답에서만 채워진다. 값은 전부 DB 에서 재조회한 것이다. */
+  colors: AiConsultColorResponse[] = [];
   /** 소분류 응답에서 상위 대분류. 그 외에는 null. */
   parentCategory: AiConsultCategoryResponse | null = null;
   /** PRODUCT_LIST 응답에서만 채워진다. */
@@ -789,6 +975,12 @@ export class AiConsultAnswerDto {
   ): this {
     this.categories = categories;
     this.parentCategory = parentCategory;
+
+    return this;
+  }
+
+  withColors(colors: AiConsultColorResponse[]): this {
+    this.colors = colors;
 
     return this;
   }
@@ -871,6 +1063,14 @@ export class PostAiConsultAskResponse {
 
   @ApiProperty({
     description:
+      '취급 색상 목록. tag 가 COLOR_LIST 일 때만 채워지고 그 외에는 빈 배열이다. ' +
+      'code 는 색상 칩을 그릴 때 쓰는 hex 값이며 미등록이면 null 이다',
+    type: [AiConsultColorResponse],
+  })
+  colors: AiConsultColorResponse[];
+
+  @ApiProperty({
+    description:
       '상품 카드 목록. tag 가 PRODUCT_LIST 일 때만 채워지고 그 외에는 빈 배열이다. ' +
       '이름·가격·이미지는 전부 DB 에서 읽은 값이라 AI 가 지어낼 수 없다',
     type: [AiConsultProductResponse],
@@ -894,6 +1094,7 @@ export class PostAiConsultAskResponse {
       brands: dto.brands,
       categories: dto.categories,
       parentCategory: dto.parentCategory,
+      colors: dto.colors,
       products: dto.products,
       appliedFilter: dto.appliedFilter,
     });

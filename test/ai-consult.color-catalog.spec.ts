@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 
 import { getDataSource, truncateTables } from './setup/db.helper';
 import { closeTestApp, getTestApp } from './setup/test-app';
+import { parseHexToLab } from '../apps/api/src/module/ai-consult/ai-consult.color';
 import {
   AiConsultColorCatalogDto,
   AiConsultColorSource,
@@ -227,5 +228,189 @@ describe('AI 상담 색상 해석 (통합)', () => {
     // Then
     expect(catalog.getCount()).toBe(3);
     expect(catalog.findMatch('파랑').getId()).toBeNull();
+  });
+
+  /**
+   * 운영 DB 의 실제 색상 구성.
+   *
+   * 이름 매칭만으로는 "빨강"(고객 어휘)과 "레드"(DB 어휘)가 자모 유사도 0.167 이라
+   * 절대 못 붙는다. 운영 로그에서 상품 검색 실패의 대부분이 이것이었으므로,
+   * 임계값을 건드릴 때 무엇이 깨지는지 이 픽스처가 바로 보여주도록 실제 값을 박아둔다.
+   */
+  describe('색공간 거리로 붙이기 (운영 색상 구성)', () => {
+    const REAL_COLORS: [string, string, string | null][] = [
+      ['블랙', 'Black', '#000000'],
+      ['화이트', 'White', '#FFFFFF'],
+      ['그레이', 'Gray', '#808080'],
+      ['카키', 'Khaki', '#C3B091'],
+      ['민트', 'Mint', '#c0ffee'],
+      ['아이보리', 'Ivory', '#FFFFF0'],
+      ['베이지', 'Beige', '#F5F5DC'],
+      ['오트밀', 'Oatmeal', '#E6D8C3'],
+      ['네이비', 'Navy', '#000080'],
+      ['차콜', 'Charcoal', '#36454F'],
+      ['라이트 퍼플', 'Light Purple', '#C8A2C8'],
+      ['소라', 'Sora', '#A7C7E7'],
+      ['핑크', 'Pink', '#FFC0CB'],
+      ['브라운', 'Brown', '#8B4513'],
+      ['레드', 'Red', '#FF0000'],
+      ['라이트 블루', 'Light Blue', '#ADD8E6'],
+      ['사파이어 블루', 'Sapphire Blue', '#0F52BA'],
+      ['리드 그레이', 'Lead Gray', '#4A443F'],
+      ['주니퍼', 'Juniper', '#282C24'],
+      ['버건디', 'Burgundy', '#800020'],
+      ['옐로우', 'Yellow', '#FFD400'],
+      ['세이지 그린', 'Sage Green', '#A8B2A1'],
+      ['네온 옐로우', 'Neon Yellow', '#DFFF00'],
+      ['스카이 블루', 'Sky Blue', '#87CEEB'],
+      ['모카무스', 'Mocha Mousse', '#A47864'],
+    ];
+
+    /** 매칭된 id 전부를 한국어 이름으로 되돌린다. 단언을 읽기 쉽게 하려는 용도다. */
+    function namesOf(
+      catalog: AiConsultColorCatalogDto,
+      query: string,
+    ): string[] {
+      return catalog
+        .findMatch(query)
+        .getIds()
+        .map((id) => catalog.findItem(id).name);
+    }
+
+    it('"빨강"을 DB 의 "레드"로 붙인다 (이름 매칭으로는 불가능하다)', async () => {
+      // Given
+      const idByKo = await seedColors(REAL_COLORS);
+      const catalog = await buildCatalog();
+
+      // When - 고객 어휘와 DB 어휘가 다르다
+      const match = catalog.findMatch('빨강');
+
+      // Then
+      expect(match.getId()).toBe(idByKo.get('레드'));
+      expect(match.toLogMeta().type).toBe(AiConsultNameMatchType.HEX_NEAREST);
+      // 기준 hex 가 정확히 일치하므로 거리가 0 이다
+      expect(match.toLogMeta().deltaE).toBe(0);
+    });
+
+    it('같은 계열 색이 여럿이면 전부 건다', async () => {
+      // Given
+      await seedColors(REAL_COLORS);
+      const catalog = await buildCatalog();
+
+      // When - "하늘색 옷"에 스카이 블루만 주면 재고가 없는 것처럼 보인다
+      const names = namesOf(catalog, '하늘색');
+
+      // Then - 가까운 순으로 함께 나온다
+      expect(names).toContain('스카이 블루');
+      expect(names).toContain('라이트 블루');
+      expect(names[0]).toBe('스카이 블루');
+      expect(catalog.findMatch('하늘색').toLogMeta().matchedCount).toBe(
+        names.length,
+      );
+    });
+
+    it('무채색 게이트: "파랑"에 차콜·그레이 같은 무채색을 주지 않는다', async () => {
+      // Given
+      await seedColors(REAL_COLORS);
+      const catalog = await buildCatalog();
+
+      // When - 거리만 재면 차콜이 1위로 올라온다
+      const names = namesOf(catalog, '파랑');
+
+      // Then
+      expect(names).toContain('네이비');
+      expect(names).not.toContain('차콜');
+      expect(names).not.toContain('그레이');
+      expect(names).not.toContain('리드 그레이');
+    });
+
+    it('Hue 게이트: "보라"에 네이비를 주지 않는다', async () => {
+      // Given
+      await seedColors(REAL_COLORS);
+      const catalog = await buildCatalog();
+
+      // When - 명도·채도가 비슷해 거리만으로는 네이비가 1위다
+      const names = namesOf(catalog, '보라');
+
+      // Then - 색상환에서 떨어져 있으므로 걸러지고 라이트 퍼플만 남는다
+      expect(names).toEqual(['라이트 퍼플']);
+    });
+
+    it('취급하지 않는 색은 억지로 붙이지 않는다', async () => {
+      // Given - 순수 초록 계열 상품이 없는 구성이다
+      await seedColors(REAL_COLORS);
+      const catalog = await buildCatalog();
+
+      // When
+      const match = catalog.findMatch('초록');
+
+      // Then - 엉뚱한 색을 보여주느니 못 붙였다고 남긴다
+      expect(match.getId()).toBeNull();
+      expect(match.getIds()).toEqual([]);
+    });
+
+    it('DB 이름을 그대로 쓰면 이름 매칭이 우선한다', async () => {
+      // Given
+      const idByKo = await seedColors(REAL_COLORS);
+      const catalog = await buildCatalog();
+
+      // When - "레드"는 색인에 있으므로 색공간까지 갈 이유가 없다
+      const match = catalog.findMatch('레드');
+
+      // Then
+      expect(match.getId()).toBe(idByKo.get('레드'));
+      expect(match.toLogMeta().type).toBe(AiConsultNameMatchType.EXACT);
+      expect(match.getIds()).toHaveLength(1);
+    });
+
+    it('DB 고유 이름의 오타는 여전히 자모 유사도로 구제한다', async () => {
+      // Given
+      const idByKo = await seedColors(REAL_COLORS);
+      const catalog = await buildCatalog();
+
+      // When - 보편 색이름이 아니라 색공간 경로가 발동하지 않는 오타다
+      // (이름을 통째로 품고 있으면 부분일치로 잡히므로 가운데 글자를 틀린다)
+      const match = catalog.findMatch('버간디');
+
+      // Then - 색공간을 앞에 둬도 자모 구제가 사라지면 안 된다
+      expect(match.getId()).toBe(idByKo.get('버건디'));
+      expect(match.toLogMeta().type).toBe(AiConsultNameMatchType.SIMILARITY);
+    });
+
+    it('color_code 가 없는 색상은 색공간 후보에서 빠진다', async () => {
+      // Given - 레드에서 hex 를 지운다
+      await seedColors(REAL_COLORS);
+      await dataSource.query(
+        `UPDATE option_value SET color_code = NULL
+          WHERE id IN (
+            SELECT entity_id FROM multilingual_text
+             WHERE entity_type = $1 AND field_name = $2 AND text_content = '레드'
+          )`,
+        [EntityType.OPTION_VALUE, OPTION_VALUE_NAME_FIELD],
+      );
+      const catalog = await buildCatalog();
+
+      // When
+      const names = namesOf(catalog, '빨강');
+
+      // Then - 비교할 색이 없으므로 붉은 계열 중 남은 것만 걸린다
+      expect(names).not.toContain('레드');
+      // 이름으로 물으면 여전히 잡힌다 — 색인은 hex 와 무관하다
+      expect(catalog.findMatch('레드').getId()).not.toBeNull();
+    });
+
+    it('소문자 hex 도 대소문자를 가리지 않고 읽는다', async () => {
+      // Given - 운영 데이터에 소문자 코드(민트 #c0ffee)가 섞여 있다
+      const idByKo = await seedColors(REAL_COLORS);
+      const catalog = await buildCatalog();
+
+      // When
+      const mint = catalog.findItem(idByKo.get('민트'));
+
+      // Then - 파싱에 실패하면 그 색은 색공간 매칭에서 조용히 빠진다
+      expect(mint.code).toBe('#c0ffee');
+      expect(parseHexToLab(mint.code)).not.toBeNull();
+      expect(parseHexToLab('#C0FFEE')).toEqual(parseHexToLab('#c0ffee'));
+    });
   });
 });

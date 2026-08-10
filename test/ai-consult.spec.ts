@@ -18,6 +18,7 @@ import {
   buildAnswerCacheKey,
   buildDailyBudgetKey,
   DAILY_LLM_CALL_LIMIT,
+  OPTION_VALUE_NAME_FIELD,
   RATE_LIMIT_PER_IP,
 } from '../apps/api/src/module/ai-consult/ai-consult.dto';
 import {
@@ -48,6 +49,7 @@ import {
 } from '../libs/repository/src/enum/ai-consult.enum';
 import { EntityType } from '../libs/repository/src/enum/entity.enum';
 import { LanguageCode } from '../libs/repository/src/enum/language.enum';
+import { COLOR_OPTION_TYPE } from '../libs/repository/src/enum/option.enum';
 import { LanguageRepositoryService } from '../libs/repository/src/service/language.repository.service';
 
 const ASK_URL = '/ai-consult/ask';
@@ -119,6 +121,9 @@ describe('AiConsultController (E2E)', () => {
       'user_profile',
       '"user"',
       'brand',
+      'variant_option',
+      'option_value',
+      'option',
       'product_category',
       'category',
       'multilingual_text',
@@ -344,6 +349,7 @@ describe('AiConsultController (E2E)', () => {
         'appliedFilter',
         'brands',
         'categories',
+        'colors',
         'parentCategory',
         'products',
         'suggestions',
@@ -1050,6 +1056,151 @@ describe('AiConsultController (E2E)', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 색상 목록 / 잡담
+  // -------------------------------------------------------------------------
+  describe('색상 목록 (intent: COLOR_LIST)', () => {
+    async function seedColors(): Promise<void> {
+      const option = await dataSource.query(
+        `INSERT INTO option (type, ui_type, sort_order, is_active)
+         VALUES ($1, 'GRID', 1, true) RETURNING id`,
+        [COLOR_OPTION_TYPE],
+      );
+
+      for (const [index, [ko, code]] of [
+        ['레드', '#FF0000'],
+        ['블랙', '#000000'],
+      ].entries()) {
+        const value = await dataSource.query(
+          `INSERT INTO option_value (option_id, color_code, sort_order, is_active)
+           VALUES ($1, $2, $3, true) RETURNING id`,
+          [option[0].id, code, index + 1],
+        );
+        await languageRepositoryService.saveMultilingualTextByLanguageCode(
+          EntityType.OPTION_VALUE,
+          value[0].id,
+          OPTION_VALUE_NAME_FIELD,
+          LanguageCode.KOREAN,
+          ko,
+        );
+      }
+    }
+
+    it('색상을 물으면 카테고리가 아니라 색상 목록을 준다', async () => {
+      // Given - COLOR_LIST 가 없으면 이 질문이 CATEGORY_LIST 로 흘러
+      // 색을 물었는데 카테고리 목록이 나간다
+      await seedColors();
+      geminiSpy.mockResolvedValue(
+        ok(
+          classification({
+            intent: AiConsultIntent.COLOR_LIST,
+            faqCode: 'NONE',
+            confidence: 0,
+          }),
+        ),
+      );
+
+      // When
+      const res = await ask('어떤 색상들이 있니');
+
+      // Then
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.COLOR_LIST);
+      expect(res.body.data.colors.map((v) => v.name)).toEqual(['레드', '블랙']);
+      expect(res.body.data.categories).toEqual([]);
+      // 색상 칩을 그리려면 hex 가 필요하다
+      expect(res.body.data.colors[0].code).toBe('#FF0000');
+    });
+
+    it('취급 색상이 없으면 FALLBACK 으로 내려간다', async () => {
+      // Given - 색상 데이터가 하나도 없는 상태
+      geminiSpy.mockResolvedValue(
+        ok(
+          classification({
+            intent: AiConsultIntent.COLOR_LIST,
+            faqCode: 'NONE',
+            confidence: 0,
+          }),
+        ),
+      );
+
+      // When
+      const res = await ask('무슨 색 있어?');
+
+      // Then - 빈 목록을 자신 있게 보여주면 안 된다
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.FALLBACK);
+      expect(res.body.data.colors).toEqual([]);
+    });
+  });
+
+  describe('잡담 (intent: SMALL_TALK)', () => {
+    it('인사·응원에 "이해하지 못했어요"로 답하지 않는다', async () => {
+      // Given
+      geminiSpy.mockResolvedValue(
+        ok(
+          classification({
+            intent: AiConsultIntent.SMALL_TALK,
+            faqCode: 'NONE',
+            confidence: 0,
+            prefaceId: AiConsultPrefaceId.THANKS,
+          }),
+        ),
+      );
+
+      // When
+      const res = await ask('서울모먼트 화이팅');
+
+      // Then - 이해 실패(FALLBACK)도 범위 외(OFF_TOPIC)도 아니다
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.SMALL_TALK);
+      expect(res.body.data.answer).not.toBe(
+        AI_CONSULT_FALLBACK_MESSAGE[LanguageCode.KOREAN],
+      );
+      // 다음 행동을 제시해야 대화가 끊기지 않는다
+      expect(res.body.data.suggestions.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('신규 FAQ', () => {
+    it('자사 소개 질문을 범위 외로 내보내지 않는다', async () => {
+      // Given
+      geminiSpy.mockResolvedValue(
+        ok(
+          classification({
+            faqCode: AiConsultFaqCode.ABOUT_SHOP,
+            confidence: 0.95,
+          }),
+        ),
+      );
+
+      // When
+      const res = await ask('서울모먼트에 대해서 알려줘');
+
+      // Then
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.FAQ_ANSWER);
+      expect(res.body.data.answer).toBe(
+        findFaqItem(AiConsultFaqCode.ABOUT_SHOP).answer[LanguageCode.KOREAN],
+      );
+    });
+
+    it('"다른 질문 추천"에는 추천 칩을 함께 준다', async () => {
+      // Given
+      geminiSpy.mockResolvedValue(
+        ok(
+          classification({
+            faqCode: AiConsultFaqCode.SUGGESTED_QUESTIONS,
+            confidence: 0.95,
+          }),
+        ),
+      );
+
+      // When
+      const res = await ask('다른 질문들 추천');
+
+      // Then - 칩이 곧 답이라 비어 있으면 "아래에서 고르세요" 뒤가 빈다
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.FAQ_ANSWER);
+      expect(res.body.data.suggestions.length).toBeGreaterThan(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // 다국어
   // -------------------------------------------------------------------------
   describe('다국어', () => {
@@ -1163,6 +1314,28 @@ describe('AiConsultController (E2E)', () => {
       expect(key).not.toBe(
         buildAnswerCacheKey(DELIVERY_QUESTION, LanguageCode.KOREAN, 'other'),
       );
+    });
+
+    it('실사용 최다 질문인 5자 질문도 캐시를 탄다', async () => {
+      // Given - "배송 기간"·"환불 방법" 은 5자다. 하한이 6이면 전건 LLM 을 타서
+      // 가장 흔한 질문일수록 비용이 드는 뒤집힌 구조가 된다.
+      const shortQuestion = '배송 기간';
+
+      // When
+      await ask(shortQuestion);
+      await ask(shortQuestion);
+
+      // Then
+      expect(geminiSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('한두 글자 잡음은 여전히 캐시하지 않는다', async () => {
+      // When - 키 공간을 오염시키면 안 된다
+      await ask('네?');
+      await ask('네?');
+
+      // Then
+      expect(geminiSpy).toHaveBeenCalledTimes(2);
     });
 
     it('캐시에 깨진 JSON 이 들어있어도 500 이 아니라 정상 응답한다', async () => {

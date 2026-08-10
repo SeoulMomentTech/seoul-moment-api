@@ -73,6 +73,14 @@ export interface AiConsultNameMatchMeta {
   runnerUpScore?: number;
   /** 1위 후보의 DB 이름. 무엇과 헷갈렸는지 보려면 필요하다. */
   candidate?: string;
+  /** HEX_NEAREST 단계의 1위 색공간 거리(CIE76 ΔE, 소수점 1자리) */
+  deltaE?: number;
+  /**
+   * HEX_NEAREST 로 붙은 색상 개수.
+   * 색상은 같은 계열이면 여러 개를 함께 거는데("하늘"→스카이블루·라이트블루),
+   * 몇 개가 걸렸는지 남겨야 검색 결과 수가 왜 그렇게 나왔는지 설명된다.
+   */
+  matchedCount?: number;
 }
 
 /**
