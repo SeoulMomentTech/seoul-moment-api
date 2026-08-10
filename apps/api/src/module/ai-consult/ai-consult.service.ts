@@ -47,6 +47,7 @@ import {
   AiConsultResolvedSlotDto,
   AiConsultLimitDto,
   AiConsultRequestContextDto,
+  AI_CONSULT_FILTER_NAME_MAX,
   ANSWER_CACHE_MIN_LENGTH,
   ANSWER_CACHE_TTL_SECONDS,
   buildAnswerCacheKey,
@@ -72,6 +73,7 @@ import {
   AI_CONSULT_CONFIRM_MESSAGE,
   AI_CONSULT_DEFAULT_SUGGESTION_CODES,
   AI_CONSULT_FALLBACK_MESSAGE,
+  AI_CONSULT_FILTER_NAME_OVERFLOW,
   AI_CONSULT_NOT_FOUND_MESSAGE,
   AI_CONSULT_OFF_TOPIC_MESSAGE,
   AI_CONSULT_PRODUCT_CATEGORY_LIST_MESSAGE,
@@ -725,6 +727,7 @@ export class AiConsultService {
         match,
         catalog,
         AiConsultCategoryLevel.CATEGORY,
+        language,
       );
     }
 
@@ -740,6 +743,7 @@ export class AiConsultService {
       productMatch,
       productCatalog,
       AiConsultCategoryLevel.PRODUCT_CATEGORY,
+      language,
     );
   }
 
@@ -747,15 +751,40 @@ export class AiConsultService {
     match: AiConsultNameMatchDto,
     catalog: AiConsultCategoryCatalogDto,
     level: AiConsultCategoryLevel,
+    language: LanguageCode,
   ): AiConsultResolvedSlotDto {
-    const id = match.getId();
-
     return AiConsultResolvedSlotDto.resolved(
-      id,
-      catalog.findItem(id).name,
+      match.getId(),
+      this.describeMatchedCategories(match, catalog, language),
       match,
       level,
     );
+  }
+
+  /**
+   * 걸린 분류가 여럿이면 함께 적는다.
+   *
+   * "모자"에 러닝 모자·비니 모자가 걸렸는데 대표 하나만 써서 "러닝 모자 상품 2개"라고
+   * 답하면 비니가 왜 나왔는지 설명이 안 된다. 고객이 쓴 말("모자")을 그대로 쓸 수도
+   * 없다 — 모델 출력이라 문장에 넣지 않는다는 규칙이 있다. 그래서 DB 이름을 나열한다.
+   */
+  private describeMatchedCategories(
+    match: AiConsultNameMatchDto,
+    catalog: AiConsultCategoryCatalogDto,
+    language: LanguageCode,
+  ): string {
+    const names = match
+      .getIds()
+      .map((id) => catalog.findItem(id)?.name)
+      .filter((name): name is string => Boolean(name));
+    const shown = names.slice(0, AI_CONSULT_FILTER_NAME_MAX).join(', ');
+    const rest = names.length - AI_CONSULT_FILTER_NAME_MAX;
+
+    return rest > 0
+      ? AI_CONSULT_FILTER_NAME_OVERFLOW[language]
+          .replace('{names}', shown)
+          .replace('{rest}', String(rest))
+      : shown;
   }
 
   /**

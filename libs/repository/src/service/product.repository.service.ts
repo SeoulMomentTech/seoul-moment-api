@@ -37,6 +37,16 @@ import {
 } from '../enum/product.enum';
 import { SortOrderHelper } from '../helper/sort-order.helper';
 
+/**
+ * 단일 id 와 id 목록을 한 형태로 모은다.
+ * 0·NaN·null 은 "조건 없음"이므로 걸러야 `IN ()` 로 빈 결과가 나오지 않는다.
+ */
+function toIdList(value?: number | number[]): number[] {
+  const list = value === undefined || value === null ? [] : [value].flat();
+
+  return list.filter((id) => Number.isFinite(id) && id > 0);
+}
+
 @Injectable()
 export class ProductRepositoryService implements OnModuleInit {
   constructor(
@@ -182,8 +192,10 @@ export class ProductRepositoryService implements OnModuleInit {
       DatabaseSort.DESC,
     ),
     brandId?: number,
-    categoryId?: number,
-    productCategoryId?: number,
+    // 여러 개면 그중 하나라도 속하면 걸린다(OR). AI 상담이 "모자"처럼 넓은 말을
+    // 받으면 "러닝 모자"·"비니 모자"를 함께 걸어야 해서 목록도 받는다.
+    categoryId?: number | number[],
+    productCategoryId?: number | number[],
     search?: string,
     withoutId?: number,
     optionIdList?: number[],
@@ -280,14 +292,18 @@ export class ProductRepositoryService implements OnModuleInit {
         query.andWhere('p.brand_id = :brandId', { brandId });
       }
 
-      if (productCategoryId) {
-        query.andWhere('p.product_category_id = :productCategoryId', {
-          productCategoryId,
+      const productCategoryIdList = toIdList(productCategoryId);
+
+      if (productCategoryIdList.length > 0) {
+        query.andWhere('p.product_category_id IN (:...productCategoryIdList)', {
+          productCategoryIdList,
         });
       }
 
-      if (categoryId) {
-        query.andWhere('c.id = :categoryId', { categoryId });
+      const categoryIdList = toIdList(categoryId);
+
+      if (categoryIdList.length > 0) {
+        query.andWhere('c.id IN (:...categoryIdList)', { categoryIdList });
       }
 
       if (withoutId) {

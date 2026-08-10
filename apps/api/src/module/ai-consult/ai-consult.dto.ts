@@ -94,6 +94,18 @@ export const NAME_FUZZY_MATCH_MARGIN = 0.05;
  * 짧은 이름은 한 글자만 달라도 유사도가 높게 나와 오탐이 된다.
  */
 export const NAME_FUZZY_MIN_LENGTH = 4;
+/**
+ * "이름이 질의를 품는" 매칭을 적용할 질의의 최소 글자 수.
+ *
+ * 1글자("옷"·"백")는 아무 이름에나 우연히 들어가 카탈로그 절반이 걸린다.
+ * 2글자면 "모자"·"후드"·"가방" 같은 실제 상위 개념부터 잡힌다.
+ */
+export const BROADER_MATCH_MIN_QUERY_LENGTH = 2;
+/**
+ * 답변 문장에 나열할 조건 이름의 최대 개수.
+ * 넓은 말에는 분류가 여러 개 걸리는데, 다 적으면 문장이 조건에 잡아먹힌다.
+ */
+export const AI_CONSULT_FILTER_NAME_MAX = 2;
 
 /** option_value 의 다국어 이름은 'name' 이 아니라 'value' 필드에 들어있다. */
 export const OPTION_VALUE_NAME_FIELD = 'value';
@@ -312,6 +324,12 @@ interface AiConsultNameCandidate {
   score: number;
 }
 
+/** 이름만으로 걸린 후보 한 칸. 점수 없이 id·이름만 필요한 단계에서 쓴다. */
+interface AiConsultNameCandidateId {
+  id: number;
+  name: string;
+}
+
 /** 색공간 거리로 걸린 색상 후보 한 칸. */
 export interface AiConsultColorHexCandidate {
   id: number;
@@ -357,6 +375,29 @@ export class AiConsultNameMatchDto {
       null,
       null,
       name,
+    );
+  }
+
+  /**
+   * 이름이 질의를 품는 경우. 여러 개가 걸리면 전부 들고 간다.
+   *
+   * "모자"에 러닝 모자만 주고 비니 모자를 빼면 고객 눈에는 그것만 파는 것처럼 보인다.
+   * 대표는 **가장 짧은 이름** — 질의에 가장 가까운(군더더기가 적은) 것이다.
+   */
+  static broader(
+    candidates: readonly AiConsultNameCandidateId[],
+  ): AiConsultNameMatchDto {
+    const [best, ...siblings] = [...candidates].sort(
+      (a, b) => a.name.length - b.name.length,
+    );
+
+    return new AiConsultNameMatchDto(
+      best.id,
+      AiConsultNameMatchType.BROADER,
+      null,
+      null,
+      best.name,
+      siblings.map((candidate) => candidate.id),
     );
   }
 
@@ -542,6 +583,41 @@ export class AiConsultNameIndexDto {
       : AiConsultNameMatchDto.partial(longestId, longestName);
   }
 
+  /**
+   * 고객이 등록된 이름보다 **넓은 말**을 썼을 때 그 아래 이름들을 전부 찾는다.
+   *
+   * 소분류가 "러닝 모자"인데 고객은 "모자 뭐 있어?"라고 묻는다. 부분일치는 질의가
+   * 이름을 품는 방향만 보므로 이 경우를 놓치고, 자모 유사도도 "모자" vs "러닝모자"가
+   * 0.5 라 임계값에 못 미친다 — 운영 로그에서 NOT_FOUND 로 떨어지던 축이다.
+   *
+   * 하나만 고를 수 없다. "모자"에는 러닝 모자·비니 모자가 함께 걸려야 한다.
+   * 못 찾으면 null 을 돌려 호출부가 다음 단계로 넘어가게 한다.
+   *
+   * 1글자 질의("옷")는 제외한다 — 아무 이름에나 우연히 걸려 전체 목록이 나간다.
+   */
+  findBroader(query: string): AiConsultNameMatchDto | null {
+    const normalized = normalizeMatchName(query);
+
+    if (normalized.length < BROADER_MATCH_MIN_QUERY_LENGTH) return null;
+
+    const bestById = new Map<number, AiConsultNameCandidateId>();
+
+    for (const [name, id] of this.idByName) {
+      if (!name.includes(normalized)) continue;
+
+      // 같은 대상의 다국어 이름 중 짧은 쪽을 대표로 남긴다.
+      const current = bestById.get(id);
+
+      if (!current || name.length < current.name.length) {
+        bestById.set(id, { id, name });
+      }
+    }
+
+    return bestById.size === 0
+      ? null
+      : AiConsultNameMatchDto.broader([...bestById.values()]);
+  }
+
   /** 표기 흔들림 구제 단계. 이름이 짧을수록 오탐이 늘어 마지막에 둔다. */
   findBySimilarity(query: string): AiConsultNameMatchDto {
     const normalized = normalizeMatchName(query);
@@ -634,8 +710,19 @@ export class AiConsultCategoryCatalogDto {
     return this.items.find((item) => item.id === id) ?? null;
   }
 
+  /**
+   * 완전·부분일치 → **넓은 말** → 자모 유사도.
+   *
+   * 넓은 말을 자모보다 먼저 두는 이유는 신호가 훨씬 강하기 때문이다. "모자"가
+   * "러닝 모자" 안에 통째로 들어있는 것은 우연이 아니지만, 자모 0.7 은 "가방"과
+   * "가발"도 넘길 수 있는 값이다.
+   */
   findMatch(query: string): AiConsultNameMatchDto {
-    return this.index.findMatch(query);
+    return (
+      this.index.findExactOrPartial(query) ??
+      this.index.findBroader(query) ??
+      this.index.findBySimilarity(query)
+    );
   }
 }
 
@@ -719,9 +806,10 @@ export class AiConsultColorCatalogDto {
       return AiConsultNameMatchDto.hexNearest(candidates);
     }
 
-    // 색으로도 못 붙었으면 이름 유사도로 마지막 구제를 시도한다.
+    // 색으로도 못 붙었으면 넓은 말("블루" → 라이트 블루·스카이 블루)을 본 뒤
+    // 이름 유사도로 마지막 구제를 시도한다.
     // 실패해도 점수가 남아야 로그에서 임계값을 조정할 수 있다.
-    return this.index.findBySimilarity(query);
+    return this.index.findBroader(query) ?? this.index.findBySimilarity(query);
   }
 
   /** 같은 계열로 판정된 색상을 가까운 순으로. DB 색 추가에 코드 변경이 필요 없는 지점이다. */
@@ -811,6 +899,21 @@ export class AiConsultResolvedSlotDto {
     return this.level === AiConsultCategoryLevel.PRODUCT_CATEGORY
       ? this.id
       : null;
+  }
+
+  /**
+   * 필터에 걸 대분류 id 전부.
+   * 넓은 말("패션")에는 여러 분류가 걸릴 수 있어 대표 하나만 쓰면 나머지가 사라진다.
+   */
+  getCategoryIds(): number[] {
+    return this.level === AiConsultCategoryLevel.CATEGORY ? this.getIds() : [];
+  }
+
+  /** 필터에 걸 소분류 id 전부("모자" → 러닝 모자·비니 모자). */
+  getProductCategoryIds(): number[] {
+    return this.level === AiConsultCategoryLevel.PRODUCT_CATEGORY
+      ? this.getIds()
+      : [];
   }
 
   /** DB 에서 읽은 이름. 고객 문장에 넣어도 안전한 유일한 값이다. */
@@ -914,6 +1017,9 @@ export class AiConsultProductFilterDto {
   toProductRequest(): GetProductRequest {
     // 같은 계열 색이 여러 개 붙었으면 전부 건다("하늘색"→스카이블루·라이트블루).
     const colorIds = this.color?.getIds() ?? [];
+    // 넓은 말에 걸린 분류도 마찬가지다("모자"→러닝 모자·비니 모자).
+    const categoryIds = this.category?.getCategoryIds() ?? [];
+    const productCategoryIds = this.category?.getProductCategoryIds() ?? [];
 
     return GetProductRequest.from(
       1,
@@ -923,8 +1029,8 @@ export class AiConsultProductFilterDto {
       // 상품명 ILIKE 검색. multilingual_text(entityType='product') 를 뒤진다.
       this.keyword || undefined,
       undefined,
-      this.category?.getCategoryId() ?? undefined,
-      this.category?.getProductCategoryId() ?? undefined,
+      categoryIds.length ? categoryIds : undefined,
+      productCategoryIds.length ? productCategoryIds : undefined,
       // optionIdList 는 이름과 달리 option_value_id 목록이다.
       colorIds.length ? colorIds : undefined,
       undefined,

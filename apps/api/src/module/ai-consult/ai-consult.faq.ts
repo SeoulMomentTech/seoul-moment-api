@@ -882,6 +882,18 @@ export const AI_CONSULT_PRODUCT_LIST_MESSAGE: Record<LanguageCode, string> = {
   [LanguageCode.TAIWAN]: '為您找到 {filter} 商品 {count} 件。',
 };
 
+/**
+ * 넓은 말("모자")에 분류가 여럿 걸렸을 때 조건 이름을 줄이는 표기.
+ *
+ * 다 나열하면 "러닝 모자, 비니 모자, 버킷 모자, … 상품 12개를 찾았어요"처럼
+ * 문장이 조건에 잡아먹힌다. 앞의 몇 개만 보이고 나머지는 개수로 줄인다.
+ */
+export const AI_CONSULT_FILTER_NAME_OVERFLOW: Record<LanguageCode, string> = {
+  [LanguageCode.KOREAN]: '{names} 외 {rest}개',
+  [LanguageCode.ENGLISH]: '{names} and {rest} more',
+  [LanguageCode.TAIWAN]: '{names} 等 {rest} 項',
+};
+
 /** 상품명 검색어만 걸렸을 때. 검색어는 모델 출력이라 문장에 넣지 않는다. */
 export const AI_CONSULT_PRODUCT_FOUND_MESSAGE: Record<LanguageCode, string> = {
   [LanguageCode.KOREAN]: '말씀하신 상품 {count}개를 찾았어요.',

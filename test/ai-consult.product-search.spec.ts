@@ -403,6 +403,119 @@ describe('AI 상담 상품 검색 (E2E)', () => {
     ]);
   });
 
+  /** 소분류 하나와 그 아래 상품 하나를 더 만든다. 운영에서 분류를 늘리는 것과 같다. */
+  async function addProductCategory(
+    categoryName: string,
+    productName: string,
+  ): Promise<void> {
+    const [brand] = await dataSource.query(`SELECT id FROM brand LIMIT 1`);
+    const [productCategory] = await dataSource.query(
+      `INSERT INTO product_category (category_id, sort_order)
+       VALUES ($1, 9) RETURNING id`,
+      [fashionId],
+    );
+    await saveText(
+      EntityType.PRODUCT_CATEGORY,
+      productCategory.id,
+      'name',
+      categoryName,
+    );
+
+    const [product] = await dataSource.query(
+      `INSERT INTO product (status, brand_id, category_id, product_category_id)
+       VALUES ('NORMAL', $1, $2, $3) RETURNING id`,
+      [brand.id, fashionId, productCategory.id],
+    );
+    await saveText(EntityType.PRODUCT, product.id, 'name', productName);
+
+    const [item] = await dataSource.query(
+      `INSERT INTO product_item (product_id, main_image_url, price, status)
+       VALUES ($1, '/product/item.png', 29000, 'NORMAL') RETURNING id`,
+      [product.id],
+    );
+    await dataSource.query(
+      `INSERT INTO product_variant (product_item_id, sku, stock_quantity, status)
+       VALUES ($1, $2, 10, 'ACTIVE')`,
+      [item.id, `SKU-${productName}`],
+    );
+  }
+
+  /**
+   * 고객은 등록된 분류명보다 **넓은 말**을 쓴다.
+   * 소분류가 "러닝 모자"인데 "모자는 뭐가 있어?"라고 묻는다 —
+   * 운영 로그에서 이게 NOT_FOUND 였고, "러닝모자"라고 정확히 쳐야만 나왔다.
+   */
+  it('분류명보다 넓은 말로 물어도 그 아래 분류가 걸린다', async () => {
+    // Given - "모자"라는 분류는 없고 "러닝 모자"·"비니 모자"만 있다
+    await addProductCategory('러닝 모자', '러닝 캡');
+    await addProductCategory('비니 모자', '니트 비니');
+    geminiSpy.mockResolvedValue(searchStub('모자'));
+
+    // When
+    const res = await ask('모자는 뭐가 있어?');
+
+    // Then - 하나만 주면 나머지는 취급하지 않는 것처럼 보인다
+    expect(res.body.data.tag).toBe(AiConsultAnswerType.PRODUCT_LIST);
+    expect(res.body.data.products.map((v) => v.name).sort()).toEqual([
+      '니트 비니',
+      '러닝 캡',
+    ]);
+    // 답변 문장에는 걸린 분류를 함께 적는다 — 대표 하나만 쓰면
+    // "러닝 모자 상품 2개"가 되어 비니가 왜 나왔는지 설명이 안 된다
+    expect(res.body.data.appliedFilter.category.split(', ').sort()).toEqual([
+      '러닝 모자',
+      '비니 모자',
+    ]);
+  });
+
+  it('넓은 말로 걸렸다는 사실이 로그에 남는다', async () => {
+    // Given
+    await addProductCategory('러닝 모자', '러닝 캡');
+    await addProductCategory('비니 모자', '니트 비니');
+    geminiSpy.mockResolvedValue(searchStub('모자'));
+
+    // When
+    await ask('모자는 뭐가 있어?');
+
+    // Then - 임계값이 아니라 포함 관계로 붙은 것이라 점수가 없다
+    const [row] = await waitForLogRows(1);
+    const meta = row.meta as AiConsultLogMetaObject;
+
+    expect(meta.categoryMatch.type).toBe(AiConsultNameMatchType.BROADER);
+    expect(meta.categoryMatch.matchedCount).toBe(2);
+    expect(meta.productCount).toBe(2);
+  });
+
+  it('정확한 분류명으로 물으면 그 분류만 나온다', async () => {
+    // Given - 넓은 말 매칭이 정확한 지목까지 넓혀버리면 안 된다
+    await addProductCategory('러닝 모자', '러닝 캡');
+    await addProductCategory('비니 모자', '니트 비니');
+    geminiSpy.mockResolvedValue(searchStub('러닝 모자'));
+
+    // When
+    const res = await ask('러닝 모자는 뭐가 있어?');
+
+    // Then
+    expect(res.body.data.products.map((v) => v.name)).toEqual(['러닝 캡']);
+    expect(res.body.data.appliedFilter.category).toBe('러닝 모자');
+  });
+
+  it('한 글자 질의는 아무 분류에나 걸리지 않는다', async () => {
+    // Given - "옷"은 "여성 겉옷"·"속옷" 어디에나 들어가 카탈로그 절반이 걸린다
+    await addProductCategory('여성 겉옷', '트렌치 코트');
+    geminiSpy.mockResolvedValue(searchStub('옷'));
+
+    // When
+    const res = await ask('옷 뭐 있어?');
+
+    // Then - 분류로는 못 붙고 상품명 완화 검색으로 넘어간다
+    const [row] = await waitForLogRows(1);
+    const meta = row.meta as AiConsultLogMetaObject;
+
+    expect(meta.categoryMatch.type).not.toBe(AiConsultNameMatchType.BROADER);
+    expect(res.body.data.appliedFilter.category).toBeNull();
+  });
+
   it('조건을 말했는데 하나도 못 붙이면 전체 목록 대신 NOT_FOUND 다', async () => {
     // Given - 취급하지 않는 색상
     geminiSpy.mockResolvedValue(searchStub('', '형광연두'));

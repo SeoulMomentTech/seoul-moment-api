@@ -173,6 +173,18 @@ export class GetProductCategoryResponse {
   }
 }
 
+/**
+ * 쿼리스트링은 `?id=1` 과 `?id=1&id=2` 를 각각 문자열·배열로 준다.
+ * 둘 다 받아 넘기고, 값이 없으면 undefined 로 정리한다.
+ */
+function toNumberOrNumberList(value: unknown): number | number[] | undefined {
+  if (Array.isArray(value)) return value.map(Number);
+
+  if (value === undefined || value === null || value === '') return undefined;
+
+  return Number(value);
+}
+
 export class GetProductRequest {
   @ApiProperty({
     description: '현재 페이지',
@@ -229,23 +241,29 @@ export class GetProductRequest {
   @Type(() => Number)
   brandId: number;
 
+  /**
+   * 여러 개를 넘기면 그중 하나라도 속하면 걸린다(OR).
+   *
+   * AI 상담이 "모자 뭐 있어?" 같은 넓은 말을 받으면 "러닝 모자"·"비니 모자"가 함께
+   * 걸리는데, 하나만 골라 보여주면 나머지는 취급하지 않는 것처럼 보인다.
+   */
   @ApiPropertyOptional({
-    description: '카테고리 id',
+    description: '카테고리 id (숫자 하나 또는 배열)',
     example: 1,
+    oneOf: [{ type: 'number' }, { type: 'array', items: { type: 'number' } }],
   })
   @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  categoryId: number;
+  @Transform(({ value }) => toNumberOrNumberList(value))
+  categoryId: number | number[];
 
   @ApiPropertyOptional({
-    description: '상품 카테고리 id',
+    description: '상품 카테고리 id (숫자 하나 또는 배열)',
     example: 1,
+    oneOf: [{ type: 'number' }, { type: 'array', items: { type: 'number' } }],
   })
   @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  productCategoryId: number;
+  @Transform(({ value }) => toNumberOrNumberList(value))
+  productCategoryId: number | number[];
 
   @ApiPropertyOptional({
     description: '옵션 id 목록 (숫자 하나 또는 배열)',
@@ -286,8 +304,8 @@ export class GetProductRequest {
     sort?: DatabaseSort,
     search?: string,
     brandId?: number,
-    categoryId?: number,
-    productCategoryId?: number,
+    categoryId?: number | number[],
+    productCategoryId?: number | number[],
     optionIdList?: number[],
     mainView?: boolean,
   ) {
