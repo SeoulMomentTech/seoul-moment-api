@@ -680,7 +680,11 @@ export class AiConsultService {
     const { language } = context;
     const [category, color] = await Promise.all([
       this.resolveCategorySlot(classification.categoryQuery, language),
-      this.resolveColorSlot(classification.colorQuery, language),
+      this.resolveColorSlot(
+        classification.colorQuery,
+        classification.colorHex,
+        language,
+      ),
     ]);
 
     return AiConsultProductFilterDto.from(
@@ -754,8 +758,13 @@ export class AiConsultService {
     );
   }
 
+  /**
+   * @param hex 모델이 정규화한 표준 색. 이름으로 못 붙었을 때 색공간 비교에 쓴다.
+   *   모델이 안 줬으면 빈 문자열이고, 그때는 이름 매칭만으로 판정한다.
+   */
   private async resolveColorSlot(
     query: string,
+    hex: string,
     language: LanguageCode,
   ): Promise<AiConsultResolvedSlotDto | null> {
     if (!query) return null;
@@ -768,7 +777,7 @@ export class AiConsultService {
       );
     }
 
-    const match = catalog.findMatch(query);
+    const match = catalog.findMatch(query, hex || null);
     const id = match.getId();
 
     return id === null
@@ -1276,6 +1285,8 @@ export class AiConsultService {
       // FALLBACK 이 "카테고리 질문이 아니었다"인지 "이름을 못 붙였다"인지 가른다.
       categoryMatch: response.categoryMatch?.toLogMeta() ?? null,
       colorQuery: classification?.colorQuery || null,
+      // 색 매칭이 틀렸을 때 모델이 준 색이 문제인지 우리 게이트가 문제인지 가른다.
+      colorHex: classification?.colorHex || null,
       colorMatch: response.colorMatch?.toLogMeta() ?? null,
       keywordQuery: classification?.keywordQuery || null,
       productCount: response.productCount,
@@ -1328,6 +1339,7 @@ export class AiConsultService {
           categoryQuery: classification?.categoryQuery || undefined,
           categoryMatch: response.categoryMatch?.toLogMeta(),
           colorQuery: classification?.colorQuery || undefined,
+          colorHex: classification?.colorHex || undefined,
           colorMatch: response.colorMatch?.toLogMeta(),
           keywordQuery: classification?.keywordQuery || undefined,
           productCount: response.productCount ?? undefined,

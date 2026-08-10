@@ -48,6 +48,13 @@ export interface AiConsultLogMetaObject {
   categoryMatch?: AiConsultNameMatchMeta;
   /** 모델이 지목한 색상 이름(원문). PRODUCT_SEARCH 에서만 채워진다. */
   colorQuery?: string;
+  /**
+   * 모델이 위 colorQuery 를 정규화한 표준 색(`#RRGGBB`).
+   *
+   * 색 매칭이 틀렸을 때 **모델이 색을 잘못 짚은 것**인지 **우리 게이트가 좁은 것**인지
+   * 가르는 값이다. 이게 없으면 둘을 구분할 방법이 없어 임계값을 헛돌린다.
+   */
+  colorHex?: string;
   /** 위 colorQuery 의 매칭 결과. 색상만 따로 봐야 어느 슬롯이 샜는지 안다. */
   colorMatch?: AiConsultNameMatchMeta;
   /** 상품명 검색어. id 해석 없이 ILIKE 로 바로 들어가므로 매칭 결과가 없다. */

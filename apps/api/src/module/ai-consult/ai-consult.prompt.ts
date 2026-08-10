@@ -93,11 +93,22 @@ const SYSTEM_RULES = `[역할]
 10. colorQuery 는 intent 가 "${AiConsultIntent.PRODUCT_SEARCH}" 일 때만 씁니다.
     **고객이 쓴 색 이름을 그대로** 옮기고, 언급이 없으면 빈 문자열로 두십시오.
     다른 색 이름으로 **바꾸지 마십시오** — "레드"를 "빨강"으로, "블랙"을 "검정"으로
-    옮기면 안 됩니다. 표기를 정리하는 것은 서버가 합니다.
+    옮기면 안 됩니다. 쇼핑몰에 그 이름 그대로 등록된 색이 있을 수 있고, 그때는
+    원문이 있어야 정확히 찾습니다. 표기 정리는 colorHex 가 맡습니다.
     예) "레드색상 옷" → "레드" / "빨간색 원피스" → "빨간색" / "검정옷 추천좀" → "검정"
         "원피스 보여줘" → ""
     수식어("진한", "파스텔")만 빼고 색 이름은 손대지 마십시오.
-11. keywordQuery 는 intent 가 "${AiConsultIntent.PRODUCT_SEARCH}" 일 때,
+11. colorHex 는 colorQuery 가 비어있지 않을 때, 그 색의 **표준 hex** 입니다.
+    형식은 반드시 #RRGGBB (대문자). 색 이름이 아니면 빈 문자열로 두십시오.
+    - CSS 색상명의 값이 아니라 **한국어에서 그 말이 가리키는 색**을 내십시오.
+      예) "갈색" → "#8B4513" (CSS brown "#A52A2A" 는 너무 붉어 오답입니다)
+    - 정도 표현("진한", "연한", "아주")은 빼고 기준색을 내십시오.
+      예) "진한파랑" → "#0000FF"
+    - 표기가 흔들려도 같은 색이면 같은 값이어야 합니다.
+      예) "빨강" · "빨강색" · "빨간색" → 모두 "#FF0000"
+    쇼핑몰이 어떤 색을 취급하는지는 몰라도 됩니다. 이 값과 실제 색상의 비교는
+    서버가 색공간 거리로 수행합니다.
+12. keywordQuery 는 intent 가 "${AiConsultIntent.PRODUCT_SEARCH}" 일 때,
     **카테고리도 색상도 아닌 검색어**(브랜드명·제품명·소재·핏·기능 등)를 담습니다.
     상품 이름에 들어갈 만한 낱말만 남기고, "있어?", "추천좀" 같은 말은 빼십시오.
     예) "드라이핏 옷 있어?"      → keywordQuery "드라이핏", categoryQuery ""
@@ -158,30 +169,51 @@ export function buildResponseSchema(): Schema {
         enum: Object.values(AiConsultIntent),
         description: '고객이 원하는 것의 종류. 규칙 8 참고',
       },
-      /**
-       * 유일한 자유 텍스트 슬롯이다. enum 으로 고정하지 않는 이유는 카테고리가
-       * DB 데이터라서, 스키마에 박으면 카테고리를 추가·수정할 때마다 재기동해야
-       * 하기 때문이다. 대신 이 값은 **DB 조회 키로만** 쓰고 고객 문장에는 절대
-       * 넣지 않는다 — 응답에 나가는 이름은 서버가 DB 에서 다시 읽은 값이다.
-       */
-      categoryQuery: {
-        type: Type.STRING,
-        description:
-          '고객이 지목한 카테고리 이름. 지목이 없으면 빈 문자열. 규칙 9 참고',
-      },
-      colorQuery: {
-        type: Type.STRING,
-        description:
-          '고객이 지목한 색상 이름. 언급이 없으면 빈 문자열. 규칙 10 참고',
-      },
-      keywordQuery: {
-        type: Type.STRING,
-        description:
-          '카테고리·색상이 아닌 상품 검색어(브랜드·제품명·소재 등). 없으면 빈 문자열. 규칙 11 참고',
-      },
+      ...buildSlotProperties(),
       ...buildFaqMatchingProperties(faqCodes),
     },
     required: ['scope', 'intent', 'faqCode', 'confidence', 'prefaceId'],
+  };
+}
+
+/**
+ * 상품 검색 슬롯들.
+ *
+ * 전부 자유 텍스트다. enum 으로 고정하지 않는 이유는 카테고리·색상이 DB 데이터라서,
+ * 스키마에 박으면 값을 추가·수정할 때마다 재기동해야 하기 때문이다. 대신 이 값들은
+ * **DB 조회 키로만** 쓰고 고객 문장에는 절대 넣지 않는다 — 응답에 나가는 이름은
+ * 서버가 DB 에서 다시 읽은 값이다.
+ */
+function buildSlotProperties(): Record<string, Schema> {
+  return {
+    categoryQuery: {
+      type: Type.STRING,
+      description:
+        '고객이 지목한 카테고리 이름. 지목이 없으면 빈 문자열. 규칙 9 참고',
+    },
+    colorQuery: {
+      type: Type.STRING,
+      description:
+        '고객이 지목한 색상 이름. 언급이 없으면 빈 문자열. 규칙 10 참고',
+    },
+    /**
+     * 표기 정규화를 모델에 맡기는 자리다.
+     *
+     * 예전에는 "빨강색"·"파랑색" 같은 표기를 서버가 표로 흡수했는데, 표는 유한하고
+     * 고객의 말은 그렇지 않아 조합마다 구멍이 났다("빨간색"은 있고 "빨강색"은 없는 식).
+     * 색 이름을 표준 색으로 옮기는 일은 언어 문제라 모델이 낫고, 그 색을 **우리가
+     * 파는 색**에 붙이는 일은 DB 문제라 서버가 낫다. 그 경계가 이 필드다.
+     */
+    colorHex: {
+      type: Type.STRING,
+      description:
+        '고객이 말한 색의 표준 hex(#RRGGBB). 색 언급이 없으면 빈 문자열. 규칙 11 참고',
+    },
+    keywordQuery: {
+      type: Type.STRING,
+      description:
+        '카테고리·색상이 아닌 상품 검색어(브랜드·제품명·소재 등). 없으면 빈 문자열. 규칙 12 참고',
+    },
   };
 }
 

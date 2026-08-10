@@ -14,7 +14,7 @@ import { plainToInstance } from 'class-transformer';
 import { IsString, Length } from 'class-validator';
 import { createHash } from 'crypto';
 
-import { findBasicColorHex, parseHexToLab } from './ai-consult.color';
+import { normalizeHexCode, parseHexToLab } from './ai-consult.color';
 import { AiConsultPrefaceId, FAQ_NONE, findFaqItem } from './ai-consult.faq';
 import { findBestSimilarity, toJamo } from './ai-consult.similarity';
 import { MultilingualFieldDto } from '../dto/multilingual.dto';
@@ -677,18 +677,22 @@ export class AiConsultColorCatalogDto {
   /**
    * 완전·부분일치 → **색공간 거리** → 자모 유사도 순으로 내려간다.
    *
-   * 색공간을 자모보다 **먼저** 두는 것이 요점이다. 색 이름은 짧아서 자모 유사도가
-   * 쉽게 오답을 낸다 — "보라"와 "소라"는 자모 4개 중 1개 차이(0.75)로 임계값을 넘어,
-   * 자모를 먼저 태우면 보라색 질의에 하늘색 상품이 나간다.
-   * 반면 색공간 경로는 질의가 **보편 색이름일 때만** 발동하므로 신호가 훨씬 강하다.
+   * 이름 매칭을 맨 앞에 두는 것이 요점이다. DB 에 그 이름이 있으면 그게 정답이고,
+   * 모델이 준 hex 로 우회할 이유가 없다("레드"를 물었는데 색공간을 돌 필요는 없다).
+   *
+   * 색공간을 자모보다 **먼저** 두는 것도 마찬가지로 중요하다. 색 이름은 짧아서 자모
+   * 유사도가 쉽게 오답을 낸다 — "보라"와 "소라"는 자모 4개 중 1개 차이(0.75)로
+   * 임계값을 넘어, 자모를 먼저 태우면 보라색 질의에 하늘색 상품이 나간다.
    * 자모는 "네이비색" 같은 DB 고유 이름의 표기 흔들림을 받아내는 자리에 남는다.
+   *
+   * @param hex 모델이 정규화한 표준 색(`#RRGGBB`). 없으면 색공간 단계를 건너뛴다.
    */
-  findMatch(query: string): AiConsultNameMatchDto {
+  findMatch(query: string, hex: string | null = null): AiConsultNameMatchDto {
     const matched = this.index.findExactOrPartial(query);
 
     if (matched) return matched;
 
-    const candidates = this.findHexCandidates(query);
+    const candidates = this.findHexCandidates(hex);
 
     if (candidates.length > 0) {
       return AiConsultNameMatchDto.hexNearest(candidates);
@@ -700,10 +704,8 @@ export class AiConsultColorCatalogDto {
   }
 
   /** 같은 계열로 판정된 색상을 가까운 순으로. DB 색 추가에 코드 변경이 필요 없는 지점이다. */
-  private findHexCandidates(query: string): AiConsultColorHexCandidate[] {
-    const queryLab = parseHexToLab(
-      findBasicColorHex(normalizeMatchName(query)),
-    );
+  private findHexCandidates(hex: string | null): AiConsultColorHexCandidate[] {
+    const queryLab = parseHexToLab(hex);
 
     if (!queryLab) return [];
 
@@ -1135,6 +1137,14 @@ export class AiConsultClassificationDto {
    */
   colorQuery = '';
   /**
+   * 모델이 정규화한 색의 표준 hex. 형식이 어긋나면 빈 문자열이다.
+   *
+   * "빨강색"·"연한하늘색"처럼 표기가 흔들려도 여기서 같은 값으로 모인다.
+   * 값이 없으면 색공간 경로를 건너뛰고 이름 매칭만 탄다 — 예전 코드가 표로 하던
+   * 일을 모델이 하는 것이라, 모델이 못 내면 그만큼만 좁아지고 오답이 늘지는 않는다.
+   */
+  colorHex = '';
+  /**
    * 카테고리·색상이 아닌 상품 검색어. 상품명 ILIKE 검색에 그대로 쓰인다.
    * **고객 문장에는 넣지 않는다** — 모델 출력이라 인젝션 문구가 섞일 수 있다.
    */
@@ -1173,6 +1183,7 @@ export class AiConsultClassificationDto {
       toEnumValue(AiConsultIntent, source.intent) ?? AiConsultIntent.FAQ;
     dto.categoryQuery = this.normalizeFreeTextSlot(source.categoryQuery);
     dto.colorQuery = this.normalizeFreeTextSlot(source.colorQuery);
+    dto.colorHex = normalizeHexCode(source.colorHex) ?? '';
     dto.keywordQuery = this.normalizeFreeTextSlot(source.keywordQuery);
     dto.faqCode = this.normalizeFaqCode(source.faqCode);
     dto.confidence = dto.faqCode
@@ -1218,6 +1229,7 @@ export class AiConsultClassificationDto {
       intent: this.intent,
       categoryQuery: this.categoryQuery,
       colorQuery: this.colorQuery,
+      colorHex: this.colorHex,
       keywordQuery: this.keywordQuery,
       faqCode: this.faqCode,
       confidence: this.confidence,

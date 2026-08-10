@@ -99,6 +99,17 @@ describe('AI 상담 상품 검색 (E2E)', () => {
     );
   }
 
+  /**
+   * 모델이 colorQuery 를 정규화해 함께 주는 표준 hex.
+   * 실제 gemini-3.1-flash-lite 출력값이며, 모르는 말이면 빈 문자열이 온다.
+   */
+  const MODEL_HEX: Readonly<Record<string, string>> = {
+    검정: '#000000',
+    까만색: '#000000',
+    하양: '#FFFFFF',
+    형광연두: '#CCFF00',
+  };
+
   /** PRODUCT_SEARCH 판정 스텁. 슬롯만 바꿔가며 쓴다. */
   function searchStub(categoryQuery = '', colorQuery = '', keywordQuery = '') {
     return ok({
@@ -106,6 +117,8 @@ describe('AI 상담 상품 검색 (E2E)', () => {
       intent: AiConsultIntent.PRODUCT_SEARCH,
       categoryQuery,
       colorQuery,
+      // 오타("검종")처럼 색으로 읽히지 않는 말에는 모델도 hex 를 못 준다
+      colorHex: MODEL_HEX[colorQuery] ?? '',
       keywordQuery,
       faqCode: 'NONE',
       confidence: 0,
