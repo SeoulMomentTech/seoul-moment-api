@@ -191,7 +191,18 @@ export class ProductRepositoryService implements OnModuleInit {
     withoutIdList?: number[],
     userId?: number,
   ): Promise<[ProductItemEntity[], number]> {
-    // 대용량 최적화: 옵션 필터링을 위한 서브쿼리 생성
+    /**
+     * 옵션 필터링을 위한 서브쿼리.
+     *
+     * **같은 옵션 안에서는 OR, 다른 옵션끼리는 AND** 다.
+     * 색상 [레드, 버건디] + 사이즈 [M] 이면 "레드 또는 버건디이면서 M 이 있는" 상품이다.
+     * 색상 여러 개를 **전부** 가진 상품을 찾는 요구는 존재하지 않는데, 값 개수로 세면
+     * (`COUNT(DISTINCT option_value_id) = 목록 길이`) 그게 된다 — AI 상담이 "빨강"을
+     * 레드·버건디·와인으로 넓혀 넘기는 순간 항상 0건이 나왔다.
+     *
+     * 그래서 값이 아니라 **옵션(그룹) 개수**로 센다. 요청한 id 가 몇 개 옵션에 걸쳐
+     * 있는지는 SQL 안에서 세므로, 호출부는 옵션 구성을 몰라도 된다.
+     */
     const buildOptionFilterSubquery = () => {
       if (!optionIdList || optionIdList.length === 0) {
         return null;
@@ -203,6 +214,11 @@ export class ProductRepositoryService implements OnModuleInit {
         .select('DISTINCT pv_sub.product_item_id')
         .from('product_variant', 'pv_sub')
         .innerJoin('variant_option', 'vo_sub', 'pv_sub.id = vo_sub.variant_id')
+        .innerJoin(
+          'option_value',
+          'ov_sub',
+          'ov_sub.id = vo_sub.option_value_id',
+        )
         .where('pv_sub.status = :productVariantStatus', {
           productVariantStatus: ProductVariantStatus.ACTIVE,
         })
@@ -210,9 +226,14 @@ export class ProductRepositoryService implements OnModuleInit {
           optionIdList,
         })
         .groupBy('pv_sub.product_item_id')
-        .having('COUNT(DISTINCT vo_sub.option_value_id) = :optionCount', {
-          optionCount: optionIdList.length,
-        });
+        .having(
+          `COUNT(DISTINCT ov_sub.option_id) = (
+            SELECT COUNT(DISTINCT ov_req.option_id)
+            FROM option_value ov_req
+            WHERE ov_req.id IN (:...optionGroupIdList)
+          )`,
+          { optionGroupIdList: optionIdList },
+        );
     };
 
     // 대용량 최적화: 검색 조건을 위한 서브쿼리 생성

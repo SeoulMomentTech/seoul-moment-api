@@ -328,6 +328,68 @@ describe('AI 상담 상품 검색 (E2E)', () => {
     expect(res.body.data.appliedFilter.color).toBe('검정');
   });
 
+  /**
+   * "빨강"처럼 DB 에 없는 보편 색이름은 같은 계열 색 **여러 개**에 걸린다.
+   * 이 id 들을 상품 필터에 넘길 때 "전부 가진 상품"으로 걸면 항상 0건이 된다 —
+   * 운영에서 "빨강"만 NOT_FOUND, "레드"는 정상이던 원인이 이거였다.
+   */
+  it('같은 계열 색이 여러 개 붙어도 그중 하나만 가진 상품이 나온다', async () => {
+    // Given - 검정 계열인 차콜(#36454F) 색상과 그 색만 가진 상품 하나를 더 둔다
+    const [option] = await dataSource.query(
+      `SELECT id FROM option WHERE type = $1`,
+      [COLOR_OPTION_TYPE],
+    );
+    const [brand] = await dataSource.query(`SELECT id FROM brand LIMIT 1`);
+    const [charcoal] = await dataSource.query(
+      `INSERT INTO option_value (option_id, color_code, sort_order, is_active)
+       VALUES ($1, '#36454F', 3, true) RETURNING id`,
+      [option.id],
+    );
+    await saveText(
+      EntityType.OPTION_VALUE,
+      charcoal.id,
+      OPTION_VALUE_NAME_FIELD,
+      '차콜',
+    );
+
+    const [product] = await dataSource.query(
+      `INSERT INTO product (status, brand_id, category_id, product_category_id)
+       VALUES ('NORMAL', $1, $2, null) RETURNING id`,
+      [brand.id, fashionId],
+    );
+    await saveText(EntityType.PRODUCT, product.id, 'name', '차콜 자켓');
+
+    const [item] = await dataSource.query(
+      `INSERT INTO product_item (product_id, main_image_url, price, status)
+       VALUES ($1, '/product/item.png', 89000, 'NORMAL') RETURNING id`,
+      [product.id],
+    );
+    const [variant] = await dataSource.query(
+      `INSERT INTO product_variant (product_item_id, sku, stock_quantity, status)
+       VALUES ($1, 'SKU-charcoal', 10, 'ACTIVE') RETURNING id`,
+      [item.id],
+    );
+    await dataSource.query(
+      `INSERT INTO variant_option (variant_id, option_value_id) VALUES ($1, $2)`,
+      [variant.id, charcoal.id],
+    );
+
+    // "까만색"은 DB 이름에 없어 색공간 경로로 검정·차콜 두 개에 걸린다
+    geminiSpy.mockResolvedValue(searchStub('', '까만색'));
+
+    // When
+    const res = await ask('까만색 옷 있어?');
+
+    // Then - 검정 3건 + 차콜 1건. 둘 다 가진 상품은 하나도 없다
+    expect(res.body.data.tag).toBe(AiConsultAnswerType.PRODUCT_LIST);
+    expect(res.body.data.products.map((v) => v.name).sort()).toEqual([
+      '검정 셔츠',
+      '검정 코트',
+      '나이키 드라이핏 티셔츠',
+      '차콜 자켓',
+    ]);
+  });
+
   it('조건을 말했는데 하나도 못 붙이면 전체 목록 대신 NOT_FOUND 다', async () => {
     // Given - 취급하지 않는 색상
     geminiSpy.mockResolvedValue(searchStub('', '형광연두'));
