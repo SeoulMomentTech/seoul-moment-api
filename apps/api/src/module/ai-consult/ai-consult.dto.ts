@@ -510,15 +510,36 @@ export class AiConsultNameIndexDto {
       return AiConsultNameMatchDto.exact(exact, normalized);
     }
 
-    // "화장품은" / "화장품 카테고리" 처럼 조사·수식어가 붙은 경우를 흡수한다.
-    // 1글자 이름은 우연히 포함될 확률이 높아 부분일치 대상에서 제외한다.
+    return this.findLongestContained(normalized);
+  }
+
+  /**
+   * "화장품은" / "화장품 카테고리" 처럼 조사·수식어가 붙은 경우를 흡수한다.
+   *
+   * **가장 긴 이름**을 골라야 한다. 이름은 서로를 품을 수 있어서("리드그레이"가
+   * "그레이"를, "네온옐로우"가 "옐로우"를) 먼저 만난 것을 쓰면 짧은 쪽이 이겨버린다.
+   * 실측에서 "리드그레이색"이 그레이로, "네온옐로우색"이 옐로우로 붙었다.
+   *
+   * 1글자 이름은 우연히 포함될 확률이 높아 대상에서 제외한다.
+   */
+  private findLongestContained(
+    normalized: string,
+  ): AiConsultNameMatchDto | null {
+    let longestName: string | null = null;
+    let longestId = 0;
+
     for (const [name, id] of this.idByName) {
-      if (name.length >= 2 && normalized.includes(name)) {
-        return AiConsultNameMatchDto.partial(id, name);
+      if (name.length < 2 || !normalized.includes(name)) continue;
+
+      if (longestName === null || name.length > longestName.length) {
+        longestName = name;
+        longestId = id;
       }
     }
 
-    return null;
+    return longestName === null
+      ? null
+      : AiConsultNameMatchDto.partial(longestId, longestName);
   }
 
   /** 표기 흔들림 구제 단계. 이름이 짧을수록 오탐이 늘어 마지막에 둔다. */

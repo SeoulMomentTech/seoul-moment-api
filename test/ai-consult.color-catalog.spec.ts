@@ -411,6 +411,55 @@ describe('AI 상담 색상 해석 (통합)', () => {
       expect(match.getIds()).toHaveLength(1);
     });
 
+    /**
+     * 색 이름은 서로를 품는다 — "리드 그레이"는 "그레이"를, "네온 옐로우"는 "옐로우"를.
+     * 부분일치가 먼저 만난 이름을 쓰면 짧은 쪽이 이겨 엉뚱한 색이 나간다.
+     */
+    it('이름이 서로를 품으면 더 긴 이름에 붙는다', async () => {
+      // Given
+      const idByKo = await seedColors(REAL_COLORS);
+      const catalog = await buildCatalog();
+
+      // When / Then
+      const cases: [string, string][] = [
+        ['리드그레이색', '리드 그레이'],
+        ['네온옐로우색', '네온 옐로우'],
+        ['라이트블루색', '라이트 블루'],
+        ['스카이블루색', '스카이 블루'],
+      ];
+
+      for (const [query, expected] of cases) {
+        const match = matchOf(catalog, query);
+
+        expect(match.getId()).toBe(idByKo.get(expected));
+        expect(match.toLogMeta().type).toBe(AiConsultNameMatchType.PARTIAL);
+      }
+    });
+
+    /**
+     * 긴 이름의 오타는 자모 유사도로 내려오는데, 여기서도 짧은 이름이 경쟁자로 붙는다.
+     * "리드그래이"는 "그레이"와도 0.83 으로 가까워, 마진 판정이 흔들리면 오답이 된다.
+     */
+    it('긴 이름의 오타도 짧은 이름에 뺏기지 않는다', async () => {
+      // Given
+      const idByKo = await seedColors(REAL_COLORS);
+      const catalog = await buildCatalog();
+
+      // When / Then
+      const cases: [string, string][] = [
+        ['리드그래이', '리드 그레이'],
+        ['네온엘로우', '네온 옐로우'],
+        ['라이트블르', '라이트 블루'],
+      ];
+
+      for (const [query, expected] of cases) {
+        const match = matchOf(catalog, query);
+
+        expect(match.getId()).toBe(idByKo.get(expected));
+        expect(match.toLogMeta().type).toBe(AiConsultNameMatchType.SIMILARITY);
+      }
+    });
+
     it('DB 고유 이름의 오타는 여전히 자모 유사도로 구제한다', async () => {
       // Given
       const idByKo = await seedColors(REAL_COLORS);
