@@ -159,15 +159,26 @@ cat deploy_dev_key.pub >> ~/.ssh/authorized_keys
 
 ## 운영 메모
 
-**롤백**
-Actions → *Deploy to Alibaba ECS (dev)* → **Run workflow** → `image_tag` 에 되돌릴 태그 입력.
-빌드를 건너뛰고 서버 레지스트리에 남아 있는 이미지를 바로 띄운다. 서버에서 직접 하려면:
+**롤백 — 서버에서**
 
 ```bash
 cd /opt/seoul-moment
+curl -s http://127.0.0.1:5000/v2/seoul-moment-api/tags/list   # 되돌릴 태그 확인
 echo 'API_IMAGE=127.0.0.1:5000/seoul-moment-api:dev-a1b2c3d' > .env
-docker compose -f docker-compose.dev.yml up -d
+docker compose -p seoul-moment -f docker-compose.dev.yml up -d
 ```
+
+`-p seoul-moment` 를 빠뜨리면 프로젝트 이름이 디렉터리명에서 새로 정해져,
+기존 컨테이너를 남남으로 인식하고 `container name is already in use` 로 깨진다.
+
+**롤백 — GitHub UI에서**
+
+Actions → *Deploy to Alibaba ECS (dev)* → **Run workflow** → `image_tag` 에 되돌릴 태그 입력.
+빌드를 건너뛰고 레지스트리에 있는 이미지를 바로 띄운다.
+
+> 단, `workflow_dispatch` 는 **워크플로 파일이 기본 브랜치(main)에 있어야** 버튼이 나타난다.
+> dev 에만 있는 동안에는 위 서버 명령으로 롤백한다. 이 워크플로는 `push: dev` 에만 반응하므로
+> main 에 올라가 있어도 prod 배포에는 아무 영향이 없다.
 
 **남아 있는 태그 확인**
 

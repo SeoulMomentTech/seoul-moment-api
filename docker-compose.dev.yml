@@ -7,8 +7,12 @@
 # 레지스트리(127.0.0.1:5000)에 push 하고, 여기서는 pull 만 한다.
 #
 # API_IMAGE 는 배포 스텝이 /opt/seoul-moment/.env 에 기록한다.
-# 수동 롤백: echo 'API_IMAGE=127.0.0.1:5000/seoul-moment-api:dev-a1b2c3d' > .env
-#            && docker compose -f docker-compose.dev.yml up -d
+#
+# 수동 롤백 (/opt/seoul-moment 에서):
+#   echo 'API_IMAGE=127.0.0.1:5000/seoul-moment-api:dev-a1b2c3d' > .env
+#   docker compose -p seoul-moment -f docker-compose.dev.yml up -d
+#
+# -p seoul-moment 를 빠뜨리면 프로젝트가 달라져 컨테이너 이름 충돌이 난다.
 
 services:
   api:
