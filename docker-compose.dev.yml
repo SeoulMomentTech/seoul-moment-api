@@ -1,28 +1,41 @@
+# dev 배포용 compose (api 컨테이너만 관리한다)
+#
+# postgres / redis 는 이 파일에서 다루지 않는다. 별도로 관리되며
+# 외부 네트워크 `app` 을 통해 붙는다.
+#
+# 이미지는 서버에서 빌드하지 않는다. GitHub Actions 가 빌드해 서버의 로컬
+# 레지스트리(127.0.0.1:5000)에 push 하고, 여기서는 pull 만 한다.
+#
+# API_IMAGE 는 배포 스텝이 /opt/seoul-moment/.env 에 기록한다.
+# 수동 롤백: echo 'API_IMAGE=127.0.0.1:5000/seoul-moment-api:dev-a1b2c3d' > .env
+#            && docker compose -f docker-compose.dev.yml up -d
+
 services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        APP: api
-        PORT: 3111
-    image: seoul-moment-api:dev
+    image: ${API_IMAGE:-127.0.0.1:5000/seoul-moment-api:dev-latest}
     container_name: seoul-moment-api-dev
     restart: unless-stopped
     env_file:
       - /opt/seoul-moment/.env.dev
     environment:
       - TZ=Asia/Seoul
+      # 2GB 인스턴스에 다른 컨테이너가 함께 뜨므로 힙 상한을 명시한다.
+      - NODE_OPTIONS=--max-old-space-size=768
     ports:
       - '3111:3111'
     networks:
       - app
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://localhost:3111/docs >/dev/null || exit 1']
-      interval: 30s
+      # node:20-slim 에는 wget/curl 이 없다. 확실히 존재하는 node 로 확인한다.
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://127.0.0.1:3111/docs',r=>process.exit(r.statusCode<400?0:1)).on('error',()=>process.exit(1))"
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 12
+      start_period: 45s
     logging:
       driver: json-file
       options:

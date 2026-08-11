@@ -1,0 +1,189 @@
+name: Deploy to Alibaba ECS (dev)
+
+# 서버에서 빌드하지 않는다. Actions 러너가 빌드해서, SSH 터널 너머의
+# dev 서버 로컬 레지스트리(127.0.0.1:5000)로 push 한다.
+# 서버는 바뀐 레이어만 받아서 api 컨테이너를 재기동한다.
+#
+# prod(AWS ECR + ECS)는 deploy-main.yml 이 담당한다. 이 워크플로는 관여하지 않는다.
+# postgres / redis 는 별도 관리 대상이므로 여기서 건드리지 않는다.
+
+on:
+  push:
+    branches: ['dev']
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: '롤백할 이미지 태그 (예: dev-a1b2c3d). 비우면 현재 커밋으로 새로 빌드한다.'
+        required: false
+        default: ''
+
+# 배포가 겹치면 같은 컨테이너를 동시에 재기동하므로 직렬화한다.
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+env:
+  APP_PORT: '3111'
+  COMPOSE_FILE: docker-compose.dev.yml
+  REMOTE_DIR: /opt/seoul-moment
+  REGISTRY: 127.0.0.1:5000
+  IMAGE_NAME: seoul-moment-api
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04 # ECS 가 x86_64 이므로 x86 러너에서 네이티브 빌드 (arm 러너는 QEMU 로 크게 느려짐)
+    environment: DEV
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve image reference
+        id: img
+        run: |
+          set -euo pipefail
+          INPUT_TAG="${{ github.event.inputs.image_tag }}"
+          if [ -n "$INPUT_TAG" ]; then
+            echo "BUILD=false"    >> "$GITHUB_OUTPUT"
+            echo "TAG=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+            echo "::notice::롤백 배포 — 빌드를 건너뛰고 ${INPUT_TAG} 를 배포한다"
+          else
+            echo "BUILD=true"               >> "$GITHUB_OUTPUT"
+            echo "TAG=dev-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare SSH
+        env:
+          SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
+          KNOWN_HOSTS: ${{ secrets.DEV_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "${KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            # 호스트키를 시크릿으로 고정해두지 않았으면 매 실행마다 그대로 신뢰한다(TOFU).
+            echo "::warning::DEV_SSH_KNOWN_HOSTS 미설정 — ssh-keyscan 결과를 그대로 신뢰한다"
+            ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+      # 레지스트리는 서버에서 127.0.0.1 에만 바인딩되어 있다(외부 미노출).
+      # 러너의 localhost:5000 을 SSH 로 그쪽에 연결해서 push 한다.
+      - name: Open SSH tunnel to registry
+        if: steps.img.outputs.BUILD == 'true'
+        env:
+          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEV_SSH_USER }}
+          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -p "${SSH_PORT:-22}" \
+            -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
+            -f -N -L 5000:127.0.0.1:5000 "${SSH_USER}@${SSH_HOST}"
+          # 터널 너머로 레지스트리가 실제로 응답하는지 확인한다.
+          curl -fsS --retry 5 --retry-delay 2 "http://${REGISTRY}/v2/" >/dev/null
+          echo "레지스트리 터널 정상"
+
+      - name: Set up Docker Buildx
+        if: steps.img.outputs.BUILD == 'true'
+        uses: docker/setup-buildx-action@v3
+        with:
+          # network=host 가 없으면 buildkit 컨테이너가 자기 네임스페이스의 localhost 를 보므로
+          # 터널(러너의 127.0.0.1:5000)에 닿지 못한다.
+          driver-opts: network=host
+          # TLS 없는 로컬 레지스트리이므로 평문 HTTP 를 허용한다.
+          # setup-buildx-action 이 구버전이면 이 키 이름은 config-inline 이다.
+          buildkitd-config-inline: |
+            [registry."127.0.0.1:5000"]
+              http = true
+
+      - name: Build and push
+        if: steps.img.outputs.BUILD == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.img.outputs.TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest
+          build-args: |
+            APP=api
+            PORT=${{ env.APP_PORT }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Copy compose file
+        env:
+          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEV_SSH_USER }}
+          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/deploy_key -P "${SSH_PORT:-22}" \
+            "$COMPOSE_FILE" "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/${COMPOSE_FILE}"
+
+      - name: Pull and restart
+        env:
+          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEV_SSH_USER }}
+          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.img.outputs.TAG }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" \
+            "API_IMAGE='${IMAGE}' COMPOSE_FILE='${COMPOSE_FILE}' REMOTE_DIR='${REMOTE_DIR}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$REMOTE_DIR"
+
+          if [ ! -f .env.dev ]; then
+            echo "ERROR: ${REMOTE_DIR}/.env.dev 가 없다. deploy/dev/alibaba-setup.md 참고." >&2
+            exit 1
+          fi
+
+          # postgres/redis 가 붙어 있는 외부 네트워크. 없으면 compose 가 죽는다.
+          if ! docker network inspect app >/dev/null 2>&1; then
+            echo "ERROR: docker network 'app' 이 없다. postgres/redis 스택을 먼저 띄워야 한다." >&2
+            exit 1
+          fi
+
+          PREV="$(sed -n 's/^API_IMAGE=//p' .env 2>/dev/null || true)"
+          echo "이전 이미지: ${PREV:-(없음)}"
+          echo "신규 이미지: ${API_IMAGE}"
+
+          # compose 가 자동으로 읽는 .env 에는 이미지 참조만 둔다.
+          printf 'API_IMAGE=%s\n' "$API_IMAGE" > .env
+
+          docker compose -f "$COMPOSE_FILE" pull api
+          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+
+          echo "헬스체크 대기..."
+          for i in $(seq 1 60); do
+            STATUS="$(docker inspect -f '{{.State.Health.Status}}' seoul-moment-api-dev 2>/dev/null || echo missing)"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "헬스체크 통과 (${i}회차)"
+              # dangling 이미지만 정리한다. 태그가 붙은 이전 버전은 롤백용으로 남긴다.
+              docker image prune -f >/dev/null || true
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "헬스체크 실패 (status=${STATUS}). 최근 로그:" >&2
+          docker compose -f "$COMPOSE_FILE" logs --tail=200 api >&2
+          echo "롤백: Actions → Deploy to Alibaba ECS (dev) → Run workflow → image_tag 에 이전 태그 입력" >&2
+          exit 1
+          REMOTE
+
+      - name: Cleanup
+        if: always()
+        run: |
+          pkill -f 'L 5000:127.0.0.1:5000' || true
+          rm -f ~/.ssh/deploy_key
