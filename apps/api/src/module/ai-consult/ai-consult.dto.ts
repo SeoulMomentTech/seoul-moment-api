@@ -1,5 +1,6 @@
 import { RedisKey } from '@app/cache/cache.dto';
 import { SupportEnv } from '@app/config/enum/config.enum';
+import { GeminiUsageDto } from '@app/external/gemini/gemini.dto';
 import { AiConsultNameMatchMeta } from '@app/repository/dto/ai-consult.dto';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import {
@@ -140,6 +141,76 @@ export function buildAnswerCacheKey(
 /** 전역 일일 예산 카운터 키. UTC 날짜 기준으로 하루를 나눈다. */
 export function buildDailyBudgetKey(date = new Date()): string {
   return `${RedisKey.AI_CONSULT_BUDGET}:${date.toISOString().slice(0, 10)}`;
+}
+
+/**
+ * 카테고리 2차 해석 캐시 TTL.
+ *
+ * 고객이 쓰는 넓은 말("옷"·"신발"·"가방")은 롱테일이 아니라 상위 수십 개에 몰린다.
+ * 길게 잡을수록 2차 호출이 줄고, 낡을 위험은 키에 섞는 카탈로그 지문이 막는다.
+ */
+export const CATEGORY_RESOLVE_CACHE_TTL_SECONDS = 60 * 60 * 24 * 7;
+
+/**
+ * 2차 해석이 한 번에 붙일 수 있는 소분류 최대 개수.
+ *
+ * 넓은 말일수록 많이 걸리는 것이 정상이라("옷" → 반팔·긴팔·여성긴팔…) 넉넉히 둔다.
+ * 다만 무제한이면 필터가 사실상 없는 것과 같아지므로 상한은 필요하다.
+ */
+export const CATEGORY_RESOLVE_MAX_IDS = 12;
+
+/**
+ * 후보 목록이 이보다 크면 2차 호출을 포기한다.
+ *
+ * 프롬프트가 후보 수에 선형으로 커진다(항목당 약 8토큰). 이 선을 넘으면 2차가
+ * 1차 분류보다 비싸져서, 붙일 확률을 위해 지불하는 값으로는 맞지 않는다.
+ */
+export const CATEGORY_RESOLVE_MAX_CANDIDATES = 600;
+
+/** 이 값 미만이면 붙이지 않는다. 억지로 고른 답을 필터에 걸면 엉뚱한 상품이 나간다. */
+export const CATEGORY_RESOLVE_CONFIDENCE_THRESHOLD = 0.6;
+
+/** id 12개 + confidence 면 40 토큰 남짓이다. */
+export const CATEGORY_RESOLVE_MAX_OUTPUT_TOKENS = 128;
+
+/**
+ * 후보 목록의 지문.
+ *
+ * 소분류는 상수가 아니라 운영 중에 추가·수정·삭제된다. 이 값을 캐시 키에 섞으면
+ * 목록이 바뀌는 순간 키 공간이 통째로 갈려 낡은 해석이 자동으로 버려진다 —
+ * 캐시를 비우거나 재배포할 필요가 없다(`buildPromptFingerprint` 와 같은 장치).
+ *
+ * id 순으로 정렬해 넣는다. 조회 순서가 흔들린 것만으로 키가 갈리면 안 된다.
+ * 이름도 함께 넣는 이유는 id 는 그대로인데 이름만 고친 경우("반팔" → "반팔티")에도
+ * 모델의 판단 근거가 달라지기 때문이다.
+ */
+export function buildCategoryCatalogFingerprint(
+  candidates: readonly AiConsultCategoryResponse[],
+): string {
+  const hash = createHash('sha256');
+
+  for (const candidate of [...candidates].sort((a, b) => a.id - b.id)) {
+    hash.update(`${candidate.id}|${candidate.name}\n`);
+  }
+
+  return hash.digest('hex').slice(0, 8);
+}
+
+/**
+ * `buildAnswerCacheKey` 와 달리 최소 길이 제한을 두지 않는다.
+ * "옷"(1자)이 이 캐시에서 히트율이 가장 높은 키라, 길이로 걸러내면 정작 아껴야 할
+ * 호출을 그대로 흘려보내게 된다.
+ */
+export function buildCategoryResolveCacheKey(
+  query: string,
+  catalogFingerprint: string,
+): string {
+  const hash = createHash('sha256')
+    .update(normalizeMatchName(query))
+    .digest('hex')
+    .slice(0, 32);
+
+  return `${RedisKey.AI_CONSULT_CATEGORY_RESOLVE}:${catalogFingerprint}:${hash}`;
 }
 
 export class PostAiConsultAskRequest {
@@ -394,6 +465,30 @@ export class AiConsultNameMatchDto {
     return new AiConsultNameMatchDto(
       best.id,
       AiConsultNameMatchType.BROADER,
+      null,
+      null,
+      best.name,
+      siblings.map((candidate) => candidate.id),
+    );
+  }
+
+  /**
+   * 모델이 후보 목록에서 직접 고른 결과.
+   *
+   * 문자열 단계가 전부 실패한 뒤에만 온다. 상위어는 여러 개가 걸리는 것이 정상이고
+   * ("옷" → 반팔·긴팔·여성긴팔), 대표는 `broader` 와 같은 규칙으로 **가장 짧은
+   * 이름**을 쓴다 — 군더더기가 가장 적어 질의에 가장 가깝다.
+   */
+  static llmMatched(
+    candidates: readonly AiConsultNameCandidateId[],
+  ): AiConsultNameMatchDto {
+    const [best, ...siblings] = [...candidates].sort(
+      (a, b) => a.name.length - b.name.length,
+    );
+
+    return new AiConsultNameMatchDto(
+      best.id,
+      AiConsultNameMatchType.LLM_MATCHED,
       null,
       null,
       best.name,
@@ -965,13 +1060,16 @@ export class AiConsultProductFilterDto {
   }
 
   /**
-   * 조건을 하나도 못 붙였을 때 고객이 쓴 말을 상품명 검색어로 재활용한다.
+   * **못 붙은** 조건의 말을 상품명 검색어로 재활용한다.
    *
    * 이게 없으면 "반팔 추천"처럼 카탈로그 이름에 없는 말을 쓴 순간 바로 "없습니다"가
    * 나간다. 상품명에는 들어있을 수 있으므로 한 번 더 찾아보고 그래도 0건일 때
    * 없다고 답하는 편이 맞다.
    *
-   * 하나라도 붙었으면 손대지 않는다 — 붙은 조건에 키워드까지 얹으면 오히려 좁아진다.
+   * 판정 기준은 "하나라도 붙었는가"가 아니라 **"말한 조건이 전부 붙었는가"** 다.
+   * 전자로 보면 "빨강 옷"에서 색만 붙고 "옷"이 통째로 사라져, 빨간 립스틱이 옷
+   * 자리에 나간다. 조건을 말했는데 조용히 버리는 것이 가장 나쁜 실패다.
+   *
    * 검색어는 `ILIKE '%...%'` 한 방이라 여러 낱말을 이어붙이면 아무것도 안 걸리므로
    * 하나만 고른다. 카테고리 쪽 말이 상품명에 등장할 확률이 높아 우선한다.
    */
@@ -981,9 +1079,12 @@ export class AiConsultProductFilterDto {
     category: AiConsultResolvedSlotDto | null,
     color: AiConsultResolvedSlotDto | null,
   ): string {
-    if (category?.getId() != null || color?.getId() != null) return '';
+    const unresolvedCategory =
+      categoryQuery && category?.getId() == null ? categoryQuery : '';
+    const unresolvedColor =
+      colorQuery && color?.getId() == null ? colorQuery : '';
 
-    return categoryQuery || colorQuery || '';
+    return unresolvedCategory || unresolvedColor;
   }
 
   get categoryMatch(): AiConsultNameMatchDto | null {
@@ -1378,6 +1479,97 @@ export class AiConsultClassificationDto {
 }
 
 /**
+ * 모델이 후보 목록에서 고른 소분류.
+ *
+ * 모델이 준 id 를 그대로 믿지 않는 것이 이 DTO 의 존재 이유다. 지어낸 id 나 이미
+ * 삭제된 id 가 상품 필터에 들어가면 예외 없이 **조용히 0건**이 되고, 로그에는
+ * "재고가 없었다"로만 남아 원인을 영영 못 찾는다.
+ */
+export class AiConsultCategoryResolveDto {
+  private constructor(
+    private readonly ids: readonly number[],
+    private readonly confidence: number,
+  ) {}
+
+  /** @param allowedIds 현재 후보 집합. 여기 없는 id 는 전부 버린다. */
+  static fromRaw(
+    raw: unknown,
+    allowedIds: ReadonlySet<number>,
+  ): AiConsultCategoryResolveDto | null {
+    if (!raw || typeof raw !== 'object') return null;
+
+    const source = raw as Record<string, unknown>;
+
+    return new AiConsultCategoryResolveDto(
+      this.normalizeIds(source.ids, allowedIds),
+      this.normalizeConfidence(source.confidence),
+    );
+  }
+
+  private static normalizeIds(
+    value: unknown,
+    allowedIds: ReadonlySet<number>,
+  ): number[] {
+    if (!Array.isArray(value)) return [];
+
+    const unique = new Set(
+      value.filter(
+        (id): id is number => Number.isInteger(id) && allowedIds.has(id),
+      ),
+    );
+
+    return [...unique].slice(0, CATEGORY_RESOLVE_MAX_IDS);
+  }
+
+  private static normalizeConfidence(value: unknown): number {
+    if (typeof value !== 'number' || Number.isNaN(value)) return 0;
+
+    return Math.min(1, Math.max(0, value));
+  }
+
+  getIds(): number[] {
+    return [...this.ids];
+  }
+
+  getConfidence(): number {
+    return this.confidence;
+  }
+
+  /**
+   * 필터에 걸 만한 결과인지.
+   * 0건("우주선 뭐 있어?")도 정상 판정이라 캐시에는 남기되 필터에는 쓰지 않는다.
+   */
+  isUsable(): boolean {
+    return (
+      this.ids.length > 0 &&
+      this.confidence >= CATEGORY_RESOLVE_CONFIDENCE_THRESHOLD
+    );
+  }
+
+  toCacheJson(): string {
+    return JSON.stringify({ ids: this.ids, confidence: this.confidence });
+  }
+
+  /**
+   * 파싱 실패는 캐시 미스로 취급한다.
+   * 캐시된 id 도 **현재** 후보와 다시 교집합을 낸다 — 키의 카탈로그 지문이 이미
+   * 막아주지만, 죽은 id 가 필터에 들어가는 것만은 두 겹으로 막을 값어치가 있다.
+   */
+  static parseCache(
+    cached: string | null,
+    allowedIds: ReadonlySet<number>,
+  ): AiConsultCategoryResolveDto | null {
+    if (!cached) return null;
+
+    try {
+      return this.fromRaw(JSON.parse(cached), allowedIds);
+    } catch {
+      return null;
+    }
+  }
+}
+
+/**
  * 요청 1건에서 파생된 값 묶음.
  * 오케스트레이션이 여러 private 메서드로 쪼개지므로 언어·질문·유저를 함께 옮긴다.
  */
@@ -1387,6 +1579,14 @@ export class AiConsultRequestContextDto {
   question: string;
   /** 게스트면 undefined — DB 로그를 남기지 않는다. */
   userId?: number;
+  /**
+   * 1차 분류 **이후에** 추가로 부른 LLM(카테고리 2차 해석)의 사용량.
+   *
+   * 여기 합치지 않으면 ai_consult_log 의 토큰·비용이 실제 지출보다 적게 잡힌다.
+   * 답변 캐시가 맞은 요청도 2차는 부를 수 있어서, "캐시 히트 = LLM 미호출" 이라는
+   * 가정이 더는 성립하지 않는다.
+   */
+  private readonly extraUsageList: GeminiUsageDto[] = [];
 
   static from(
     language: LanguageCode,
@@ -1400,6 +1600,65 @@ export class AiConsultRequestContextDto {
     dto.userId = userId;
 
     return dto;
+  }
+
+  addUsage(usage: GeminiUsageDto): void {
+    this.extraUsageList.push(usage);
+  }
+
+  /** 2차 호출 횟수. 캐시가 실제로 먹고 있는지 로그로 보려면 필요하다. */
+  getExtraCallCount(): number {
+    return this.extraUsageList.length;
+  }
+
+  getExtraPromptTokenCount(): number {
+    return this.sumUsage((usage) => usage.promptTokenCount);
+  }
+
+  getExtraOutputTokenCount(): number {
+    return this.sumUsage((usage) => usage.getOutputTokenCount());
+  }
+
+  getExtraCostMicroUsd(): number {
+    return this.sumUsage((usage) => usage.getEstimatedCostMicroUsd());
+  }
+
+  private sumUsage(pick: (usage: GeminiUsageDto) => number): number {
+    return this.extraUsageList.reduce((total, usage) => total + pick(usage), 0);
+  }
+}
+
+/**
+ * 이 요청에서 실제로 나간 LLM 사용량 전부 — 1차 분류 + 카테고리 2차 해석.
+ *
+ * Winston 로그와 DB 적재가 각자 합산하면 한쪽만 고쳤을 때 두 집계가 조용히 어긋난다.
+ * 합치는 규칙을 여기 한 곳에 가둔다.
+ *
+ * `answerSource` 만 보고 "캐시면 0" 이라고 읽으면 안 된다 — 답변 캐시가 맞은
+ * 요청도 2차 해석은 부를 수 있어서, 캐시 히트 건에 토큰이 찍히는 것이 정상이다.
+ */
+export class AiConsultUsageTotalDto {
+  private constructor(
+    readonly promptTokens: number,
+    readonly outputTokens: number,
+    readonly estimatedCostMicroUsd: number,
+    /** 2차 해석 호출 횟수. 0 이면 문자열 매칭으로 끝났거나 캐시가 맞았다. */
+    readonly categoryResolveCalls: number,
+  ) {}
+
+  /** @param primary 1차 분류의 사용량. 캐시·canned 라 호출을 안 했으면 null. */
+  static from(
+    context: AiConsultRequestContextDto,
+    primary: GeminiUsageDto | null,
+  ): AiConsultUsageTotalDto {
+    return new AiConsultUsageTotalDto(
+      (primary?.promptTokenCount ?? 0) + context.getExtraPromptTokenCount(),
+      (primary?.getOutputTokenCount() ?? 0) +
+        context.getExtraOutputTokenCount(),
+      (primary?.getEstimatedCostMicroUsd() ?? 0) +
+        context.getExtraCostMicroUsd(),
+      context.getExtraCallCount(),
+    );
   }
 }
 

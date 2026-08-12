@@ -61,6 +61,14 @@ export interface AiConsultLogMetaObject {
   keywordQuery?: string;
   /** 상품 검색 결과 건수. 0 건이면 조건은 붙었는데 재고가 없다는 뜻이다. */
   productCount?: number;
+  /**
+   * 카테고리 2차 해석(상위어 → 소분류) LLM 호출 횟수.
+   *
+   * 이 요청에서 1차 분류 **외에** 몇 번 더 불렀는지다. 0(=undefined)이면 문자열
+   * 매칭으로 끝났거나 Redis 캐시가 맞았다는 뜻이고, 이 값의 비율이 곧 2차 캐시
+   * 적중률이다. promptTokens·estimatedCostMicroUsd 에는 이미 합산되어 있다.
+   */
+  categoryResolveCalls?: number;
   /** 인젝션 마커가 감지됐는지 — 차단하지 않고 관찰만 한다 */
   injectionFlagged?: boolean;
 }

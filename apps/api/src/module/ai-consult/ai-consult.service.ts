@@ -5,10 +5,12 @@ import { Configuration } from '@app/config/configuration';
 import {
   GeminiErrorKind,
   GeminiStructuredResultDto,
-  GeminiUsageDto,
 } from '@app/external/gemini/gemini.dto';
 import { GeminiService } from '@app/external/gemini/gemini.service';
-import { maskPii } from '@app/repository/dto/ai-consult.dto';
+import {
+  AiConsultLogMetaObject,
+  maskPii,
+} from '@app/repository/dto/ai-consult.dto';
 import { BrandEntity } from '@app/repository/entity/brand.entity';
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { ProductCategoryEntity } from '@app/repository/entity/product-category.entity';
@@ -37,6 +39,7 @@ import {
   AiConsultCannedAnswerType,
   AiConsultCategoryCatalogDto,
   AiConsultCategoryLevel,
+  AiConsultCategoryResolveDto,
   AiConsultNameMatchDto,
   AiConsultCategoryResponse,
   AiConsultCategorySource,
@@ -47,11 +50,17 @@ import {
   AiConsultResolvedSlotDto,
   AiConsultLimitDto,
   AiConsultRequestContextDto,
+  AiConsultUsageTotalDto,
   AI_CONSULT_FILTER_NAME_MAX,
   ANSWER_CACHE_MIN_LENGTH,
   ANSWER_CACHE_TTL_SECONDS,
   buildAnswerCacheKey,
+  buildCategoryCatalogFingerprint,
+  buildCategoryResolveCacheKey,
   buildDailyBudgetKey,
+  CATEGORY_RESOLVE_CACHE_TTL_SECONDS,
+  CATEGORY_RESOLVE_MAX_CANDIDATES,
+  CATEGORY_RESOLVE_MAX_OUTPUT_TOKENS,
   CONFIDENCE_ANSWER_THRESHOLD,
   CONFIDENCE_CONFIRM_THRESHOLD,
   DAILY_BUDGET_TTL_SECONDS,
@@ -90,6 +99,9 @@ import {
   PREFACES,
 } from './ai-consult.faq';
 import {
+  buildCategoryResolveSchema,
+  buildCategoryResolveSystemInstruction,
+  buildCategoryResolveUserContent,
   buildPromptFingerprint,
   buildResponseSchema,
   buildSystemInstruction,
@@ -128,6 +140,15 @@ export class AiConsultService {
     this.systemInstruction,
     this.responseSchema,
   );
+
+  /**
+   * 카테고리 2차 해석용. 1차와 같은 이유로 부팅 시 1회만 만든다.
+   * 후보 목록은 여기 들어가지 않는다 — 소분류는 운영 중에 바뀌므로 매 요청 DB 에서
+   * 읽어 userContent 앞에 붙인다.
+   */
+  private readonly categoryResolveInstruction =
+    buildCategoryResolveSystemInstruction();
+  private readonly categoryResolveSchema = buildCategoryResolveSchema();
 
   /** local/dev 는 개인 레이트리밋을 끈다. 전역 일일 예산은 환경과 무관하게 적용된다. */
   private readonly rateLimitEnabled = !RATE_LIMIT_DISABLED_ENVS.includes(
@@ -474,12 +495,15 @@ export class AiConsultService {
     categoryMatch: AiConsultNameMatchDto,
   ): Promise<AiConsultAnswerDto> {
     const catalog = await this.findAllProductCategoryCatalog(context.language);
-    const match = catalog.findMatch(classification.categoryQuery);
-    const id = match.getId();
+    const match = await this.matchProductCategory(
+      context,
+      classification.categoryQuery,
+      catalog,
+    );
 
-    // 대분류에도 소분류에도 없다. 고객이 쓴 말은 보통 대분류 수준이라
-    // 그쪽 실패 사유를 남겨야 로그로 임계값을 조정할 수 있다.
-    if (id === null) {
+    // 대분류에도 소분류에도 없고 모델도 못 골랐다. 고객이 쓴 말은 보통 대분류
+    // 수준이라 그쪽 실패 사유를 남겨야 로그로 임계값을 조정할 수 있다.
+    if (match.getId() === null) {
       return this.buildNotFound(context).withCategoryMatch(categoryMatch);
     }
 
@@ -488,11 +512,11 @@ export class AiConsultService {
       AiConsultProductFilterDto.from(
         classification.categoryQuery,
         '',
-        AiConsultResolvedSlotDto.resolved(
-          id,
-          catalog.findItem(id).name,
+        this.toResolvedCategory(
           match,
+          catalog,
           AiConsultCategoryLevel.PRODUCT_CATEGORY,
+          context.language,
         ),
         null,
         '',
@@ -681,7 +705,7 @@ export class AiConsultService {
   ): Promise<AiConsultProductFilterDto> {
     const { language } = context;
     const [category, color] = await Promise.all([
-      this.resolveCategorySlot(classification.categoryQuery, language),
+      this.resolveCategorySlot(context, classification.categoryQuery),
       this.resolveColorSlot(
         classification.colorQuery,
         classification.colorHex,
@@ -706,11 +730,12 @@ export class AiConsultService {
    * "화장품"처럼 양쪽에 다 있을 수 있는 이름을 넓은 쪽으로 해석해야 결과가 많기 때문이다.
    */
   private async resolveCategorySlot(
+    context: AiConsultRequestContextDto,
     query: string,
-    language: LanguageCode,
   ): Promise<AiConsultResolvedSlotDto | null> {
     if (!query) return null;
 
+    const { language } = context;
     const catalog = await this.findCategoryCatalog(language);
     const productCatalog = await this.findAllProductCategoryCatalog(language);
 
@@ -731,10 +756,14 @@ export class AiConsultService {
       );
     }
 
-    const productMatch = productCatalog.findMatch(query);
+    const productMatch = await this.matchProductCategory(
+      context,
+      query,
+      productCatalog,
+    );
 
-    // 소분류에서도 못 찾았으면 대분류 쪽 실패 사유를 남긴다 — 고객이 말한 것은
-    // 보통 대분류 수준의 단어라 그쪽 점수가 원인 분석에 쓸모 있다.
+    // 소분류에서도, 모델 2차 해석으로도 못 찾았으면 대분류 쪽 실패 사유를 남긴다 —
+    // 고객이 말한 것은 보통 대분류 수준의 단어라 그쪽 점수가 원인 분석에 쓸모 있다.
     if (productMatch.getId() === null) {
       return AiConsultResolvedSlotDto.unresolved(match);
     }
@@ -745,6 +774,176 @@ export class AiConsultService {
       AiConsultCategoryLevel.PRODUCT_CATEGORY,
       language,
     );
+  }
+
+  /**
+   * 소분류 이름 붙이기. 문자열로 실패하면 **모델에게 후보 목록을 주고 다시 묻는다.**
+   *
+   * "옷"·"신발" 같은 상위어는 문자열 규칙으로는 영원히 안 붙는다 — "옷"과 "반팔"은
+   * 자모가 하나도 겹치지 않아 유사도가 0 이고, 부분일치도 서로를 품지 못한다.
+   * 임계값을 아무리 조여도 해결되지 않는 종류의 실패라서 의미를 아는 쪽에 넘긴다.
+   *
+   * 실패하면 문자열 매칭 결과를 그대로 돌려준다 — 실패 사유(점수·단계)가 로그에
+   * 남아야 임계값을 근거 있게 조정할 수 있다.
+   */
+  private async matchProductCategory(
+    context: AiConsultRequestContextDto,
+    query: string,
+    catalog: AiConsultCategoryCatalogDto,
+  ): Promise<AiConsultNameMatchDto> {
+    const match = catalog.findMatch(query);
+
+    if (match.getId() !== null) return match;
+
+    return (await this.resolveCategoryByLlm(context, query, catalog)) ?? match;
+  }
+
+  /** 붙이지 못하면 null. 호출부가 문자열 단계의 실패 사유를 유지하게 한다. */
+  private async resolveCategoryByLlm(
+    context: AiConsultRequestContextDto,
+    query: string,
+    catalog: AiConsultCategoryCatalogDto,
+  ): Promise<AiConsultNameMatchDto | null> {
+    const candidates = catalog.getItems();
+
+    // 후보가 너무 많으면 2차 프롬프트가 1차 분류보다 비싸진다. 그때는 안 부른다.
+    if (
+      candidates.length === 0 ||
+      candidates.length > CATEGORY_RESOLVE_MAX_CANDIDATES
+    ) {
+      return null;
+    }
+
+    const allowedIds = new Set(candidates.map((candidate) => candidate.id));
+    const cacheKey = buildCategoryResolveCacheKey(
+      query,
+      buildCategoryCatalogFingerprint(candidates),
+    );
+    const cached = await this.findCachedCategoryResolve(cacheKey, allowedIds);
+    const resolved =
+      cached ??
+      (await this.askCategoryResolve(
+        context,
+        query,
+        candidates,
+        allowedIds,
+        cacheKey,
+      ));
+
+    if (!resolved?.isUsable()) return null;
+
+    const matched = resolved
+      .getIds()
+      .map((id) => catalog.findItem(id))
+      .filter((item): item is AiConsultCategoryResponse => item !== null);
+
+    return matched.length === 0
+      ? null
+      : AiConsultNameMatchDto.llmMatched(matched);
+  }
+
+  /**
+   * 2차 호출.
+   *
+   * 일일 예산은 1차와 **같은 카운터**로 소비한다 — 따로 세면 상한이 조용히 두 배가
+   * 된다. 예산이 바닥나면 호출을 건너뛰고 기존 동작(못 붙음)으로 degrade 한다.
+   */
+  private async askCategoryResolve(
+    context: AiConsultRequestContextDto,
+    query: string,
+    candidates: readonly AiConsultCategoryResponse[],
+    allowedIds: ReadonlySet<number>,
+    cacheKey: string,
+  ): Promise<AiConsultCategoryResolveDto | null> {
+    // 키가 없으면 부를 것이 없다. 예산·호출 카운터를 건드리지 않고 빠져야
+    // 로컬·테스트(키 미설정이 기본)의 로그가 "부른 척" 하지 않는다.
+    if (!this.geminiService.isConfigured()) return null;
+
+    if (!(await this.consumeDailyBudget())) return null;
+
+    const result = await this.geminiService.generateStructured<unknown>({
+      systemInstruction: this.categoryResolveInstruction,
+      userContent: buildCategoryResolveUserContent(query, candidates),
+      responseSchema: this.categoryResolveSchema,
+      maxOutputTokens: CATEGORY_RESOLVE_MAX_OUTPUT_TOKENS,
+    });
+
+    // 실패해도 토큰은 나갔을 수 있다. 누적을 먼저 해야 비용이 새지 않는다.
+    context.addUsage(result.usage);
+
+    const resolved = result.ok
+      ? AiConsultCategoryResolveDto.fromRaw(result.parsed, allowedIds)
+      : null;
+
+    this.writeCategoryResolveLog(query, candidates.length, result, resolved);
+
+    if (!resolved) return null;
+
+    // 0건("우주선")도 캐시한다. 안 하면 같은 말이 들어올 때마다 호출이 반복된다.
+    await this.cacheCategoryResolve(cacheKey, resolved);
+
+    return resolved;
+  }
+
+  /**
+   * 2차 호출 전용 로그.
+   *
+   * 붙는 데 성공한 질의를 모아두면 그대로 동의어 상수표의 재료가 된다 — 자주 오는
+   * 말은 표로 흡수해 호출 자체를 없앨 수 있다.
+   */
+  private writeCategoryResolveLog(
+    query: string,
+    candidateCount: number,
+    result: GeminiStructuredResultDto<unknown>,
+    resolved: AiConsultCategoryResolveDto | null,
+  ): void {
+    this.logger.info('AI_CONSULT_CATEGORY_RESOLVE', {
+      query,
+      candidateCount,
+      matchedCount: resolved?.getIds().length ?? 0,
+      confidence: resolved?.getConfidence() ?? null,
+      usable: resolved?.isUsable() ?? false,
+      latencyMs: result.latencyMs,
+      errorKind: result.errorKind,
+      promptTokens: result.usage.promptTokenCount,
+      outputTokens: result.usage.getOutputTokenCount(),
+      estimatedCostMicroUsd: result.usage.getEstimatedCostMicroUsd(),
+    });
+  }
+
+  private async findCachedCategoryResolve(
+    cacheKey: string,
+    allowedIds: ReadonlySet<number>,
+  ): Promise<AiConsultCategoryResolveDto | null> {
+    try {
+      return AiConsultCategoryResolveDto.parseCache(
+        await this.cacheService.find(cacheKey),
+        allowedIds,
+      );
+    } catch (error: any) {
+      this.logger.warn(
+        `AI consult category resolve cache read failed: ${error.message}`,
+      );
+
+      return null;
+    }
+  }
+
+  private async cacheCategoryResolve(
+    cacheKey: string,
+    resolved: AiConsultCategoryResolveDto,
+  ): Promise<void> {
+    try {
+      await this.cacheService.set(
+        cacheKey,
+        resolved.toCacheJson(),
+        CATEGORY_RESOLVE_CACHE_TTL_SECONDS,
+      );
+    } catch (error: any) {
+      this.logger.warn(
+        `AI consult category resolve cache write failed: ${error.message}`,
+      );
+    }
   }
 
   private toResolvedCategory(
@@ -1257,7 +1456,7 @@ export class AiConsultService {
   ): void {
     const maskedQuestion = maskPii(context.question);
 
-    const usage = result?.usage ?? null;
+    const usage = AiConsultUsageTotalDto.from(context, result?.usage ?? null);
 
     this.writeStructuredLog(
       maskedQuestion,
@@ -1297,7 +1496,7 @@ export class AiConsultService {
     classification: AiConsultClassificationDto | null,
     answerSource: AiConsultAnswerSource,
     result: GeminiStructuredResultDto<unknown> | null,
-    usage: GeminiUsageDto | null,
+    usage: AiConsultUsageTotalDto,
   ): void {
     this.logger.info('AI_CONSULT', {
       userId: context.userId ?? null,
@@ -1319,10 +1518,11 @@ export class AiConsultService {
       colorMatch: response.colorMatch?.toLogMeta() ?? null,
       keywordQuery: classification?.keywordQuery || null,
       productCount: response.productCount,
-      // answerSource 가 LLM 이 아니면(캐시·canned) 호출을 안 했으므로 전부 0 이다.
-      promptTokens: usage?.promptTokenCount ?? 0,
-      outputTokens: usage?.getOutputTokenCount() ?? 0,
-      estimatedCostMicroUsd: usage?.getEstimatedCostMicroUsd() ?? 0,
+      // 1차 + 2차 합산이다. 합치는 규칙은 AiConsultUsageTotalDto 에 있다.
+      promptTokens: usage.promptTokens,
+      outputTokens: usage.outputTokens,
+      estimatedCostMicroUsd: usage.estimatedCostMicroUsd,
+      categoryResolveCalls: usage.categoryResolveCalls,
       // 매칭 실패 질문만 남겨 FAQ 보강 근거로 쓴다(전건 원문 적재 방지).
       question:
         response.answerType === AiConsultAnswerType.FAQ_ANSWER
@@ -1338,7 +1538,7 @@ export class AiConsultService {
     classification: AiConsultClassificationDto | null,
     answerSource: AiConsultAnswerSource,
     result: GeminiStructuredResultDto<unknown> | null,
-    usage: GeminiUsageDto | null,
+    usage: AiConsultUsageTotalDto,
   ): void {
     void this.aiConsultLogRepositoryService
       .save({
@@ -1350,32 +1550,48 @@ export class AiConsultService {
         answerSource,
         matchedFaqCode: response.faqCode,
         confidence: response.confidence,
-        model: result ? Configuration.getConfig().GEMINI_MODEL : null,
-        promptTokens: usage?.promptTokenCount ?? 0,
-        outputTokens: usage?.getOutputTokenCount() ?? 0,
-        estimatedCostMicroUsd: usage?.getEstimatedCostMicroUsd() ?? 0,
+        // 2차 해석만 돈 경우(답변 캐시 히트)에도 호출한 모델은 남겨야 한다.
+        model:
+          result || usage.categoryResolveCalls > 0
+            ? Configuration.getConfig().GEMINI_MODEL
+            : null,
+        promptTokens: usage.promptTokens,
+        outputTokens: usage.outputTokens,
+        estimatedCostMicroUsd: usage.estimatedCostMicroUsd,
         latencyMs: result?.latencyMs ?? 0,
         finishReason: result?.finishReason ?? null,
         errorKind: result?.errorKind ?? null,
         traceId: this.logger.getTraceId(),
-        meta: {
-          cacheHit: answerSource === AiConsultAnswerSource.ANSWER_CACHE,
-          alternatives: classification?.alternatives,
-          reason: classification?.reason,
-          // faqCode + languageCode + prefaceId 면 고객이 본 answer 를 그대로 재현할 수 있다.
-          prefaceId: classification?.prefaceId,
-          intent: classification?.intent,
-          categoryQuery: classification?.categoryQuery || undefined,
-          categoryMatch: response.categoryMatch?.toLogMeta(),
-          colorQuery: classification?.colorQuery || undefined,
-          colorHex: classification?.colorHex || undefined,
-          colorMatch: response.colorMatch?.toLogMeta(),
-          keywordQuery: classification?.keywordQuery || undefined,
-          productCount: response.productCount ?? undefined,
-        },
+        meta: this.buildLogMeta(response, classification, answerSource, usage),
       })
       .catch((error) =>
         this.logger.warn(`Failed to persist AI consult log: ${error.message}`),
       );
+  }
+
+  /** 컬럼으로 두기엔 잦게 바뀌는 판정 부산물. 집계가 아니라 사후 분석에 쓴다. */
+  private buildLogMeta(
+    response: AiConsultAnswerDto,
+    classification: AiConsultClassificationDto | null,
+    answerSource: AiConsultAnswerSource,
+    usage: AiConsultUsageTotalDto,
+  ): AiConsultLogMetaObject {
+    return {
+      cacheHit: answerSource === AiConsultAnswerSource.ANSWER_CACHE,
+      alternatives: classification?.alternatives,
+      reason: classification?.reason,
+      // faqCode + languageCode + prefaceId 면 고객이 본 answer 를 그대로 재현할 수 있다.
+      prefaceId: classification?.prefaceId,
+      intent: classification?.intent,
+      categoryQuery: classification?.categoryQuery || undefined,
+      categoryMatch: response.categoryMatch?.toLogMeta(),
+      colorQuery: classification?.colorQuery || undefined,
+      colorHex: classification?.colorHex || undefined,
+      colorMatch: response.colorMatch?.toLogMeta(),
+      keywordQuery: classification?.keywordQuery || undefined,
+      productCount: response.productCount ?? undefined,
+      // 0 이면 문자열로 끝났거나 캐시가 맞았다는 뜻이라 남길 게 없다.
+      categoryResolveCalls: usage.categoryResolveCalls || undefined,
+    };
   }
 }

@@ -581,20 +581,186 @@ describe('AI 상담 상품 검색 (E2E)', () => {
     });
   });
 
-  it('조건 하나라도 붙었으면 완화 검색어를 얹지 않는다', async () => {
-    // Given - 색상은 붙고 카테고리는 못 붙는 조합
+  it('말한 조건이 전부 붙었으면 완화 검색어를 얹지 않는다', async () => {
+    // Given - 카테고리·색상 둘 다 붙는 조합
+    geminiSpy.mockResolvedValue(searchStub('패션', '검정'));
+
+    // When
+    const res = await ask('패션 검정 있어?');
+
+    // Then - 붙은 조건에 키워드까지 얹으면 결과가 오히려 좁아진다
+    expect(res.body.data.tag).toBe(AiConsultAnswerType.PRODUCT_LIST);
+    expect(res.body.data.products).toHaveLength(3);
+    expect(res.body.data.appliedFilter).toEqual({
+      category: '패션',
+      color: '검정',
+      keyword: null,
+    });
+  });
+
+  it('색상만 붙고 분류를 못 붙이면 분류 말을 상품명 검색어로 얹는다', async () => {
+    // Given - 색상은 붙고 카테고리("옷")는 카탈로그에 없는 조합
     geminiSpy.mockResolvedValue(searchStub('옷', '검정'));
 
     // When
     const res = await ask('검정 옷 있어?');
 
-    // Then - "옷"을 상품명 검색어로 얹으면 결과가 오히려 좁아진다
-    expect(res.body.data.tag).toBe(AiConsultAnswerType.PRODUCT_LIST);
-    expect(res.body.data.products).toHaveLength(3);
+    // Then - "옷"을 조용히 버리고 검정 상품 전부를 보여주면 안 된다.
+    // 그렇게 하면 검정 립스틱이 옷 자리에 나간다.
+    expect(res.body.data.tag).toBe(AiConsultAnswerType.NOT_FOUND);
+    expect(res.body.data.products).toHaveLength(0);
     expect(res.body.data.appliedFilter).toEqual({
       category: null,
       color: '검정',
-      keyword: null,
+      keyword: '옷',
+    });
+  });
+
+  /**
+   * "옷"·"신발" 같은 상위어. 등록된 이름과 자모가 하나도 겹치지 않아
+   * ("옷" vs "반팔") 문자열 규칙으로는 영원히 안 붙는다. 문자열 단계가 전부
+   * 실패한 뒤에만 모델에게 후보 목록을 주고 다시 묻는다.
+   */
+  describe('상위어 2차 해석 (LLM)', () => {
+    let configuredSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      // 테스트 환경은 API 키가 없어 2차 경로가 통째로 꺼져 있다.
+      configuredSpy = jest
+        .spyOn(app.get(GeminiService), 'isConfigured')
+        .mockReturnValue(true);
+    });
+
+    afterEach(() => {
+      configuredSpy.mockRestore();
+    });
+
+    /** 2차 해석 응답 스텁. 모델은 후보 목록에서 고른 id 만 돌려준다. */
+    function resolveStub(ids: number[], confidence = 0.95) {
+      return ok({ ids, confidence });
+    }
+
+    it('문자열로 못 붙는 상위어를 모델이 후보 목록에서 골라 붙인다', async () => {
+      // Given - "옷"은 대분류(패션)에도 소분류(반팔)에도 문자열로 안 붙는다
+      geminiSpy
+        .mockResolvedValueOnce(searchStub('옷', '검정'))
+        .mockResolvedValueOnce(resolveStub([shortSleeveId]));
+
+      // When
+      const res = await ask('검정 옷 있어?');
+
+      // Then - 상품명 완화 검색으로 흘러 0건이 되던 자리다
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.PRODUCT_LIST);
+      expect(res.body.data.products.map((v) => v.name)).toEqual([
+        '나이키 드라이핏 티셔츠',
+      ]);
+      // 문장에 나가는 이름은 모델이 준 "옷"이 아니라 DB 에서 읽은 이름이다
+      expect(res.body.data.appliedFilter).toEqual({
+        category: '반팔',
+        color: '검정',
+        keyword: null,
+      });
+    });
+
+    it('분류 질문에서도 상위어를 모델이 골라 상품을 준다', async () => {
+      // Given - intent 가 CATEGORY_LIST 인 경로도 같은 실패를 겪는다
+      geminiSpy
+        .mockResolvedValueOnce(categoryStub('옷'))
+        .mockResolvedValueOnce(resolveStub([shortSleeveId]));
+
+      // When
+      const res = await ask('옷 뭐 있어?');
+
+      // Then
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.PRODUCT_LIST);
+      expect(res.body.data.products.map((v) => v.name)).toEqual([
+        '나이키 드라이핏 티셔츠',
+      ]);
+    });
+
+    it('모델이 지어낸 id 는 필터에 들어가지 않는다', async () => {
+      // Given - 후보 목록에 없는 id
+      geminiSpy
+        .mockResolvedValueOnce(searchStub('옷', '검정'))
+        .mockResolvedValueOnce(resolveStub([999_999]));
+
+      // When
+      const res = await ask('검정 옷 있어?');
+
+      // Then - 걷어내고 나면 붙은 게 없으니 완화 검색어로 내려간다.
+      // 죽은 id 를 그대로 걸면 조용히 0건이 되어 원인을 못 찾는다.
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.NOT_FOUND);
+      expect(res.body.data.appliedFilter).toEqual({
+        category: null,
+        color: '검정',
+        keyword: '옷',
+      });
+    });
+
+    it('확신이 낮으면 붙이지 않는다', async () => {
+      // Given
+      geminiSpy
+        .mockResolvedValueOnce(searchStub('옷', '검정'))
+        .mockResolvedValueOnce(resolveStub([shortSleeveId], 0.3));
+
+      // When
+      const res = await ask('검정 옷 있어?');
+
+      // Then - 억지로 고른 답을 필터에 걸면 엉뚱한 상품이 나간다
+      expect(res.body.data.tag).toBe(AiConsultAnswerType.NOT_FOUND);
+      expect(res.body.data.appliedFilter.category).toBeNull();
+    });
+
+    it('같은 말이 다시 오면 2차 호출을 반복하지 않는다', async () => {
+      // Given
+      geminiSpy
+        .mockResolvedValueOnce(searchStub('옷', '검정'))
+        .mockResolvedValueOnce(resolveStub([shortSleeveId]));
+      await ask('검정 옷 있어?');
+      expect(geminiSpy).toHaveBeenCalledTimes(2);
+
+      // When - 문장이 달라 답변 캐시는 안 맞지만 분류 해석 캐시는 맞는다
+      geminiSpy.mockResolvedValueOnce(searchStub('옷', '검정'));
+      const res = await ask('검정색 옷 좀 보여줄래?');
+
+      // Then - 1차만 늘고 2차는 늘지 않는다
+      expect(geminiSpy).toHaveBeenCalledTimes(3);
+      expect(res.body.data.appliedFilter.category).toBe('반팔');
+    });
+
+    it('해당 분류가 없다는 판정도 캐시해 반복 호출하지 않는다', async () => {
+      // Given - 0건도 정상 판정이다
+      geminiSpy
+        .mockResolvedValueOnce(searchStub('우주선'))
+        .mockResolvedValueOnce(resolveStub([]));
+      await ask('우주선 있어?');
+      expect(geminiSpy).toHaveBeenCalledTimes(2);
+
+      // When
+      geminiSpy.mockResolvedValueOnce(searchStub('우주선'));
+      await ask('우주선 파는 거 있나요?');
+
+      // Then - 캐시하지 않으면 같은 말마다 호출이 반복된다
+      expect(geminiSpy).toHaveBeenCalledTimes(3);
+    });
+
+    it('2차 호출 토큰까지 합쳐서 로그에 남긴다', async () => {
+      // Given
+      geminiSpy
+        .mockResolvedValueOnce(searchStub('옷', '검정'))
+        .mockResolvedValueOnce(resolveStub([shortSleeveId]));
+
+      // When
+      await ask('검정 옷 있어?');
+
+      // Then - 1차만 세면 집계가 실제 지출보다 적게 잡힌다
+      const [row] = await waitForLogRows(1);
+      const meta = row.meta as AiConsultLogMetaObject;
+
+      expect(Number(row.prompt_tokens)).toBe(4800);
+      expect(Number(row.output_tokens)).toBe(120);
+      expect(meta.categoryResolveCalls).toBe(1);
+      expect(meta.categoryMatch.type).toBe(AiConsultNameMatchType.LLM_MATCHED);
     });
   });
 
