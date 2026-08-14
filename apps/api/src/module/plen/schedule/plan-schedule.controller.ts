@@ -128,8 +128,11 @@ export class PlanScheduleController {
   @ApiOperation({ summary: '플랜 스케줄 삭제' })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(PlanApiGuard)
-  async deletePlanSchedule(@Param('id', ParseIntPipe) id: number) {
-    await this.planScheduleService.deletePlanSchedule(id);
+  async deletePlanSchedule(
+    @Request() req: PlanUserRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    await this.planScheduleService.deletePlanSchedule(id, req.user.id);
   }
 
   @Get(':id(\\d+)')
@@ -138,9 +141,13 @@ export class PlanScheduleController {
   @UseGuards(PlanApiGuard)
   @ResponseData(GetPlanScheduleDetailResponse)
   async getPlanScheduleDetail(
+    @Request() req: PlanUserRequest,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<ResponseDataDto<GetPlanScheduleDetailResponse>> {
-    const result = await this.planScheduleService.getPlanScheduleDetail(id);
+    const result = await this.planScheduleService.getPlanScheduleDetail(
+      id,
+      req.user.id,
+    );
     return new ResponseDataDto(result);
   }
 
@@ -150,10 +157,15 @@ export class PlanScheduleController {
   @UseGuards(PlanApiGuard)
   @ResponseData(PatchPlanScheduleResponse)
   async patchPlanSchedule(
+    @Request() req: PlanUserRequest,
     @Param('id', ParseIntPipe) id: number,
     @Body() body: PatchPlanScheduleRequest,
   ): Promise<ResponseDataDto<PatchPlanScheduleResponse>> {
-    const result = await this.planScheduleService.patchPlanSchedule(id, body);
+    const result = await this.planScheduleService.patchPlanSchedule(
+      id,
+      body,
+      req.user.id,
+    );
     return new ResponseDataDto(result);
   }
 
@@ -163,12 +175,14 @@ export class PlanScheduleController {
   @UseGuards(PlanApiGuard)
   @ResponseData(PatchPlanScheduleStatusResponse)
   async patchPlanScheduleStatus(
+    @Request() req: PlanUserRequest,
     @Param('id', ParseIntPipe) id: number,
     @Body() body: PatchPlanScheduleStatusRequest,
   ): Promise<ResponseDataDto<PatchPlanScheduleStatusResponse>> {
     const result = await this.planScheduleService.patchPlanScheduleStatus(
       id,
       body.status,
+      req.user.id,
     );
 
     return new ResponseDataDto(result);
