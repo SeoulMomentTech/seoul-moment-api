@@ -670,6 +670,13 @@ export class GetCalendarDayItem {
 
   @ApiProperty({ description: '제목', example: '상견례' })
   title: string;
+
+  @ApiProperty({
+    description: '상태 (달력에서 완료 여부 표시에 사용)',
+    example: PlanScheduleStatus.NORMAL,
+    enum: PlanScheduleStatus,
+  })
+  status: PlanScheduleStatus;
 }
 
 export class GetCalendarListResponse {

@@ -18,6 +18,7 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
+  GetCalendarDayItem,
   GetCalendarListResponse,
   GetPlanScheduleDetailResponse,
   GetPlanScheduleListRequest,
@@ -284,7 +285,7 @@ export class PlanScheduleService {
         roomId,
       );
 
-    const dayMap = new Map<string, { id: number; title: string }[]>();
+    const dayMap = new Map<string, GetCalendarDayItem[]>();
 
     for (const schedule of planSchedules) {
       if (!schedule.startDate) continue;
@@ -293,7 +294,12 @@ export class PlanScheduleService {
       const dayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
       const existing = dayMap.get(dayStr) ?? [];
-      existing.push({ id: schedule.id, title: schedule.title });
+      // status를 함께 내려줘야 달력에서 완료된 일정을 구분해 표시할 수 있다
+      existing.push({
+        id: schedule.id,
+        title: schedule.title,
+        status: schedule.status,
+      });
       dayMap.set(dayStr, existing);
     }
 
