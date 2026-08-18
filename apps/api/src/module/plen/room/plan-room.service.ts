@@ -1,4 +1,6 @@
 /* eslint-disable max-lines-per-function */
+import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
+import { ServiceError } from '@app/common/exception/service.error';
 import { ChatRoomMemberEntity } from '@app/repository/entity/chat-room-member.entity';
 import { ChatRoomEntity } from '@app/repository/entity/chat-room.entity';
 import { PlanUserRoomMemberEntity } from '@app/repository/entity/plan-user-room-member.entity';
@@ -36,7 +38,36 @@ export class PlanRoomService {
     private readonly chatMessageRepositoryService: ChatRepositoryService,
   ) {}
 
-  async getPlanRoomInfo(roomId: number): Promise<GetPlanRoomResponse> {
+  /**
+   * 요청자가 해당 방의 멤버인지 확인한다.
+   *
+   * 이 검사가 없으면 로그인한 사용자가 방 ID(순차 증가)만 바꿔가며
+   * 다른 사람의 결혼 정보·예산·멤버 목록을 들여다볼 수 있다.
+   */
+  private async assertRoomMember(
+    roomId: number,
+    planUserId: string,
+  ): Promise<void> {
+    const member =
+      await this.planUserRoomMemberRepositoryService.findByRoomIdAndPlanUserId(
+        roomId,
+        planUserId,
+      );
+
+    if (!member) {
+      throw new ServiceError(
+        'You are not a member of this room',
+        ServiceErrorCode.FORBIDDEN,
+      );
+    }
+  }
+
+  async getPlanRoomInfo(
+    roomId: number,
+    planUserId: string,
+  ): Promise<GetPlanRoomResponse> {
+    await this.assertRoomMember(roomId, planUserId);
+
     const planUserRoom =
       await this.planUserRoomRepositoryService.getByRoomId(roomId);
 
@@ -51,7 +82,12 @@ export class PlanRoomService {
     return GetPlanRoomResponse.from(userEntity, roomMemberList);
   }
 
-  async getPlanRoomAmount(roomId: number): Promise<GetPlanUserAmountResponse> {
+  async getPlanRoomAmount(
+    roomId: number,
+    planUserId: string,
+  ): Promise<GetPlanUserAmountResponse> {
+    await this.assertRoomMember(roomId, planUserId);
+
     const planUserRoomEntity =
       await this.planUserRoomRepositoryService.getByRoomId(roomId);
 
@@ -246,7 +282,10 @@ export class PlanRoomService {
 
   async getPlanRoomTotalAmount(
     roomId: number,
+    planUserId: string,
   ): Promise<GetPlanUserTotalAmountResponse> {
+    await this.assertRoomMember(roomId, planUserId);
+
     const planUserRoomEntity =
       await this.planUserRoomRepositoryService.getByRoomId(roomId);
 
@@ -263,7 +302,10 @@ export class PlanRoomService {
   async getPlanRoomCategoryChartList(
     roomId: number,
     categoryName: string,
+    planUserId: string,
   ): Promise<GetPlanUserAmountCategory[]> {
+    await this.assertRoomMember(roomId, planUserId);
+
     const categoryChartList =
       await this.planScheduleRepositoryService.getCategoryChartList(
         undefined,

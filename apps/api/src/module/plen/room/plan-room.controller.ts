@@ -53,9 +53,13 @@ export class PlanRoomController {
   @UseGuards(PlanApiGuard)
   @ResponseData(GetPlanRoomResponse)
   async getPlanRoomInfo(
+    @Request() req: PlanUserRequest,
     @Param('roomId', ParseIntPipe) roomId: number,
   ): Promise<ResponseDataDto<GetPlanRoomResponse>> {
-    const result = await this.planRoomService.getPlanRoomInfo(roomId);
+    const result = await this.planRoomService.getPlanRoomInfo(
+      roomId,
+      req.user.id,
+    );
 
     return new ResponseDataDto(result);
   }
@@ -66,9 +70,13 @@ export class PlanRoomController {
   @UseGuards(PlanApiGuard)
   @ResponseData(GetPlanUserTotalAmountResponse)
   async getPlanRoomTotalAmount(
+    @Request() req: PlanUserRequest,
     @Param('roomId', ParseIntPipe) roomId: number,
   ): Promise<ResponseDataDto<GetPlanUserTotalAmountResponse>> {
-    const result = await this.planRoomService.getPlanRoomTotalAmount(roomId);
+    const result = await this.planRoomService.getPlanRoomTotalAmount(
+      roomId,
+      req.user.id,
+    );
     return new ResponseDataDto(result);
   }
 
@@ -78,9 +86,13 @@ export class PlanRoomController {
   @UseGuards(PlanApiGuard)
   @ResponseData(GetPlanUserAmountResponse)
   async getPlanUserAmount(
+    @Request() req: PlanUserRequest,
     @Param('roomId', ParseIntPipe) roomId: number,
   ): Promise<ResponseDataDto<GetPlanUserAmountResponse>> {
-    const amount = await this.planRoomService.getPlanRoomAmount(roomId);
+    const amount = await this.planRoomService.getPlanRoomAmount(
+      roomId,
+      req.user.id,
+    );
 
     return new ResponseDataDto(amount);
   }
@@ -116,12 +128,14 @@ export class PlanRoomController {
   @UseGuards(PlanApiGuard)
   @ResponseList(GetPlanUserAmountCategory)
   async getPlanUserAmountCategoryChart(
+    @Request() req: PlanUserRequest,
     @Param('roomId', ParseIntPipe) roomId: number,
     @Query() query: GetPlanUserAmountCategoryRequest,
   ): Promise<ResponseListDto<GetPlanUserAmountCategory>> {
     const amount = await this.planRoomService.getPlanRoomCategoryChartList(
       roomId,
       query.categoryName,
+      req.user.id,
     );
 
     return new ResponseListDto(amount);
