@@ -18,6 +18,7 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
+  GetCalendarDayItem,
   GetCalendarListResponse,
   GetPlanScheduleDetailResponse,
   GetPlanScheduleListRequest,
@@ -185,8 +186,66 @@ export class PlanScheduleService {
     ];
   }
 
-  async deletePlanSchedule(id: number) {
+  /**
+   * 요청자가 해당 스케줄에 접근할 수 있는지 확인한다.
+   *
+   * 이 검사가 없으면 로그인한 사용자가 스케줄 ID(순차 증가)만 바꿔가며
+   * 다른 사용자의 스케줄을 조회·수정·삭제할 수 있다.
+   *
+   * - 본인이 만든 스케줄이면 허용
+   * - 방에 속한 스케줄이면 그 방의 멤버여야 하고,
+   *   쓰기 작업(수정·삭제·상태변경)은 READ 권한이면 거부
+   */
+  private async getAuthorizedPlanSchedule(
+    id: number,
+    planUserId: string,
+    requireWrite: boolean,
+  ) {
     const planSchedule = await this.planScheduleRepositoryService.getById(id);
+
+    if (planSchedule.planUserId === planUserId) {
+      return planSchedule;
+    }
+
+    if (!planSchedule.planUserRoomId) {
+      throw new ServiceError(
+        'You are not allowed to access this plan schedule',
+        ServiceErrorCode.FORBIDDEN,
+      );
+    }
+
+    const planUserRoomMember =
+      await this.planUserRoomMemberRepositoryService.findByRoomIdAndPlanUserId(
+        planSchedule.planUserRoomId,
+        planUserId,
+      );
+
+    if (!planUserRoomMember) {
+      throw new ServiceError(
+        'You are not a member of this room',
+        ServiceErrorCode.FORBIDDEN,
+      );
+    }
+
+    if (
+      requireWrite &&
+      planUserRoomMember.permission === PlanUserRoomMemberPermission.READ
+    ) {
+      throw new ServiceError(
+        'You are not allowed to modify this plan schedule',
+        ServiceErrorCode.FORBIDDEN,
+      );
+    }
+
+    return planSchedule;
+  }
+
+  async deletePlanSchedule(id: number, planUserId: string) {
+    const planSchedule = await this.getAuthorizedPlanSchedule(
+      id,
+      planUserId,
+      true,
+    );
 
     const updateDto: UpdatePlanScheduleDto = {
       id: planSchedule.id,
@@ -198,8 +257,13 @@ export class PlanScheduleService {
 
   async getPlanScheduleDetail(
     id: number,
+    planUserId: string,
   ): Promise<GetPlanScheduleDetailResponse> {
-    const planSchedule = await this.planScheduleRepositoryService.getById(id);
+    const planSchedule = await this.getAuthorizedPlanSchedule(
+      id,
+      planUserId,
+      false,
+    );
 
     return GetPlanScheduleDetailResponse.from(planSchedule);
   }
@@ -208,8 +272,13 @@ export class PlanScheduleService {
   async patchPlanSchedule(
     id: number,
     body: PatchPlanScheduleRequest,
+    planUserId: string,
   ): Promise<PatchPlanScheduleResponse> {
-    const planSchedule = await this.planScheduleRepositoryService.getById(id);
+    const planSchedule = await this.getAuthorizedPlanSchedule(
+      id,
+      planUserId,
+      true,
+    );
 
     const updateDto: UpdatePlanScheduleDto = {
       id: planSchedule.id,
@@ -252,8 +321,13 @@ export class PlanScheduleService {
   async patchPlanScheduleStatus(
     id: number,
     status: PlanScheduleStatus,
+    planUserId: string,
   ): Promise<PatchPlanScheduleStatusResponse> {
-    const planSchedule = await this.planScheduleRepositoryService.getById(id);
+    const planSchedule = await this.getAuthorizedPlanSchedule(
+      id,
+      planUserId,
+      true,
+    );
 
     const updateDto: UpdatePlanScheduleDto = {
       id: planSchedule.id,
@@ -284,7 +358,7 @@ export class PlanScheduleService {
         roomId,
       );
 
-    const dayMap = new Map<string, { id: number; title: string }[]>();
+    const dayMap = new Map<string, GetCalendarDayItem[]>();
 
     for (const schedule of planSchedules) {
       if (!schedule.startDate) continue;
@@ -293,7 +367,12 @@ export class PlanScheduleService {
       const dayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
       const existing = dayMap.get(dayStr) ?? [];
-      existing.push({ id: schedule.id, title: schedule.title });
+      // status를 함께 내려줘야 달력에서 완료된 일정을 구분해 표시할 수 있다
+      existing.push({
+        id: schedule.id,
+        title: schedule.title,
+        status: schedule.status,
+      });
       dayMap.set(dayStr, existing);
     }
 
