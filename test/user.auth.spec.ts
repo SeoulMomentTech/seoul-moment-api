@@ -1674,7 +1674,7 @@ describe('UserAuthController (E2E)', () => {
         // Then
         expect(res.status).toBe(409);
         expect(res.body.message).toBe(
-          '이미 다른 계정에 연결된 Google 계정입니다.',
+          '이미 다른 계정에 연결된 SNS 계정입니다.',
         );
       });
 
@@ -1714,7 +1714,7 @@ describe('UserAuthController (E2E)', () => {
         // Then - 409 & 기존 P1 연결이 그대로 유지됨
         expect(res.status).toBe(409);
         expect(res.body.message).toBe(
-          '이미 다른 Google 계정이 연결된 계정입니다.',
+          '이미 다른 SNS 계정이 연결된 계정입니다.',
         );
         const sns = await dataSource.query(
           `SELECT provider_user_id FROM user_sns WHERE user_id = $1`,
