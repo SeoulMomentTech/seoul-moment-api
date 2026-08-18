@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { ConfigImpl } from '../configImpl';
 import { SupportEnv } from '../enum/config.enum';
 
@@ -29,6 +30,8 @@ const getConfig = (): ConfigImpl => ({
   GOOGLE_SHEET_SERVICE_EMAIL: process.env.GOOGLE_SHEET_SERVICE_EMAIL || '',
   GOOGLE_SHEET_SERVICE_PRIMARY: process.env.GOOGLE_SHEET_SERVICE_PRIMARY || '',
   GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
+
+  LINE_CHANNEL_ID: process.env.LINE_CHANNEL_ID || '',
 
   SERPER_URL: process.env.SERPER_URL || '',
   SERPER_API_KEY: process.env.SERPER_API_KEY || '',

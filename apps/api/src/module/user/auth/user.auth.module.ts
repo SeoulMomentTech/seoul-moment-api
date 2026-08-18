@@ -1,6 +1,7 @@
 import { CommonAuthModule } from '@app/auth/auth.module';
 import { Configuration } from '@app/config/configuration';
 import { ExternalGoogleModule } from '@app/external/google/google.module';
+import { ExternalLineModule } from '@app/external/line/line.module';
 import { RepositoryModule } from '@app/repository/repository.module';
 import { Module } from '@nestjs/common';
 
@@ -14,6 +15,7 @@ import { AuthModule } from '../../auth/auth.module';
     CommonAuthModule.forRoot(Configuration.getConfig().JWT_SECRET),
     AuthModule,
     ExternalGoogleModule,
+    ExternalLineModule,
   ],
   controllers: [UserAuthController],
   providers: [UserAuthService],

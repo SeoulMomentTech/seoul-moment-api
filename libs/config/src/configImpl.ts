@@ -33,6 +33,9 @@ export interface ConfigImpl {
   GOOGLE_SHEET_SERVICE_PRIMARY: string;
   GOOGLE_OAUTH_CLIENT_ID: string;
 
+  // LINE Login (id_token audience = channel ID)
+  LINE_CHANNEL_ID: string;
+
   SERPER_URL: string;
   SERPER_API_KEY: string;
 
