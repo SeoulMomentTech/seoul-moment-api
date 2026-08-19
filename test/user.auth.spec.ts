@@ -3,6 +3,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
 import { ExternalGoogleAuthService } from '@app/external/google/google-auth.service';
+import { ExternalLineAuthService } from '@app/external/line/line-auth.service';
 import { HttpRequestService } from '@app/http/http.service';
 import { faker } from '@faker-js/faker';
 import { INestApplication } from '@nestjs/common';
@@ -1888,6 +1889,639 @@ describe('UserAuthController (E2E)', () => {
         // When
         const res = await request(app.getHttpServer())
           .post(`${BASE_URL}/google/signup`)
+          .send({ signupToken });
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // LINE 인증 (POST /user/auth/line/login | link | signup)
+  // -----------------------------------------------------------------------
+  describe('LINE 인증', () => {
+    let lineAuthService: ExternalLineAuthService;
+    let httpService: HttpRequestService;
+    let tokenSigner: JwtService;
+
+    beforeAll(() => {
+      // Given - 외부 LINE idToken 검증 서비스 + user.auth와 동일 시크릿 서명기
+      lineAuthService = app.get(ExternalLineAuthService, { strict: false });
+      httpService = app.get(HttpRequestService);
+      tokenSigner = new JwtService({
+        secret: Configuration.getConfig().JWT_SECRET,
+      });
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    /** LINE userId(sub)는 'U' + 32자리 hex 형식이다. */
+    function buildLineUserId() {
+      return `U${faker.string.hexadecimal({
+        length: 32,
+        casing: 'lower',
+        prefix: '',
+      })}`;
+    }
+
+    function buildNickname() {
+      return faker.internet
+        .username()
+        .replace(/[^a-zA-Z0-9_]/g, '')
+        .slice(0, 20);
+    }
+
+    /** 서비스 계층을 통째로 대체한다(분기 로직 검증용). */
+    function mockVerifyIdToken(payload: {
+      providerUserId: string;
+      email: string;
+      emailVerified: boolean;
+    }) {
+      jest.spyOn(lineAuthService, 'verifyIdToken').mockResolvedValue(payload);
+    }
+
+    /** LINE verify 엔드포인트 응답만 대체한다(실제 서비스 로직 검증용). */
+    function mockLineVerifyResponse(data: Record<string, unknown>) {
+      return jest
+        .spyOn(httpService, 'sendPostRequest')
+        .mockResolvedValue({ result: true, data });
+    }
+
+    async function signUpUser() {
+      const body = buildSignUpBody();
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(body);
+      expect(res.status).toBe(204);
+      const rows = await dataSource.query(
+        `SELECT id FROM "user" WHERE email = $1`,
+        [body.email],
+      );
+      return { ...body, id: rows[0].id as number };
+    }
+
+    describe('POST /user/auth/line/login', () => {
+      it('미가입 + 미연결 계정이면 needsSignup과 signupToken을 반환한다', async () => {
+        // Given
+        const providerUserId = buildLineUserId();
+        const email = faker.internet.email().toLowerCase();
+        mockVerifyIdToken({ providerUserId, email, emailVerified: true });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsLinkConfirm).toBe(false);
+        expect(res.body.data.needsSignup).toBe(true);
+        expect(res.body.data.email).toBe(email);
+        const payload = jwtService.decode(res.body.data.signupToken);
+        expect(payload.jwtType).toBe(SNS_SIGNUP_TOKEN_TYPE);
+        expect(payload.provider).toBe('LINE');
+        expect(payload.providerUserId).toBe(providerUserId);
+        expect(res.body.data.token).toBeUndefined();
+      });
+
+      it('기존 이메일 가입자가 미연결이면 needsLinkConfirm과 linkToken을 반환한다', async () => {
+        // Given
+        const user = await signUpUser();
+        const providerUserId = buildLineUserId();
+        mockVerifyIdToken({
+          providerUserId,
+          email: user.email,
+          emailVerified: true,
+        });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsLinkConfirm).toBe(true);
+        expect(res.body.data.email).toBe(user.email);
+        const payload = jwtService.decode(res.body.data.linkToken);
+        expect(payload.jwtType).toBe(SNS_LINK_TOKEN_TYPE);
+        expect(payload.provider).toBe('LINE');
+        expect(payload.userId).toBe(user.id);
+      });
+
+      it('이미 연결된 LINE 계정이면 바로 로그인 토큰을 반환한다', async () => {
+        // Given - 가입 후 link까지 완료해 user_sns 연결 생성
+        const user = await signUpUser();
+        const providerUserId = buildLineUserId();
+        mockVerifyIdToken({
+          providerUserId,
+          email: user.email,
+          emailVerified: true,
+        });
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: loginRes.body.data.linkToken })
+          .expect(200);
+
+        // When - 동일 providerUserId로 재로그인
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsLinkConfirm).toBe(false);
+        expect(typeof res.body.data.token).toBe('string');
+        expect(typeof res.body.data.refreshToken).toBe('string');
+        const rows = await dataSource.query(
+          `SELECT refresh_token FROM "user" WHERE id = $1`,
+          [user.id],
+        );
+        expect(rows[0].refresh_token).toBe(res.body.data.refreshToken);
+      });
+
+      it('Google로 가입한 계정과 이메일이 같으면 LINE은 연결 확인 분기를 탄다', async () => {
+        // Given - 이메일 가입자 1명
+        const user = await signUpUser();
+        mockVerifyIdToken({
+          providerUserId: buildLineUserId(),
+          email: user.email,
+          emailVerified: true,
+        });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then - 새 계정을 만들지 않고 기존 계정 연결을 제안한다
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsLinkConfirm).toBe(true);
+        const users = await dataSource.query(
+          `SELECT id FROM "user" WHERE email = $1`,
+          [user.email],
+        );
+        expect(users).toHaveLength(1);
+      });
+
+      it('유효하지 않은 idToken이면 401을 반환한다', async () => {
+        // Given
+        jest
+          .spyOn(lineAuthService, 'verifyIdToken')
+          .mockRejectedValue(
+            new ServiceError(
+              '유효하지 않은 LINE idToken입니다.',
+              ServiceErrorCode.UNAUTHORIZED,
+            ),
+          );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'bad-token' });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.code).toBe('UNAUTHORIZED');
+      });
+
+      it('idToken이 누락되면 400을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({});
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+
+      // -------------------------------------------------------------------
+      // ExternalLineAuthService 자체 검증 (LINE verify 응답만 대체)
+      // -------------------------------------------------------------------
+      it('LINE verify 요청에 채널 ID를 client_id로 실어 보낸다', async () => {
+        // Given
+        const providerUserId = buildLineUserId();
+        const spy = mockLineVerifyResponse({
+          sub: providerUserId,
+          email: faker.internet.email().toLowerCase(),
+        });
+
+        // When
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'real-looking-id-token' })
+          .expect(200);
+
+        // Then - aud 검증이 우리 채널 기준으로 이뤄져야 한다
+        const [url, body] = spy.mock.calls[0];
+        expect(url).toBe('https://api.line.me/oauth2/v2.1/verify');
+        expect((body as URLSearchParams).get('client_id')).toBe(
+          Configuration.getConfig().LINE_CHANNEL_ID,
+        );
+        expect((body as URLSearchParams).get('id_token')).toBe(
+          'real-looking-id-token',
+        );
+      });
+
+      it('LINE이 이메일을 내려주지 않으면 401을 반환하고 가입시키지 않는다', async () => {
+        // Given - 사용자가 동의 화면에서 이메일 제공을 거부한 경우
+        const providerUserId = buildLineUserId();
+        mockLineVerifyResponse({ sub: providerUserId });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'real-looking-id-token' });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe(
+          'LINE 계정의 이메일 제공에 동의해야 로그인할 수 있습니다.',
+        );
+        const sns = await dataSource.query(
+          `SELECT user_id FROM user_sns WHERE provider_user_id = $1`,
+          [providerUserId],
+        );
+        expect(sns).toHaveLength(0);
+      });
+
+      it('LINE verify 응답에 sub가 없으면 401을 반환한다', async () => {
+        // Given
+        mockLineVerifyResponse({ email: faker.internet.email().toLowerCase() });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'real-looking-id-token' });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('유효하지 않은 LINE idToken입니다.');
+      });
+    });
+
+    describe('POST /user/auth/line/link', () => {
+      it('linkToken으로 연결하면 토큰을 발급하고 user_sns 행이 생성된다', async () => {
+        // Given
+        const user = await signUpUser();
+        const providerUserId = buildLineUserId();
+        mockVerifyIdToken({
+          providerUserId,
+          email: user.email,
+          emailVerified: true,
+        });
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: loginRes.body.data.linkToken });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(typeof res.body.data.token).toBe('string');
+        expect(typeof res.body.data.refreshToken).toBe('string');
+        const sns = await dataSource.query(
+          `SELECT user_id, provider, provider_user_id, provider_email
+           FROM user_sns WHERE user_id = $1`,
+          [user.id],
+        );
+        expect(sns).toHaveLength(1);
+        expect(sns[0].provider).toBe('LINE');
+        expect(sns[0].provider_user_id).toBe(providerUserId);
+      });
+
+      it('이미 다른 계정에 연결된 LINE 계정이면 409를 반환한다', async () => {
+        // Given - userA에 providerUserId P 연결
+        const userA = await signUpUser();
+        const providerUserId = buildLineUserId();
+        mockVerifyIdToken({
+          providerUserId,
+          email: userA.email,
+          emailVerified: true,
+        });
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: loginRes.body.data.linkToken })
+          .expect(200);
+
+        // Given - userB 명의의 linkToken을 동일 providerUserId로 위조
+        const userB = await signUpUser();
+        const forgedLinkToken = tokenSigner.sign(
+          {
+            userId: userB.id,
+            providerUserId,
+            providerEmail: userB.email,
+            email: userB.email,
+            provider: 'LINE',
+            jwtType: SNS_LINK_TOKEN_TYPE,
+          },
+          { expiresIn: '5m' },
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: forgedLinkToken });
+
+        // Then
+        expect(res.status).toBe(409);
+        expect(res.body.message).toBe(
+          '이미 다른 계정에 연결된 SNS 계정입니다.',
+        );
+      });
+
+      it('해당 계정이 이미 다른 LINE 계정에 연결돼 있으면 409를 반환하고 기존 연결을 덮어쓰지 않는다', async () => {
+        // Given - user에 P1 연결
+        const user = await signUpUser();
+        const providerUserId1 = buildLineUserId();
+        mockVerifyIdToken({
+          providerUserId: providerUserId1,
+          email: user.email,
+          emailVerified: true,
+        });
+        const loginRes1 = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: loginRes1.body.data.linkToken })
+          .expect(200);
+
+        // Given - 같은 user에 새 providerUserId P2 linkToken 발급
+        const providerUserId2 = buildLineUserId();
+        mockVerifyIdToken({
+          providerUserId: providerUserId2,
+          email: user.email,
+          emailVerified: true,
+        });
+        const loginRes2 = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // When - P2로 link 시도
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: loginRes2.body.data.linkToken });
+
+        // Then - 409 & 기존 P1 연결이 그대로 유지됨
+        expect(res.status).toBe(409);
+        expect(res.body.message).toBe(
+          '이미 다른 SNS 계정이 연결된 계정입니다.',
+        );
+        const sns = await dataSource.query(
+          `SELECT provider_user_id FROM user_sns WHERE user_id = $1`,
+          [user.id],
+        );
+        expect(sns).toHaveLength(1);
+        expect(sns[0].provider_user_id).toBe(providerUserId1);
+      });
+
+      it('provider가 GOOGLE인 linkToken을 line/link에 사용하면 401을 반환한다', async () => {
+        // Given - 서명은 유효하지만 provider가 다른 토큰
+        const user = await signUpUser();
+        const crossProviderToken = tokenSigner.sign(
+          {
+            userId: user.id,
+            providerUserId: faker.string.numeric(21),
+            providerEmail: user.email,
+            email: user.email,
+            provider: 'GOOGLE',
+            jwtType: SNS_LINK_TOKEN_TYPE,
+          },
+          { expiresIn: '5m' },
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: crossProviderToken });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('유효하지 않은 link token입니다.');
+      });
+
+      it('jwtType이 link 토큰이 아니면 401을 반환한다', async () => {
+        // Given - refresh 타입 토큰을 linkToken 자리에 전달
+        const wrongToken = tokenSigner.sign(
+          {
+            userId: 1,
+            providerUserId: buildLineUserId(),
+            provider: 'LINE',
+            jwtType: REFRESH_TOKEN_TYPE,
+          },
+          { expiresIn: '5m' },
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: wrongToken });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('유효하지 않은 link token입니다.');
+      });
+
+      it('linkToken이 누락되면 400을 반환한다', async () => {
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({});
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe('POST /user/auth/line/signup', () => {
+      function buildSignupToken(overrides?: Record<string, unknown>) {
+        return tokenSigner.sign(
+          {
+            providerUserId: buildLineUserId(),
+            providerEmail: faker.internet.email().toLowerCase(),
+            email: faker.internet.email().toLowerCase(),
+            provider: 'LINE',
+            jwtType: SNS_SIGNUP_TOKEN_TYPE,
+            ...overrides,
+          },
+          { expiresIn: '10m' },
+        );
+      }
+
+      it('signupToken과 nickname으로 신규 user와 user_sns를 생성한다', async () => {
+        // Given
+        const email = faker.internet.email().toLowerCase();
+        const providerUserId = buildLineUserId();
+        const signupToken = buildSignupToken({
+          email,
+          providerEmail: email,
+          providerUserId,
+        });
+        const nickname = buildNickname();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/signup`)
+          .send({ signupToken, nickname });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(typeof res.body.data.token).toBe('string');
+        expect(typeof res.body.data.refreshToken).toBe('string');
+        const users = await dataSource.query(
+          `SELECT id, nickname, password FROM "user" WHERE email = $1`,
+          [email],
+        );
+        expect(users).toHaveLength(1);
+        expect(users[0].nickname).toBe(nickname);
+        // SNS 가입자는 사용 불가한 임의 bcrypt 해시가 채워진다
+        expect(users[0].password.startsWith('$2')).toBe(true);
+        const sns = await dataSource.query(
+          `SELECT provider, provider_user_id FROM user_sns WHERE user_id = $1`,
+          [users[0].id],
+        );
+        expect(sns).toHaveLength(1);
+        expect(sns[0].provider).toBe('LINE');
+        expect(sns[0].provider_user_id).toBe(providerUserId);
+      });
+
+      it('마케팅 동의 값이 각각의 동의 일시로 저장된다', async () => {
+        // Given
+        const email = faker.internet.email().toLowerCase();
+        const signupToken = buildSignupToken({ email, providerEmail: email });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/signup`)
+          .send({
+            signupToken,
+            nickname: buildNickname(),
+            newProductAgreed: true,
+            adAgreed: false,
+            recommendAgreed: true,
+          });
+
+        // Then
+        expect(res.status).toBe(200);
+        const users = await dataSource.query(
+          `SELECT new_product_date, ad_agree_date, recommend_date
+           FROM "user" WHERE email = $1`,
+          [email],
+        );
+        expect(users[0].new_product_date).not.toBeNull();
+        expect(users[0].ad_agree_date).toBeNull();
+        expect(users[0].recommend_date).not.toBeNull();
+      });
+
+      it('이미 가입된 nickname이면 409를 반환한다', async () => {
+        // Given
+        const existing = await signUpUser();
+        const signupToken = buildSignupToken();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/signup`)
+          .send({ signupToken, nickname: existing.nickname });
+
+        // Then
+        expect(res.status).toBe(409);
+      });
+
+      it('createUserSns 단계에서 충돌이 나면 트랜잭션이 롤백되어 user가 생성되지 않는다', async () => {
+        // Given - userA에 providerUserId P 연결
+        const userA = await signUpUser();
+        const providerUserId = buildLineUserId();
+        mockVerifyIdToken({
+          providerUserId,
+          email: userA.email,
+          emailVerified: true,
+        });
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: loginRes.body.data.linkToken })
+          .expect(200);
+
+        // Given - 신규 이메일이지만 providerUserId는 P(이미 사용중)인 signupToken 위조
+        const newEmail = faker.internet.email().toLowerCase();
+        const signupToken = buildSignupToken({
+          email: newEmail,
+          providerEmail: newEmail,
+          providerUserId,
+        });
+
+        // When - createUser는 성공하지만 createUserSns가 unique 제약 위반
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/signup`)
+          .send({ signupToken, nickname: buildNickname() });
+
+        // Then - 에러 응답 + 트랜잭션 롤백으로 user 행이 남지 않음
+        expect(res.status).toBeGreaterThanOrEqual(400);
+        const users = await dataSource.query(
+          `SELECT id FROM "user" WHERE email = $1`,
+          [newEmail],
+        );
+        expect(users).toHaveLength(0);
+      });
+
+      it('provider가 GOOGLE인 signupToken을 line/signup에 사용하면 401을 반환한다', async () => {
+        // Given
+        const crossProviderToken = buildSignupToken({ provider: 'GOOGLE' });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/signup`)
+          .send({ signupToken: crossProviderToken, nickname: buildNickname() });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('유효하지 않은 signup token입니다.');
+      });
+
+      it('jwtType이 signup 토큰이 아니면 401을 반환한다', async () => {
+        // Given
+        const wrongToken = tokenSigner.sign(
+          {
+            providerUserId: buildLineUserId(),
+            email: faker.internet.email().toLowerCase(),
+            provider: 'LINE',
+            jwtType: ONE_TIME_TOKEN_TYPE,
+          },
+          { expiresIn: '5m' },
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/signup`)
+          .send({ signupToken: wrongToken, nickname: buildNickname() });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('유효하지 않은 signup token입니다.');
+      });
+
+      it('nickname이 누락되면 400을 반환한다', async () => {
+        // Given
+        const signupToken = buildSignupToken();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/signup`)
           .send({ signupToken });
 
         // Then

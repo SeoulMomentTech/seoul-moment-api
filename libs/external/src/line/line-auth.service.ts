@@ -62,15 +62,20 @@ export class ExternalLineAuthService {
       );
     }
 
-    // 이메일은 선택이다. LINE 채널의 "이메일 취득 권한"이 아직 승인되지 않았거나
-    // 사용자가 미동의하면 email이 내려오지 않는다. 이 경우 sub 기반의 안정적인
-    // placeholder 이메일을 만들어 가입을 진행한다(이메일 기준 계정 연결은 불가).
-    // 권한 승인 후에는 실제 email이 그대로 사용된다.
-    const email = data.email ?? `line_${data.sub}@line.local`;
+    // 이메일은 필수다. 채널의 "이메일 취득 권한"이 승인된 상태이므로 email이
+    // 없다는 것은 사용자가 동의 화면에서 이메일 제공을 거부했다는 뜻이다.
+    // 이메일 없이 가입시키면 기존 계정과의 연결(link) 분기를 영구히 탈 수 없고
+    // 메일 발송도 불가능하므로, 가입을 진행하지 않고 거부한다.
+    if (!data.email) {
+      throw new ServiceError(
+        'LINE 계정의 이메일 제공에 동의해야 로그인할 수 있습니다.',
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
 
     return {
       providerUserId: data.sub,
-      email,
+      email: data.email,
       emailVerified: true,
     };
   }
