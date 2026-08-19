@@ -49,12 +49,22 @@ export class CommonAuthService {
   async authEmail(email: string) {
     const code = Math.floor(100000 + Math.random() * 900000);
 
-    this.externalGoogleMailService.sendMailByTemplate(
-      email,
-      'Email Verification Code',
-      HtmlTemplate.AUTH_CODE,
-      { code },
-    );
+    // 발송 성공을 확인한 뒤에 코드를 저장한다. 발송을 기다리지 않으면
+    // 메일이 실패해도 API가 200을 돌려주고 코드만 캐시에 남아,
+    // 사용자는 오지 않는 메일을 기다리고 장애도 드러나지 않는다.
+    try {
+      await this.externalGoogleMailService.sendMailByTemplate(
+        email,
+        'Email Verification Code',
+        HtmlTemplate.AUTH_CODE,
+        { code },
+      );
+    } catch {
+      throw new ServiceError(
+        '인증 메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.',
+        ServiceErrorCode.INTERNAL_SERVER_ERROR,
+      );
+    }
 
     await this.cacheService.set(email, code, 60 * 5);
   }
