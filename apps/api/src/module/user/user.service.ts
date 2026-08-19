@@ -77,6 +77,10 @@ export class UserService {
     id: number,
     dto: PatchUserProfileRequest,
   ): Promise<void> {
+    // save()는 upsert라 프로필이 없으면 새로 만들어 버린다. 생성은
+    // POST /user/profile 의 책임이므로 PATCH는 존재를 먼저 확인한다.
+    await this.userRepositoryService.getUserProfile(id);
+
     await this.userRepositoryService.updateUserProfile({
       userId: id,
       gender: dto.gender,
@@ -203,6 +207,10 @@ export class UserService {
     id: number,
     dto: PatchUserProfileNicknameRequest,
   ): Promise<void> {
+    // 프로필 생성은 POST /user/profile 의 책임이다. PATCH 계열은
+    // 프로필이 이미 있는 상태에서만 동작해야 한다.
+    await this.userRepositoryService.getUserProfile(id);
+
     await this.validateAndUpdateNickname(id, dto.nickname);
   }
 
@@ -210,6 +218,8 @@ export class UserService {
     id: number,
     dto: PatchUserProfileNameRequest,
   ): Promise<void> {
+    await this.userRepositoryService.getUserProfile(id);
+
     await this.validateAndUpdateName(id, dto.name);
   }
 

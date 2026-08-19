@@ -252,6 +252,10 @@ export class PatchUserProfileRequest {
     example: '2025-01-01',
   })
   @EmptyStringToNull()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'birthDate는 YYYY-MM-DD 형식이어야 합니다.',
+  })
+  @IsDateString()
   @IsString()
   @IsOptional()
   birthDate?: string;
