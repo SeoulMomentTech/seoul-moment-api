@@ -11,6 +11,10 @@ export interface GoogleIdTokenPayload {
   email: string;
   /** 이메일 인증 여부 */
   emailVerified: boolean;
+  /** Google 표시 이름. profile scope 미동의 시 null */
+  name: string | null;
+  /** Google 프로필 이미지 URL. profile scope 미동의 시 null */
+  picture: string | null;
 }
 
 /**
@@ -54,6 +58,8 @@ export class ExternalGoogleAuthService {
         providerUserId: payload.sub,
         email: payload.email,
         emailVerified: !!payload.email_verified,
+        name: payload.name ?? null,
+        picture: payload.picture ?? null,
       };
     } catch (error) {
       if (error instanceof ServiceError) throw error;

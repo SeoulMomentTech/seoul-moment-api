@@ -11,12 +11,18 @@ export interface LineIdTokenPayload {
   email: string;
   /** 이메일 인증 여부 */
   emailVerified: boolean;
+  /** LINE 표시 이름. profile scope 미동의 시 null */
+  name: string | null;
+  /** LINE 프로필 이미지 URL. profile scope 미동의 시 null */
+  picture: string | null;
 }
 
 /** LINE id_token verify 엔드포인트 응답 (필요한 필드만) */
 interface LineVerifyResponse {
   sub: string;
   email?: string;
+  name?: string;
+  picture?: string;
 }
 
 const LINE_VERIFY_URL = 'https://api.line.me/oauth2/v2.1/verify';
@@ -77,6 +83,8 @@ export class ExternalLineAuthService {
       providerUserId: data.sub,
       email: data.email,
       emailVerified: true,
+      name: data.name ?? null,
+      picture: data.picture ?? null,
     };
   }
 

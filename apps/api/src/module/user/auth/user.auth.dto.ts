@@ -219,6 +219,17 @@ export class PostSnsLoginResponse {
   signupToken?: string;
 
   @ApiPropertyOptional({
+    description:
+      'SNS 회원가입이 필요한 경우 내려가는 SNS 표시 이름. ' +
+      '닉네임 입력칸의 기본값으로 쓰라고 주는 값이며, 그대로 저장되지 않는다. ' +
+      'provider가 이름을 주지 않으면(profile scope 미동의) 내려가지 않는다.',
+    example: '홍길동',
+  })
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @ApiPropertyOptional({
     description: '이미 연결된 계정인 경우 발급되는 access token',
     example: 'token',
   })

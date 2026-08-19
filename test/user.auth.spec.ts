@@ -2,6 +2,7 @@ import { CacheService } from '@app/cache/cache.service';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
+import { S3Service } from '@app/external/aws/s3/s3.service';
 import { ExternalGoogleAuthService } from '@app/external/google/google-auth.service';
 import { ExternalGoogleMailService } from '@app/external/google/google-mail.service';
 import { ExternalLineAuthService } from '@app/external/line/line-auth.service';
@@ -63,6 +64,7 @@ describe('UserAuthController (E2E)', () => {
       'user_product_like',
       'user_sns',
       'user_fit',
+      'user_profile_image',
       'user_profile',
       '"user"',
     ]);
@@ -1457,8 +1459,14 @@ describe('UserAuthController (E2E)', () => {
       providerUserId: string;
       email: string;
       emailVerified: boolean;
+      name?: string | null;
+      picture?: string | null;
     }) {
-      jest.spyOn(googleAuthService, 'verifyIdToken').mockResolvedValue(payload);
+      jest.spyOn(googleAuthService, 'verifyIdToken').mockResolvedValue({
+        name: null,
+        picture: null,
+        ...payload,
+      });
     }
 
     function buildNickname() {
@@ -1912,12 +1920,14 @@ describe('UserAuthController (E2E)', () => {
   describe('LINE 인증', () => {
     let lineAuthService: ExternalLineAuthService;
     let httpService: HttpRequestService;
+    let s3Service: S3Service;
     let tokenSigner: JwtService;
 
     beforeAll(() => {
       // Given - 외부 LINE idToken 검증 서비스 + user.auth와 동일 시크릿 서명기
       lineAuthService = app.get(ExternalLineAuthService, { strict: false });
       httpService = app.get(HttpRequestService);
+      s3Service = app.get(S3Service, { strict: false });
       tokenSigner = new JwtService({
         secret: Configuration.getConfig().JWT_SECRET,
       });
@@ -1948,8 +1958,14 @@ describe('UserAuthController (E2E)', () => {
       providerUserId: string;
       email: string;
       emailVerified: boolean;
+      name?: string | null;
+      picture?: string | null;
     }) {
-      jest.spyOn(lineAuthService, 'verifyIdToken').mockResolvedValue(payload);
+      jest.spyOn(lineAuthService, 'verifyIdToken').mockResolvedValue({
+        name: null,
+        picture: null,
+        ...payload,
+      });
     }
 
     /** LINE verify 엔드포인트 응답만 대체한다(실제 서비스 로직 검증용). */
@@ -2108,6 +2124,53 @@ describe('UserAuthController (E2E)', () => {
 
         // Then
         expect(res.status).toBe(400);
+      });
+
+      it('SNS 표시 이름이 있으면 응답과 signupToken에 함께 실린다', async () => {
+        // Given - profile scope 동의로 name/picture 가 내려온 경우
+        const providerUserId = buildLineUserId();
+        const email = faker.internet.email().toLowerCase();
+        const name = faker.person.fullName();
+        const picture = 'https://profile.line-scdn.net/0hAbCdEf';
+        mockVerifyIdToken({
+          providerUserId,
+          email,
+          emailVerified: true,
+          name,
+          picture,
+        });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then - name 은 닉네임 기본값용으로 화면에 내려주고
+        expect(res.status).toBe(200);
+        expect(res.body.data.name).toBe(name);
+        // picture 는 서버만 쓰므로 응답에 넣지 않고 토큰에만 싣는다
+        expect(res.body.data.picture).toBeUndefined();
+        const payload = jwtService.decode(res.body.data.signupToken);
+        expect(payload.name).toBe(name);
+        expect(payload.picture).toBe(picture);
+      });
+
+      it('provider가 이름을 주지 않으면 name을 내려주지 않는다', async () => {
+        // Given - profile scope 미동의
+        mockVerifyIdToken({
+          providerUserId: buildLineUserId(),
+          email: faker.internet.email().toLowerCase(),
+          emailVerified: true,
+        });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.name).toBeUndefined();
       });
 
       // -------------------------------------------------------------------
@@ -2433,6 +2496,94 @@ describe('UserAuthController (E2E)', () => {
         expect(users[0].new_product_date).not.toBeNull();
         expect(users[0].ad_agree_date).toBeNull();
         expect(users[0].recommend_date).not.toBeNull();
+      });
+
+      it('프로필 이미지가 있으면 S3로 옮겨 user_profile_image를 만든다', async () => {
+        // Given
+        const email = faker.internet.email().toLowerCase();
+        const signupToken = buildSignupToken({
+          email,
+          providerEmail: email,
+          picture: 'https://profile.line-scdn.net/0hAbCdEf',
+        });
+        jest.spyOn(global, 'fetch').mockResolvedValue({
+          ok: true,
+          arrayBuffer: async () => new ArrayBuffer(8),
+        } as Response);
+        const uploadSpy = jest
+          .spyOn(s3Service, 'uploadImage')
+          .mockResolvedValue({
+            url: `${Configuration.getConfig().IMAGE_DOMAIN_NAME}/profile/test.webp`,
+            key: 'profile/test.webp',
+            bucket: 'test-bucket',
+            fileName: 'test.webp',
+          });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/signup`)
+          .send({ signupToken, nickname: buildNickname() });
+
+        // Then - provider URL을 그대로 저장하지 않고 우리 경로로 바꿔 넣는다
+        expect(res.status).toBe(200);
+        expect(uploadSpy).toHaveBeenCalledTimes(1);
+        const users = await dataSource.query(
+          `SELECT id FROM "user" WHERE email = $1`,
+          [email],
+        );
+        const images = await dataSource.query(
+          `SELECT image_path FROM user_profile_image WHERE user_id = $1`,
+          [users[0].id],
+        );
+        expect(images).toHaveLength(1);
+        expect(images[0].image_path).toBe('/profile/test.webp');
+      });
+
+      it('프로필 이미지 이관이 실패해도 가입은 성공한다', async () => {
+        // Given - 이미지 다운로드가 실패하는 상황
+        const email = faker.internet.email().toLowerCase();
+        const signupToken = buildSignupToken({
+          email,
+          providerEmail: email,
+          picture: 'https://profile.line-scdn.net/0hAbCdEf',
+        });
+        jest
+          .spyOn(global, 'fetch')
+          .mockRejectedValue(new Error('network unreachable'));
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/signup`)
+          .send({ signupToken, nickname: buildNickname() });
+
+        // Then - 계정은 만들어지고 이미지만 없다
+        expect(res.status).toBe(200);
+        const users = await dataSource.query(
+          `SELECT id FROM "user" WHERE email = $1`,
+          [email],
+        );
+        expect(users).toHaveLength(1);
+        const images = await dataSource.query(
+          `SELECT image_path FROM user_profile_image WHERE user_id = $1`,
+          [users[0].id],
+        );
+        expect(images).toHaveLength(0);
+      });
+
+      it('프로필 이미지가 없으면 이미지 업로드를 시도하지 않는다', async () => {
+        // Given - picture 없는 signupToken
+        const email = faker.internet.email().toLowerCase();
+        const signupToken = buildSignupToken({ email, providerEmail: email });
+        const fetchSpy = jest.spyOn(global, 'fetch');
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/signup`)
+          .send({ signupToken, nickname: buildNickname() });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(fetchSpy).not.toHaveBeenCalled();
       });
 
       it('이미 가입된 nickname이면 409를 반환한다', async () => {

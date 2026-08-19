@@ -1,5 +1,6 @@
 import { CommonAuthModule } from '@app/auth/auth.module';
 import { Configuration } from '@app/config/configuration';
+import { S3Module } from '@app/external/aws/aws.module';
 import { ExternalGoogleModule } from '@app/external/google/google.module';
 import { ExternalLineModule } from '@app/external/line/line.module';
 import { RepositoryModule } from '@app/repository/repository.module';
@@ -16,6 +17,7 @@ import { AuthModule } from '../../auth/auth.module';
     AuthModule,
     ExternalGoogleModule,
     ExternalLineModule,
+    S3Module,
   ],
   controllers: [UserAuthController],
   providers: [UserAuthService],

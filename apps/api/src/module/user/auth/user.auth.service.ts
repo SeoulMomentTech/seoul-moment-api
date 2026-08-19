@@ -3,10 +3,15 @@ import { CommonAuthService } from '@app/auth/auth.service';
 import { RedisKey } from '@app/cache/cache.dto';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
+import { LoggerService } from '@app/common/log/logger.service';
+import { stripImageDomain } from '@app/common/util/image.util';
 import { Configuration } from '@app/config/configuration';
+import { S3Service } from '@app/external/aws/s3/s3.service';
 import { ExternalGoogleAuthService } from '@app/external/google/google-auth.service';
 import { ExternalLineAuthService } from '@app/external/line/line-auth.service';
 import { UpdateUserDto } from '@app/repository/dto/user.dto';
+import { UserProfileImageEntity } from '@app/repository/entity/user-profile-image.entity';
+import { UserProfileEntity } from '@app/repository/entity/user-profile.entity';
 import { UserEntity } from '@app/repository/entity/user.entity';
 import { UserSnsProvider } from '@app/repository/enum/user-sns.enum';
 import { UserSnsRepositoryService } from '@app/repository/service/user-sns.repository.service';
@@ -30,6 +35,15 @@ import {
 } from './user.auth.dto';
 import { AuthService } from '../../auth/auth.service';
 
+/** SNS idToken 검증 결과. name/picture 는 provider가 주지 않으면 null 이다. */
+interface SnsLoginProfile {
+  providerUserId: string;
+  email: string;
+  emailVerified: boolean;
+  name?: string | null;
+  picture?: string | null;
+}
+
 @Injectable()
 export class UserAuthService {
   constructor(
@@ -39,6 +53,8 @@ export class UserAuthService {
     private readonly authService: AuthService,
     private readonly externalGoogleAuthService: ExternalGoogleAuthService,
     private readonly externalLineAuthService: ExternalLineAuthService,
+    private readonly s3Service: S3Service,
+    private readonly logger: LoggerService,
   ) {}
 
   async signUp(signUpRequest: PostUserSignUpRequest): Promise<void> {
@@ -86,11 +102,10 @@ export class UserAuthService {
     return this.snsLink(UserSnsProvider.GOOGLE, linkToken);
   }
 
-  @Transactional()
   async googleSignup(
     signupRequest: PostGoogleSignupRequest,
   ): Promise<PostUserLoginResponse> {
-    return this.snsSignup(UserSnsProvider.GOOGLE, signupRequest);
+    return this.completeSnsSignup(UserSnsProvider.GOOGLE, signupRequest);
   }
 
   async lineLogin(idToken: string): Promise<PostSnsLoginResponse> {
@@ -104,11 +119,35 @@ export class UserAuthService {
     return this.snsLink(UserSnsProvider.LINE, linkToken);
   }
 
-  @Transactional()
   async lineSignup(
     signupRequest: PostLineSignupRequest,
   ): Promise<PostUserLoginResponse> {
-    return this.snsSignup(UserSnsProvider.LINE, signupRequest);
+    return this.completeSnsSignup(UserSnsProvider.LINE, signupRequest);
+  }
+
+  /**
+   * 미가입 SNS 계정에 내려줄 응답을 만든다.
+   * name 은 닉네임 입력칸 기본값으로 쓰라고 화면에 내려주고,
+   * picture 는 토큰에만 실어 둔다. 가입을 마치는 시점에 서버가 직접
+   * 내려받아 S3로 옮기므로 클라이언트가 다룰 일이 없다.
+   */
+  private async buildSnsSignupResponse(
+    provider: UserSnsProvider,
+    { providerUserId, email, name = null, picture = null }: SnsLoginProfile,
+  ): Promise<PostSnsLoginResponse> {
+    const signupToken = await this.issueSnsToken(
+      { providerUserId, providerEmail: email, email, name, picture },
+      JwtType.SNS_SIGNUP_TOKEN,
+      provider,
+    );
+
+    return {
+      needsLinkConfirm: false,
+      needsSignup: true,
+      email,
+      signupToken,
+      ...(name ? { name } : {}),
+    };
   }
 
   /**
@@ -117,12 +156,10 @@ export class UserAuthService {
    */
   private async snsLogin(
     provider: UserSnsProvider,
-    {
-      providerUserId,
-      email,
-      emailVerified,
-    }: { providerUserId: string; email: string; emailVerified: boolean },
+    profile: SnsLoginProfile,
   ): Promise<PostSnsLoginResponse> {
+    const { providerUserId, email, emailVerified } = profile;
+
     if (!emailVerified) {
       throw new ServiceError(
         'SNS 이메일이 인증되지 않았습니다.',
@@ -142,13 +179,7 @@ export class UserAuthService {
     }
 
     if (!(await this.userRepositoryService.existUserByEmail(email))) {
-      const signupToken = await this.issueSnsToken(
-        { providerUserId, providerEmail: email, email },
-        JwtType.SNS_SIGNUP_TOKEN,
-        provider,
-      );
-
-      return { needsLinkConfirm: false, needsSignup: true, email, signupToken };
+      return this.buildSnsSignupResponse(provider, profile);
     }
 
     const user = await this.userRepositoryService.getUserByEmail(email);
@@ -227,10 +258,15 @@ export class UserAuthService {
   }
 
   /** SNS 회원가입 코어. signupToken을 검증해 신규 user + user_sns를 생성하고 토큰을 발급한다. */
+  @Transactional()
   private async snsSignup(
     provider: UserSnsProvider,
     signupRequest: PostSnsSignupRequest,
-  ): Promise<PostUserLoginResponse> {
+  ): Promise<{
+    tokens: PostUserLoginResponse;
+    userId: number;
+    picture: string | null;
+  }> {
     const payload = await this.commonAuthService.verifyJwt(
       signupRequest.signupToken,
     );
@@ -254,7 +290,76 @@ export class UserAuthService {
       providerEmail: payload.providerEmail,
     });
 
-    return this.issueTokens(user.id);
+    const tokens = await this.issueTokens(user.id);
+
+    return { tokens, userId: user.id, picture: payload.picture ?? null };
+  }
+
+  /**
+   * SNS 회원가입 전체 흐름. 계정 생성은 트랜잭션 안에서 끝내고,
+   * 프로필 이미지 이관은 커밋 뒤에 별도로 처리한다. 외부 이미지를 받아
+   * S3에 올리는 네트워크 작업을 트랜잭션 안에 두면 커넥션을 그만큼
+   * 붙잡게 되고, 이미지 실패가 가입 실패로 번진다.
+   */
+  private async completeSnsSignup(
+    provider: UserSnsProvider,
+    signupRequest: PostSnsSignupRequest,
+  ): Promise<PostUserLoginResponse> {
+    const { tokens, userId, picture } = await this.snsSignup(
+      provider,
+      signupRequest,
+    );
+
+    await this.migrateSnsProfileImage(userId, picture);
+
+    return tokens;
+  }
+
+  /**
+   * SNS 프로필 이미지를 우리 S3로 옮겨 붙인다.
+   * provider가 준 URL을 그대로 저장하지 않는 이유는 두 가지다.
+   * imagePath 는 IMAGE_DOMAIN_NAME 을 앞에 붙여 쓰는 상대 경로 전제라
+   * 외부 URL을 넣으면 주소가 깨지고, provider의 이미지 URL은 사용자가
+   * 사진을 바꾸면 만료된다.
+   * 실패해도 가입은 유효하므로 경고만 남기고 넘어간다.
+   */
+  private async migrateSnsProfileImage(
+    userId: number,
+    picture: string | null,
+  ): Promise<void> {
+    if (!picture) return;
+
+    try {
+      const response = await fetch(picture);
+
+      if (!response.ok) {
+        throw new Error(`이미지 응답 코드 ${response.status}`);
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const { url } = await this.s3Service.uploadImage(buffer, {
+        folder: 'profile',
+      });
+
+      // user_profile_image 는 user_profile 을 참조하므로 빈 프로필을 먼저 만든다.
+      if (!(await this.userRepositoryService.findUserProfile(userId))) {
+        await this.userRepositoryService.createUserProfile(
+          plainToInstance(UserProfileEntity, { userId }),
+        );
+      }
+
+      await this.userRepositoryService.createUserProfileImage(
+        plainToInstance(UserProfileImageEntity, {
+          userId,
+          imagePath: stripImageDomain(url),
+        }),
+      );
+    } catch (error) {
+      this.logger.warn('SNS 프로필 이미지 이관 실패', {
+        userId,
+        error: error.message,
+      });
+    }
   }
 
   async postEmailCode(email: string): Promise<void> {
