@@ -3,6 +3,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
 import { ExternalGoogleAuthService } from '@app/external/google/google-auth.service';
+import { ExternalGoogleMailService } from '@app/external/google/google-mail.service';
 import { ExternalLineAuthService } from '@app/external/line/line-auth.service';
 import { HttpRequestService } from '@app/http/http.service';
 import { faker } from '@faker-js/faker';
@@ -38,6 +39,7 @@ describe('UserAuthController (E2E)', () => {
   let dataSource: DataSource;
   let jwtService: JwtService;
   let cacheService: CacheService;
+  let mailService: ExternalGoogleMailService;
 
   beforeAll(async () => {
     // Given - 앱 싱글톤 획득 (최초 1회만 부트스트랩)
@@ -45,7 +47,14 @@ describe('UserAuthController (E2E)', () => {
     dataSource = getDataSource(app);
     jwtService = app.get(JwtService);
     cacheService = app.get(CacheService);
+    mailService = app.get(ExternalGoogleMailService, { strict: false });
   }, 60_000);
+
+  beforeEach(() => {
+    // SMTP 발송은 매 테스트마다 스텁한다. 실제 Gmail 접속을 시도하지 않게 하고,
+    // 발송 실패가 곧 API 실패가 되므로(authEmail이 await 한다) 결과를 고정한다.
+    jest.spyOn(mailService, 'sendMailByTemplate').mockResolvedValue(undefined);
+  });
 
   afterEach(async () => {
     await cacheService.deleteAll();

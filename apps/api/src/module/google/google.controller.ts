@@ -31,7 +31,7 @@ export class GoogleController {
   @ApiOperation({ summary: '이메일 발송' })
   @HttpCode(HttpStatus.OK)
   async postGoogleEmail(@Body() body: PostGoogleEmailRequest) {
-    this.googleMailService.sendMail(
+    await this.googleMailService.sendMail(
       body.to,
       body.name,
       body.subject,
