@@ -74,6 +74,9 @@ Path aliases defined in `tsconfig.json`:
 - BDD pattern with Given-When-Then comments.
 - Test infra: `docker-compose.test.yml` runs PostgreSQL (port 5433) + Redis (port 6380).
 - Use `Testcontainers` for real DB instances, `@faker-js/faker` for test data.
+- All integration specs share one Nest app instance and run with `--runInBand`, so heap usage
+  accumulates across specs. `test:integration` sets `--max-old-space-size=8192`; without it the
+  run dies with "JavaScript heap out of memory" partway through.
 
 ## Conventions (from .cursorrules)
 
