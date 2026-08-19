@@ -3,7 +3,8 @@ import { LanguageCode } from '@app/repository/enum/language.enum';
 /**
  * AI 상담이 사용하는 정적 지식 카탈로그.
  *
- * ⚠️ 아래 answer 문구의 기간·금액·조건은 **초안(placeholder)** 이다.
+ * ⚠️ 아래 answer 문구의 기간·금액·조건 중 미확정 기능은 **초안(placeholder)** 이다.
+ *    현재 운영 중인 CS 정책은 Seoul Moment의 대만 판매/한국 조달 구조를 기준으로 작성한다.
  *    고객에게 그대로 노출되는 계약 조건 고지이므로 배포 전 CS/법무 검수가 필수다.
  *    (전자상거래법상 표시·광고에 해당한다)
  *
@@ -100,11 +101,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     ],
     answer: {
       [LanguageCode.KOREAN]:
-        '결제가 완료되면 영업일 기준 2~4일 내에 출고되고, 출고 후 배송에 2~5일이 더 걸립니다. 주문이 몰리는 시즌이나 공휴일에는 하루 이틀 늦어질 수 있습니다.',
+        '서울 모먼트의 상품은 상품별 재고 위치와 공급 방식에 따라 배송 기간이 달라질 수 있습니다. 한국에서 준비되는 상품은 결제 확인 후 상품 준비 및 한국 출고, 국제 운송, 대만 통관, 대만 현지 배송 순으로 진행되며 일반적으로 영업일 기준 약 7~20일이 소요될 수 있습니다. 브랜드 출고 일정, 통관, 공휴일 및 물류 상황에 따라 추가 지연이 발생할 수 있습니다.',
       [LanguageCode.ENGLISH]:
-        'Orders are dispatched within 2-4 business days after payment, and delivery takes another 2-5 days after dispatch. Please allow an extra day or two during peak seasons and holidays.',
+        'Delivery times at Seoul Moment vary depending on the product’s stock location and supply method. For items prepared in Korea, the process generally includes product preparation, dispatch from Korea, international transportation, customs clearance in Taiwan, and local delivery. Delivery generally takes about 7-20 business days after payment is confirmed, but additional delays may occur due to brand dispatch schedules, customs, holidays, or logistics conditions.',
       [LanguageCode.TAIWAN]:
-        '付款完成後將於 2~4 個工作日內出貨，出貨後約需 2~5 天送達。訂單量大的旺季或遇假日可能延遲一至兩天。',
+        'Seoul Moment 的商品會依庫存所在地與供貨方式而有不同的配送時間。由韓國準備的商品，確認付款後將依序進行商品準備、韓國出貨、國際運輸、台灣進口通關及台灣境內配送，一般約需 7～20 個工作日。實際時間可能因品牌出貨進度、通關、假日或物流狀況而有所延遲。',
     },
     title: {
       [LanguageCode.KOREAN]: '배송 기간',
@@ -124,11 +125,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     ],
     answer: {
       [LanguageCode.KOREAN]:
-        '마이페이지 > 주문 내역에서 해당 주문의 운송장 번호와 현재 배송 상태를 확인하실 수 있습니다. 출고가 완료되면 운송장 번호가 등록됩니다.',
+        '마이페이지 > 주문 내역에서 주문 진행 상태를 확인하실 수 있습니다. 배송 단계에 따라 확인 가능한 물류 정보가 다를 수 있으며, 대만 현지 배송이 시작되고 운송장 정보가 등록되면 해당 배송 정보를 통해 조회하실 수 있습니다.',
       [LanguageCode.ENGLISH]:
-        'You can check the tracking number and current delivery status under My Page > Order History. The tracking number is registered once your order has been dispatched.',
+        'You can check your order progress under My Page > Order History. The logistics information available may vary by shipping stage. Once local delivery in Taiwan begins and a tracking number is registered, you can use that information to track the shipment.',
       [LanguageCode.TAIWAN]:
-        '您可以在「我的帳戶 > 訂單記錄」中查看該筆訂單的物流單號與目前配送狀態。出貨完成後才會登錄物流單號。',
+        '您可以在「我的帳戶 > 訂單記錄」查看訂單目前的處理進度。不同配送階段可查詢的物流資訊可能不同；商品進入台灣境內配送並登錄物流單號後，即可依該物流資訊查詢配送狀態。',
     },
     title: {
       [LanguageCode.KOREAN]: '배송 조회',
@@ -166,11 +167,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     ],
     answer: {
       [LanguageCode.KOREAN]:
-        '해외 배송이 가능하며, 국가와 통관 상황에 따라 출고 후 5~14일이 소요됩니다. 배송 가능 국가와 국가별 배송비는 주문서 화면에서 확인하실 수 있습니다.',
+        '서울 모먼트는 현재 대만 고객을 대상으로 한국 상품의 구매 및 배송 서비스를 운영하고 있습니다. 한국에서 준비되는 상품은 한국 출고 후 국제 운송과 대만 수입통관을 거쳐 대만 내 지정 배송 방식으로 전달됩니다. 향후 기타 국가 배송이 제공되는 경우 배송 가능 지역과 비용은 결제 화면 또는 별도 안내를 기준으로 합니다.',
       [LanguageCode.ENGLISH]:
-        'We do ship internationally. Delivery takes 5-14 days after dispatch depending on the destination and customs processing. Available countries and rates are shown at checkout.',
+        'Seoul Moment currently provides purchasing and delivery services for Korean products primarily to customers in Taiwan. Items prepared in Korea are shipped internationally, cleared through Taiwan customs, and then delivered through the selected local delivery method. If delivery to additional countries becomes available, eligible destinations and fees will be shown at checkout or announced separately.',
       [LanguageCode.TAIWAN]:
-        '我們提供海外配送，依國家與通關情況，出貨後約需 5~14 天。可配送國家與各國運費請於結帳頁面確認。',
+        'Seoul Moment 目前主要為台灣顧客提供韓國商品的購買與配送服務。由韓國準備的商品將於韓國出貨後進行國際運輸及台灣進口通關，再依顧客選擇的台灣境內配送方式送達。未來若開放其他國家配送，適用地區與費用將以結帳頁面或另行公告為準。',
     },
     title: {
       [LanguageCode.KOREAN]: '해외 배송',
@@ -184,11 +185,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     hints: ['관세', '통관', '세금 내야', 'customs duty', '關稅', '報關'],
     answer: {
       [LanguageCode.KOREAN]:
-        '해외 배송 상품의 관세와 수입 부가세는 현지 규정에 따라 수취인께 부과될 수 있으며, 상품 금액에 포함되어 있지 않습니다. 부과 기준은 국가별로 다르므로 현지 세관 규정을 확인해 주세요.',
+        '한국에서 대만으로 배송되는 상품은 대만의 수입통관 절차를 거칠 수 있습니다. 통관 과정에서 수취인 본인 확인 또는 EZ WAY(易利委) 실명인증이 요구될 수 있으므로 관련 안내를 받으신 경우 기한 내 완료해 주세요. 관세·수입세 등 추가 비용 발생 여부는 상품 종류, 신고 금액 및 관계 법령에 따라 달라질 수 있습니다.',
       [LanguageCode.ENGLISH]:
-        'Customs duties and import taxes on international orders may be charged to the recipient under local regulations and are not included in the product price. Thresholds vary by country, so please check your local customs rules.',
+        'Products shipped from Korea to Taiwan may be subject to Taiwan import customs procedures. Recipient identity verification or EZ WAY real-name authentication may be required, so please complete any requested verification within the stated period. Whether customs duties or import taxes apply depends on the product type, declared value, and applicable regulations.',
       [LanguageCode.TAIWAN]:
-        '海外訂單的關稅與進口稅可能依當地法規向收件人徵收，並未包含在商品金額中。課稅標準因國家而異，請確認當地海關規定。',
+        '由韓國寄送至台灣的商品可能需要辦理台灣進口通關。通關過程中可能需要收件人進行身分確認或使用 EZ WAY 易利委完成實名認證；如收到相關通知，請於期限內完成。是否產生關稅、進口稅等額外費用，將依商品種類、申報金額及相關法規而定。',
     },
     title: {
       [LanguageCode.KOREAN]: '관세 · 통관',
@@ -202,11 +203,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     hints: ['배송 늦어', '아직 안 왔어', '지연', 'delayed', '還沒到', '延遲'],
     answer: {
       [LanguageCode.KOREAN]:
-        '주문 폭주, 기상 악화, 통관 지연 등으로 예정보다 늦어질 수 있습니다. 마이페이지 > 주문 내역에서 최신 배송 상태를 먼저 확인해 주시고, 안내된 기간을 넘겼다면 고객센터로 주문번호와 함께 문의해 주세요.',
+        '브랜드 출고 지연, 한국·대만의 공휴일, 국제 물류, 항공 운송, 기상 상황 또는 대만 통관 절차로 인해 배송이 예상보다 늦어질 수 있습니다. 먼저 마이페이지 > 주문 내역에서 주문 상태를 확인해 주시고, 안내된 예상 기간을 초과한 경우 주문번호와 함께 고객센터로 문의해 주세요.',
       [LanguageCode.ENGLISH]:
-        'Delays can happen due to high order volume, bad weather, or customs processing. Please check the latest status under My Page > Order History first, and if it has passed the stated period, contact our customer service with your order number.',
+        'Delivery may be delayed by brand dispatch schedules, public holidays in Korea or Taiwan, international logistics, air transportation, weather, or Taiwan customs procedures. Please first check your order status under My Page > Order History. If the stated estimated period has passed, contact customer service with your order number.',
       [LanguageCode.TAIWAN]:
-        '訂單量大、天候不佳或通關延誤都可能造成延遲。請先於「我的帳戶 > 訂單記錄」確認最新配送狀態，若已超過公告期間，請提供訂單編號聯繫客服。',
+        '配送可能因品牌出貨延遲、韓國或台灣國定假日、國際物流、航空運輸、天候或台灣通關程序而超出原預估時間。請先至「我的帳戶 > 訂單記錄」確認訂單狀態；若已超過所公告的預估期間，請提供訂單編號聯繫客服。',
     },
     title: {
       [LanguageCode.KOREAN]: '배송 지연',
@@ -220,11 +221,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     hints: ['환불 어떻게', '환불 신청', '돈 돌려', 'refund', '退款方式'],
     answer: {
       [LanguageCode.KOREAN]:
-        '마이페이지 > 주문 내역에서 해당 상품의 반품·환불 신청 버튼을 눌러 접수하실 수 있습니다. 상품이 회수되어 검수가 완료되면 환불이 진행되며, 결제하신 수단으로 되돌려 드립니다.',
+        '반품 또는 환불이 필요한 경우 마이페이지 > 주문 내역의 해당 주문에서 신청하거나 고객센터로 문의해 주세요. 신청 내용과 상품 상태를 확인한 후 회수 및 검수가 필요한 경우 절차를 안내해 드립니다. 환불이 승인되면 원칙적으로 기존 결제수단을 기준으로 처리하며, 결제수단에 따라 별도 환불 절차가 안내될 수 있습니다.',
       [LanguageCode.ENGLISH]:
-        'You can request a return/refund from My Page > Order History using the button on the relevant item. Once the item is collected and inspected, the refund is issued back to your original payment method.',
+        'If you need a return or refund, submit a request from the relevant order under My Page > Order History or contact customer service. We will review the request and item condition and provide collection or inspection instructions where necessary. Approved refunds are generally processed to the original payment method, although a separate procedure may apply depending on the payment method.',
       [LanguageCode.TAIWAN]:
-        '請於「我的帳戶 > 訂單記錄」點選該商品的退貨/退款申請按鈕提出申請。商品回收並檢驗完成後即進行退款，並退回您原本的付款方式。',
+        '如需辦理退貨或退款，請於「我的帳戶 > 訂單記錄」中的相關訂單提出申請，或聯繫客服。收到申請後，我們會確認申請內容與商品狀況；如需回收或檢驗商品，將另行說明相關流程。退款核准後原則上依原付款方式辦理，但部分付款方式可能需要另行提供退款資料。',
     },
     title: {
       [LanguageCode.KOREAN]: '환불 방법',
@@ -244,11 +245,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     ],
     answer: {
       [LanguageCode.KOREAN]:
-        '상품 검수가 끝나면 영업일 기준 3~5일 내에 환불 처리가 완료됩니다. 카드 결제의 경우 카드사 사정에 따라 취소 내역이 반영되는 데 며칠이 더 걸릴 수 있습니다.',
+        '환불 승인 후 실제 환불 완료 시점은 결제수단과 금융기관의 처리 일정에 따라 달라질 수 있습니다. 서울 모먼트에서 환불 처리를 완료한 이후에도 카드사, 결제대행사 또는 은행의 처리에 추가 시간이 소요될 수 있습니다.',
       [LanguageCode.ENGLISH]:
-        'Refunds are completed within 3-5 business days after the returned item passes inspection. For card payments, it may take a few extra days for your card issuer to reflect the cancellation.',
+        'The time required for a refund to appear after approval depends on the payment method and the processing schedule of the relevant financial institution. Even after Seoul Moment completes the refund request, additional processing time may be required by the card issuer, payment provider, or bank.',
       [LanguageCode.TAIWAN]:
-        '商品檢驗完成後，將於 3~5 個工作日內完成退款。信用卡付款者，依發卡機構作業時間，帳單上顯示取消紀錄可能需要額外幾天。',
+        '退款核准後，實際入帳時間會依付款方式及金融機構的處理時間而有所不同。Seoul Moment 完成退款作業後，信用卡公司、支付服務商或銀行仍可能需要額外作業時間。',
     },
     title: {
       [LanguageCode.KOREAN]: '환불 소요 기간',
@@ -268,11 +269,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     ],
     answer: {
       [LanguageCode.KOREAN]:
-        '상품 수령 후 7일 이내에 반품 신청이 가능합니다. 다만 착용·세탁·훼손된 상품, 택이나 부속품이 없는 상품, 개봉 시 가치가 훼손되는 상품은 반품이 어렵습니다.',
+        '반품은 대만 관련 소비자보호 법령 및 상품별 적용 조건에 따라 처리됩니다. 반품을 원하시는 경우 상품 수령 후 가능한 한 빠르게 신청해 주세요. 상품의 성질, 위생상 이유, 개봉 여부 또는 법령상 합리적인 예외 사유에 따라 해제권 적용이 제한될 수 있으며, 상세 조건은 해당 상품 안내와 반품 절차를 기준으로 합니다.',
       [LanguageCode.ENGLISH]:
-        'You may request a return within 7 days of receiving your order. Items that have been worn, washed or damaged, items missing tags or accessories, and items whose value is lost once opened cannot be returned.',
+        'Returns are handled in accordance with applicable Taiwan consumer protection laws and the conditions applicable to each product. If you wish to return an item, please submit your request as soon as possible after delivery. Depending on the nature of the product, hygiene considerations, whether it has been opened, or other legally permitted exceptions, the right to cancel may be restricted. Please refer to the product notice and return procedure for details.',
       [LanguageCode.TAIWAN]:
-        '收到商品後 7 天內可申請退貨。惟已穿著、洗滌或毀損的商品、缺少吊牌或配件的商品，以及開封後價值受損的商品恕無法退貨。',
+        '退貨將依台灣相關消費者保護法規及各商品適用條件辦理。如需退貨，請於收到商品後儘速提出申請。依商品性質、衛生考量、是否已拆封或其他法令所允許的合理例外情形，解除權可能受到限制；詳細條件請以商品頁面說明及退貨流程為準。',
     },
     title: {
       [LanguageCode.KOREAN]: '반품 조건',
@@ -286,11 +287,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     hints: ['반품비', '반품 배송비 누가', 'return shipping cost', '退貨運費'],
     answer: {
       [LanguageCode.KOREAN]:
-        '단순 변심으로 반품하시는 경우 왕복 배송비는 고객님 부담입니다. 상품 불량이나 오배송처럼 판매자 책임인 경우에는 배송비를 부담하지 않으셔도 됩니다.',
+        '상품 하자, 오배송 등 서울 모먼트의 책임으로 인정되는 반품의 경우 필요한 반품 배송비는 서울 모먼트가 부담합니다. 그 외 반품에 따른 배송비 부담 여부는 반품 사유, 상품 상태 및 관련 법령에 따라 안내됩니다. 고객센터의 반품 안내를 확인한 후 상품을 발송해 주세요.',
       [LanguageCode.ENGLISH]:
-        'For returns due to a change of mind, the round-trip shipping cost is covered by the customer. If the return is our fault — a defective or incorrect item — you do not pay any shipping cost.',
+        'If a return is confirmed to be due to Seoul Moment’s responsibility, such as a defective or incorrectly shipped item, Seoul Moment will cover the necessary return shipping cost. For other returns, responsibility for shipping costs will be determined according to the reason for return, item condition, and applicable law. Please follow the return instructions from customer service before sending the item.',
       [LanguageCode.TAIWAN]:
-        '若因個人因素退貨，來回運費由客戶負擔。若屬商品瑕疵或錯誤出貨等賣方責任，則無需負擔運費。',
+        '若經確認屬商品瑕疵、錯誤出貨等 Seoul Moment 應負責之情形，必要的退貨運費將由 Seoul Moment 負擔。其他退貨情形的運費負擔，將依退貨原因、商品狀況及相關法規判定。寄回商品前請先依客服提供的退貨說明辦理。',
     },
     title: {
       [LanguageCode.KOREAN]: '반품 배송비',
@@ -304,11 +305,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     hints: ['교환 어떻게', '교환 신청', 'exchange', '換貨方式'],
     answer: {
       [LanguageCode.KOREAN]:
-        '마이페이지 > 주문 내역에서 교환 신청을 접수해 주세요. 기존 상품이 회수되어 검수가 끝나면 교환 상품이 다시 출고됩니다. 교환하실 옵션의 재고가 없는 경우에는 환불로 안내드립니다.',
+        '교환이 필요한 경우 마이페이지 > 주문 내역에서 신청하거나 고객센터로 문의해 주세요. 한국에서 조달되는 상품은 재고와 국제배송 과정으로 인해 직접 교환보다 반품 및 재주문 방식으로 안내될 수 있습니다. 상품 불량 또는 오배송의 경우 확인 후 교환 또는 환불 절차를 안내해 드립니다.',
       [LanguageCode.ENGLISH]:
-        'Please submit an exchange request from My Page > Order History. Once the original item is collected and inspected, the replacement is dispatched. If the option you want is out of stock, we will process a refund instead.',
+        'If you need an exchange, submit a request under My Page > Order History or contact customer service. For products sourced from Korea, availability and international shipping may mean that a return and new order is used instead of a direct exchange. For defective or incorrectly shipped items, we will review the issue and provide exchange or refund instructions.',
       [LanguageCode.TAIWAN]:
-        '請於「我的帳戶 > 訂單記錄」提出換貨申請。原商品回收並檢驗完成後即會寄出換貨商品。若您欲更換的款式無庫存，將改以退款處理。',
+        '如需換貨，請於「我的帳戶 > 訂單記錄」提出申請，或聯繫客服。由韓國調貨的商品因庫存及國際配送流程，部分情況可能以「退貨後重新下單」取代直接換貨。若屬商品瑕疵或錯誤出貨，確認後將為您說明換貨或退款流程。',
     },
     title: {
       [LanguageCode.KOREAN]: '교환 방법',
@@ -346,11 +347,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     hints: ['주문 취소', '취소하고 싶어', 'cancel order', '取消訂單'],
     answer: {
       [LanguageCode.KOREAN]:
-        '출고 준비 전이라면 마이페이지 > 주문 내역에서 바로 취소하실 수 있습니다. 이미 출고된 뒤에는 취소가 불가능하므로, 상품을 받으신 후 반품으로 접수해 주세요.',
+        '주문 취소 가능 여부는 현재 주문 처리 단계에 따라 달라집니다. 결제 후 아직 브랜드 발주·상품 확보 또는 출고 절차가 시작되지 않은 주문은 취소가 가능할 수 있으므로 마이페이지에서 확인하거나 고객센터로 문의해 주세요. 이미 상품 확보·출고 또는 국제배송 절차가 진행된 경우 즉시 취소가 제한될 수 있으며, 수령 후 반품 절차가 적용될 수 있습니다.',
       [LanguageCode.ENGLISH]:
-        'If your order has not yet entered dispatch preparation, you can cancel it directly from My Page > Order History. Once it has shipped, cancellation is no longer possible — please request a return after receiving the item.',
+        'Whether an order can be cancelled depends on its current processing stage. If brand ordering, product procurement, or dispatch preparation has not yet started after payment, cancellation may still be possible; please check My Page or contact customer service. Once procurement, dispatch, or international shipping has begun, immediate cancellation may be restricted and the return procedure may apply after delivery.',
       [LanguageCode.TAIWAN]:
-        '若訂單尚未進入出貨準備，可直接於「我的帳戶 > 訂單記錄」取消。已出貨後無法取消，請於收到商品後改以退貨方式申請。',
+        '訂單是否可取消將依目前處理階段而定。付款後若尚未開始向品牌訂購、備貨或出貨程序，可能仍可取消，請於「我的帳戶」確認或聯繫客服。若商品已進入備貨、出貨或國際配送流程，可能無法立即取消，並可能需於收貨後依退貨流程辦理。',
     },
     title: {
       [LanguageCode.KOREAN]: '주문 취소',
@@ -370,11 +371,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     ],
     answer: {
       [LanguageCode.KOREAN]:
-        '출고 전이라면 고객센터로 주문번호와 함께 문의해 주시면 배송지 변경을 도와드립니다. 상품 옵션 변경은 주문 취소 후 재주문하시는 편이 가장 빠릅니다.',
+        '배송지 또는 상품 옵션 변경 가능 여부는 주문 처리 단계에 따라 달라집니다. 변경이 필요한 경우 가능한 한 빨리 주문번호와 함께 고객센터로 문의해 주세요. 브랜드 발주, 상품 확보 또는 출고가 이미 진행된 경우 변경이 제한될 수 있으며, 옵션 변경은 기존 주문 취소 후 재주문으로 안내될 수 있습니다.',
       [LanguageCode.ENGLISH]:
-        'Before dispatch, contact our customer service with your order number and we will help change the delivery address. To change a product option, cancelling and reordering is usually the fastest route.',
+        'Whether the delivery address or product option can be changed depends on the order processing stage. Please contact customer service with your order number as soon as possible. Changes may be restricted once brand ordering, procurement, or dispatch has begun, and an option change may require cancelling the existing order and placing a new one.',
       [LanguageCode.TAIWAN]:
-        '出貨前請提供訂單編號聯繫客服，我們會協助變更配送地址。若要變更商品款式，建議取消訂單後重新下單最為快速。',
+        '配送地址或商品款式是否可修改，將依訂單目前的處理階段而定。如需修改，請儘快提供訂單編號聯繫客服。若已開始向品牌訂購、備貨或出貨，可能無法修改；款式變更亦可能需要先取消原訂單後重新下單。',
     },
     title: {
       [LanguageCode.KOREAN]: '주문 정보 변경',
@@ -412,11 +413,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     ],
     answer: {
       [LanguageCode.KOREAN]:
-        '신용·체크카드와 간편결제를 지원하며, 사용 가능한 결제 수단은 주문서 결제 화면에 표시됩니다. 해외 발행 카드는 카드사 정책에 따라 승인이 제한될 수 있습니다.',
+        '사용 가능한 결제수단은 서울 모먼트 결제 화면에 표시되는 항목을 기준으로 합니다. 신용카드, 모바일 결제, 계좌이체 등은 실제 활성화된 결제수단에 한해 이용할 수 있으며 결제수단별 승인 조건과 제한은 해당 결제서비스 또는 금융기관 정책에 따를 수 있습니다.',
       [LanguageCode.ENGLISH]:
-        'We accept credit/debit cards and simple-pay services; the available options are listed on the checkout page. Cards issued overseas may be declined depending on the issuer’s policy.',
+        'Available payment methods are those displayed on the Seoul Moment checkout page. Credit cards, mobile payments, bank transfers, and other methods can be used only when they are currently enabled. Approval requirements and restrictions may vary according to the relevant payment service or financial institution.',
       [LanguageCode.TAIWAN]:
-        '我們支援信用卡/金融卡與行動支付，可用的付款方式會顯示於結帳頁面。海外發行的卡片可能因發卡機構政策而無法授權。',
+        '實際可使用的付款方式以 Seoul Moment 結帳頁面所顯示的項目為準。信用卡、行動支付、銀行轉帳等方式僅限目前已啟用者使用；各付款方式的授權條件與限制可能依支付服務商或金融機構規定而有所不同。',
     },
     title: {
       [LanguageCode.KOREAN]: '결제 수단',
@@ -436,11 +437,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     ],
     answer: {
       [LanguageCode.KOREAN]:
-        '카드 한도, 해외 결제 차단 설정, 카드 정보 입력 오류를 먼저 확인해 주세요. 그래도 결제가 되지 않으면 다른 결제 수단을 이용해 보시고, 계속 실패하면 고객센터로 문의해 주세요.',
+        '결제가 정상적으로 완료되지 않는 경우 입력한 결제정보, 카드 한도, 금융기관의 거래 제한 또는 해당 결제서비스 상태를 확인해 주세요. 다른 결제수단으로 다시 시도할 수도 있습니다. 동일한 문제가 계속되면 오류 화면 또는 관련 정보를 함께 고객센터로 전달해 주세요.',
       [LanguageCode.ENGLISH]:
-        'Please first check your card limit, any block on overseas payments, and whether the card details were entered correctly. If it still fails, try another payment method and contact our customer service if the problem persists.',
+        'If payment cannot be completed, please check the payment information entered, card limit, transaction restrictions imposed by your financial institution, and the status of the payment service. You may also try another available payment method. If the issue continues, contact customer service and include the error screen or relevant details.',
       [LanguageCode.TAIWAN]:
-        '請先確認信用卡額度、是否設定禁止海外交易，以及卡片資訊是否輸入正確。若仍無法付款，請嘗試其他付款方式；持續失敗請聯繫客服。',
+        '若付款未能正常完成，請先確認輸入的付款資訊、信用卡額度、金融機構的交易限制，以及該支付服務目前的狀態。您也可以改用其他可用的付款方式再次嘗試。若問題持續發生，請將錯誤畫面或相關資訊提供給客服。',
     },
     title: {
       [LanguageCode.KOREAN]: '결제 실패',
@@ -449,6 +450,7 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     },
   },
   {
+    // TODO(Seoul Moment): 실제 기능/정책 활성화 시 answer 조건 최종 확정
     code: AiConsultFaqCode.INSTALLMENT,
     intent: '할부 결제와 무이자 할부 가능 여부',
     hints: ['할부', '무이자', 'installment', '分期', '免利息'],
@@ -514,11 +516,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     hints: ['불량', '하자', '찢어져', '다른 상품이 왔어', 'defective', '瑕疵'],
     answer: {
       [LanguageCode.KOREAN]:
-        '불편을 드려 죄송합니다. 마이페이지 > 주문 내역에서 반품·교환을 접수하시고 하자 부위 사진을 함께 첨부해 주세요. 판매자 책임으로 확인되면 배송비 부담 없이 교환 또는 환불로 처리해 드립니다.',
+        '불편을 드려 죄송합니다. 상품 불량, 파손 또는 오배송이 확인된 경우 상품 수령 후 가능한 한 빠르게 주문번호와 문제를 확인할 수 있는 사진 또는 영상을 준비하여 고객센터로 문의해 주세요. 확인 결과 서울 모먼트의 책임으로 인정되는 경우 필요한 배송비는 서울 모먼트가 부담하고 교환, 재배송 또는 환불 절차를 안내해 드립니다.',
       [LanguageCode.ENGLISH]:
-        'We are sorry for the trouble. Please submit a return/exchange request from My Page > Order History and attach photos of the issue. Once confirmed as our fault, we will exchange or refund the item at no shipping cost to you.',
+        'We are sorry for the inconvenience. If you receive a defective, damaged, or incorrect item, please contact customer service as soon as possible after delivery with your order number and photos or video showing the issue. If the issue is confirmed to be Seoul Moment’s responsibility, we will cover the necessary shipping costs and provide instructions for an exchange, reshipment, or refund.',
       [LanguageCode.TAIWAN]:
-        '造成您的不便，我們深感抱歉。請於「我的帳戶 > 訂單記錄」提出退貨/換貨申請，並附上瑕疵部位照片。經確認屬賣方責任者，將不收取運費並為您換貨或退款。',
+        '造成您的不便，我們深感抱歉。如收到瑕疵、破損或錯誤商品，請於收貨後儘速準備訂單編號及可確認問題的照片或影片並聯繫客服。經確認屬 Seoul Moment 應負責之情形，必要的配送費用將由 Seoul Moment 負擔，並為您說明換貨、重新寄送或退款流程。',
     },
     title: {
       [LanguageCode.KOREAN]: '상품 하자 신고',
@@ -545,6 +547,7 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     },
   },
   {
+    // TODO(Seoul Moment): 실제 기능/정책 활성화 시 answer 조건 최종 확정
     code: AiConsultFaqCode.RESTOCK_NOTICE,
     intent: '재입고 알림 신청 방법',
     hints: [
@@ -587,6 +590,7 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     },
   },
   {
+    // TODO(Seoul Moment): 실제 기능/정책 활성화 시 answer 조건 최종 확정
     code: AiConsultFaqCode.MEMBERSHIP_GRADE,
     intent: '회원 등급 기준과 등급별 혜택',
     hints: ['회원 등급', '등급 올리', 'VIP', 'membership tier', '會員等級'],
@@ -605,6 +609,7 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     },
   },
   {
+    // TODO(Seoul Moment): 실제 기능/정책 활성화 시 answer 조건 최종 확정
     code: AiConsultFaqCode.POINT_REWARD,
     intent: '적립금 적립 기준과 사용 방법',
     hints: ['적립금', '포인트', '적립 언제', 'reward points', '購物金'],
@@ -664,11 +669,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     hints: ['고객센터', '상담원', '전화', '문의', 'contact', '客服'],
     answer: {
       [LanguageCode.KOREAN]:
-        '고객센터는 평일 영업시간에 운영되며, 사이트 하단의 문의하기 또는 고객센터 이메일로 접수해 주시면 순차적으로 답변드립니다. 주문 관련 문의는 주문번호를 함께 남겨 주시면 더 빠르게 확인할 수 있습니다.',
+        '서울 모먼트 고객센터 운영시간은 평일(월요일~금요일) 10:00~18:00이며, 공휴일은 운영하지 않습니다. 사이트의 문의 채널 또는 서울 모먼트 고객센터를 통해 접수해 주시면 순차적으로 확인해 드립니다. 주문 관련 문의 시 주문번호를 함께 남겨주시면 보다 빠르게 확인할 수 있습니다.',
       [LanguageCode.ENGLISH]:
-        'Our customer service operates during business hours on weekdays. Please use the Contact Us link at the bottom of the site or email us, and we will reply in order of receipt. Including your order number helps us respond faster.',
+        'Seoul Moment customer service is available Monday through Friday from 10:00 to 18:00 and is closed on public holidays. Please contact us through the inquiry channel on our website or Seoul Moment customer service. Requests are reviewed in the order received, and including your order number helps us check order-related inquiries more quickly.',
       [LanguageCode.TAIWAN]:
-        '客服於平日營業時間服務。請透過網站下方的「聯絡我們」或客服信箱與我們聯繫，我們會依序回覆。訂單相關問題請一併提供訂單編號，以便更快確認。',
+        'Seoul Moment 客服時間為週一至週五 10:00～18:00，國定假日暫停服務。您可透過網站的聯絡管道或 Seoul Moment 客服提出詢問，我們將依序處理。訂單相關問題若能一併提供訂單編號，可協助我們更快確認。',
     },
     title: {
       [LanguageCode.KOREAN]: '고객센터 문의',
@@ -690,16 +695,16 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     ],
     answer: {
       [LanguageCode.KOREAN]:
-        '주문 관련 영수증과 증빙 서류는 마이페이지 > 주문 내역에서 확인하실 수 있습니다. 그 밖에 세금 환급이나 별도 증빙이 필요하신 경우 주문번호와 함께 고객센터로 문의해 주세요.',
+        '주문 관련 영수증 또는 증빙 처리가 필요한 경우 주문번호와 필요한 정보를 준비하여 고객센터로 문의해 주세요. 회사 명의로 영수증 처리가 필요한 경우 회사명과 통일번호(統一編號) 등 필요한 정보를 정확하게 제공해 주세요. 영수증 및 증빙 발행 방식은 서울 모먼트의 실제 처리 절차와 관련 규정에 따라 안내됩니다.',
       [LanguageCode.ENGLISH]:
-        'Receipts and supporting documents for your order are available under My Page > Order History. For tax refunds or any other documentation, please contact our customer service with your order number.',
+        'If you need a receipt or supporting document for an order, please contact customer service with your order number and the required information. If the receipt needs to be issued for a company, please provide the correct company name, Unified Business Number (統一編號), and any other required details. Receipt and supporting-document processing will follow Seoul Moment’s actual procedures and applicable regulations.',
       [LanguageCode.TAIWAN]:
-        '訂單相關收據與憑證可於「我的帳戶 > 訂單記錄」查看。若需退稅或其他證明文件，請提供訂單編號聯繫客服。',
+        '如需訂單發票、收據或其他相關憑證，請準備訂單編號及所需資料後聯繫客服。如需公司報帳使用，請正確提供公司抬頭、統一編號等開立資訊。實際開立方式與可提供的憑證，將依 Seoul Moment 的實際作業流程及相關規定辦理。',
     },
     title: {
-      [LanguageCode.KOREAN]: '영수증 · 세금 환급',
-      [LanguageCode.ENGLISH]: 'Receipts & tax refund',
-      [LanguageCode.TAIWAN]: '收據與退稅',
+      [LanguageCode.KOREAN]: '영수증 · 증빙 처리',
+      [LanguageCode.ENGLISH]: 'Receipts & documents',
+      [LanguageCode.TAIWAN]: '發票與收據',
     },
   },
   {
@@ -720,11 +725,11 @@ export const AI_CONSULT_FAQ: readonly AiConsultFaqItem[] = [
     ],
     answer: {
       [LanguageCode.KOREAN]:
-        '서울 모먼트는 한국의 패션·뷰티 브랜드를 한곳에서 만나볼 수 있는 온라인 편집숍이에요. 입점 브랜드와 취급 카테고리는 "브랜드 목록", "카테고리 알려줘"라고 물어보시면 바로 보여드릴게요.',
+        '서울 모먼트는 한국의 패션·뷰티·라이프스타일 브랜드와 대만 소비자를 연결하는 큐레이션 커머스 플랫폼입니다. 한국의 다양한 브랜드와 상품을 소개하고, 대만에서 보다 편리하게 상품을 확인하고 구매할 수 있도록 서비스를 제공합니다. 입점 브랜드나 상품 카테고리가 궁금하시면 "브랜드 목록" 또는 "카테고리 알려줘"라고 말씀해 주세요.',
       [LanguageCode.ENGLISH]:
-        'Seoul Moment is an online concept store where you can discover Korean fashion and beauty brands in one place. Just ask for the "brand list" or "categories" and I will show you what we carry.',
+        'Seoul Moment is a curated commerce platform connecting Korean fashion, beauty, and lifestyle brands with consumers in Taiwan. We introduce a variety of Korean brands and products and provide services that make them easier to discover and purchase in Taiwan. Ask for the "brand list" or "categories" to explore what we carry.',
       [LanguageCode.TAIWAN]:
-        'Seoul Moment 是一個能一次認識韓國時尚與美妝品牌的線上選物店。您可以直接詢問「品牌列表」或「有哪些類別」，我會立即為您顯示。',
+        'Seoul Moment 是連結韓國時尚、美妝與生活風格品牌和台灣消費者的選品電商平台。我們介紹來自韓國的多元品牌與商品，並提供讓台灣消費者更方便認識及購買韓國商品的服務。想了解進駐品牌或商品類別，可以直接詢問「品牌列表」或「有哪些類別」。',
     },
     title: {
       [LanguageCode.KOREAN]: '서울 모먼트 소개',
