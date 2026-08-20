@@ -6,6 +6,10 @@ import { ChatMessageEntity } from '@app/repository/entity/chat-message.entity';
 import { PlanScheduleEntity } from '@app/repository/entity/plan-schedule.entity';
 import { PlanUserCategoryEntity } from '@app/repository/entity/plan-user-category.entity';
 import { ChatMessageType } from '@app/repository/enum/chat-message.enum';
+import {
+  PlanActivityTargetType,
+  PlanActivityType,
+} from '@app/repository/enum/plan-activity.enum';
 import { PlanScheduleStatus } from '@app/repository/enum/plan-schedule.enum';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
@@ -29,6 +33,7 @@ import {
   PostPlanScheduleRequest,
   PostPlanScheduleResponse,
 } from './plan-schedule.dto';
+import { PlanActivityService } from '../activity/plan-activity.service';
 import { PlanNotificationMessageDto } from '../notification/plan-notification.dto';
 import { PlanNotificationService } from '../notification/plan-notification.service';
 
@@ -41,6 +46,7 @@ export class PlanScheduleService {
     private readonly planUserRoomMemberRepositoryService: PlanUserRoomMemberRepositoryService,
     private readonly planNotificationService: PlanNotificationService,
     private readonly chatMessageRepositoryService: ChatRepositoryService,
+    private readonly planActivityService: PlanActivityService,
   ) {}
 
   @Transactional()
@@ -96,6 +102,16 @@ export class PlanScheduleService {
         ),
       );
     }
+
+    await this.planActivityService.record({
+      type: PlanActivityType.SCHEDULE_CREATED,
+      planUserId: id,
+      planUserRoomId: postPlanScheduleRequest.roomId,
+      targetType: PlanActivityTargetType.SCHEDULE,
+      targetId: planSchedule.id,
+      targetTitle: planSchedule.title,
+      amount: planSchedule.amount,
+    });
 
     return PostPlanScheduleResponse.from(planSchedule);
   }
@@ -253,6 +269,16 @@ export class PlanScheduleService {
     };
 
     await this.planScheduleRepositoryService.update(updateDto);
+
+    await this.planActivityService.record({
+      type: PlanActivityType.SCHEDULE_DELETED,
+      planUserId,
+      planUserRoomId: planSchedule.planUserRoomId,
+      targetType: PlanActivityTargetType.SCHEDULE,
+      targetId: planSchedule.id,
+      targetTitle: planSchedule.title,
+      amount: planSchedule.amount,
+    });
   }
 
   async getPlanScheduleDetail(
@@ -336,6 +362,18 @@ export class PlanScheduleService {
 
     const updatedPlanSchedule =
       await this.planScheduleRepositoryService.update(updateDto);
+
+    if (status === PlanScheduleStatus.COMPLETED) {
+      await this.planActivityService.record({
+        type: PlanActivityType.SCHEDULE_COMPLETED,
+        planUserId,
+        planUserRoomId: planSchedule.planUserRoomId,
+        targetType: PlanActivityTargetType.SCHEDULE,
+        targetId: planSchedule.id,
+        targetTitle: planSchedule.title,
+        amount: planSchedule.amount,
+      });
+    }
 
     return PatchPlanScheduleStatusResponse.from(updatedPlanSchedule);
   }

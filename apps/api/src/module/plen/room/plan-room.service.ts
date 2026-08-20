@@ -5,6 +5,10 @@ import { ChatRoomMemberEntity } from '@app/repository/entity/chat-room-member.en
 import { ChatRoomEntity } from '@app/repository/entity/chat-room.entity';
 import { PlanUserRoomMemberEntity } from '@app/repository/entity/plan-user-room-member.entity';
 import { PlanUserRoomEntity } from '@app/repository/entity/plan-user-room.entity';
+import {
+  PlanActivityTargetType,
+  PlanActivityType,
+} from '@app/repository/enum/plan-activity.enum';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
 import { PlanCategoryRepositoryService } from '@app/repository/service/plan-category.repository.service';
@@ -21,6 +25,7 @@ import {
   GetPlanRoomMemberResponse,
   GetPlanRoomResponse,
 } from './plan-room.dto';
+import { PlanActivityService } from '../activity/plan-activity.service';
 import { GetPlanUserTotalAmountResponse } from '../schedule/plan-schedule.dto';
 import {
   GetPlanUserAmountCategory,
@@ -36,6 +41,7 @@ export class PlanRoomService {
     private readonly planScheduleRepositoryService: PlanScheduleRepositoryService,
     private readonly planCategoryRepositoryService: PlanCategoryRepositoryService,
     private readonly chatMessageRepositoryService: ChatRepositoryService,
+    private readonly planActivityService: PlanActivityService,
   ) {}
 
   /**
@@ -176,6 +182,24 @@ export class PlanRoomService {
         permission: PlanUserRoomMemberPermission.WRITE,
       }),
     );
+
+    // 이 지점까지 왔다는 건 방이 이제 막 공유되기 시작했다는 뜻이다
+    // (이미 멤버였다면 위에서 반환했다).
+    await this.planActivityService.record({
+      type: PlanActivityType.ROOM_CREATED,
+      planUserId: ownerUserEntity.id,
+      planUserRoomId: planUserRoom.id,
+      targetType: PlanActivityTargetType.ROOM,
+      targetId: planUserRoom.id,
+    });
+
+    await this.planActivityService.record({
+      type: PlanActivityType.MEMBER_JOINED,
+      planUserId: userId,
+      planUserRoomId: planUserRoom.id,
+      targetType: PlanActivityTargetType.ROOM,
+      targetId: planUserRoom.id,
+    });
 
     await this.planScheduleRepositoryService.updatePlanUserRoomId(
       ownerUserEntity.id,

@@ -43,6 +43,7 @@ import { OptionValueEntity } from './entity/option-value.entity';
 import { OptionEntity } from './entity/option.entity';
 import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
+import { PlanActivityEntity } from './entity/plan-activity.entity';
 import { PlanCategoryEntity } from './entity/plan-category.entity';
 import { PlanScheduleEntity } from './entity/plan-schedule.entity';
 import { PlanUserCategoryEntity } from './entity/plan-user-category.entity';
@@ -84,6 +85,7 @@ import { LanguageRepositoryService } from './service/language.repository.service
 import { NewsRepositoryService } from './service/news.repository.service';
 import { OptionRepositoryService } from './service/option.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
+import { PlanActivityRepositoryService } from './service/plan-activity.repository.service';
 import { PlanCategoryRepositoryService } from './service/plan-category.repository.service';
 import { PlanScheduleRepositoryService } from './service/plan-schedule.repository.service';
 import { PlanUserRoomMemberRepositoryService } from './service/plan-user--room-member.repository.service';
@@ -137,6 +139,7 @@ import { UserRepositoryService } from './service/user.repository.service';
       ExternalLinkEntity,
       AdminRoleEntity,
       PlanUserEntity,
+      PlanActivityEntity,
       PlanScheduleEntity,
       PlanCategoryEntity,
       PlanUserCategoryEntity,
@@ -187,6 +190,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     AdminRoleRepositoryService,
     AdminRepositoryService,
     PlanUserRepositoryService,
+    PlanActivityRepositoryService,
     PlanScheduleRepositoryService,
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
@@ -215,6 +219,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     AdminRepositoryService,
     AdminRoleRepositoryService,
     PlanUserRepositoryService,
+    PlanActivityRepositoryService,
     PlanScheduleRepositoryService,
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
