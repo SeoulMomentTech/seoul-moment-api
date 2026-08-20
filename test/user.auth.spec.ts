@@ -22,6 +22,7 @@ const REFRESH_TOKEN_TYPE = 'REFRESH_TOKEN';
 const ONE_TIME_TOKEN_TYPE = 'ONE_TIME_TIME';
 const SNS_LINK_TOKEN_TYPE = 'SNS_LINK_TOKEN';
 const SNS_SIGNUP_TOKEN_TYPE = 'SNS_SIGNUP_TOKEN';
+const SNS_EMAIL_TOKEN_TYPE = 'SNS_EMAIL_TOKEN';
 
 function buildSignUpBody(overrides?: Record<string, unknown>) {
   return {
@@ -2201,26 +2202,61 @@ describe('UserAuthController (E2E)', () => {
         );
       });
 
-      it('LINE이 이메일을 내려주지 않으면 401을 반환하고 가입시키지 않는다', async () => {
+      it('LINE이 이메일을 주지 않으면 needsEmail과 emailToken을 반환한다', async () => {
         // Given - 사용자가 동의 화면에서 이메일 제공을 거부한 경우
         const providerUserId = buildLineUserId();
-        mockLineVerifyResponse({ sub: providerUserId });
+        mockLineVerifyResponse({ sub: providerUserId, name: 'Patrick' });
 
         // When
         const res = await request(app.getHttpServer())
           .post(`${BASE_URL}/line/login`)
           .send({ idToken: 'real-looking-id-token' });
 
-        // Then
-        expect(res.status).toBe(401);
-        expect(res.body.message).toBe(
-          'LINE 계정의 이메일 제공에 동의해야 로그인할 수 있습니다.',
-        );
+        // Then - 막지 않고 이메일 입력 단계로 보낸다
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsEmail).toBe(true);
+        expect(res.body.data.needsSignup).toBeUndefined();
+        expect(res.body.data.token).toBeUndefined();
+        const payload = jwtService.decode(res.body.data.emailToken);
+        expect(payload.jwtType).toBe(SNS_EMAIL_TOKEN_TYPE);
+        expect(payload.provider).toBe('LINE');
+        expect(payload.providerUserId).toBe(providerUserId);
+        // 이 시점에는 아직 아무 계정도 만들어지지 않는다
         const sns = await dataSource.query(
           `SELECT user_id FROM user_sns WHERE provider_user_id = $1`,
           [providerUserId],
         );
         expect(sns).toHaveLength(0);
+      });
+
+      it('이미 연결된 계정이면 이메일이 없어도 바로 로그인된다', async () => {
+        // Given - 이메일로 연결까지 끝낸 계정
+        const user = await signUpUser();
+        const providerUserId = buildLineUserId();
+        mockVerifyIdToken({
+          providerUserId,
+          email: user.email,
+          emailVerified: true,
+        });
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: loginRes.body.data.linkToken })
+          .expect(200);
+        jest.restoreAllMocks();
+
+        // When - 이번엔 이메일 없이 로그인
+        mockLineVerifyResponse({ sub: providerUserId });
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'real-looking-id-token' });
+
+        // Then - sub 로 이미 식별되므로 이메일을 다시 받을 이유가 없다
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsEmail).toBeUndefined();
+        expect(typeof res.body.data.token).toBe('string');
       });
 
       it('LINE verify 응답에 sub가 없으면 401을 반환한다', async () => {
@@ -2235,6 +2271,252 @@ describe('UserAuthController (E2E)', () => {
         // Then
         expect(res.status).toBe(401);
         expect(res.body.message).toBe('유효하지 않은 LINE idToken입니다.');
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // 이메일 직접 입력 (LINE 이 이메일을 주지 않은 경우)
+    // -------------------------------------------------------------------
+    describe('POST /user/auth/line/email/code | verify', () => {
+      /** 이메일 미동의 상태로 로그인해 emailToken 을 받아온다. */
+      async function loginWithoutEmail() {
+        const providerUserId = buildLineUserId();
+        mockLineVerifyResponse({ sub: providerUserId });
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'real-looking-id-token' });
+        expect(res.status).toBe(200);
+        return {
+          providerUserId,
+          emailToken: res.body.data.emailToken as string,
+        };
+      }
+
+      it('emailToken으로 인증 코드를 발송하고 6자리 코드를 저장한다', async () => {
+        // Given
+        const { emailToken } = await loginWithoutEmail();
+        const email = faker.internet.email().toLowerCase();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/code`)
+          .send({ emailToken, email });
+
+        // Then
+        expect(res.status).toBe(200);
+        const cached = await cacheService.find(email);
+        expect(cached).toMatch(/^\d{6}$/);
+      });
+
+      it('이미 가입된 이메일이어도 409가 아니라 코드를 발송한다', async () => {
+        // Given - SNS 흐름에서 기존 계정 연결은 정상 경로다
+        const existing = await signUpUser();
+        const { emailToken } = await loginWithoutEmail();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/code`)
+          .send({ emailToken, email: existing.email });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(await cacheService.find(existing.email)).toMatch(/^\d{6}$/);
+      });
+
+      it('emailToken이 없거나 변조되면 401을 반환한다', async () => {
+        // Given - jwtType 이 다른 토큰
+        const wrongToken = tokenSigner.sign(
+          {
+            providerUserId: buildLineUserId(),
+            provider: 'LINE',
+            jwtType: SNS_SIGNUP_TOKEN_TYPE,
+          },
+          { expiresIn: '10m' },
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/code`)
+          .send({ emailToken: wrongToken, email: faker.internet.email() });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('유효하지 않은 email token입니다.');
+      });
+
+      it('provider가 GOOGLE인 emailToken을 쓰면 401을 반환한다', async () => {
+        // Given
+        const crossProviderToken = tokenSigner.sign(
+          {
+            providerUserId: buildLineUserId(),
+            provider: 'GOOGLE',
+            jwtType: SNS_EMAIL_TOKEN_TYPE,
+          },
+          { expiresIn: '10m' },
+        );
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/code`)
+          .send({
+            emailToken: crossProviderToken,
+            email: faker.internet.email(),
+          });
+
+        // Then
+        expect(res.status).toBe(401);
+      });
+
+      it('코드를 검증하면 미가입 이메일은 signupToken을 반환한다', async () => {
+        // Given
+        const { providerUserId, emailToken } = await loginWithoutEmail();
+        const email = faker.internet.email().toLowerCase();
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/code`)
+          .send({ emailToken, email })
+          .expect(200);
+        const code = await cacheService.find(email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/verify`)
+          .send({ emailToken, email, code });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsSignup).toBe(true);
+        const payload = jwtService.decode(res.body.data.signupToken);
+        expect(payload.jwtType).toBe(SNS_SIGNUP_TOKEN_TYPE);
+        expect(payload.providerUserId).toBe(providerUserId);
+        expect(payload.email).toBe(email);
+        // 사용자가 직접 입력한 값이므로 provider 가 준 이메일 자리에는 넣지 않는다
+        expect(payload.providerEmail).toBeNull();
+      });
+
+      it('코드를 검증하면 기존 가입 이메일은 linkToken을 반환한다', async () => {
+        // Given
+        const existing = await signUpUser();
+        const { emailToken } = await loginWithoutEmail();
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/code`)
+          .send({ emailToken, email: existing.email })
+          .expect(200);
+        const code = await cacheService.find(existing.email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/verify`)
+          .send({ emailToken, email: existing.email, code });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.needsLinkConfirm).toBe(true);
+        const payload = jwtService.decode(res.body.data.linkToken);
+        expect(payload.jwtType).toBe(SNS_LINK_TOKEN_TYPE);
+        expect(payload.userId).toBe(existing.id);
+      });
+
+      it('발급받은 linkToken으로 연결하면 로그인까지 완료된다', async () => {
+        // Given
+        const existing = await signUpUser();
+        const { providerUserId, emailToken } = await loginWithoutEmail();
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/code`)
+          .send({ emailToken, email: existing.email })
+          .expect(200);
+        const code = await cacheService.find(existing.email);
+        const verifyRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/verify`)
+          .send({ emailToken, email: existing.email, code });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/link`)
+          .send({ linkToken: verifyRes.body.data.linkToken });
+
+        // Then - provider 가 이메일을 주지 않았으므로 provider_email 은 비어 있다
+        expect(res.status).toBe(200);
+        expect(typeof res.body.data.token).toBe('string');
+        const sns = await dataSource.query(
+          `SELECT provider, provider_user_id, provider_email
+           FROM user_sns WHERE user_id = $1`,
+          [existing.id],
+        );
+        expect(sns).toHaveLength(1);
+        expect(sns[0].provider).toBe('LINE');
+        expect(sns[0].provider_user_id).toBe(providerUserId);
+        expect(sns[0].provider_email).toBeNull();
+      });
+
+      it('인증 코드가 틀리면 401을 반환하고 토큰을 주지 않는다', async () => {
+        // Given - 코드 검증 없이 토큰이 나가면 남의 이메일로 계정을 가로챌 수 있다
+        const existing = await signUpUser();
+        const { emailToken } = await loginWithoutEmail();
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/code`)
+          .send({ emailToken, email: existing.email })
+          .expect(200);
+        const realCode = await cacheService.find(existing.email);
+        const wrongCode = String(
+          (parseInt(realCode, 10) + 1) % 1000000,
+        ).padStart(6, '0');
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/verify`)
+          .send({ emailToken, email: existing.email, code: wrongCode });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.data).toBeUndefined();
+      });
+
+      it('코드를 발송하지 않고 검증하면 401을 반환한다', async () => {
+        // Given
+        const { emailToken } = await loginWithoutEmail();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/verify`)
+          .send({
+            emailToken,
+            email: faker.internet.email().toLowerCase(),
+            code: '123456',
+          });
+
+        // Then
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('인증 코드가 만료되었습니다.');
+      });
+
+      it('이메일 형식이 아니면 400을 반환한다', async () => {
+        // Given
+        const { emailToken } = await loginWithoutEmail();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/code`)
+          .send({ emailToken, email: 'not-an-email' });
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+
+      it('code가 6자리 숫자가 아니면 400을 반환한다', async () => {
+        // Given
+        const { emailToken } = await loginWithoutEmail();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/verify`)
+          .send({
+            emailToken,
+            email: faker.internet.email().toLowerCase(),
+            code: '12a4',
+          });
+
+        // Then
+        expect(res.status).toBe(400);
       });
     });
 

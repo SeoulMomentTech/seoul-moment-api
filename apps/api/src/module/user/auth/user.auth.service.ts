@@ -24,8 +24,12 @@ import { Transactional } from 'typeorm-transactional';
 
 import {
   PostGoogleSignupRequest,
+  PostLineEmailCodeRequest,
+  PostLineEmailVerifyRequest,
   PostLineSignupRequest,
   PostPasswordPhoneVerifyResponse,
+  PostSnsEmailCodeRequest,
+  PostSnsEmailVerifyRequest,
   PostSnsLoginResponse,
   PostSnsSignupRequest,
   PostUserLoginRequest,
@@ -38,7 +42,8 @@ import { AuthService } from '../../auth/auth.service';
 /** SNS idToken 검증 결과. name/picture 는 provider가 주지 않으면 null 이다. */
 interface SnsLoginProfile {
   providerUserId: string;
-  email: string;
+  /** provider 가 이메일을 주지 않으면 null. 서비스가 직접 입력받는다. */
+  email: string | null;
   emailVerified: boolean;
   name?: string | null;
   picture?: string | null;
@@ -125,18 +130,52 @@ export class UserAuthService {
     return this.completeSnsSignup(UserSnsProvider.LINE, signupRequest);
   }
 
+  async lineEmailCode(request: PostLineEmailCodeRequest): Promise<void> {
+    return this.snsEmailCode(UserSnsProvider.LINE, request);
+  }
+
+  async lineEmailVerify(
+    request: PostLineEmailVerifyRequest,
+  ): Promise<PostSnsLoginResponse> {
+    return this.snsEmailVerify(UserSnsProvider.LINE, request);
+  }
+
   /**
    * 미가입 SNS 계정에 내려줄 응답을 만든다.
    * name 은 닉네임 입력칸 기본값으로 쓰라고 화면에 내려주고,
    * picture 는 토큰에만 실어 둔다. 가입을 마치는 시점에 서버가 직접
    * 내려받아 S3로 옮기므로 클라이언트가 다룰 일이 없다.
    */
+  /**
+   * provider 가 이메일을 주지 않은 경우의 응답을 만든다.
+   * 이 시점에는 어떤 계정에 이어질지 알 수 없으므로 가입/연결 분기를
+   * 확정하지 않고, sub 만 담은 단기 토큰을 내려 이메일 인증을 먼저 받는다.
+   */
+  private async buildSnsEmailResponse(
+    provider: UserSnsProvider,
+    { providerUserId, name = null, picture = null }: SnsLoginProfile,
+  ): Promise<PostSnsLoginResponse> {
+    const emailToken = await this.issueSnsToken(
+      { providerUserId, name, picture },
+      JwtType.SNS_EMAIL_TOKEN,
+      provider,
+    );
+
+    return {
+      needsLinkConfirm: false,
+      needsEmail: true,
+      emailToken,
+      ...(name ? { name } : {}),
+    };
+  }
+
   private async buildSnsSignupResponse(
     provider: UserSnsProvider,
     { providerUserId, email, name = null, picture = null }: SnsLoginProfile,
+    providerEmail: string | null,
   ): Promise<PostSnsLoginResponse> {
     const signupToken = await this.issueSnsToken(
-      { providerUserId, providerEmail: email, email, name, picture },
+      { providerUserId, providerEmail, email, name, picture },
       JwtType.SNS_SIGNUP_TOKEN,
       provider,
     );
@@ -160,7 +199,7 @@ export class UserAuthService {
   ): Promise<PostSnsLoginResponse> {
     const { providerUserId, email, emailVerified } = profile;
 
-    if (!emailVerified) {
+    if (email && !emailVerified) {
       throw new ServiceError(
         'SNS 이메일이 인증되지 않았습니다.',
         ServiceErrorCode.UNAUTHORIZED,
@@ -178,13 +217,104 @@ export class UserAuthService {
       return { needsLinkConfirm: false, ...tokens };
     }
 
+    // provider 가 이메일을 주지 않았다면(사용자가 동의 화면에서 거부)
+    // 여기서 막지 않고, 서비스가 직접 이메일을 입력받아 인증한다.
+    if (!email) {
+      return this.buildSnsEmailResponse(provider, profile);
+    }
+
     if (!(await this.userRepositoryService.existUserByEmail(email))) {
-      return this.buildSnsSignupResponse(provider, profile);
+      return this.buildSnsSignupResponse(provider, profile, email);
     }
 
     const user = await this.userRepositoryService.getUserByEmail(email);
     const linkToken = await this.issueSnsToken(
       { userId: user.id, providerUserId, providerEmail: email, email },
+      JwtType.SNS_LINK_TOKEN,
+      provider,
+    );
+
+    return { needsLinkConfirm: true, email, linkToken };
+  }
+
+  /**
+   * emailToken 을 검증해 SNS 계정 식별자를 꺼낸다.
+   * provider 가 다르거나 타입이 맞지 않으면 다른 흐름의 토큰이므로 거부한다.
+   */
+  private async verifySnsEmailToken(
+    provider: UserSnsProvider,
+    emailToken: string,
+  ): Promise<Record<string, any>> {
+    const payload = await this.commonAuthService.verifyJwt(emailToken);
+
+    if (
+      payload.jwtType !== JwtType.SNS_EMAIL_TOKEN ||
+      payload.provider !== provider
+    ) {
+      throw new ServiceError(
+        '유효하지 않은 email token입니다.',
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
+
+    return payload;
+  }
+
+  /**
+   * 사용자가 직접 입력한 이메일로 인증 코드를 보낸다.
+   * 회원가입용 postEmailCode 와 달리 이미 가입된 이메일이어도 막지 않는다.
+   * SNS 흐름에서 기존 계정에 연결하는 것은 정상 경로이고, 여기서 409 를
+   * 내면 '그 이메일은 가입돼 있다'는 사실이 인증 없이 노출되기도 한다.
+   */
+  private async snsEmailCode(
+    provider: UserSnsProvider,
+    { emailToken, email }: PostSnsEmailCodeRequest,
+  ): Promise<void> {
+    await this.verifySnsEmailToken(provider, emailToken);
+
+    await this.commonAuthService.authEmail(email);
+  }
+
+  /**
+   * 입력한 이메일의 인증 코드를 검증한 뒤 가입/연결을 분기한다.
+   *
+   * 코드 검증이 이 흐름의 전부다. 검증 없이 이메일만 받아 분기하면
+   * 남의 이메일을 입력해 그 계정에 자기 SNS 를 연결할 수 있다(계정 탈취).
+   * 그래서 signupToken/linkToken 은 반드시 검증을 통과한 뒤에만 발급한다.
+   */
+  private async snsEmailVerify(
+    provider: UserSnsProvider,
+    { emailToken, email, code }: PostSnsEmailVerifyRequest,
+  ): Promise<PostSnsLoginResponse> {
+    const payload = await this.verifySnsEmailToken(provider, emailToken);
+
+    await this.commonAuthService.verifyEmail(email, parseInt(code, 10));
+
+    // 인증된 이메일로 기존 분기를 그대로 태운다. providerEmail 은 provider 가
+    // 준 값이 아니므로 null 로 두고, user.email 로 쓸 값만 email 에 담는다.
+    const profile: SnsLoginProfile = {
+      providerUserId: payload.providerUserId,
+      email,
+      emailVerified: true,
+      name: payload.name ?? null,
+      picture: payload.picture ?? null,
+    };
+
+    // providerEmail 은 provider 가 준 이메일을 담는 자리다. 여기서는 사용자가
+    // 직접 입력한 값이므로 null 로 둔다. 섞으면 나중에 provider 가 실제로
+    // 준 이메일과 구분할 수 없다.
+    if (!(await this.userRepositoryService.existUserByEmail(email))) {
+      return this.buildSnsSignupResponse(provider, profile, null);
+    }
+
+    const user = await this.userRepositoryService.getUserByEmail(email);
+    const linkToken = await this.issueSnsToken(
+      {
+        userId: user.id,
+        providerUserId: profile.providerUserId,
+        providerEmail: null,
+        email,
+      },
       JwtType.SNS_LINK_TOKEN,
       provider,
     );

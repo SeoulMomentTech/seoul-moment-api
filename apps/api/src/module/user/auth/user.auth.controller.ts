@@ -30,6 +30,8 @@ import {
   PostGoogleSignupRequest,
   PostInfoPhoneCodeRequest,
   PostInfoPhoneVerifyRequest,
+  PostLineEmailCodeRequest,
+  PostLineEmailVerifyRequest,
   PostLineLinkRequest,
   PostLineLoginRequest,
   PostLineLoginResponse,
@@ -70,12 +72,16 @@ const LINE_AUTH_FLOW = `**LINE 인증 전체 플로우**
    - 이미 연결된 계정 → 200 { needsLinkConfirm: false, token, refreshToken } (로그인 완료)
    - 가입됨 + LINE 미연결 → 200 { needsLinkConfirm: true, email, linkToken } → 2-A
    - 미가입(신규) → 200 { needsLinkConfirm: false, needsSignup: true, email, signupToken } → 2-B
+   - 이메일 미동의 → 200 { needsEmail: true, emailToken } → 1-B
 2. 다음 단계
+   - 1-B. 이메일 직접 입력 (LINE이 이메일을 주지 않은 경우)
+       POST /user/auth/line/email/code   { emailToken, email }        → 인증 코드 발송
+       POST /user/auth/line/email/verify { emailToken, email, code }  → 코드 검증 후 2-A 또는 2-B 로 분기
    - 2-A. 연결 확인 모달 → POST /user/auth/line/link { linkToken }
    - 2-B. 닉네임/약관 입력 → POST /user/auth/line/signup { signupToken, nickname, ...약관동의 }
 3. link / signup 성공 → 200 { token, refreshToken } (로그인 완료)
 
-판단 기준: 응답에 token이 있으면 즉시 로그인. 없으면 needsLinkConfirm / needsSignup으로 다음 단계 결정. 모든 정상 분기는 HTTP 200 (가입 여부로 404 미반환). linkToken 5분 / signupToken 10분 만료. LINE은 이메일 제공이 필수이며, 이메일 미동의 시 401을 반환한다.`;
+판단 기준: 응답에 token이 있으면 즉시 로그인. 없으면 needsEmail / needsLinkConfirm / needsSignup 으로 다음 단계 결정. 모든 정상 분기는 HTTP 200 (가입 여부로 404 미반환). emailToken 10분 / linkToken 5분 / signupToken 10분 만료. 사용자가 LINE 동의 화면에서 이메일 제공을 거부해도 로그인을 막지 않고, 서비스가 직접 이메일을 입력받아 인증한다.`;
 
 @Controller('user/auth')
 export class UserAuthController {
@@ -230,6 +236,47 @@ export class UserAuthController {
     const result = await this.userAuthService.lineSignup(body);
 
     return new ResponseDataDto(plainToInstance(PostUserLoginResponse, result));
+  }
+
+  @Post('line/email/code')
+  @ApiOperation({
+    summary: 'LINE 이메일 직접 입력 - 인증 코드 발송 (1-B단계)',
+    description:
+      LINE_AUTH_FLOW +
+      '\n\n▶ 현재 API: **1-B 단계** — 사용자가 LINE 동의 화면에서 이메일 제공을 ' +
+      '거부한 경우, 직접 입력한 이메일로 6자리 인증 코드를 발송한다. ' +
+      '회원가입용 email/code 와 달리 이미 가입된 이메일이어도 409를 내지 않는다. ' +
+      '기존 계정에 LINE을 연결하는 것이 정상 경로이기 때문이다. ' +
+      'emailToken은 line/login 응답에서 받는다. 코드는 5분간 유효하다.',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(HttpStatus.UNAUTHORIZED, 'emailToken 만료 또는 변조')
+  @ResponseException(HttpStatus.INTERNAL_SERVER_ERROR, '인증 메일 발송 실패')
+  async postLineEmailCode(@Body() body: PostLineEmailCodeRequest) {
+    await this.userAuthService.lineEmailCode(body);
+  }
+
+  @Post('line/email/verify')
+  @ApiOperation({
+    summary: 'LINE 이메일 직접 입력 - 인증 코드 검증 (1-B단계)',
+    description:
+      LINE_AUTH_FLOW +
+      '\n\n▶ 현재 API: **1-B 단계** — 인증 코드를 검증하고, 인증된 이메일 기준으로 ' +
+      '미가입이면 signupToken(2-B), 가입됨이면 linkToken(2-A)을 반환한다. ' +
+      '코드 검증을 통과해야만 토큰이 발급된다.',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ResponseException(
+    HttpStatus.UNAUTHORIZED,
+    'emailToken 만료/변조 또는 인증 코드 만료/불일치',
+  )
+  @ResponseData(PostLineLoginResponse)
+  async postLineEmailVerify(
+    @Body() body: PostLineEmailVerifyRequest,
+  ): Promise<ResponseDataDto<PostLineLoginResponse>> {
+    const result = await this.userAuthService.lineEmailVerify(body);
+
+    return new ResponseDataDto(plainToInstance(PostLineLoginResponse, result));
   }
 
   @Get('one-time-token')

@@ -6,6 +6,7 @@ import {
   IsEmail,
   IsOptional,
   IsString,
+  Matches,
 } from 'class-validator';
 
 import { PostPhoneVerifyRequest as CommonPostPhoneVerifyRequest } from '../../auth/auth.dto';
@@ -230,6 +231,28 @@ export class PostSnsLoginResponse {
   name?: string;
 
   @ApiPropertyOptional({
+    description:
+      'provider가 이메일을 주지 않아(사용자가 동의 화면에서 거부) ' +
+      '이메일을 직접 입력받아야 하는지 여부. ' +
+      'true면 emailToken이 내려가고, 클라이언트는 이메일 입력 화면으로 이동해 ' +
+      'sns/email/code → sns/email/verify 를 차례로 호출해야 한다.',
+    example: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  needsEmail?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      '이메일 직접 입력이 필요한 경우, 인증 코드 발송/검증 API에 전달할 단기 JWT. ' +
+      'SNS 계정 식별자(sub)를 담고 있어 이메일 인증이 끝나면 그 계정과 이어진다.',
+    example: 'emailToken',
+  })
+  @IsString()
+  @IsOptional()
+  emailToken?: string;
+
+  @ApiPropertyOptional({
     description: '이미 연결된 계정인 경우 발급되는 access token',
     example: 'token',
   })
@@ -259,6 +282,49 @@ export class PostGoogleLinkRequest {
   @IsDefined()
   linkToken: string;
 }
+
+/**
+ * provider가 이메일을 주지 않은 경우, 사용자가 직접 입력한 이메일로
+ * 인증 코드를 발송하는 요청.
+ * 회원가입용 email/code 와 달리 이미 가입된 이메일이어도 409를 내지 않는다.
+ * SNS 흐름에서는 기존 계정에 연결하는 것이 정상 경로이기 때문이다.
+ */
+export class PostSnsEmailCodeRequest {
+  @ApiProperty({
+    description: 'SNS login 응답으로 받은 단기 emailToken',
+    example: 'emailToken',
+  })
+  @IsString()
+  @IsDefined()
+  emailToken: string;
+
+  @ApiProperty({
+    description: '사용자가 직접 입력한 이메일',
+    example: 'test@test.com',
+  })
+  @IsEmail()
+  @IsDefined()
+  email: string;
+}
+
+export class PostLineEmailCodeRequest extends PostSnsEmailCodeRequest {}
+
+/**
+ * 입력한 이메일의 인증 코드를 검증하고, 그 이메일 기준으로
+ * 신규 가입 / 기존 계정 연결을 분기하는 요청.
+ */
+export class PostSnsEmailVerifyRequest extends PostSnsEmailCodeRequest {
+  @ApiProperty({
+    description: '메일로 받은 6자리 인증 코드',
+    example: '123456',
+  })
+  @IsString()
+  @IsDefined()
+  @Matches(/^\d{6}$/, { message: 'code는 6자리 숫자여야 합니다.' })
+  code: string;
+}
+
+export class PostLineEmailVerifyRequest extends PostSnsEmailVerifyRequest {}
 
 export class PostLineLinkRequest {
   @ApiProperty({
