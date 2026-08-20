@@ -46,6 +46,13 @@ export class PlanUserEntity extends CommonEntity {
   @Column('int', { nullable: true, comment: '예산 (만원 단위)' })
   budget: number;
 
+  @Column('varchar', {
+    length: 255,
+    nullable: true,
+    comment: '예식장 이름',
+  })
+  weddingVenue: string;
+
   @Column('varchar', { length: 255, nullable: true, comment: '이름/닉네임' })
   name: string;
 

@@ -84,6 +84,7 @@ export class PlanScheduleService {
         startDate: postPlanScheduleRequest.startDate
           ? new Date(postPlanScheduleRequest.startDate)
           : null,
+        startTime: postPlanScheduleRequest.startTime || null,
         location: postPlanScheduleRequest.location,
         locationLat: postPlanScheduleRequest.locationLat,
         locationLng: postPlanScheduleRequest.locationLng,
@@ -312,7 +313,17 @@ export class PlanScheduleService {
       title: body.title,
       payType: body.payType,
       amount: body.amount,
-      startDate: body.startDate ? new Date(body.startDate) : null,
+      // 보내지 않은 필드는 건드리지 않는다. save() 는 undefined 는 무시하지만
+      // null 은 그대로 써 버려서, 예전처럼 무조건 null 을 넣으면 날짜만 빼고
+      // PATCH 할 때(보드 드래그 등) 다른 화면의 값이 조용히 지워진다.
+      startDate:
+        body.startDate === undefined
+          ? undefined
+          : body.startDate
+            ? new Date(body.startDate)
+            : null,
+      startTime:
+        body.startTime === undefined ? undefined : body.startTime || null,
       location: body.location,
       locationLat: body.locationLat,
       locationLng: body.locationLng,
@@ -412,6 +423,7 @@ export class PlanScheduleService {
         status: schedule.status,
         categoryName: schedule.categoryName,
         amount: schedule.amount ?? null,
+        startTime: schedule.startTime ?? null,
       });
       dayMap.set(dayStr, existing);
     }

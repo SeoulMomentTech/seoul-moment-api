@@ -44,6 +44,14 @@ export class PlanScheduleEntity extends CommonEntity {
   @Column('date', { nullable: true })
   startDate: Date;
 
+  /**
+   * 시작 시각 'HH:mm'. startDate 를 timestamp 로 바꾸지 않고 따로 둔다 —
+   * 이미 쌓인 date 값을 옮기는 마이그레이션 없이 시각만 더할 수 있고,
+   * "날짜만 정하고 시간은 아직" 인 일정을 그대로 표현할 수 있다.
+   */
+  @Column('varchar', { length: 5, nullable: true, comment: '시작 시각 HH:mm' })
+  startTime: string;
+
   @Column('varchar', { length: 255, nullable: true })
   location: string;
 

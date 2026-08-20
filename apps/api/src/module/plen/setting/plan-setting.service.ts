@@ -32,6 +32,11 @@ export class PlanSettingService {
       : null;
     planUser.budget = postPlanSettingRequest.budget;
     planUser.name = postPlanSettingRequest.name;
+    // 온보딩은 예식장 이름을 묻지 않는다. 무조건 대입하면 프로필에서 넣어 둔
+    // 값이 온보딩을 다시 저장할 때마다 지워지므로, 보낸 경우에만 반영한다.
+    if (postPlanSettingRequest.weddingVenue !== undefined) {
+      planUser.weddingVenue = postPlanSettingRequest.weddingVenue || null;
+    }
     planUser.requiredAgreementDate =
       postPlanSettingRequest.requiredAgreementDate
         ? new Date(postPlanSettingRequest.requiredAgreementDate)

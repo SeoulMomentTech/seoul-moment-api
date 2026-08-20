@@ -66,6 +66,12 @@ export class GetPlanUserResponse {
   })
   name: string;
 
+  @ApiPropertyOptional({
+    description: '예식장 이름',
+    example: '그랜드하얏트 서울',
+  })
+  weddingVenue: string | null;
+
   @ApiProperty({
     description: '플랜 유저 방 멤버 목록',
     example: [
@@ -131,6 +137,7 @@ export class GetPlanUserResponse {
       weddingDate: entity.weddingDate,
       budget: entity.budget,
       name: entity.name,
+      weddingVenue: entity.weddingVenue ?? null,
       members,
       hasSeenMainGuide: entity.hasSeenMainGuideDate !== null,
       hasSeenBudgetGuide: entity.hasSeenBudgetGuideDate !== null,
