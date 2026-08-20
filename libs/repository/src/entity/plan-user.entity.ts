@@ -12,6 +12,7 @@ import { ChatRoomMemberEntity } from './chat-room-member.entity';
 import { CommonEntity } from './common.entity';
 import { PlanScheduleEntity } from './plan-schedule.entity';
 import { PlanUserCategoryEntity } from './plan-user-category.entity';
+import { PlanUserDeviceTokenEntity } from './plan-user-device-token.entity';
 import { PlanUserRoomMemberEntity } from './plan-user-room-member.entity';
 import { PlanUserRoomEntity } from './plan-user-room.entity';
 import { PlanUserStatus } from '../enum/plan-user.enum';
@@ -124,6 +125,11 @@ export class PlanUserEntity extends CommonEntity {
     cascade: true,
   })
   chatRoomMembers: ChatRoomMemberEntity[];
+
+  @OneToMany(() => PlanUserDeviceTokenEntity, (token) => token.planUser, {
+    cascade: true,
+  })
+  deviceTokens: PlanUserDeviceTokenEntity[];
 
   @Column('timestamp', { nullable: true, comment: '마지막 로그인 일시' })
   lastLoginDate: Date;

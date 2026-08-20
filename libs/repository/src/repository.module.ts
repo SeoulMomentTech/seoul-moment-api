@@ -46,6 +46,7 @@ import { PartnerEntity } from './entity/partner.entity';
 import { PlanCategoryEntity } from './entity/plan-category.entity';
 import { PlanScheduleEntity } from './entity/plan-schedule.entity';
 import { PlanUserCategoryEntity } from './entity/plan-user-category.entity';
+import { PlanUserDeviceTokenEntity } from './entity/plan-user-device-token.entity';
 import { PlanUserRoomMemberEntity } from './entity/plan-user-room-member.entity';
 import { PlanUserRoomEntity } from './entity/plan-user-room.entity';
 import { PlanUserEntity } from './entity/plan-user.entity';
@@ -86,6 +87,7 @@ import { PartnerRepositoryService } from './service/partner.repository.service';
 import { PlanCategoryRepositoryService } from './service/plan-category.repository.service';
 import { PlanScheduleRepositoryService } from './service/plan-schedule.repository.service';
 import { PlanUserRoomMemberRepositoryService } from './service/plan-user--room-member.repository.service';
+import { PlanUserDeviceTokenRepositoryService } from './service/plan-user-device-token.repository.service';
 import { PlanUserRoomRepositoryService } from './service/plan-user-room.repository.service';
 import { PlanUserRepositoryService } from './service/plan-user.repository.service';
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
@@ -138,6 +140,7 @@ import { UserRepositoryService } from './service/user.repository.service';
       PlanScheduleEntity,
       PlanCategoryEntity,
       PlanUserCategoryEntity,
+      PlanUserDeviceTokenEntity,
       PlanUserRoomEntity,
       PlanUserRoomMemberEntity,
       ChatMessageEntity,
@@ -188,6 +191,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
     PlanUserRoomMemberRepositoryService,
+    PlanUserDeviceTokenRepositoryService,
     ChatRepositoryService,
     BrandPromotionRepositoryService,
     UserRepositoryService,
@@ -215,6 +219,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
     PlanUserRoomMemberRepositoryService,
+    PlanUserDeviceTokenRepositoryService,
     ChatRepositoryService,
     BrandPromotionRepositoryService,
     UserRepositoryService,

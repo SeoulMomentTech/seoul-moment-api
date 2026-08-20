@@ -2,17 +2,20 @@ import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
 import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
 import { PlanScheduleRepositoryService } from '@app/repository/service/plan-schedule.repository.service';
 import { PlanUserRoomMemberRepositoryService } from '@app/repository/service/plan-user--room-member.repository.service';
+import { PlanUserDeviceTokenRepositoryService } from '@app/repository/service/plan-user-device-token.repository.service';
 import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
 import { Injectable } from '@nestjs/common';
 
 import {
+  DeletePlanUserDeviceTokenRequest,
   GetPlanUserAmountCategory,
   GetPlanUserAmountResponse,
   GetPlanUserRoomMemberResponse,
   GetUserChatRoomResponse,
   PatchPlanUserRequest,
   PatchPlanUserResponse,
+  PostPlanUserDeviceTokenRequest,
 } from './plan-user.dto';
 import { GetPlanUserTotalAmountResponse } from '../schedule/plan-schedule.dto';
 
@@ -24,7 +27,39 @@ export class PlanUserService {
     private readonly planUserRoomRepositoryService: PlanUserRoomRepositoryService,
     private readonly planUserRoomMemberRepositoryService: PlanUserRoomMemberRepositoryService,
     private readonly chatRoomRepositoryService: ChatRepositoryService,
+    private readonly planUserDeviceTokenRepositoryService: PlanUserDeviceTokenRepositoryService,
   ) {}
+
+  /**
+   * FCM 기기 토큰 등록. 앱은 토큰이 바뀔 때마다·로그인 직후마다 부르므로
+   * 같은 토큰이 반복해서 들어온다 — 새로 쌓지 않고 upsert 한다.
+   */
+  async postPlanUserDeviceToken(
+    planUserId: string,
+    request: PostPlanUserDeviceTokenRequest,
+  ): Promise<void> {
+    await this.planUserDeviceTokenRepositoryService.upsert(
+      planUserId,
+      request.token,
+      request.platform,
+    );
+  }
+
+  /**
+   * 로그아웃한 기기를 발송 대상에서 뺀다.
+   *
+   * 없는 토큰이어도 성공으로 둔다 — 로그아웃이 "이미 지워졌다"는 이유로 실패하면
+   * 앱은 재시도할 방법이 없고, 결과적으로 남의 기기에 알림이 계속 가는 쪽이 더 나쁘다.
+   */
+  async deletePlanUserDeviceToken(
+    planUserId: string,
+    request: DeletePlanUserDeviceTokenRequest,
+  ): Promise<void> {
+    await this.planUserDeviceTokenRepositoryService.deleteByPlanUserIdAndToken(
+      planUserId,
+      request.token,
+    );
+  }
 
   async patchPlanUser(
     id: string,

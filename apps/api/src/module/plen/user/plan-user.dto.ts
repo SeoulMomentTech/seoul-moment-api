@@ -1,9 +1,18 @@
 import { ChatRoomEntity } from '@app/repository/entity/chat-room.entity';
 import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
+import { DevicePlatform } from '@app/repository/enum/plan-user-device-token.enum';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
-import { IsDefined, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsDefined,
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class GetUserChatRoomResponse {
   @ApiProperty({
@@ -320,4 +329,37 @@ export class GetPlanUserRoomMemberResponse {
       )?.permission,
     });
   }
+}
+
+export class PostPlanUserDeviceTokenRequest {
+  @ApiProperty({
+    description: 'FCM 등록 토큰. 재설치·데이터 삭제·장기 미사용으로 바뀐다',
+    example: 'fMEP0vJqS0m...:APA91bH...',
+  })
+  @IsDefined()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(512)
+  token: string;
+
+  @ApiProperty({
+    description: '기기 플랫폼',
+    enum: DevicePlatform,
+    example: DevicePlatform.ANDROID,
+  })
+  @IsDefined()
+  @IsEnum(DevicePlatform)
+  platform: DevicePlatform;
+}
+
+export class DeletePlanUserDeviceTokenRequest {
+  @ApiProperty({
+    description: '해제할 FCM 등록 토큰. 그 기기 하나만 발송 대상에서 빠진다',
+    example: 'fMEP0vJqS0m...:APA91bH...',
+  })
+  @IsDefined()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(512)
+  token: string;
 }
