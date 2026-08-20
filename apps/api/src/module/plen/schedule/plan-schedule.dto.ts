@@ -686,6 +686,16 @@ export class GetCalendarDayItem {
     enum: PlanScheduleStatus,
   })
   status: PlanScheduleStatus;
+
+  @ApiProperty({ description: '카테고리명', example: '예식장' })
+  categoryName: string;
+
+  @ApiPropertyOptional({
+    description:
+      '금액(만 원). 완료된 일정이 언제 얼마를 썼는지 달력에서 바로 보이게 한다',
+    example: 620,
+  })
+  amount: number | null;
 }
 
 export class GetCalendarListResponse {

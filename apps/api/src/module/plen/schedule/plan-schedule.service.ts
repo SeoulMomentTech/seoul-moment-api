@@ -410,6 +410,8 @@ export class PlanScheduleService {
         id: schedule.id,
         title: schedule.title,
         status: schedule.status,
+        categoryName: schedule.categoryName,
+        amount: schedule.amount ?? null,
       });
       dayMap.set(dayStr, existing);
     }
