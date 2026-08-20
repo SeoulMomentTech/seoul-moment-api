@@ -287,6 +287,14 @@ export class GetPlanScheduleResponse {
   @IsDefined()
   status: PlanScheduleStatus;
 
+  @ApiPropertyOptional({
+    description: '장소. 홈의 "다가오는 일정"이 일정 아래에 붙여 보여준다',
+    example: '청담 브라이덜',
+  })
+  @IsOptional()
+  @IsString()
+  location?: string | null;
+
   static from(entity: PlanScheduleEntity) {
     return plainToInstance(this, {
       id: entity.id,
@@ -295,6 +303,7 @@ export class GetPlanScheduleResponse {
       amount: entity.amount,
       startDate: entity.startDate,
       status: entity.status,
+      location: entity.location ?? null,
     });
   }
 }
