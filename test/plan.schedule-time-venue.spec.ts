@@ -202,6 +202,79 @@ describe('일정 시각 · 예식장 이름 (E2E)', () => {
     expect(item?.amount).toBe(185);
   });
 
+  // ── 목록의 status 필터 ───────────────────────────────────────────
+  it('status 를 안 주면 완료한 것까지 전부 온다', async () => {
+    // Given - 보드와 홈 대시보드가 이렇게 부른다.
+    //         예전에는 여기서 COMPLETED 가 조용히 빠져서 "완료한 플랜이
+    //         보드에 안 뜬다" 였다.
+    const user = await createPlanUser();
+    const todo = await addSchedule(user.id, { startDate: '2026-08-23' });
+    const done = await addSchedule(user.id, { startDate: '2026-08-02' });
+    await scheduleService.patchPlanScheduleStatus(
+      done.id,
+      PlanScheduleStatus.COMPLETED,
+      user.id,
+    );
+
+    // When
+    const [list, total] = await scheduleService.getPlanScheduleList(user.id, {
+      page: 1,
+      count: 100,
+    } as never);
+
+    // Then
+    expect(total).toBe(2);
+    expect(list.map((i) => i.id).sort()).toEqual([todo.id, done.id].sort());
+    expect(list.find((i) => i.id === done.id)?.status).toBe(
+      PlanScheduleStatus.COMPLETED,
+    );
+  });
+
+  it('status=NORMAL 은 예정만, status=COMPLETED 는 완료만 준다', async () => {
+    // Given
+    const user = await createPlanUser();
+    const todo = await addSchedule(user.id, { startDate: '2026-08-23' });
+    const done = await addSchedule(user.id, { startDate: '2026-08-02' });
+    await scheduleService.patchPlanScheduleStatus(
+      done.id,
+      PlanScheduleStatus.COMPLETED,
+      user.id,
+    );
+
+    // When / Then
+    const [normalList] = await scheduleService.getPlanScheduleList(user.id, {
+      page: 1,
+      count: 100,
+      status: PlanScheduleStatus.NORMAL,
+    } as never);
+    expect(normalList.map((i) => i.id)).toEqual([todo.id]);
+
+    const [doneList] = await scheduleService.getPlanScheduleList(user.id, {
+      page: 1,
+      count: 100,
+      status: PlanScheduleStatus.COMPLETED,
+    } as never);
+    expect(doneList.map((i) => i.id)).toEqual([done.id]);
+  });
+
+  it('지운 일정은 status 를 안 줘도 오지 않는다', async () => {
+    // Given
+    const user = await createPlanUser();
+    const kept = await addSchedule(user.id, { startDate: '2026-08-23' });
+    const removed = await addSchedule(user.id, { startDate: '2026-08-24' });
+
+    // When
+    await scheduleService.deletePlanSchedule(removed.id, user.id);
+
+    // Then
+    const [list, total] = await scheduleService.getPlanScheduleList(user.id, {
+      page: 1,
+      count: 100,
+    } as never);
+    expect(total).toBe(1);
+    expect(list.map((i) => i.id)).toEqual([kept.id]);
+  });
+
   // ── 예식장 이름 ──────────────────────────────────────────────────
   it('예식장 이름을 저장하면 사용자 조회에서 그대로 나온다', async () => {
     // Given

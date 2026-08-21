@@ -96,10 +96,13 @@ export class PlanScheduleRepositoryService {
     sort: DatabaseSort = DatabaseSort.DESC,
     planUserRoomId?: number,
   ): Promise<[PlanScheduleEntity[], number]> {
+    // status 를 안 주면 "지운 것 빼고 전부" 다. 예전에는 여기서 COMPLETED 도
+    // 같이 걸렀는데, 그러면 필터를 안 건 목록이 조용히 완료를 빼먹는다 —
+    // 플랜 보드와 홈 대시보드처럼 "쓴 돈까지 포함해 전부" 를 봐야 하는
+    // 화면이 완료된 일정을 영영 못 받는다. 완료만 보고 싶으면
+    // status=COMPLETED 를, 예정만 보고 싶으면 status=NORMAL 을 준다.
     const baseCondition: FindOptionsWhere<PlanScheduleEntity> = {
-      status: Not(
-        In([PlanScheduleStatus.DELETE, PlanScheduleStatus.COMPLETED]),
-      ),
+      status: Not(In([PlanScheduleStatus.DELETE])),
     };
 
     if (search) {
