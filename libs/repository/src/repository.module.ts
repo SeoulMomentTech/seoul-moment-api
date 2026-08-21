@@ -91,6 +91,7 @@ import { PlanUserRepositoryService } from './service/plan-user.repository.servic
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
 import { UserSnsRepositoryService } from './service/user-sns.repository.service';
+import { UserWithdrawRepositoryService } from './service/user-withdraw.repository.service';
 import { UserLikeRepositoryService } from './service/user.like.repository.service';
 import { UserRecentRepositoryService } from './service/user.recent.repository.service';
 import { UserRepositoryService } from './service/user.repository.service';
@@ -194,6 +195,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     UserLikeRepositoryService,
     UserRecentRepositoryService,
     UserSnsRepositoryService,
+    UserWithdrawRepositoryService,
     AiConsultLogRepositoryService,
   ],
   exports: [
@@ -221,6 +223,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     UserLikeRepositoryService,
     UserRecentRepositoryService,
     UserSnsRepositoryService,
+    UserWithdrawRepositoryService,
     AiConsultLogRepositoryService,
   ],
 })

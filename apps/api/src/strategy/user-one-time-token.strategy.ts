@@ -25,7 +25,17 @@ export class UserOneTimeTokenStrategy extends PassportStrategy(
     if (payload.jwtType !== JwtType.ONE_TIME_TOKEN)
       throw new HttpException('Invalid token type', HttpStatus.UNAUTHORIZED);
 
-    const userEntity = await this.userRepositoryService.getUserById(payload.id);
+    // 탈퇴한 회원은 소프트 삭제되어 조회되지 않는다. 남아 있던 액세스
+    // 토큰도 이 시점에 무효가 된다.
+    const userEntity = await this.userRepositoryService.findUserById(
+      payload.id,
+    );
+
+    if (!userEntity)
+      throw new HttpException(
+        'Withdrawn or unknown user',
+        HttpStatus.UNAUTHORIZED,
+      );
 
     return userEntity;
   }

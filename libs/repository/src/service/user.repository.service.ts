@@ -56,12 +56,25 @@ export class UserRepositoryService {
     return user;
   }
 
-  async getUserByIdWithRefreshToken(id: number): Promise<UserEntity> {
-    const user = await this.userRepository
+  /**
+   * 소프트 삭제(탈퇴)된 회원은 제외하고 조회한다. 인증 단계에서 "회원이
+   * 없다"를 404가 아니라 401로 다루기 위해 예외 대신 null 을 돌려준다.
+   */
+  async findUserById(id: number): Promise<UserEntity | null> {
+    return await this.userRepository.findOneBy({ id });
+  }
+
+  /** 탈퇴 회원 제외. 없으면 null (인증 단계 전용). */
+  async findUserByIdWithRefreshToken(id: number): Promise<UserEntity | null> {
+    return await this.userRepository
       .createQueryBuilder('user')
       .where('user.id = :id', { id })
       .addSelect('user.refreshToken')
       .getOne();
+  }
+
+  async getUserByIdWithRefreshToken(id: number): Promise<UserEntity> {
+    const user = await this.findUserByIdWithRefreshToken(id);
 
     if (!user) {
       throw new ServiceError('User not found', ServiceErrorCode.NOT_FOUND_DATA);
