@@ -192,6 +192,7 @@ export class UserAuthService {
   /**
    * SNS 로그인 분기 코어. idToken 검증 결과를 받아
    * 연결됨 → 로그인 / 미가입 → signupToken / 가입됨·미연결 → linkToken 으로 분기한다.
+   * 가입돼 있고 이미 다른 SNS 가 연결된 계정이면 409 로 끊는다(계정당 SNS 1개).
    */
   private async snsLogin(
     provider: UserSnsProvider,
@@ -227,14 +228,47 @@ export class UserAuthService {
       return this.buildSnsSignupResponse(provider, profile, email);
     }
 
+    return this.buildSnsLinkResponse(provider, providerUserId, email, email);
+  }
+
+  /**
+   * 기존 계정에 SNS 를 연결할 수 있는지 확인하고 linkToken 을 내려준다.
+   * user 1 : sns 1 이므로 이미 다른 SNS 가 연결된 계정이면 연결 확인 단계로
+   * 넘기지 않고 여기서 바로 409 로 끊는다.
+   */
+  private async buildSnsLinkResponse(
+    provider: UserSnsProvider,
+    providerUserId: string,
+    email: string,
+    providerEmail: string | null,
+  ): Promise<PostSnsLoginResponse> {
     const user = await this.userRepositoryService.getUserByEmail(email);
+
+    await this.assertSnsNotLinked(user.id);
+
     const linkToken = await this.issueSnsToken(
-      { userId: user.id, providerUserId, providerEmail: email, email },
+      { userId: user.id, providerUserId, providerEmail, email },
       JwtType.SNS_LINK_TOKEN,
       provider,
     );
 
     return { needsLinkConfirm: true, email, linkToken };
+  }
+
+  /**
+   * user 1 : sns 1 규칙. 이미 SNS 가 연결된 회원에게는 다른 SNS 로그인/가입을
+   * 허용하지 않는다. 구글로 가입한 회원이 같은 이메일의 LINE 으로 들어오면
+   * 연결도 가입도 아닌 409 로 응답한다.
+   */
+  private async assertSnsNotLinked(userId: number): Promise<void> {
+    const linkedSns = await this.userSnsRepositoryService.findByUserId(userId);
+
+    if (linkedSns) {
+      throw new ServiceError(
+        `이미 ${linkedSns.provider} 계정이 연결된 회원입니다.`,
+        ServiceErrorCode.CONFLICT,
+      );
+    }
   }
 
   /**
@@ -307,19 +341,12 @@ export class UserAuthService {
       return this.buildSnsSignupResponse(provider, profile, null);
     }
 
-    const user = await this.userRepositoryService.getUserByEmail(email);
-    const linkToken = await this.issueSnsToken(
-      {
-        userId: user.id,
-        providerUserId: profile.providerUserId,
-        providerEmail: null,
-        email,
-      },
-      JwtType.SNS_LINK_TOKEN,
+    return this.buildSnsLinkResponse(
       provider,
+      profile.providerUserId,
+      email,
+      null,
     );
-
-    return { needsLinkConfirm: true, email, linkToken };
   }
 
   /** SNS 계정 연결 코어. linkToken을 검증해 user_sns 행을 추가하고 토큰을 발급한다. */
@@ -345,7 +372,11 @@ export class UserAuthService {
     return this.issueTokens(userId);
   }
 
-  /** 중복 연결을 검사한 뒤 user_sns 행을 생성한다. 이미 동일 연결이 있으면 무시한다. */
+  /**
+   * 중복 연결을 검사한 뒤 user_sns 행을 생성한다. 이미 동일 연결이 있으면 무시한다.
+   * 로그인 단계에서 이미 걸러지지만, 그 사이에 다른 SNS 가 연결됐을 수 있으므로
+   * 발급된 linkToken 을 믿지 않고 연결 직전에 한 번 더 확인한다.
+   */
   private async linkSnsAccount(
     provider: UserSnsProvider,
     userId: number,
@@ -366,18 +397,7 @@ export class UserAuthService {
 
     if (existing) return;
 
-    const userProviderSns =
-      await this.userSnsRepositoryService.findByUserAndProvider(
-        userId,
-        provider,
-      );
-
-    if (userProviderSns) {
-      throw new ServiceError(
-        '이미 다른 SNS 계정이 연결된 계정입니다.',
-        ServiceErrorCode.CONFLICT,
-      );
-    }
+    await this.assertSnsNotLinked(userId);
 
     await this.userSnsRepositoryService.createUserSns({
       userId,

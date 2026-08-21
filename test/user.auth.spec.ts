@@ -1714,33 +1714,66 @@ describe('UserAuthController (E2E)', () => {
           .send({ linkToken: loginRes1.body.data.linkToken })
           .expect(200);
 
-        // Given - 같은 user에 새 providerUserId P2 linkToken 발급
+        // Given - 이제 login은 409라 linkToken을 받을 수 없으므로 P2 토큰을 위조한다
         const providerUserId2 = faker.string.numeric(21);
-        mockVerifyIdToken({
-          providerUserId: providerUserId2,
-          email: user.email,
-          emailVerified: true,
-        });
-        const loginRes2 = await request(app.getHttpServer())
-          .post(`${BASE_URL}/google/login`)
-          .send({ idToken: 'fake-id-token' });
+        const forgedLinkToken = tokenSigner.sign(
+          {
+            userId: user.id,
+            providerUserId: providerUserId2,
+            providerEmail: user.email,
+            email: user.email,
+            provider: 'GOOGLE',
+            jwtType: SNS_LINK_TOKEN_TYPE,
+          },
+          { expiresIn: '5m' },
+        );
 
         // When - P2로 link 시도
         const res = await request(app.getHttpServer())
           .post(`${BASE_URL}/google/link`)
-          .send({ linkToken: loginRes2.body.data.linkToken });
+          .send({ linkToken: forgedLinkToken });
 
         // Then - 409 & 기존 P1 연결이 그대로 유지됨
         expect(res.status).toBe(409);
-        expect(res.body.message).toBe(
-          '이미 다른 SNS 계정이 연결된 계정입니다.',
-        );
+        expect(res.body.message).toBe('이미 GOOGLE 계정이 연결된 회원입니다.');
         const sns = await dataSource.query(
           `SELECT provider_user_id FROM user_sns WHERE user_id = $1`,
           [user.id],
         );
         expect(sns).toHaveLength(1);
         expect(sns[0].provider_user_id).toBe(providerUserId1);
+      });
+
+      it('이미 Google이 연결된 계정과 이메일이 같으면 재로그인 분기에서 409를 반환한다', async () => {
+        // Given - user에 Google 계정 하나가 연결돼 있다
+        const user = await signUpUser();
+        const providerUserId = faker.string.numeric(21);
+        mockVerifyIdToken({
+          providerUserId,
+          email: user.email,
+          emailVerified: true,
+        });
+        const loginRes = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/link`)
+          .send({ linkToken: loginRes.body.data.linkToken })
+          .expect(200);
+
+        // When - 같은 이메일의 다른 Google 계정으로 로그인
+        mockVerifyIdToken({
+          providerUserId: faker.string.numeric(21),
+          email: user.email,
+          emailVerified: true,
+        });
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/google/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then - 계정당 SNS는 1개이므로 연결 분기로 넘어가지 않는다
+        expect(res.status).toBe(409);
+        expect(res.body.message).toBe('이미 GOOGLE 계정이 연결된 회원입니다.');
       });
 
       it('jwtType이 link 토큰이 아니면 401을 반환한다', async () => {
@@ -2072,8 +2105,8 @@ describe('UserAuthController (E2E)', () => {
         expect(rows[0].refresh_token).toBe(res.body.data.refreshToken);
       });
 
-      it('Google로 가입한 계정과 이메일이 같으면 LINE은 연결 확인 분기를 탄다', async () => {
-        // Given - 이메일 가입자 1명
+      it('이메일로 가입한 계정과 이메일이 같으면 LINE은 연결 확인 분기를 탄다', async () => {
+        // Given - 이메일 가입자 1명 (연결된 SNS 없음)
         const user = await signUpUser();
         mockVerifyIdToken({
           providerUserId: buildLineUserId(),
@@ -2094,6 +2127,36 @@ describe('UserAuthController (E2E)', () => {
           [user.email],
         );
         expect(users).toHaveLength(1);
+      });
+
+      it('Google이 연결된 계정과 이메일이 같으면 LINE 로그인은 409를 반환한다', async () => {
+        // Given - 이메일 가입 후 Google이 연결된 계정
+        const user = await signUpUser();
+        await dataSource.query(
+          `INSERT INTO user_sns (user_id, provider, provider_user_id, provider_email)
+           VALUES ($1, 'GOOGLE', $2, $3)`,
+          [user.id, faker.string.numeric(21), user.email],
+        );
+        mockVerifyIdToken({
+          providerUserId: buildLineUserId(),
+          email: user.email,
+          emailVerified: true,
+        });
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/login`)
+          .send({ idToken: 'fake-id-token' });
+
+        // Then - 계정당 SNS는 1개라 연결도 가입도 되지 않는다
+        expect(res.status).toBe(409);
+        expect(res.body.message).toBe('이미 GOOGLE 계정이 연결된 회원입니다.');
+        const sns = await dataSource.query(
+          `SELECT provider FROM user_sns WHERE user_id = $1`,
+          [user.id],
+        );
+        expect(sns).toHaveLength(1);
+        expect(sns[0].provider).toBe('GOOGLE');
       });
 
       it('유효하지 않은 idToken이면 401을 반환한다', async () => {
@@ -2416,6 +2479,36 @@ describe('UserAuthController (E2E)', () => {
         expect(payload.userId).toBe(existing.id);
       });
 
+      it('입력한 이메일 계정에 이미 다른 SNS가 연결돼 있으면 409를 반환한다', async () => {
+        // Given - Google이 연결된 기존 계정의 이메일을 직접 입력한다
+        const existing = await signUpUser();
+        await dataSource.query(
+          `INSERT INTO user_sns (user_id, provider, provider_user_id, provider_email)
+           VALUES ($1, 'GOOGLE', $2, $3)`,
+          [existing.id, faker.string.numeric(21), existing.email],
+        );
+        const { emailToken } = await loginWithoutEmail();
+        await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/code`)
+          .send({ emailToken, email: existing.email })
+          .expect(200);
+        const code = await cacheService.find(existing.email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/line/email/verify`)
+          .send({ emailToken, email: existing.email, code });
+
+        // Then
+        expect(res.status).toBe(409);
+        expect(res.body.message).toBe('이미 GOOGLE 계정이 연결된 회원입니다.');
+        const sns = await dataSource.query(
+          `SELECT provider FROM user_sns WHERE user_id = $1`,
+          [existing.id],
+        );
+        expect(sns).toHaveLength(1);
+      });
+
       it('발급받은 linkToken으로 연결하면 로그인까지 완료된다', async () => {
         // Given
         const existing = await signUpUser();
@@ -2613,27 +2706,28 @@ describe('UserAuthController (E2E)', () => {
           .send({ linkToken: loginRes1.body.data.linkToken })
           .expect(200);
 
-        // Given - 같은 user에 새 providerUserId P2 linkToken 발급
+        // Given - 이제 login은 409라 linkToken을 받을 수 없으므로 P2 토큰을 위조한다
         const providerUserId2 = buildLineUserId();
-        mockVerifyIdToken({
-          providerUserId: providerUserId2,
-          email: user.email,
-          emailVerified: true,
-        });
-        const loginRes2 = await request(app.getHttpServer())
-          .post(`${BASE_URL}/line/login`)
-          .send({ idToken: 'fake-id-token' });
+        const forgedLinkToken = tokenSigner.sign(
+          {
+            userId: user.id,
+            providerUserId: providerUserId2,
+            providerEmail: user.email,
+            email: user.email,
+            provider: 'LINE',
+            jwtType: SNS_LINK_TOKEN_TYPE,
+          },
+          { expiresIn: '5m' },
+        );
 
         // When - P2로 link 시도
         const res = await request(app.getHttpServer())
           .post(`${BASE_URL}/line/link`)
-          .send({ linkToken: loginRes2.body.data.linkToken });
+          .send({ linkToken: forgedLinkToken });
 
         // Then - 409 & 기존 P1 연결이 그대로 유지됨
         expect(res.status).toBe(409);
-        expect(res.body.message).toBe(
-          '이미 다른 SNS 계정이 연결된 계정입니다.',
-        );
+        expect(res.body.message).toBe('이미 LINE 계정이 연결된 회원입니다.');
         const sns = await dataSource.query(
           `SELECT provider_user_id FROM user_sns WHERE user_id = $1`,
           [user.id],

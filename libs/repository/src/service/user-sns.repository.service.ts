@@ -29,14 +29,9 @@ export class UserSnsRepositoryService {
     });
   }
 
-  async findByUserAndProvider(
-    userId: number,
-    provider: UserSnsProvider,
-  ): Promise<UserSnsEntity | null> {
-    return await this.userSnsRepository.findOneBy({
-      userId,
-      provider,
-    });
+  /** user 1 : sns 1 이므로 userId 만으로 연결된 SNS 를 찾는다. */
+  async findByUserId(userId: number): Promise<UserSnsEntity | null> {
+    return await this.userSnsRepository.findOneBy({ userId });
   }
 
   async createUserSns(userSns: CreateUserSnsDto): Promise<UserSnsEntity> {

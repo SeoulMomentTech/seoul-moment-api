@@ -57,7 +57,8 @@ const GOOGLE_AUTH_FLOW = `**Google 인증 전체 플로우**
 
 1. POST /user/auth/google/login { idToken }
    - 이미 연결된 계정 → 200 { needsLinkConfirm: false, token, refreshToken } (로그인 완료)
-   - 가입됨 + Google 미연결 → 200 { needsLinkConfirm: true, email, linkToken } → 2-A
+   - 가입됨 + SNS 미연결 → 200 { needsLinkConfirm: true, email, linkToken } → 2-A
+   - 가입됨 + 다른 SNS 이미 연결 → 409 (한 계정에 SNS는 하나만 연결된다)
    - 미가입(신규) → 200 { needsLinkConfirm: false, needsSignup: true, email, signupToken } → 2-B
 2. 다음 단계
    - 2-A. 연결 확인 모달 → POST /user/auth/google/link { linkToken }
@@ -70,7 +71,8 @@ const LINE_AUTH_FLOW = `**LINE 인증 전체 플로우**
 
 1. POST /user/auth/line/login { idToken }
    - 이미 연결된 계정 → 200 { needsLinkConfirm: false, token, refreshToken } (로그인 완료)
-   - 가입됨 + LINE 미연결 → 200 { needsLinkConfirm: true, email, linkToken } → 2-A
+   - 가입됨 + SNS 미연결 → 200 { needsLinkConfirm: true, email, linkToken } → 2-A
+   - 가입됨 + 다른 SNS 이미 연결 → 409 (한 계정에 SNS는 하나만 연결된다)
    - 미가입(신규) → 200 { needsLinkConfirm: false, needsSignup: true, email, signupToken } → 2-B
    - 이메일 미동의 → 200 { needsEmail: true, emailToken } → 1-B
 2. 다음 단계
@@ -118,6 +120,10 @@ export class UserAuthController {
   })
   @HttpCode(HttpStatus.OK)
   @ResponseException(HttpStatus.UNAUTHORIZED, '유효하지 않은 Google idToken')
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '해당 이메일 계정에 이미 다른 SNS가 연결됨 (계정당 SNS 1개)',
+  )
   @ResponseData(PostGoogleLoginResponse)
   async postGoogleLogin(
     @Body() body: PostGoogleLoginRequest,
@@ -140,7 +146,10 @@ export class UserAuthController {
   })
   @HttpCode(HttpStatus.OK)
   @ResponseException(HttpStatus.UNAUTHORIZED, 'linkToken 만료 또는 변조')
-  @ResponseException(HttpStatus.CONFLICT, '이미 다른 계정에 연결된 Google 계정')
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '이미 다른 계정에 연결된 Google 계정 또는 이미 다른 SNS가 연결된 계정',
+  )
   @ResponseData(PostUserLoginResponse)
   async postGoogleLink(
     @Body() body: PostGoogleLinkRequest,
@@ -184,6 +193,10 @@ export class UserAuthController {
   })
   @HttpCode(HttpStatus.OK)
   @ResponseException(HttpStatus.UNAUTHORIZED, '유효하지 않은 LINE idToken')
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '해당 이메일 계정에 이미 다른 SNS가 연결됨 (계정당 SNS 1개)',
+  )
   @ResponseData(PostLineLoginResponse)
   async postLineLogin(
     @Body() body: PostLineLoginRequest,
@@ -204,7 +217,10 @@ export class UserAuthController {
   })
   @HttpCode(HttpStatus.OK)
   @ResponseException(HttpStatus.UNAUTHORIZED, 'linkToken 만료 또는 변조')
-  @ResponseException(HttpStatus.CONFLICT, '이미 다른 계정에 연결된 LINE 계정')
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '이미 다른 계정에 연결된 LINE 계정 또는 이미 다른 SNS가 연결된 계정',
+  )
   @ResponseData(PostUserLoginResponse)
   async postLineLink(
     @Body() body: PostLineLinkRequest,
@@ -269,6 +285,10 @@ export class UserAuthController {
   @ResponseException(
     HttpStatus.UNAUTHORIZED,
     'emailToken 만료/변조 또는 인증 코드 만료/불일치',
+  )
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '해당 이메일 계정에 이미 다른 SNS가 연결됨 (계정당 SNS 1개)',
   )
   @ResponseData(PostLineLoginResponse)
   async postLineEmailVerify(
