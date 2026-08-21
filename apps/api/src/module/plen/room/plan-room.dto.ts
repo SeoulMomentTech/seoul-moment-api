@@ -144,6 +144,13 @@ export class GetPlanRoomListResponse {
   remainingBudget: number;
 
   @ApiProperty({
+    description:
+      '아직 안 쓴 예정 지출 (만원 단위). 카드 막대에서 실제 지출 뒤에 회색으로 붙는다',
+    example: 1850,
+  })
+  plannedUseAmount: number;
+
+  @ApiProperty({
     description: '계획 개수',
     example: 10,
   })
@@ -164,6 +171,7 @@ export class GetPlanRoomListResponse {
     entity: PlanUserRoomEntity,
     remainingBudget: number,
     memberDtoList: GetPlanUserRoomMemberResponse[],
+    plannedUseAmount = 0,
   ) {
     return plainToInstance(this, {
       roomId: entity.id,
@@ -171,6 +179,7 @@ export class GetPlanRoomListResponse {
       weddingDate: entity.owner.weddingDate,
       budget: entity.owner.budget,
       remainingBudget,
+      plannedUseAmount,
       planCount: entity.schedules.filter(
         (v) => v.status !== PlanScheduleStatus.DELETE,
       ).length,

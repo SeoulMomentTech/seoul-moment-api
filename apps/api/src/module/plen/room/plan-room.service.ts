@@ -288,6 +288,12 @@ export class PlanRoomService {
 
       const remainingBudget = planUserRoom.owner.budget - planAmount;
 
+      // 아직 안 쓴 예정 지출. 카드 막대에서 실제 지출 뒤에 회색으로 붙는다.
+      const plannedUseAmount =
+        await this.planScheduleRepositoryService.getPlannedUseAmountByRoomId(
+          planUserRoom.id,
+        );
+
       const memberDtoList = await this.getPlanUserRoomMemberListByRoomId(
         planUserRoom.id,
       );
@@ -297,6 +303,7 @@ export class PlanRoomService {
           planUserRoom,
           remainingBudget,
           memberDtoList,
+          plannedUseAmount,
         ),
       );
     }
