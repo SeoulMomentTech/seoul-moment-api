@@ -6,6 +6,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { PlanScheduleController } from './plan-schedule.controller';
 import { PlanScheduleService } from './plan-schedule.service';
+import { PlanActivityModule } from '../activity/plan-activity.module';
 import { PlanNotificationModule } from '../notification/plan-notification.module';
 
 @Module({
@@ -13,6 +14,7 @@ import { PlanNotificationModule } from '../notification/plan-notification.module
     RepositoryModule,
     KakaoModule,
     PlanNotificationModule,
+    PlanActivityModule,
     JwtModule.register({
       secret: Configuration.getConfig().JWT_SECRET,
     }),

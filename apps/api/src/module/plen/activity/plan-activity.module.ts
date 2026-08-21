@@ -4,20 +4,20 @@ import { RepositoryModule } from '@app/repository/repository.module';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 
-import { PlanRoomController } from './plan-room.controller';
-import { PlanRoomService } from './plan-room.service';
-import { PlanActivityModule } from '../activity/plan-activity.module';
+import { PlanActivityController } from './plan-activity.controller';
+import { PlanActivityService } from './plan-activity.service';
 
 @Module({
   imports: [
     RepositoryModule,
-    PlanActivityModule,
     KakaoModule,
     JwtModule.register({
       secret: Configuration.getConfig().JWT_SECRET,
     }),
   ],
-  controllers: [PlanRoomController],
-  providers: [PlanRoomService],
+  controllers: [PlanActivityController],
+  providers: [PlanActivityService],
+  // 스케줄·방·설정 서비스가 활동을 남길 때 쓴다
+  exports: [PlanActivityService],
 })
-export class PlanRoomModule {}
+export class PlanActivityModule {}

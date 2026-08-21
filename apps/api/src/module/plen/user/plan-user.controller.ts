@@ -6,6 +6,7 @@ import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Patch,
   Post,
@@ -17,12 +18,14 @@ import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 
 import {
+  DeletePlanUserDeviceTokenRequest,
   GetPlanUserAmountCategory,
   GetPlanUserAmountCategoryRequest,
   GetPlanUserAmountResponse,
   GetPlanUserResponse,
   PatchPlanUserRequest,
   PatchPlanUserResponse,
+  PostPlanUserDeviceTokenRequest,
 } from './plan-user.dto';
 import { PlanUserService } from './plan-user.service';
 import { PlanUserRequest } from '../plan.type';
@@ -107,6 +110,38 @@ export class PlanUserController {
     const result = await this.planUserService.patchPlanUser(req.user.id, body);
 
     return new ResponseDataDto(result);
+  }
+
+  @Post('device-token')
+  @ApiOperation({
+    summary: 'FCM 기기 토큰 등록',
+    description:
+      '앱이 백그라운드/종료 상태일 때 채팅 푸시를 받을 기기를 등록한다. ' +
+      '한 유저가 기기를 여러 대 쓸 수 있어 토큰은 여러 개 저장되고, 같은 토큰이 다시 오면 갱신된다.',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  async postPlanUserDeviceToken(
+    @Request() req: PlanUserRequest,
+    @Body() body: PostPlanUserDeviceTokenRequest,
+  ) {
+    await this.planUserService.postPlanUserDeviceToken(req.user.id, body);
+  }
+
+  @Delete('device-token')
+  @ApiOperation({
+    summary: 'FCM 기기 토큰 해제',
+    description:
+      '로그아웃한 기기를 푸시 발송 대상에서 뺀다. 다른 기기의 토큰은 그대로 남는다. ' +
+      '이미 지워진 토큰이어도 성공으로 응답한다.',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  async deletePlanUserDeviceToken(
+    @Request() req: PlanUserRequest,
+    @Body() body: DeletePlanUserDeviceTokenRequest,
+  ) {
+    await this.planUserService.deletePlanUserDeviceToken(req.user.id, body);
   }
 
   @Post('has-seen-main-guide')

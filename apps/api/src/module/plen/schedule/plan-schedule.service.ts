@@ -6,6 +6,10 @@ import { ChatMessageEntity } from '@app/repository/entity/chat-message.entity';
 import { PlanScheduleEntity } from '@app/repository/entity/plan-schedule.entity';
 import { PlanUserCategoryEntity } from '@app/repository/entity/plan-user-category.entity';
 import { ChatMessageType } from '@app/repository/enum/chat-message.enum';
+import {
+  PlanActivityTargetType,
+  PlanActivityType,
+} from '@app/repository/enum/plan-activity.enum';
 import { PlanScheduleStatus } from '@app/repository/enum/plan-schedule.enum';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
@@ -29,6 +33,7 @@ import {
   PostPlanScheduleRequest,
   PostPlanScheduleResponse,
 } from './plan-schedule.dto';
+import { PlanActivityService } from '../activity/plan-activity.service';
 import { PlanNotificationMessageDto } from '../notification/plan-notification.dto';
 import { PlanNotificationService } from '../notification/plan-notification.service';
 
@@ -41,6 +46,7 @@ export class PlanScheduleService {
     private readonly planUserRoomMemberRepositoryService: PlanUserRoomMemberRepositoryService,
     private readonly planNotificationService: PlanNotificationService,
     private readonly chatMessageRepositoryService: ChatRepositoryService,
+    private readonly planActivityService: PlanActivityService,
   ) {}
 
   @Transactional()
@@ -78,6 +84,7 @@ export class PlanScheduleService {
         startDate: postPlanScheduleRequest.startDate
           ? new Date(postPlanScheduleRequest.startDate)
           : null,
+        startTime: postPlanScheduleRequest.startTime || null,
         location: postPlanScheduleRequest.location,
         locationLat: postPlanScheduleRequest.locationLat,
         locationLng: postPlanScheduleRequest.locationLng,
@@ -96,6 +103,16 @@ export class PlanScheduleService {
         ),
       );
     }
+
+    await this.planActivityService.record({
+      type: PlanActivityType.SCHEDULE_CREATED,
+      planUserId: id,
+      planUserRoomId: postPlanScheduleRequest.roomId,
+      targetType: PlanActivityTargetType.SCHEDULE,
+      targetId: planSchedule.id,
+      targetTitle: planSchedule.title,
+      amount: planSchedule.amount,
+    });
 
     return PostPlanScheduleResponse.from(planSchedule);
   }
@@ -253,6 +270,16 @@ export class PlanScheduleService {
     };
 
     await this.planScheduleRepositoryService.update(updateDto);
+
+    await this.planActivityService.record({
+      type: PlanActivityType.SCHEDULE_DELETED,
+      planUserId,
+      planUserRoomId: planSchedule.planUserRoomId,
+      targetType: PlanActivityTargetType.SCHEDULE,
+      targetId: planSchedule.id,
+      targetTitle: planSchedule.title,
+      amount: planSchedule.amount,
+    });
   }
 
   async getPlanScheduleDetail(
@@ -286,7 +313,17 @@ export class PlanScheduleService {
       title: body.title,
       payType: body.payType,
       amount: body.amount,
-      startDate: body.startDate ? new Date(body.startDate) : null,
+      // 보내지 않은 필드는 건드리지 않는다. save() 는 undefined 는 무시하지만
+      // null 은 그대로 써 버려서, 예전처럼 무조건 null 을 넣으면 날짜만 빼고
+      // PATCH 할 때(보드 드래그 등) 다른 화면의 값이 조용히 지워진다.
+      startDate:
+        body.startDate === undefined
+          ? undefined
+          : body.startDate
+            ? new Date(body.startDate)
+            : null,
+      startTime:
+        body.startTime === undefined ? undefined : body.startTime || null,
       location: body.location,
       locationLat: body.locationLat,
       locationLng: body.locationLng,
@@ -337,6 +374,18 @@ export class PlanScheduleService {
     const updatedPlanSchedule =
       await this.planScheduleRepositoryService.update(updateDto);
 
+    if (status === PlanScheduleStatus.COMPLETED) {
+      await this.planActivityService.record({
+        type: PlanActivityType.SCHEDULE_COMPLETED,
+        planUserId,
+        planUserRoomId: planSchedule.planUserRoomId,
+        targetType: PlanActivityTargetType.SCHEDULE,
+        targetId: planSchedule.id,
+        targetTitle: planSchedule.title,
+        amount: planSchedule.amount,
+      });
+    }
+
     return PatchPlanScheduleStatusResponse.from(updatedPlanSchedule);
   }
 
@@ -372,6 +421,9 @@ export class PlanScheduleService {
         id: schedule.id,
         title: schedule.title,
         status: schedule.status,
+        categoryName: schedule.categoryName,
+        amount: schedule.amount ?? null,
+        startTime: schedule.startTime ?? null,
       });
       dayMap.set(dayStr, existing);
     }

@@ -30,6 +30,14 @@ export class PostPlanSettingRequest {
   name?: string;
 
   @ApiPropertyOptional({
+    description: '예식장 이름. 빈 문자열을 보내면 지운다',
+    example: '그랜드하얏트 서울',
+  })
+  @IsString()
+  @IsOptional()
+  weddingVenue?: string;
+
+  @ApiPropertyOptional({
     description: '필수 동의 여부',
     example: '2025-02-24',
   })
@@ -80,12 +88,19 @@ export class PostPlanSettingResponse {
   @IsDefined()
   name: string;
 
+  @ApiPropertyOptional({
+    description: '예식장 이름',
+    example: '그랜드하얏트 서울',
+  })
+  weddingVenue: string | null;
+
   static from(entity: PlanUserEntity) {
     return plainToInstance(this, {
       id: entity.id,
       weddingDate: entity.weddingDate,
       budget: entity.budget,
       name: entity.name,
+      weddingVenue: entity.weddingVenue ?? null,
     });
   }
 }

@@ -36,6 +36,12 @@ export interface ConfigImpl {
   // LINE Login (id_token audience = channel ID)
   LINE_CHANNEL_ID: string;
 
+  /**
+   * Firebase 서비스 계정 키(JSON 원문 또는 base64). FCM 발송 자격증명이다.
+   * 비어 있으면 푸시 발송만 비활성화되고 앱은 정상 기동한다.
+   */
+  FIREBASE_SERVICE_ACCOUNT: string;
+
   SERPER_URL: string;
   SERPER_API_KEY: string;
 

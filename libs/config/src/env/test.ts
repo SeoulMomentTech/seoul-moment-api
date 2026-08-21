@@ -35,6 +35,8 @@ const getConfig = (): ConfigImpl => ({
 
   LINE_CHANNEL_ID: process.env.LINE_CHANNEL_ID || '',
 
+  FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT || '',
+
   SERPER_URL: process.env.SERPER_URL || '',
   SERPER_API_KEY: process.env.SERPER_API_KEY || '',
 

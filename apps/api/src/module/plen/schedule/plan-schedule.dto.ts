@@ -13,6 +13,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
@@ -78,6 +79,19 @@ export class PostPlanScheduleRequest {
   @IsString()
   @IsOptional()
   startDate?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "시작 시각 'HH:mm' (24시간). 날짜만 정하고 시간은 비워 둘 수 있다. " +
+      '빈 문자열을 보내면 시각을 지운다',
+    example: '11:00',
+  })
+  @IsString()
+  @IsOptional()
+  @Matches(/^$|^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: "startTime 은 'HH:mm' 형식이어야 합니다",
+  })
+  startTime?: string;
 
   @ApiPropertyOptional({
     description: '위치',
@@ -187,6 +201,9 @@ export class PostPlanScheduleResponse {
   @IsDefined()
   startDate: string;
 
+  @ApiPropertyOptional({ description: "시작 시각 'HH:mm'", example: '11:00' })
+  startTime: string | null;
+
   @ApiProperty({
     description: '위치',
     example: '서울시 강남구 역삼동',
@@ -228,6 +245,7 @@ export class PostPlanScheduleResponse {
       payType: entity.payType,
       amount: entity.amount,
       startDate: entity.startDate,
+      startTime: entity.startTime ?? null,
       location: entity.location,
       locationLat: entity.locationLat,
       locationLng: entity.locationLng,
@@ -278,6 +296,9 @@ export class GetPlanScheduleResponse {
   @IsDefined()
   startDate: string;
 
+  @ApiPropertyOptional({ description: "시작 시각 'HH:mm'", example: '11:00' })
+  startTime: string | null;
+
   @ApiProperty({
     description: '상태',
     example: PlanScheduleStatus.NORMAL,
@@ -287,6 +308,14 @@ export class GetPlanScheduleResponse {
   @IsDefined()
   status: PlanScheduleStatus;
 
+  @ApiPropertyOptional({
+    description: '장소. 홈의 "다가오는 일정"이 일정 아래에 붙여 보여준다',
+    example: '청담 브라이덜',
+  })
+  @IsOptional()
+  @IsString()
+  location?: string | null;
+
   static from(entity: PlanScheduleEntity) {
     return plainToInstance(this, {
       id: entity.id,
@@ -294,7 +323,9 @@ export class GetPlanScheduleResponse {
       title: entity.title,
       amount: entity.amount,
       startDate: entity.startDate,
+      startTime: entity.startTime ?? null,
       status: entity.status,
+      location: entity.location ?? null,
     });
   }
 }
@@ -390,6 +421,9 @@ export class GetPlanScheduleDetailResponse {
   })
   startDate: string;
 
+  @ApiPropertyOptional({ description: "시작 시각 'HH:mm'", example: '11:00' })
+  startTime: string | null;
+
   @ApiProperty({
     description: '위치',
     example: '서울시 강남구 역삼동',
@@ -435,6 +469,7 @@ export class GetPlanScheduleDetailResponse {
       title: entity.title,
       amount: entity.amount,
       startDate: entity.startDate,
+      startTime: entity.startTime ?? null,
       location: entity.location,
       locationLat: entity.locationLat,
       locationLng: entity.locationLng,
@@ -496,6 +531,19 @@ export class PatchPlanScheduleRequest {
   @IsString()
   @IsOptional()
   startDate?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "시작 시각 'HH:mm' (24시간). 날짜만 정하고 시간은 비워 둘 수 있다. " +
+      '빈 문자열을 보내면 시각을 지운다',
+    example: '11:00',
+  })
+  @IsString()
+  @IsOptional()
+  @Matches(/^$|^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: "startTime 은 'HH:mm' 형식이어야 합니다",
+  })
+  startTime?: string;
 
   @ApiPropertyOptional({
     description: '위치',
@@ -579,6 +627,9 @@ export class PatchPlanScheduleResponse {
   @IsDefined()
   startDate: string;
 
+  @ApiPropertyOptional({ description: "시작 시각 'HH:mm'", example: '11:00' })
+  startTime: string | null;
+
   @ApiProperty({
     description: '위치',
     example: '서울시 강남구 역삼동',
@@ -619,6 +670,7 @@ export class PatchPlanScheduleResponse {
       payType: entity.payType,
       amount: entity.amount,
       startDate: entity.startDate,
+      startTime: entity.startTime ?? null,
       location: entity.location,
       locationLat: entity.locationLat,
       locationLng: entity.locationLng,
@@ -677,6 +729,19 @@ export class GetCalendarDayItem {
     enum: PlanScheduleStatus,
   })
   status: PlanScheduleStatus;
+
+  @ApiProperty({ description: '카테고리명', example: '예식장' })
+  categoryName: string;
+
+  @ApiPropertyOptional({
+    description:
+      '금액(만 원). 완료된 일정이 언제 얼마를 썼는지 달력에서 바로 보이게 한다',
+    example: 620,
+  })
+  amount: number | null;
+
+  @ApiPropertyOptional({ description: "시작 시각 'HH:mm'", example: '11:00' })
+  startTime: string | null;
 }
 
 export class GetCalendarListResponse {
