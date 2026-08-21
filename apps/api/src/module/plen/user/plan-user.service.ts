@@ -184,6 +184,13 @@ export class PlanUserService {
     const chatRoomList =
       await this.chatRoomRepositoryService.findChatRoomByPlanUserId(id);
 
-    return chatRoomList.map((v) => GetUserChatRoomResponse.from(v));
+    const lastMessages =
+      await this.chatRoomRepositoryService.findLastMessageByRoomIds(
+        chatRoomList.map((v) => v.id),
+      );
+
+    return chatRoomList.map((v) =>
+      GetUserChatRoomResponse.from(v, lastMessages.get(v.id) ?? null),
+    );
   }
 }

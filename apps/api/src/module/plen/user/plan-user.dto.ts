@@ -1,3 +1,4 @@
+import { ChatMessageEntity } from '@app/repository/entity/chat-message.entity';
 import { ChatRoomEntity } from '@app/repository/entity/chat-room.entity';
 import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
 import { DevicePlatform } from '@app/repository/enum/plan-user-device-token.enum';
@@ -27,10 +28,28 @@ export class GetUserChatRoomResponse {
   })
   name: string;
 
-  static from(entity: ChatRoomEntity) {
+  @ApiPropertyOptional({
+    description:
+      '마지막 메시지 미리보기. 홈 대시보드의 "대화" 카드가 방 이름 아래에 쓴다. 사진·플랜 공유는 텍스트가 없어 null 이다',
+    example: '드레스 투어 23일 일요일 11시로 잡았어',
+  })
+  lastMessage: string | null;
+
+  @ApiPropertyOptional({
+    description: '마지막 메시지 시각 (ISO). 메시지가 없으면 null',
+    example: '2026-08-21T02:14:00.000Z',
+  })
+  lastMessageDate: string | null;
+
+  static from(entity: ChatRoomEntity, lastMessage?: ChatMessageEntity | null) {
+    // 플랜 공유 메시지는 message.text 가 비어 있다. 그때는 문구를 지어내지
+    // 않고 null 을 준다 — 프론트가 미리보기 줄을 아예 그리지 않는다.
+    const text = lastMessage?.message?.text?.trim();
     return plainToInstance(GetUserChatRoomResponse, {
       id: entity.id,
       name: entity.name ?? '채팅방',
+      lastMessage: text || null,
+      lastMessageDate: lastMessage?.createDate ?? null,
     });
   }
 }

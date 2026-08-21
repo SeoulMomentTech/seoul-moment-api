@@ -169,6 +169,30 @@ export class ChatRepositoryService {
     });
   }
 
+  /**
+   * 방마다 가장 최근 메시지 하나씩. 홈 대시보드의 "대화" 카드가 방 이름
+   * 아래에 미리보기로 쓴다.
+   *
+   * 방 수만큼 쿼리를 돌리지 않도록 DISTINCT ON 으로 한 번에 가져온다.
+   * 방이 몇 개 안 되더라도, 목록을 여는 화면마다 N+1 이 생기는 건 피한다.
+   */
+  async findLastMessageByRoomIds(
+    roomIds: number[],
+  ): Promise<Map<number, ChatMessageEntity>> {
+    if (roomIds.length === 0) return new Map();
+
+    const rows = await this.chatMessageRepository
+      .createQueryBuilder('m')
+      .distinctOn(['m.chat_room_id'])
+      .where('m.chat_room_id IN (:...roomIds)', { roomIds })
+      .orderBy('m.chat_room_id', 'ASC')
+      .addOrderBy('m.create_date', 'DESC')
+      .addOrderBy('m.id', 'DESC')
+      .getMany();
+
+    return new Map(rows.map((row) => [row.chatRoomId, row]));
+  }
+
   async updateChatRoom(dto: UpdateChatRoomDto): Promise<ChatRoomEntity> {
     return this.chatRoomRepository.save(dto);
   }
