@@ -45,6 +45,8 @@ import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
 import { PlanActivityEntity } from './entity/plan-activity.entity';
 import { PlanCategoryEntity } from './entity/plan-category.entity';
+import { PlanFeedPostEntity } from './entity/plan-feed-post.entity';
+import { PlanFeedVoteEntity } from './entity/plan-feed-vote.entity';
 import { PlanScheduleEntity } from './entity/plan-schedule.entity';
 import { PlanUserCategoryEntity } from './entity/plan-user-category.entity';
 import { PlanUserDeviceTokenEntity } from './entity/plan-user-device-token.entity';
@@ -87,6 +89,8 @@ import { OptionRepositoryService } from './service/option.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
 import { PlanActivityRepositoryService } from './service/plan-activity.repository.service';
 import { PlanCategoryRepositoryService } from './service/plan-category.repository.service';
+import { PlanFeedVoteRepositoryService } from './service/plan-feed-vote.repository.service';
+import { PlanFeedRepositoryService } from './service/plan-feed.repository.service';
 import { PlanScheduleRepositoryService } from './service/plan-schedule.repository.service';
 import { PlanUserRoomMemberRepositoryService } from './service/plan-user--room-member.repository.service';
 import { PlanUserDeviceTokenRepositoryService } from './service/plan-user-device-token.repository.service';
@@ -140,6 +144,8 @@ import { UserRepositoryService } from './service/user.repository.service';
       AdminRoleEntity,
       PlanUserEntity,
       PlanActivityEntity,
+      PlanFeedPostEntity,
+      PlanFeedVoteEntity,
       PlanScheduleEntity,
       PlanCategoryEntity,
       PlanUserCategoryEntity,
@@ -191,6 +197,8 @@ import { UserRepositoryService } from './service/user.repository.service';
     AdminRepositoryService,
     PlanUserRepositoryService,
     PlanActivityRepositoryService,
+    PlanFeedRepositoryService,
+    PlanFeedVoteRepositoryService,
     PlanScheduleRepositoryService,
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
@@ -220,6 +228,8 @@ import { UserRepositoryService } from './service/user.repository.service';
     AdminRoleRepositoryService,
     PlanUserRepositoryService,
     PlanActivityRepositoryService,
+    PlanFeedRepositoryService,
+    PlanFeedVoteRepositoryService,
     PlanScheduleRepositoryService,
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
