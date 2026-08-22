@@ -231,6 +231,60 @@ describe('UserAuthController (E2E)', () => {
       expect(rows[0].email).toBe(first.email);
     });
 
+    it('이미 가입된 email로 가입 시 409와 CONFLICT를 반환한다', async () => {
+      // Given - 첫 사용자 가입
+      const first = buildSignUpBody();
+      await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(first)
+        .expect(204);
+
+      // When - 동일 email로 두 번째 가입 시도
+      const second = buildSignUpBody({ email: first.email });
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(second);
+
+      // Then - unique 제약으로 500이 나지 않고 409로 끊긴다
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe('CONFLICT');
+      expect(res.body.message).toBe('User already exists');
+      const rows = await dataSource.query(
+        `SELECT nickname FROM "user" WHERE email = $1`,
+        [first.email],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].nickname).toBe(first.nickname);
+    });
+
+    it('SNS로 가입된 email로 가입 시 409와 SNS_JOINED를 반환한다', async () => {
+      // Given - 가입 후 SNS 연동까지 된 계정
+      const first = buildSignUpBody();
+      await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(first)
+        .expect(204);
+      const [{ id }] = await dataSource.query(
+        `SELECT id FROM "user" WHERE email = $1`,
+        [first.email],
+      );
+      await dataSource.query(
+        `INSERT INTO user_sns (user_id, provider, provider_user_id, provider_email)
+         VALUES ($1, 'GOOGLE', $2, $3)`,
+        [id, faker.string.numeric(21), first.email],
+      );
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(buildSignUpBody({ email: first.email }));
+
+      // Then - 이메일 로그인으로 안내하면 막다른 길이므로 코드를 갈라 준다
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe('SNS_JOINED');
+      expect(res.body.message).toBe('SNS로 가입된 이메일입니다.');
+    });
+
     it('선택 동의 필드가 boolean이 아니면 400을 반환한다', async () => {
       // Given
       const body = buildSignUpBody({ newProductAgreed: 'yes' });
@@ -563,11 +617,45 @@ describe('UserAuthController (E2E)', () => {
 
       // Then
       expect(res.status).toBe(409);
+      expect(res.body.code).toBe('CONFLICT');
       expect(res.body.message).toBe('User already exists');
 
       // Redis에 인증 코드가 저장되지 않아야 한다
       const cached = await cacheService.find(body.email);
       expect(cached).toBeNull();
+    });
+
+    it('SNS로 가입된 이메일이면 409와 SNS_JOINED를 반환한다', async () => {
+      // Given - 가입 후 SNS 연동까지 된 계정
+      const body = buildSignUpBody();
+      await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(body)
+        .expect(204);
+      const [{ id }] = await dataSource.query(
+        `SELECT id FROM "user" WHERE email = $1`,
+        [body.email],
+      );
+      await dataSource.query(
+        `INSERT INTO user_sns (user_id, provider, provider_user_id, provider_email)
+         VALUES ($1, 'LINE', $2, $3)`,
+        [
+          id,
+          `U${faker.string.hexadecimal({ length: 32, prefix: '' })}`,
+          body.email,
+        ],
+      );
+
+      // When
+      const res = await request(app.getHttpServer())
+        .post(`${BASE_URL}/email/code`)
+        .send({ email: body.email });
+
+      // Then - 일반 가입자(CONFLICT)와 갈라서 SNS 로그인으로 안내할 수 있게 한다
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe('SNS_JOINED');
+      expect(res.body.message).toBe('SNS로 가입된 이메일입니다.');
+      expect(await cacheService.find(body.email)).toBeNull();
     });
 
     it('이메일 형식이 잘못되면 400을 반환한다', async () => {

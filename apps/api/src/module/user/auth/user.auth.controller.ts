@@ -95,6 +95,10 @@ export class UserAuthController {
   @Post('signup')
   @ApiOperation({ summary: '유저 회원가입' })
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '이미 가입된 이메일 (code: CONFLICT | SNS_JOINED) 또는 이미 존재하는 닉네임',
+  )
   async postUserSignUp(@Body() body: PostUserSignUpRequest): Promise<void> {
     await this.userAuthService.signUp(body);
   }
@@ -326,9 +330,22 @@ export class UserAuthController {
   }
 
   @Post('email/code')
-  @ApiOperation({ summary: '회원 가입용 이메일 인증 코드 발송' })
+  @ApiOperation({
+    summary: '회원 가입용 이메일 인증 코드 발송',
+    description: `이미 가입된 이메일이면 코드를 보내지 않고 409를 낸다.
+응답 body의 code로 안내를 갈라야 한다.
+
+- code=CONFLICT → 이메일/비밀번호로 가입한 계정. 이메일 로그인으로 안내
+- code=SNS_JOINED → SNS로 가입한 계정. SNS 로그인으로 안내
+
+SNS로 가입한 계정은 비밀번호가 사용 불가한 임의값이라, 이메일 로그인으로 안내하면
+어떤 비밀번호로도 로그인할 수 없다. 어떤 SNS인지(GOOGLE/LINE)는 내려주지 않는다.`,
+  })
   @HttpCode(HttpStatus.OK)
-  @ResponseException(HttpStatus.CONFLICT, '이미 가입된 이메일')
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '이미 가입된 이메일 (code: CONFLICT | SNS_JOINED)',
+  )
   async postEmailCode(@Body() body: PostEmailCodeRequest) {
     await this.userAuthService.postEmailCode(body.email);
   }

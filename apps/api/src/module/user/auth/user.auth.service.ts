@@ -63,6 +63,10 @@ export class UserAuthService {
   ) {}
 
   async signUp(signUpRequest: PostUserSignUpRequest): Promise<void> {
+    // email/code 에서 이미 걸러지지만, 가입 요청이 직접 들어오면 email 의
+    // unique 제약에 걸려 500 이 난다. 같은 기준으로 여기서도 409 를 낸다.
+    await this.assertEmailNotJoined(signUpRequest.email);
+
     await this.userRepositoryService.validateUserNickname(
       signUpRequest.nickname,
     );
@@ -512,14 +516,34 @@ export class UserAuthService {
     }
   }
 
+  /**
+   * 회원가입용 이메일 인증 코드를 보낸다.
+   * 이미 가입된 이메일이면 코드를 보내지 않고 409 로 끊되, SNS 로 가입한
+   * 계정은 SNS_JOINED 로 구분해 준다. 그 계정은 비밀번호가 사용 불가한
+   * 임의값이라, 그냥 '이미 가입된 이메일' 로만 안내하면 사용자가 이메일
+   * 로그인을 시도하다 막다른 길에 빠진다.
+   */
   async postEmailCode(email: string): Promise<void> {
-    const exist = await this.userRepositoryService.existUserByEmail(email);
-
-    if (exist) {
-      throw new ServiceError('User already exists', ServiceErrorCode.CONFLICT);
-    }
+    await this.assertEmailNotJoined(email);
 
     await this.authService.sendEmailCode(email);
+  }
+
+  /** 가입 여부를 확인하고, 가입돼 있으면 SNS 연동 여부로 갈라 409 를 던진다. */
+  private async assertEmailNotJoined(email: string): Promise<void> {
+    if (!(await this.userRepositoryService.existUserByEmail(email))) return;
+
+    const user = await this.userRepositoryService.getUserByEmail(email);
+    const linkedSns = await this.userSnsRepositoryService.findByUserId(user.id);
+
+    if (linkedSns) {
+      throw new ServiceError(
+        'SNS로 가입된 이메일입니다.',
+        ServiceErrorCode.SNS_JOINED,
+      );
+    }
+
+    throw new ServiceError('User already exists', ServiceErrorCode.CONFLICT);
   }
 
   async postPasswordEmailCode(email: string): Promise<void> {
