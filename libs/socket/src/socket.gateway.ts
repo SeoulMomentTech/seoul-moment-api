@@ -188,7 +188,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       /*
         payload 의 planUser 도 믿지 않는다. 연결 때 확인한 사용자만 쓴다.
-        조언자도 대화는 할 수 있으므로 권한은 보지 않고 멤버인지만 본다.
+        함께 보는 사람도 대화는 할 수 있으므로 권한은 보지 않고 멤버인지만 본다.
       */
       const senderPlanUser = (client as any).planUser;
       if (!senderPlanUser) throw new Error('unauthenticated socket');

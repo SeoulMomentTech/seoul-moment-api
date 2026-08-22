@@ -14,7 +14,7 @@ import { getDataSource, truncateTables } from './setup/db.helper';
 import { closeTestApp, getTestApp } from './setup/test-app';
 import { PlanUserEntity } from '../libs/repository/src/entity/plan-user.entity';
 
-describe('신랑·신부 지정과 조언자 권한 (E2E)', () => {
+describe('신랑·신부 지정과 함께 보는 사람 권한 (E2E)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
   let roomService: PlanRoomService;
@@ -59,8 +59,12 @@ describe('신랑·신부 지정과 조언자 권한 (E2E)', () => {
   }
 
   /** owner 의 공유 코드로 joiner 가 참여한다 (실제 가입 경로) */
-  async function join(owner: PlanUserEntity, joiner: PlanUserEntity) {
-    await roomService.postPlanRoom(joiner.id, owner.roomShareCode);
+  async function join(
+    owner: PlanUserEntity,
+    joiner: PlanUserEntity,
+    asSpouse = false,
+  ) {
+    await roomService.postPlanRoom(joiner.id, owner.roomShareCode, asSpouse);
   }
 
   async function permissionOf(owner: PlanUserEntity, userId: string) {
@@ -75,7 +79,7 @@ describe('신랑·신부 지정과 조언자 권한 (E2E)', () => {
   }
 
   // ── 기본 권한 ────────────────────────────────────────────────────
-  it('공유 코드로 참여하면 조언자(READ)가 된다', async () => {
+  it('공유 코드로 참여하면 함께 보는 사람(READ)가 된다', async () => {
     // Given
     const owner = await createUser();
     const advisor = await createUser();
@@ -92,7 +96,7 @@ describe('신랑·신부 지정과 조언자 권한 (E2E)', () => {
     );
   });
 
-  it('조언자는 일정을 만들 수 없다', async () => {
+  it('함께 보는 사람은 일정을 만들 수 없다', async () => {
     // Given
     const owner = await createUser();
     const advisor = await createUser();
@@ -111,6 +115,40 @@ describe('신랑·신부 지정과 조언자 권한 (E2E)', () => {
         roomId: room.room.id,
       } as never),
     ).rejects.toBeInstanceOf(ServiceError);
+  });
+
+  // ── 배우자 링크로 참여 ───────────────────────────────────────────
+  it('배우자 링크로 들어오면 바로 신랑·신부가 된다', async () => {
+    // Given
+    const owner = await createUser();
+    const spouse = await createUser();
+
+    // When
+    await join(owner, spouse, true);
+
+    // Then
+    expect(await permissionOf(owner, spouse.id)).toBe(
+      PlanUserRoomMemberPermission.SPOUSE,
+    );
+  });
+
+  it('배우자가 이미 있으면 같은 링크로 들어와도 함께 보는 사람이다', async () => {
+    // Given - 먼저 들어온 사람이 배우자다
+    const owner = await createUser();
+    const first = await createUser();
+    const second = await createUser();
+    await join(owner, first, true);
+
+    // When
+    await join(owner, second, true);
+
+    // Then
+    expect(await permissionOf(owner, first.id)).toBe(
+      PlanUserRoomMemberPermission.SPOUSE,
+    );
+    expect(await permissionOf(owner, second.id)).toBe(
+      PlanUserRoomMemberPermission.READ,
+    );
   });
 
   // ── 배우자 지정 ──────────────────────────────────────────────────
@@ -140,7 +178,7 @@ describe('신랑·신부 지정과 조언자 권한 (E2E)', () => {
     expect(created.id).toBeTruthy();
   });
 
-  it('배우자는 한 명뿐이라 새로 지정하면 이전 사람은 조언자로 내려간다', async () => {
+  it('배우자는 한 명뿐이라 새로 지정하면 이전 사람은 함께 보는 사람으로 내려간다', async () => {
     // Given
     const owner = await createUser();
     const first = await createUser();
@@ -161,7 +199,7 @@ describe('신랑·신부 지정과 조언자 권한 (E2E)', () => {
     );
   });
 
-  it('지정을 풀면 조언자로 돌아간다', async () => {
+  it('지정을 풀면 함께 보는 사람으로 돌아간다', async () => {
     // Given
     const owner = await createUser();
     const spouse = await createUser();

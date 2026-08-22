@@ -137,8 +137,14 @@ export class PlanRoomController {
   async postPlanRoom(
     @Request() req: PlanUserRequest,
     @Param('shareCode') shareCode: string,
+    @Query('as') as?: string,
   ) {
-    await this.planRoomService.postPlanRoom(req.user.id, shareCode);
+    // 초대 링크가 역할을 지닌다. ?as=spouse 는 신랑·신부용 링크다.
+    await this.planRoomService.postPlanRoom(
+      req.user.id,
+      shareCode,
+      as === 'spouse',
+    );
   }
 
   @Get('amount/category-chart/:roomId([0-9]+)')

@@ -1,5 +1,5 @@
 export enum PlanUserRoomMemberPermission {
-  /** 조언자. 대화는 하지만 일정·예산은 못 고친다 */
+  /** 함께 보는 사람. 대화는 하지만 일정·예산은 못 고친다 */
   READ = 'READ',
   /**
    * 예전 기본값. 지금은 새로 붙지 않지만 이미 이 권한으로 편집하던 사람이

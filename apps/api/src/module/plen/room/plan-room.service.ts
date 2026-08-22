@@ -145,7 +145,11 @@ export class PlanRoomService {
   }
 
   @Transactional()
-  async postPlanRoom(userId: string, shareCode: string) {
+  /**
+   * @param asSpouse 배우자 링크로 들어왔는지. 아직 배우자가 없을 때만
+   *                 통한다 — 먼저 들어온 사람이 배우자다.
+   */
+  async postPlanRoom(userId: string, shareCode: string, asSpouse = false) {
     const ownerUserEntity =
       await this.planUserRepositoryService.getByRoomShareCode(shareCode);
 
@@ -167,6 +171,13 @@ export class PlanRoomService {
       return;
     }
 
+    const existingSpouse = asSpouse
+      ? await this.planUserRoomMemberRepositoryService.findSpouseByRoomId(
+          planUserRoom.id,
+        )
+      : null;
+    const grantSpouse = asSpouse && !existingSpouse;
+
     await this.planUserRoomMemberRepositoryService.create(
       plainToInstance(PlanUserRoomMemberEntity, {
         roomId: planUserRoom.id,
@@ -179,8 +190,15 @@ export class PlanRoomService {
       plainToInstance(PlanUserRoomMemberEntity, {
         roomId: planUserRoom.id,
         planUserId: userId,
-        // 새로 들어오는 사람은 조언자다. 신랑·신부는 방장이 따로 지정한다.
-        permission: PlanUserRoomMemberPermission.READ,
+        /*
+          기본은 "함께 보는 사람"(READ) 이다. 배우자 링크로 들어왔고 아직
+          배우자가 없을 때만 SPOUSE 를 준다 — 먼저 들어온 사람이 배우자다.
+          이미 있으면 조용히 READ 로 들어온다. 잘못 들어와도 방장이 멤버
+          목록에서 바꿀 수 있다.
+        */
+        permission: grantSpouse
+          ? PlanUserRoomMemberPermission.SPOUSE
+          : PlanUserRoomMemberPermission.READ,
       }),
     );
 
@@ -255,7 +273,7 @@ export class PlanRoomService {
   }
 
   /**
-   * 신랑·신부(배우자) 지정. 방마다 한 명뿐이라 기존 배우자는 조언자로
+   * 신랑·신부(배우자) 지정. 방마다 한 명뿐이라 기존 배우자는 함께 보는 사람으로
    * 내린다. planUserId 가 없으면 지정을 푼다.
    */
   @Transactional()
