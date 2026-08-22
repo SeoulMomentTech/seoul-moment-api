@@ -15,6 +15,8 @@ import {
   MaxLength,
 } from 'class-validator';
 
+import { isCoupleChatRoom } from '../chat/couple-chat.util';
+
 export class GetUserChatRoomResponse {
   @ApiProperty({
     description: '채팅방 ID',
@@ -41,7 +43,18 @@ export class GetUserChatRoomResponse {
   })
   lastMessageDate: string | null;
 
-  static from(entity: ChatRoomEntity, lastMessage?: ChatMessageEntity | null) {
+  @ApiProperty({
+    description:
+      '신랑·신부 방인지. 방장과 배우자 둘만 있는 방이다. 목록에서 맨 위에 두고 다르게 보여준다',
+    example: true,
+  })
+  isCouple: boolean;
+
+  static from(
+    entity: ChatRoomEntity,
+    lastMessage?: ChatMessageEntity | null,
+    coupleIds?: string[],
+  ) {
     // 플랜 공유 메시지는 message.text 가 비어 있다. 그때는 문구를 지어내지
     // 않고 null 을 준다 — 프론트가 미리보기 줄을 아예 그리지 않는다.
     const text = lastMessage?.message?.text?.trim();
@@ -50,6 +63,7 @@ export class GetUserChatRoomResponse {
       name: entity.name ?? '채팅방',
       lastMessage: text || null,
       lastMessageDate: lastMessage?.createDate ?? null,
+      isCouple: isCoupleChatRoom(entity, coupleIds),
     });
   }
 }

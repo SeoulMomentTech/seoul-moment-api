@@ -1,10 +1,12 @@
 /* eslint-disable max-lines-per-function */
 import { LoggerService } from '@app/common/log/logger.service';
 import { ChatMessageEntity } from '@app/repository/entity/chat-message.entity';
+import { ChatRoomEntity } from '@app/repository/entity/chat-room.entity';
 import { ChatMessageType } from '@app/repository/enum/chat-message.enum';
 import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
 import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
@@ -37,11 +39,51 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly planUserRepositoryService: PlanUserRepositoryService,
     private readonly chatMessageRepositoryService: ChatRepositoryService,
     private readonly planNotificationService: PlanNotificationService,
+    private readonly jwtService: JwtService,
   ) {}
 
   @WebSocketServer() server: Server;
-  handleConnection() {
+
+  /**
+   * 소켓에 인증을 건다. 예전에는 아무 검증이 없어서 방 id 와 아무 사용자
+   * id 만 알면 남의 이름으로 메시지를 넣을 수 있었다.
+   *
+   * 웹·안드로이드·iOS 모두 이미 `auth: { token }` 을 보내고 있어 클라이언트
+   * 변경 없이 켤 수 있다. 카카오 토큰 재검증(PlanApiGuard 가 하는 일)까지
+   * 매 연결마다 하지는 않는다 — JWT 는 우리가 서명한 것이고, 소켓 연결마다
+   * 외부 API 를 때리면 채팅 진입이 느려진다.
+   */
+  async handleConnection(client: Socket) {
+    try {
+      const token = (client.handshake?.auth as { token?: string })?.token;
+
+      if (!token) throw new Error('no token');
+
+      const payload = this.jwtService.verify(token);
+      const planUser = await this.planUserRepositoryService.getById(
+        payload.planUserId ?? payload.sub,
+      );
+
+      (client as any).planUser = planUser;
+    } catch (error) {
+      this.logger.info(`[SOCKET] 인증 실패로 연결을 끊는다: ${error.message}`);
+      client.emit('error', '로그인이 필요합니다.');
+      client.disconnect(true);
+      return;
+    }
+
     this.emitRoomList();
+  }
+
+  /** 이 소켓의 사용자가 그 채팅방 멤버인지 */
+  private assertChatRoomMember(chatRoom: ChatRoomEntity, planUserId: string) {
+    const isMember = (chatRoom.members ?? []).some(
+      (m) => m.planUserId === planUserId,
+    );
+
+    if (!isMember) {
+      throw new Error(`not a member of chat room ${chatRoom.id}`);
+    }
   }
 
   async handleDisconnect(client: Socket) {
@@ -69,7 +111,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { room: number; userId: string },
   ) {
-    const { room, userId } = payload;
+    const { room } = payload;
 
     try {
       // 1. DB 또는 서비스에서 방 존재 여부 확인
@@ -80,10 +122,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.planUserRoomRepositoryService.getByRoomId(
         chatRoom.planUserRoomId,
       );
-      const planUser = await this.planUserRepositoryService.getById(userId);
 
-      // 3. 소켓 객체에 데이터 바인딩
-      (client as any).planUser = planUser;
+      /*
+        payload 의 userId 는 쓰지 않는다. 예전에는 그 값을 그대로 믿어서
+        아무 id 나 적어 남의 이름으로 들어갈 수 있었다. 연결할 때 토큰으로
+        확인한 사용자만 쓰고, 그 방 멤버인지도 본다.
+      */
+      const planUser = (client as any).planUser;
+      if (!planUser) throw new Error('unauthenticated socket');
+
+      this.assertChatRoomMember(chatRoom, planUser.id);
+
+      const userId = planUser.id;
+
       (client as any).chatRoomId = room;
 
       // 4. 메모리 데이터 업데이트 (roomsData)
@@ -135,7 +186,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         chatRoom.planUserRoomId,
       );
 
-      const senderPlanUser = planUser || (client as any).planUser;
+      /*
+        payload 의 planUser 도 믿지 않는다. 연결 때 확인한 사용자만 쓴다.
+        조언자도 대화는 할 수 있으므로 권한은 보지 않고 멤버인지만 본다.
+      */
+      const senderPlanUser = (client as any).planUser;
+      if (!senderPlanUser) throw new Error('unauthenticated socket');
+
+      this.assertChatRoomMember(chatRoom, senderPlanUser.id);
 
       this.logger.info(
         `[MSG] Room: ${room} | User: ${senderPlanUser.id} | Text: ${message}`,

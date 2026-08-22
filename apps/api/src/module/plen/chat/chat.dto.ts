@@ -5,6 +5,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 import { IsDefined, IsString } from 'class-validator';
 
+import { isCoupleChatRoom } from './couple-chat.util';
 import { ListFilterDto } from '../../admin/admin.dto';
 
 export class GetChatMessagesRequest extends ListFilterDto {}
@@ -60,13 +61,20 @@ export class ChatRoomResponse {
 
   memberList: GetChatRoomMemberResponse[];
 
-  static from(entity: ChatRoomEntity) {
+  @ApiProperty({
+    description: '신랑·신부 방인지. 방장과 배우자 둘만 있는 방이다',
+    example: true,
+  })
+  isCouple: boolean;
+
+  static from(entity: ChatRoomEntity, coupleIds?: string[]) {
     return plainToInstance(this, {
       id: entity.id,
       name: entity.name ?? '채팅방',
       memberList: entity.members.map((member) =>
         GetChatRoomMemberResponse.from(member.planUser),
       ),
+      isCouple: isCoupleChatRoom(entity, coupleIds),
     });
   }
 }

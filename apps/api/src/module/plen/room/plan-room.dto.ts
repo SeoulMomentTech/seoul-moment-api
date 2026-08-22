@@ -2,8 +2,9 @@ import { PlanUserRoomEntity } from '@app/repository/entity/plan-user-room.entity
 import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
 import { PlanScheduleStatus } from '@app/repository/enum/plan-schedule.enum';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
+import { IsOptional, IsString } from 'class-validator';
 
 import { ChatRoomResponse } from '../chat/chat.dto';
 import { GetPlanUserRoomMemberResponse } from '../user/plan-user.dto';
@@ -112,6 +113,17 @@ export class GetRoomShareCodeResponse {
   }
 }
 
+export class PatchPlanRoomSpouseRequest {
+  @ApiPropertyOptional({
+    description:
+      '배우자로 지정할 멤버의 plan user id. 비우거나 null 이면 지정을 푼다',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsOptional()
+  @IsString()
+  planUserId?: string | null;
+}
+
 export class GetPlanRoomListResponse {
   @ApiProperty({
     description: '방 ID',
@@ -172,6 +184,7 @@ export class GetPlanRoomListResponse {
     remainingBudget: number,
     memberDtoList: GetPlanUserRoomMemberResponse[],
     plannedUseAmount = 0,
+    coupleIds?: string[],
   ) {
     return plainToInstance(this, {
       roomId: entity.id,
@@ -185,7 +198,7 @@ export class GetPlanRoomListResponse {
       ).length,
       members: memberDtoList,
       chatRooms: entity.chatRooms.map((chatRoom) =>
-        ChatRoomResponse.from(chatRoom),
+        ChatRoomResponse.from(chatRoom, coupleIds),
       ),
     });
   }

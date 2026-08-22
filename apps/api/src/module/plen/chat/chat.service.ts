@@ -2,13 +2,17 @@ import { DatabaseSort } from '@app/common/enum/global.enum';
 import { ChatMessageDto } from '@app/repository/dto/chat-message.dto';
 import { UpdateChatRoomDto } from '@app/repository/dto/chat-room.dto';
 import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
+import { PlanUserRoomMemberRepositoryService } from '@app/repository/service/plan-user--room-member.repository.service';
 import { Injectable } from '@nestjs/common';
 
 import { ChatRoomResponse } from './chat.dto';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly chatRepositoryService: ChatRepositoryService) {}
+  constructor(
+    private readonly chatRepositoryService: ChatRepositoryService,
+    private readonly planUserRoomMemberRepositoryService: PlanUserRoomMemberRepositoryService,
+  ) {}
 
   async getChatMessages(
     chatRoomId: number,
@@ -38,7 +42,12 @@ export class ChatService {
   async getChatRoomInfo(chatRoomId: number): Promise<ChatRoomResponse> {
     const result = await this.chatRepositoryService.getChatRoomById(chatRoomId);
 
-    return ChatRoomResponse.from(result);
+    const coupleIds =
+      await this.planUserRoomMemberRepositoryService.findCoupleIdsByRoomIds([
+        result.planUserRoomId,
+      ]);
+
+    return ChatRoomResponse.from(result, coupleIds.get(result.planUserRoomId));
   }
 
   async getChatRoomMessageCount(

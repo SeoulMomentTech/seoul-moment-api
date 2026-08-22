@@ -4,12 +4,14 @@ import { SwaggerAuthName } from '@app/common/docs/swagger.dto';
 import { ResponseDataDto } from '@app/common/type/response-data';
 import { ResponseListDto } from '@app/common/type/response-list';
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   Request,
@@ -20,6 +22,7 @@ import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 
 import {
   GetPlanRoomListResponse,
+  PatchPlanRoomSpouseRequest,
   GetPlanRoomResponse,
   GetRoomShareCodeResponse,
 } from './plan-room.dto';
@@ -108,6 +111,22 @@ export class PlanRoomController {
     const result = await this.planRoomService.getPlanRoomList(req.user.id);
 
     return new ResponseListDto(result);
+  }
+
+  @Patch('spouse')
+  @ApiOperation({
+    summary: '신랑·신부(배우자) 지정 — 방장만. planUserId 를 비우면 해제',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  async patchPlanRoomSpouse(
+    @Request() req: PlanUserRequest,
+    @Body() body: PatchPlanRoomSpouseRequest,
+  ) {
+    await this.planRoomService.patchPlanRoomSpouse(
+      req.user.id,
+      body.planUserId ?? null,
+    );
   }
 
   @Post(':shareCode([0-9a-fA-F-]{36})')

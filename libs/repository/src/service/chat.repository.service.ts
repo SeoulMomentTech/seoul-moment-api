@@ -3,7 +3,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, MoreThan, Not, Repository } from 'typeorm';
+import { In, LessThan, MoreThan, Not, Repository } from 'typeorm';
 
 import { PlanScheduleRepositoryService } from './plan-schedule.repository.service';
 import {
@@ -164,8 +164,21 @@ export class ChatRepositoryService {
   async findChatRoomByPlanUserId(
     planUserId: string,
   ): Promise<ChatRoomEntity[]> {
-    return this.chatRoomRepository.find({
+    /*
+      where 로 members 를 걸면 TypeORM 이 그 조건에 맞는 멤버만 실어 준다.
+      커플 방 판별에는 방의 멤버 전원이 필요하므로, 먼저 내가 속한 방 id 를
+      추린 뒤 그 방들을 멤버와 함께 다시 받는다.
+    */
+    const mine = await this.chatRoomRepository.find({
       where: { members: { planUserId } },
+      select: { id: true },
+    });
+
+    if (mine.length === 0) return [];
+
+    return this.chatRoomRepository.find({
+      where: { id: In(mine.map((v) => v.id)) },
+      relations: ['members'],
     });
   }
 

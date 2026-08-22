@@ -179,7 +179,8 @@ export class PlanRoomService {
       plainToInstance(PlanUserRoomMemberEntity, {
         roomId: planUserRoom.id,
         planUserId: userId,
-        permission: PlanUserRoomMemberPermission.WRITE,
+        // 새로 들어오는 사람은 조언자다. 신랑·신부는 방장이 따로 지정한다.
+        permission: PlanUserRoomMemberPermission.READ,
       }),
     );
 
@@ -232,6 +233,104 @@ export class PlanRoomService {
         }),
       ),
     ]);
+  }
+
+  /** 방장 본인인지. 배우자 지정처럼 방장만 할 수 있는 일에 쓴다 */
+  private async assertRoomOwner(
+    roomId: number,
+    planUserId: string,
+  ): Promise<void> {
+    const member =
+      await this.planUserRoomMemberRepositoryService.findByRoomIdAndPlanUserId(
+        roomId,
+        planUserId,
+      );
+
+    if (member?.permission !== PlanUserRoomMemberPermission.OWNER) {
+      throw new ServiceError(
+        'Only the room owner can change the spouse',
+        ServiceErrorCode.FORBIDDEN,
+      );
+    }
+  }
+
+  /**
+   * 신랑·신부(배우자) 지정. 방마다 한 명뿐이라 기존 배우자는 조언자로
+   * 내린다. planUserId 가 없으면 지정을 푼다.
+   */
+  @Transactional()
+  async patchPlanRoomSpouse(
+    ownerId: string,
+    planUserId: string | null,
+  ): Promise<void> {
+    const room =
+      await this.planUserRoomRepositoryService.findByOwnerId(ownerId);
+
+    if (!room) {
+      throw new ServiceError(
+        'You do not have a plan room',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    await this.assertRoomOwner(room.id, ownerId);
+
+    if (planUserId && planUserId === ownerId) {
+      throw new ServiceError(
+        'You cannot set yourself as the spouse',
+        ServiceErrorCode.BAD_REQUEST,
+      );
+    }
+
+    const current =
+      await this.planUserRoomMemberRepositoryService.findSpouseByRoomId(
+        room.id,
+      );
+
+    // 먼저 내려놓지 않으면 부분 유니크 인덱스에 걸린다
+    if (current && current.planUserId !== planUserId) {
+      current.permission = PlanUserRoomMemberPermission.READ;
+      await this.planUserRoomMemberRepositoryService.save(current);
+    }
+
+    if (!planUserId) {
+      if (current) {
+        await this.planActivityService.record({
+          type: PlanActivityType.SPOUSE_CLEARED,
+          planUserId: ownerId,
+          planUserRoomId: room.id,
+          targetType: PlanActivityTargetType.ROOM,
+          targetId: room.id,
+        });
+      }
+      return;
+    }
+
+    const target =
+      await this.planUserRoomMemberRepositoryService.findByRoomIdAndPlanUserId(
+        room.id,
+        planUserId,
+      );
+
+    if (!target) {
+      throw new ServiceError(
+        'That user is not a member of this room',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    if (target.permission === PlanUserRoomMemberPermission.SPOUSE) return;
+
+    target.permission = PlanUserRoomMemberPermission.SPOUSE;
+    await this.planUserRoomMemberRepositoryService.save(target);
+
+    await this.planActivityService.record({
+      type: PlanActivityType.SPOUSE_ASSIGNED,
+      planUserId: ownerId,
+      planUserRoomId: room.id,
+      targetType: PlanActivityTargetType.ROOM,
+      targetId: room.id,
+    });
   }
 
   private async getPlanUserRoomMemberListByUserId(
@@ -298,12 +397,18 @@ export class PlanRoomService {
         planUserRoom.id,
       );
 
+      const coupleIds =
+        await this.planUserRoomMemberRepositoryService.findCoupleIdsByRoomIds([
+          planUserRoom.id,
+        ]);
+
       result.push(
         GetPlanRoomListResponse.from(
           planUserRoom,
           remainingBudget,
           memberDtoList,
           plannedUseAmount,
+          coupleIds.get(planUserRoom.id),
         ),
       );
     }

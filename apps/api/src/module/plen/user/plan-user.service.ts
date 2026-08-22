@@ -184,13 +184,23 @@ export class PlanUserService {
     const chatRoomList =
       await this.chatRoomRepositoryService.findChatRoomByPlanUserId(id);
 
-    const lastMessages =
-      await this.chatRoomRepositoryService.findLastMessageByRoomIds(
+    const [lastMessages, coupleIdsByPlanRoom] = await Promise.all([
+      this.chatRoomRepositoryService.findLastMessageByRoomIds(
         chatRoomList.map((v) => v.id),
-      );
+      ),
+      // 채팅방은 여러 플랜 방에 걸쳐 있을 수 있다. 방마다 신랑·신부 두
+      // 사람을 받아 두고 멤버 구성으로 커플 방을 가린다.
+      this.planUserRoomMemberRepositoryService.findCoupleIdsByRoomIds([
+        ...new Set(chatRoomList.map((v) => v.planUserRoomId)),
+      ]),
+    ]);
 
     return chatRoomList.map((v) =>
-      GetUserChatRoomResponse.from(v, lastMessages.get(v.id) ?? null),
+      GetUserChatRoomResponse.from(
+        v,
+        lastMessages.get(v.id) ?? null,
+        coupleIdsByPlanRoom.get(v.planUserRoomId),
+      ),
     );
   }
 }
