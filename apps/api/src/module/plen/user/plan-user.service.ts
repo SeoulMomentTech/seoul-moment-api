@@ -84,13 +84,13 @@ export class PlanUserService {
     id: string,
     budget: number,
   ): Promise<GetPlanUserTotalAmountResponse> {
-    const planUserRoomEntity =
-      await this.planUserRoomRepositoryService.findByOwnerId(id);
-
-    const planAmount = await this.planScheduleRepositoryService.getPlanAmount(
-      id,
-      planUserRoomEntity?.id,
-    );
+    /*
+      방 id 를 주지 않는다 — 그러면 "개인 일정 + 내가 방장인 방의 일정" 둘 다
+      센다. 예전에는 내 방만 세어서, /add-plen 에서 방 없이 만든 일정이
+      목록에는 보이는데 예산에서는 통째로 빠졌다.
+    */
+    const planAmount =
+      await this.planScheduleRepositoryService.getPlanAmount(id);
 
     return GetPlanUserTotalAmountResponse.from(
       budget,
@@ -102,17 +102,13 @@ export class PlanUserService {
   async getPlanUserAmount(
     userEntity: PlanUserEntity,
   ): Promise<GetPlanUserAmountResponse> {
-    const planUserRoomEntity =
-      await this.planUserRoomRepositoryService.findByOwnerId(userEntity.id);
-
+    // 위와 같은 이유로 방 id 를 주지 않는다 (개인 + 내 방 둘 다)
     const plannedUseAmount =
       await this.planScheduleRepositoryService.getPlannedUseAmount(
         userEntity.id,
-        planUserRoomEntity?.id,
       );
     const usedAmount = await this.planScheduleRepositoryService.getUsedAmount(
       userEntity.id,
-      planUserRoomEntity?.id,
     );
 
     return GetPlanUserAmountResponse.from(

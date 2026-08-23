@@ -22,6 +22,31 @@ import {
   PlanScheduleStatus,
 } from '../enum/plan-schedule.enum';
 
+/**
+ * "이 사람의 플랜" 의 범위.
+ *
+ * 방을 주면 그 방만, 안 주면 **개인 일정 + 내가 방장인 방의 일정** 둘 다다.
+ * 가입할 때 방이 하나 생기고 앱이 일정을 그 방에 붙이기 때문에, 개인만
+ * 보면 사실상 아무것도 안 보인다.
+ *
+ * 예전에는 목록·캘린더·금액이 각자 다른 규칙을 썼다 —
+ *   목록  : 개인 + 내 방  (맞음)
+ *   캘린더: 개인만        → 방에 붙은 일정이 달력에서 통째로 사라졌다
+ *   금액  : 내 방만       → 개인 일정이 예산에서 통째로 빠졌다
+ * 같은 데이터를 화면마다 다르게 세던 것이라 한 곳으로 모은다.
+ */
+function ownScope(
+  base: FindOptionsWhere<PlanScheduleEntity>,
+  planUserId: string,
+  roomId?: number,
+): FindOptionsWhere<PlanScheduleEntity>[] {
+  if (roomId) return [{ ...base, planUserId, planUserRoomId: roomId }];
+  return [
+    { ...base, planUserId, planUserRoomId: IsNull() },
+    { ...base, planUserId, planUserRoom: { ownerId: planUserId } },
+  ];
+}
+
 @Injectable()
 export class PlanScheduleRepositoryService {
   constructor(
@@ -153,11 +178,11 @@ export class PlanScheduleRepositoryService {
 
   async getPlanAmount(id: string, roomId?: number): Promise<number> {
     const result = await this.planScheduleRepository.find({
-      where: {
-        planUserId: id,
-        status: Not(In([PlanScheduleStatus.DELETE])),
-        planUserRoomId: !roomId ? IsNull() : roomId,
-      },
+      where: ownScope(
+        { status: Not(In([PlanScheduleStatus.DELETE])) },
+        id,
+        roomId,
+      ),
       select: { amount: true },
     });
 
@@ -178,11 +203,7 @@ export class PlanScheduleRepositoryService {
 
   async getPlannedUseAmount(id: string, roomId?: number): Promise<number> {
     const result = await this.planScheduleRepository.find({
-      where: {
-        planUserId: id,
-        status: PlanScheduleStatus.NORMAL,
-        planUserRoomId: !roomId ? IsNull() : roomId,
-      },
+      where: ownScope({ status: PlanScheduleStatus.NORMAL }, id, roomId),
       select: { amount: true },
     });
 
@@ -203,11 +224,7 @@ export class PlanScheduleRepositoryService {
 
   async getUsedAmount(id: string, roomId?: number): Promise<number> {
     const result = await this.planScheduleRepository.find({
-      where: {
-        planUserId: id,
-        status: PlanScheduleStatus.COMPLETED,
-        planUserRoomId: !roomId ? IsNull() : roomId,
-      },
+      where: ownScope({ status: PlanScheduleStatus.COMPLETED }, id, roomId),
       select: { amount: true },
     });
 
@@ -293,12 +310,14 @@ export class PlanScheduleRepositoryService {
     const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
     return this.planScheduleRepository.find({
-      where: {
+      where: ownScope(
+        {
+          status: Not(In([PlanScheduleStatus.DELETE])),
+          startDate: Between(startDate, endDate),
+        },
         planUserId,
-        status: Not(In([PlanScheduleStatus.DELETE])),
-        planUserRoomId: !roomId ? IsNull() : roomId,
-        startDate: Between(startDate, endDate),
-      },
+        roomId,
+      ),
     });
   }
 
