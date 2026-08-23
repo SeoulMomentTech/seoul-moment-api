@@ -98,10 +98,46 @@ export class PostPlanFeedRequest {
   @Type(() => Number)
   amount?: number;
 
-  @ApiPropertyOptional({ description: '주소. 시/구 까지만 저장된다' })
+  @ApiPropertyOptional({
+    description:
+      '카카오 장소 id. 같은 업체 후기를 묶는 열쇠라, 고른 경우 반드시 함께 보낸다',
+    example: '1234567890',
+  })
   @IsOptional()
   @IsString()
-  location?: string;
+  @MaxLength(40)
+  placeId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      '카카오 장소 이름. 주면 업체명으로 쓴다 — 일정 제목은 "본식 촬영" 같은 개인 메모인 경우가 많다',
+    example: 'SG웨딩홀',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  placeName?: string;
+
+  @ApiPropertyOptional({
+    description: '도로명 주소. 이 값에서 시/구를 잘라 region 을 만든다',
+    example: '서울 강남구 테헤란로 152',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  address?: string;
+
+  @ApiPropertyOptional({ description: '위도', example: 37.5006 })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  lat?: number;
+
+  @ApiPropertyOptional({ description: '경도', example: 127.0364 })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  lng?: number;
 
   @ApiProperty({ description: '만족도 1~5', example: 4 })
   @IsInt()
@@ -167,6 +203,21 @@ export class GetPlanFeedResponse {
   @ApiPropertyOptional({ description: '지역 (시/구)', example: '서울 강남구' })
   region: string | null;
 
+  @ApiPropertyOptional({
+    description: '도로명 주소. 카카오 장소를 고른 경우에만 있다',
+    example: '서울 강남구 테헤란로 152',
+  })
+  address: string | null;
+
+  @ApiPropertyOptional({ description: '카카오 장소 id' })
+  placeId: string | null;
+
+  @ApiPropertyOptional({ description: '위도. 카카오맵 링크에 쓴다' })
+  lat: number | null;
+
+  @ApiPropertyOptional({ description: '경도. 카카오맵 링크에 쓴다' })
+  lng: number | null;
+
   @ApiProperty({ description: '만족도 1~5', example: 5 })
   rating: number;
 
@@ -221,6 +272,11 @@ export class GetPlanFeedResponse {
     }
     response.isAmountPublic = entity.isAmountPublic;
     response.region = entity.region;
+    response.address = entity.address;
+    response.placeId = entity.placeId;
+    // decimal 은 드라이버가 문자열로 준다. 지도 링크에 그대로 넣으면 깨진다
+    response.lat = entity.lat === null ? null : Number(entity.lat);
+    response.lng = entity.lng === null ? null : Number(entity.lng);
     response.rating = entity.rating;
     response.body = entity.body;
     response.authorDDay = entity.authorDDay;
@@ -284,8 +340,18 @@ export class GetPostableScheduleResponse {
   @ApiPropertyOptional({ description: '금액 (만원)', example: 385 })
   amount: number | null;
 
-  @ApiPropertyOptional({ description: '주소' })
+  @ApiPropertyOptional({
+    description:
+      '일정에 적힌 장소. 카카오 검색에서 고른 경우 주소가 아니라 **업체명**이다',
+    example: 'SG웨딩홀',
+  })
   location: string | null;
+
+  @ApiPropertyOptional({ description: '위도' })
+  locationLat: number | null;
+
+  @ApiPropertyOptional({ description: '경도' })
+  locationLng: number | null;
 
   @ApiPropertyOptional({ description: '날짜' })
   startDate: Date | null;

@@ -138,9 +138,46 @@ describe('견적 후기 피드 (E2E)', () => {
     expect(created.categoryName).toBe('스드메');
     expect(created.title).toBe('아뜰리에 진');
     expect(created.amount).toBe(385);
-    expect(created.region).toBe('서울 강남구');
     expect(created.authorRole).toBe(PlanFeedAuthorRole.BRIDE);
     expect(created.authorDDay).toBe(daysUntilWedding('2026-12-31'));
+  });
+
+  it('장소를 안 고르면 지역이 비어 있다', async () => {
+    // Given - 일정의 location 은 카카오에서 고르면 주소가 아니라 업체명이다
+    //         ("SG웨딩홀"). 그걸 주소로 알고 파싱하던 버그가 있었다.
+    const user = await createUser();
+    const schedule = await createSchedule(user, { location: 'SG웨딩홀' });
+
+    // When
+    const created = await post(user, schedule.id);
+
+    // Then
+    expect(created.region).toBeNull();
+    expect(created.address).toBeNull();
+    expect(created.placeId).toBeNull();
+  });
+
+  it('카카오 장소를 고르면 업체명·주소·지역·좌표가 들어간다', async () => {
+    // Given - 일정 제목이 개인 메모라도 고른 장소 이름이 이긴다
+    const user = await createUser();
+    const schedule = await createSchedule(user, { title: '본식 촬영' });
+
+    // When
+    const created = await post(user, schedule.id, {
+      placeId: '26338954',
+      placeName: 'SG웨딩홀',
+      address: '서울 강남구 테헤란로 152',
+      lat: 37.5006,
+      lng: 127.0364,
+    });
+
+    // Then
+    expect(created.title).toBe('SG웨딩홀');
+    expect(created.address).toBe('서울 강남구 테헤란로 152');
+    expect(created.region).toBe('서울 강남구');
+    expect(created.placeId).toBe('26338954');
+    expect(created.lat).toBeCloseTo(37.5006, 4);
+    expect(created.lng).toBeCloseTo(127.0364, 4);
   });
 
   it('클라이언트가 보낸 금액이 아니라 일정의 금액을 쓴다', async () => {
@@ -253,10 +290,9 @@ describe('견적 후기 피드 (E2E)', () => {
     const b = await createSchedule(author, {
       categoryName: '웨딩홀',
       title: 'SG 웨딩홀',
-      location: '부산광역시 해운대구 우동 1',
     });
-    await post(author, a.id);
-    await post(author, b.id);
+    await post(author, a.id, { address: '서울 강남구 도산대로 430' });
+    await post(author, b.id, { address: '부산 해운대구 우동 1' });
 
     // When
     const [byCategory] = await feedService.getPlanFeedList(viewer.id, {

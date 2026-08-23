@@ -26,6 +26,7 @@ import { PlanFeedAuthorRole, PlanFeedPostStatus } from '../enum/plan-feed.enum';
 @Index(['status', 'createDate'])
 @Index(['status', 'categoryName', 'createDate'])
 @Index(['planUserId', 'createDate'])
+@Index(['placeId'])
 @Entity('plan_feed_post')
 export class PlanFeedPostEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
@@ -65,9 +66,32 @@ export class PlanFeedPostEntity extends CommonEntity {
   @Column('varchar', {
     length: 60,
     nullable: true,
-    comment: '시/구 까지만. 전체 주소를 그대로 옮기면 업체·집 주소가 공개된다',
+    comment: '시/구 까지만. 필터·집계용. address 에서 잘라 만든다',
   })
   region: string | null;
+
+  @Column('varchar', {
+    length: 255,
+    nullable: true,
+    comment: '도로명 주소. 카카오 장소를 고른 경우에만 있다',
+  })
+  address: string | null;
+
+  @Column('varchar', {
+    name: 'place_id',
+    length: 40,
+    nullable: true,
+    comment:
+      '카카오 장소 id. 같은 업체 후기를 묶는 유일한 열쇠다 — ' +
+      '업체명은 자유 문자열이라 "SG웨딩홀"과 "sg 웨딩홀"이 서로 다른 업체가 된다',
+  })
+  placeId: string | null;
+
+  @Column('decimal', { precision: 11, scale: 8, nullable: true })
+  lat: number | null;
+
+  @Column('decimal', { precision: 11, scale: 8, nullable: true })
+  lng: number | null;
 
   @Column('smallint', { nullable: false, default: 0, comment: '만족도 1~5' })
   rating: number;

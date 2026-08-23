@@ -34,6 +34,26 @@ import { daysUntilWedding, toRegion } from './plan-feed.util';
 /** 사이드 패널이 훑는 완료 일정 상한. 전부 세지 않고 최근 것만 본다 */
 const POSTABLE_SCAN_COUNT = 200;
 
+/**
+ * 고른 카카오 장소를 컬럼으로.
+ *
+ * **region 은 주소에서만 만든다.** 예전에는 일정의 location 을 넘겼는데,
+ * 카카오 검색으로 고르면 거기 들어가는 값이 주소가 아니라 업체명
+ * ("SG웨딩홀") 이라 지역이 늘 비어 있었다.
+ *
+ * 자르는 일은 서버에서 한다 — 프론트에 맡기면 앱마다 다르게 자르고, 한 곳만
+ * 빠뜨려도 전체 주소가 그대로 올라간다.
+ */
+function placeColumns(body: PostPlanFeedRequest) {
+  return {
+    region: toRegion(body.address),
+    address: body.address?.trim() || null,
+    placeId: body.placeId?.trim() || null,
+    lat: body.lat ?? null,
+    lng: body.lng ?? null,
+  };
+}
+
 @Injectable()
 export class PlanFeedService {
   constructor(
@@ -101,6 +121,10 @@ export class PlanFeedService {
    *
    * 일정에서 옮겨 담는 게 기본이고, 그때 값은 **일정에서 읽어 복사**한다.
    * 클라이언트가 보낸 금액을 그대로 믿으면 아무 값이나 시세로 올릴 수 있다.
+   *
+   * 업체명만은 예외로, 고른 카카오 장소 이름이 일정 제목을 이긴다. 일정
+   * 제목은 자기가 보려고 적은 메모라 "본식 촬영", "1차 미팅" 인 경우가
+   * 많은데 그게 피드에 업체명으로 올라가면 아무도 못 알아본다.
    */
   async postPlanFeed(
     planUserId: string,
@@ -112,11 +136,11 @@ export class PlanFeedService {
           categoryName: body.categoryName?.trim(),
           title: body.title?.trim(),
           amount: body.amount ?? null,
-          location: body.location ?? null,
           sourceScheduleId: null,
         };
-    const { amount, location, sourceScheduleId } = source;
-    const { categoryName, title } = source;
+    const { amount, sourceScheduleId, categoryName } = source;
+    // 업체명은 고른 카카오 장소가 이긴다 (일정 제목은 개인 메모인 경우가 많다)
+    const title = body.placeName?.trim() || source.title;
 
     if (!categoryName || !title) {
       throw new ServiceError(
@@ -135,9 +159,7 @@ export class PlanFeedService {
         title,
         amount,
         isAmountPublic: body.isAmountPublic ?? true,
-        // 자르는 일은 여기서 한다. 프론트에 맡기면 앱마다 다르게 자르고,
-        // 한 곳만 빠뜨려도 전체 주소가 그대로 올라간다.
-        region: toRegion(location),
+        ...placeColumns(body),
         rating: body.rating,
         body: body.body?.trim() || null,
         authorDDay: daysUntilWedding(planUser?.weddingDate),
@@ -312,6 +334,10 @@ export class PlanFeedService {
         title: schedule.title,
         amount: schedule.amount ?? null,
         location: schedule.location ?? null,
+        locationLat:
+          schedule.locationLat === null ? null : Number(schedule.locationLat),
+        locationLng:
+          schedule.locationLng === null ? null : Number(schedule.locationLng),
         startDate: schedule.startDate ?? null,
       }));
   }
@@ -329,7 +355,6 @@ export class PlanFeedService {
     categoryName: string;
     title: string;
     amount: number | null;
-    location: string | null;
     sourceScheduleId: number;
   }> {
     const schedule =
@@ -365,7 +390,6 @@ export class PlanFeedService {
       categoryName: schedule.categoryName,
       title: schedule.title,
       amount: schedule.amount ?? null,
-      location: schedule.location ?? null,
       sourceScheduleId: schedule.id,
     };
   }
