@@ -71,6 +71,14 @@ export class PlanUserDeviceTokenRepositoryService {
     await this.planUserDeviceTokenRepository.delete({ planUserId, token });
   }
 
+  /**
+   * 탈퇴한 사용자의 기기 토큰 전부. 남겨 두면 계정이 사라진 뒤에도 그 기기로
+   * 푸시가 계속 간다.
+   */
+  async deleteAllByPlanUserId(planUserId: string): Promise<void> {
+    await this.planUserDeviceTokenRepository.delete({ planUserId });
+  }
+
   /** FCM 이 더 이상 유효하지 않다고 답한 토큰 정리. 복구 대상이 아니라 hard delete 한다. */
   async deleteByTokens(tokens: string[]): Promise<void> {
     if (tokens.length === 0) {

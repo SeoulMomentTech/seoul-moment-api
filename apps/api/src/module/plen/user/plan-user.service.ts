@@ -6,6 +6,7 @@ import { PlanUserDeviceTokenRepositoryService } from '@app/repository/service/pl
 import { PlanUserRoomRepositoryService } from '@app/repository/service/plan-user-room.repository.service';
 import { PlanUserRepositoryService } from '@app/repository/service/plan-user.repository.service';
 import { Injectable } from '@nestjs/common';
+import { Transactional } from 'typeorm-transactional';
 
 import {
   DeletePlanUserDeviceTokenRequest,
@@ -59,6 +60,24 @@ export class PlanUserService {
       planUserId,
       request.token,
     );
+  }
+
+  /**
+   * 회원 탈퇴.
+   *
+   * 앱 심사가 앱 안에서 계정을 지울 수 있기를 요구한다(애플 5.1.1(v),
+   * 구글 데이터 삭제 정책). 되돌릴 수 없어서 화면에서 두 번 확인받는다.
+   *
+   * 기기 토큰을 먼저 지운다 — 탈퇴 처리 도중 들어온 채팅 푸시가 이미 나간
+   * 사람의 기기로 가면 안 된다.
+   */
+  @Transactional()
+  async deletePlanUser(planUserId: string): Promise<void> {
+    await this.planUserDeviceTokenRepositoryService.deleteAllByPlanUserId(
+      planUserId,
+    );
+
+    await this.planUserRepositoryService.withdraw(planUserId);
   }
 
   async patchPlanUser(

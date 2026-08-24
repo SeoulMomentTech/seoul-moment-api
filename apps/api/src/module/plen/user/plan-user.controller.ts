@@ -112,6 +112,20 @@ export class PlanUserController {
     return new ResponseDataDto(result);
   }
 
+  @Delete()
+  @ApiOperation({
+    summary: '회원 탈퇴',
+    description:
+      '개인을 가리키는 값(소셜 id·이메일·이름·프로필·예식장)을 즉시 비우고 계정을 소프트 삭제한다. ' +
+      '같은 소셜 계정으로 다시 로그인하면 새 사용자로 시작한다. ' +
+      '채팅 메시지와 견적 후기는 남는다 — 대화는 방에 남은 상대의 것이고, 후기는 원래 익명이다.',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  async deletePlanUser(@Request() req: PlanUserRequest) {
+    await this.planUserService.deletePlanUser(req.user.id);
+  }
+
   @Post('device-token')
   @ApiOperation({
     summary: 'FCM 기기 토큰 등록',
