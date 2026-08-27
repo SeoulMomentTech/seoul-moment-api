@@ -10,6 +10,7 @@ import { UserLikeModule } from './like/user.like.module';
 import { UserRecentModule } from './recent/user.recent.module';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
+import { UserWithdrawModule } from './withdraw/user.withdraw.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UserService } from './user.service';
     UserImageModule,
     UserLikeModule,
     UserRecentModule,
+    UserWithdrawModule,
   ],
   controllers: [UserController],
   providers: [UserService, UserOneTimeTokenStrategy, UserRefreshTokenStrategy],

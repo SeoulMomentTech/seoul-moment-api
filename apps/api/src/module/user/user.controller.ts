@@ -29,11 +29,36 @@ import {
   PostUserProfileRequest,
 } from './user.dto';
 import { UserService } from './user.service';
+import { UserWithdrawService } from './withdraw/user.withdraw.service';
 import { UserOneTimeTokenGuard } from '../../guard/user-one-time-token.guard';
+
+const WITHDRAW_DESCRIPTION = `회원을 탈퇴 처리한다.
+
+- 이메일/닉네임/전화번호 등 식별정보는 익명값으로 치환되고 계정은 소프트 삭제된다.
+- SNS 연동, 좋아요(브랜드/상품/룩북), 최근 본 상품, 프로필 이미지는 즉시 삭제된다.
+- 발급된 액세스·리프레시 토큰은 즉시 무효화되어 이후 요청은 401을 받는다.
+- 탈퇴한 이메일·전화번호로 다시 가입할 수 있다.
+- 복구되지 않으니 클라이언트에서 반드시 확인 절차를 거칠 것.`;
 
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly userWithdrawService: UserWithdrawService,
+  ) {}
+
+  @Delete()
+  @ApiOperation({
+    summary: '회원 탈퇴',
+    description: WITHDRAW_DESCRIPTION,
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseException(HttpStatus.UNAUTHORIZED, '토큰 만료 또는 이미 탈퇴한 회원')
+  @ResponseException(HttpStatus.NOT_FOUND, '유저 정보 없음')
+  async deleteUser(@Request() req: any) {
+    await this.userWithdrawService.withdraw(req.user.id);
+  }
 
   @Get('info')
   @ApiOperation({ summary: '유저 정보 조회' })

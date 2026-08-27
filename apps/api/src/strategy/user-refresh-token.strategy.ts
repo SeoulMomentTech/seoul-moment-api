@@ -27,8 +27,15 @@ export class UserRefreshTokenStrategy extends PassportStrategy(
 
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
 
+    // 탈퇴한 회원은 소프트 삭제되어 조회되지 않으므로 리프레시도 막힌다.
     const userEntity =
-      await this.userRepositoryService.getUserByIdWithRefreshToken(payload.id);
+      await this.userRepositoryService.findUserByIdWithRefreshToken(payload.id);
+
+    if (!userEntity)
+      throw new HttpException(
+        'Withdrawn or unknown user',
+        HttpStatus.UNAUTHORIZED,
+      );
 
     if (!userEntity.refreshToken || token !== userEntity.refreshToken)
       throw new HttpException('Invalid refresh token', HttpStatus.FORBIDDEN);

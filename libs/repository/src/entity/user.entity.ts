@@ -100,8 +100,8 @@ export class UserEntity extends CommonEntity {
   @OneToOne(() => UserFitEntity, (fit) => fit.user)
   fit: UserFitEntity;
 
-  @OneToMany(() => UserSnsEntity, (sns) => sns.user)
-  snsList: UserSnsEntity[];
+  @OneToOne(() => UserSnsEntity, (sns) => sns.user)
+  sns: UserSnsEntity;
 
   @OneToMany(() => UserBrandLikeEntity, (like) => like.user)
   brandLikes: UserBrandLikeEntity[];
