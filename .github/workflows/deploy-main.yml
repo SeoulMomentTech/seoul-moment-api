@@ -78,6 +78,7 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
-          deployment-configuration: |
-            minimumHealthyPercent: 0
-            maximumPercent: 100
+          # 배포 비율(minimumHealthyPercent/maximumPercent), 배포 서킷 브레이커,
+          # 헬스체크 유예 기간은 이 액션의 입력이 아니라 ECS '서비스' 속성이다.
+          # 여기에 적으면 GitHub Actions 가 경고만 내고 조용히 무시하므로
+          # 콘솔이나 aws ecs update-service 로 서비스에 직접 설정해야 한다.
