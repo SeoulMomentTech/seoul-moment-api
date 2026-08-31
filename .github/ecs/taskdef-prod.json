@@ -3,7 +3,7 @@
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
-  "memory": "1024",
+  "memory": "2048",
   "runtimePlatform": {
     "cpuArchitecture": "ARM64",
     "operatingSystemFamily": "LINUX"
@@ -16,6 +16,12 @@
       "image": "IMAGE_PLACEHOLDER",
       "essential": true,
       "portMappings": [{ "containerPort": 3000, "protocol": "tcp" }],
+      "environment": [
+        {
+          "name": "NODE_OPTIONS",
+          "value": "--max-old-space-size=1536"
+        }
+      ],
       "secrets": [
         {
           "name": "NODE_ENV",

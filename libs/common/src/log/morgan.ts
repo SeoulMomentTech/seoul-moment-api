@@ -1,3 +1,5 @@
+import { Configuration } from '@app/config/configuration';
+import { SupportEnv } from '@app/config/enum/config.enum';
 import { INestApplication } from '@nestjs/common';
 import { Application } from 'express';
 import type { IncomingMessage } from 'http';
@@ -50,6 +52,7 @@ function convertBodyMessage(message: string) {
 /* eslint-disable max-lines-per-function */
 function morganSetting(app: INestApplication<any>) {
   const logger = app.get(LoggerService);
+  const isProd = Configuration.getConfig().NODE_ENV === SupportEnv.PROD;
 
   // Request line 로깅 (morgan 사용)
   app.use(
@@ -71,11 +74,19 @@ function morganSetting(app: INestApplication<any>) {
   );
 
   // Request/Response body 로깅 (morgan-body 사용)
+  //
+  // 응답 본문 로깅은 morgan-body 가 res.send 를 가로채 본문 전체를 응답 객체에
+  // 붙들어 두고, 1000자로 잘라내기 전에 payload 를 통째로 JSON.stringify 한다.
+  // 목록 API 처럼 응답이 큰 요청이 몰리면 이 순간 할당이 힙을 밀어올려
+  // prod 컨테이너가 OOM(exit 137)으로 죽었다. (2026-08-31 장애)
+  // prod 에서만 끄고, dev/local/test 는 디버깅 편의를 위해 그대로 둔다.
   morganBody(app.getHttpAdapter().getInstance() as Application, {
     noColors: false, // 컬러 유지
     prettify: false,
     logReqDateTime: false, // request line은 이미 morgan으로 처리
     logReqUserAgent: false,
+    logResponseBody: !isProd,
+    maxBodyLength: isProd ? 500 : 1000,
 
     skip(_req: IncomingMessage) {
       return isSkipUrl(_req);
