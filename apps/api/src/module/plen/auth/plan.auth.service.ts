@@ -9,19 +9,10 @@ import { plainToInstance } from 'class-transformer';
 import { v4 as uuidV4 } from 'uuid';
 
 import { PostPlanLoginRequest, PostPlanLoginResponse } from './plan.auth.dto';
-
-/**
- * 로그인 세션 수명.
- *
- * 예전에는 `36500d`(약 100년)였다. 회수할 방법이 없는 토큰에 붙일 수명이
- * 아니고, 어차피 가드가 카카오 토큰을 매번 확인해서 실제로는 6시간이면
- * 끊겼다. 지금은 이 값이 그대로 세션 수명이다 — 탭을 닫든 기기를 재부팅하든
- * 반년 안에 다시 들어오면 로그인 상태가 유지된다.
- *
- * 갱신(슬라이딩)은 아직 없다. 넣으려면 응답으로 새 토큰을 돌려주고 프론트가
- * 그걸 받아 저장해야 한다.
- */
-const PLAN_SESSION_EXPIRE_TIME = '180d';
+import {
+  buildPlanTokenPayload,
+  PLAN_SESSION_EXPIRE_TIME,
+} from '../plan.session';
 
 @Injectable()
 export class PlanAuthService {
@@ -59,12 +50,7 @@ export class PlanAuthService {
     }
 
     const jwtToken = await this.commonAuthService.generateJwt(
-      {
-        platformType,
-        planUserId: planUser.id,
-        kakaoId: kakaoValidateTokenResponse.id,
-        tokenVersion: planUser.tokenVersion ?? 0,
-      },
+      buildPlanTokenPayload(planUser, platformType),
       JwtType.ONE_TIME_TOKEN,
       PLAN_SESSION_EXPIRE_TIME,
     );

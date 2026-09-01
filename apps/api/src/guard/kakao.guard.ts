@@ -12,6 +12,14 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
+import {
+  buildPlanTokenPayload,
+  isLegacyPlanTokenPayload,
+  PLAN_SESSION_EXPIRE_TIME,
+  PLAN_SESSION_RENEW_BEFORE_SEC,
+  RENEWED_TOKEN_HEADER,
+} from '../module/plen/plan.session';
+
 /**
  * DB 에서 읽어 온 timestamp 가 "오늘" 것인지 본다.
  *
@@ -51,6 +59,10 @@ function isStoredToday(stored: Date, now: Date): boolean {
  * 지금은 서명·만료·토큰 세대만 보고 `planUserId` 로 사용자를 찾는다.
  * 토큰을 되돌려 받아야 할 때는 `plan_user.token_version` 을 올린다
  * (`POST /plan/auth/logout/all`, 회원 탈퇴).
+ *
+ * 수명이 절반 넘게 지났으면 요청을 처리하면서 새 토큰을 응답 헤더로 함께
+ * 내준다. 그래야 **쓰는 동안에는 세션이 계속 밀린다** — 없으면 매일 들어오는
+ * 사용자도 로그인한 지 180일째에 한 번 튕긴다.
  *
  * **여기에 카카오 호출을 다시 넣지 마세요.** 로그인 상태를 남의 토큰 수명에
  * 다시 매다는 일입니다.
@@ -97,7 +109,14 @@ export class PlanApiGuard implements CanActivate {
       );
     }
 
-    request.user = await this.getPlanUser(payload);
+    const planUser = await this.getPlanUser(payload);
+    request.user = planUser;
+
+    this.renewTokenIfNeeded(
+      context.switchToHttp().getResponse(),
+      payload,
+      planUser,
+    );
 
     return true;
   }
@@ -140,6 +159,43 @@ export class PlanApiGuard implements CanActivate {
     await this.touchLastLoginDate(planUser);
 
     return planUser;
+  }
+
+  /**
+   * 수명이 얼마 안 남았으면 새 토큰을 응답 헤더에 실어 준다.
+   *
+   * 프론트는 공통 fetch 래퍼에서 이 헤더를 보고 저장된 토큰을 갈아 끼운다.
+   * 헤더가 없으면 아무 일도 일어나지 않으므로, 받아 가지 못해도 원래 토큰이
+   * 만료될 때까지는 그대로 쓸 수 있다.
+   *
+   * **갱신은 인증을 다 통과한 뒤에만 한다.** 회수됐거나 만료된 토큰은 여기까지
+   * 오지 못하므로, 죽은 토큰이 갱신으로 되살아나는 길은 없다.
+   */
+  private renewTokenIfNeeded(
+    response: { setHeader: (name: string, value: string) => void },
+    payload: Record<string, any>,
+    planUser: PlanUserEntity,
+  ): void {
+    const exp = payload.exp;
+
+    if (typeof exp !== 'number') return;
+
+    const remainingSec = exp - Math.floor(Date.now() / 1000);
+    const isExpiringSoon = remainingSec < PLAN_SESSION_RENEW_BEFORE_SEC;
+
+    if (!isExpiringSoon && !isLegacyPlanTokenPayload(payload)) return;
+
+    // payload 를 물려주지 않고 새로 만든다. 그대로 이어 쓰면 옛 토큰에 박혀
+    // 있던 카카오 access_token 이 새 토큰에도 따라 들어간다.
+    const renewed = this.jwtService.sign(
+      {
+        ...buildPlanTokenPayload(planUser, payload.platformType),
+        jwtType: JwtType.ONE_TIME_TOKEN,
+      },
+      { expiresIn: PLAN_SESSION_EXPIRE_TIME },
+    );
+
+    response.setHeader(RENEWED_TOKEN_HEADER, renewed);
   }
 
   /**

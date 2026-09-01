@@ -53,6 +53,7 @@ import { PlanAuthModule } from './module/plen/auth/plan.auth.module';
 import { PlanCategoryModule } from './module/plen/category/plan-category.module';
 import { ChatModule } from './module/plen/chat/chat.module';
 import { PlanModule } from './module/plen/plan.module';
+import { RENEWED_TOKEN_HEADER } from './module/plen/plan.session';
 import { PlanRoomModule } from './module/plen/room/plan-room.module';
 import { PlanScheduleModule } from './module/plen/schedule/plan-schedule.module';
 import { PlanSettingModule } from './module/plen/setting/plan-setting.module';
@@ -70,7 +71,10 @@ async function bootstrap() {
   initializeTransactionalContext();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    cors: true,
+    // 브라우저는 다른 오리진의 응답에서 노출한 헤더만 읽는다. 세션 갱신
+    // 토큰이 이 헤더로 나가므로, 빼면 프론트에서 헤더가 없는 것처럼 보이고
+    // 갱신이 조용히 죽는다. 나머지 옵션은 cors 패키지 기본값 그대로다.
+    cors: { exposedHeaders: [RENEWED_TOKEN_HEADER] },
   });
 
   const logger = app.get(LoggerService);

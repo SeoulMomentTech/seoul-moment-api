@@ -185,6 +185,107 @@ describe('Plan session (E2E)', () => {
     });
   });
 
+  describe('쓰는 동안 세션이 계속 밀린다', () => {
+    /** 갱신 토큰은 응답 헤더로 온다 (모든 플랜 API 의 응답 모양을 바꿀 수는 없다) */
+    function renewedTokenOf(res: request.Response): string | undefined {
+      return res.headers['x-renewed-token'];
+    }
+
+    it('갓 받은 토큰은 갱신하지 않는다', async () => {
+      // Given - 요청마다 토큰이 바뀌면 클라이언트가 저장한 값과 어긋날 틈만 늘어난다
+      const planUser = await createPlanUser();
+
+      // When
+      const res = await getPlanUser(signToken(planUser));
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(renewedTokenOf(res)).toBeUndefined();
+    });
+
+    it('절반 넘게 지났으면 새 토큰을 함께 내준다', async () => {
+      // Given - 남은 수명 80일 (기준 90일 미만)
+      const planUser = await createPlanUser();
+      const almostSpent = signToken(planUser, { expiresIn: '80d' });
+
+      // When
+      const res = await getPlanUser(almostSpent);
+
+      // Then
+      const renewed = renewedTokenOf(res);
+      expect(renewed).toEqual(expect.any(String));
+
+      // 새 토큰으로 그대로 통하고, 만료가 다시 180일 뒤로 밀린다
+      expect((await getPlanUser(renewed)).status).toBe(200);
+      const { iat, exp } = jwt.decode(renewed) as { iat: number; exp: number };
+      expect(exp - iat).toBe(180 * 24 * 60 * 60);
+    });
+
+    it('갱신된 토큰은 한 번 더 갱신되지 않는다', async () => {
+      // Given
+      const planUser = await createPlanUser();
+      const renewed = renewedTokenOf(
+        await getPlanUser(signToken(planUser, { expiresIn: '80d' })),
+      );
+
+      // When
+      const res = await getPlanUser(renewed);
+
+      // Then
+      expect(renewedTokenOf(res)).toBeUndefined();
+    });
+
+    it('옛 토큰은 수명이 남았어도 새 모양으로 갈아 끼운다', async () => {
+      // Given - 100년짜리라 수명만 보면 영영 갈리지 않는다. 그런데 그 안에는
+      // 카카오 access_token 이 박혀 있어 주운 사람이 카카오 API 를 부를 수 있다
+      const planUser = await createPlanUser();
+      const legacyToken = jwt.sign(
+        {
+          platformType: PlatformType.KAKAO,
+          planUserId: planUser.id,
+          kakaoId: planUser.kakaoId,
+          kakaoToken: 'kakao-access-token-should-not-survive',
+          jwtType: JwtType.ONE_TIME_TOKEN,
+        },
+        SECRET,
+        { expiresIn: '36500d' },
+      );
+
+      // When
+      const renewed = renewedTokenOf(await getPlanUser(legacyToken));
+
+      // Then
+      expect(renewed).toEqual(expect.any(String));
+      const payload = jwt.decode(renewed) as Record<string, any>;
+      expect(payload.kakaoToken).toBeUndefined();
+      expect(payload.tokenVersion).toBe(0);
+      expect(payload.planUserId).toBe(planUser.id);
+    });
+
+    it('회수된 토큰은 갱신해 주지 않는다', async () => {
+      // Given - 죽은 토큰이 갱신으로 되살아나면 회수가 뚫린다
+      const planUser = await createPlanUser({ tokenVersion: 1 });
+      const revoked = jwt.sign(
+        {
+          platformType: PlatformType.KAKAO,
+          planUserId: planUser.id,
+          kakaoId: planUser.kakaoId,
+          tokenVersion: 0,
+          jwtType: JwtType.ONE_TIME_TOKEN,
+        },
+        SECRET,
+        { expiresIn: '80d' },
+      );
+
+      // When
+      const res = await getPlanUser(revoked);
+
+      // Then
+      expect(res.status).toBe(401);
+      expect(renewedTokenOf(res)).toBeUndefined();
+    });
+  });
+
   describe('거절해야 하는 토큰', () => {
     it('만료된 토큰은 401', async () => {
       const planUser = await createPlanUser();
