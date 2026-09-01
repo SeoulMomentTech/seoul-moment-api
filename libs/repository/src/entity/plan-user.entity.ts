@@ -103,6 +103,23 @@ export class PlanUserEntity extends CommonEntity {
   })
   status: PlanUserStatus;
 
+  /**
+   * 토큰 세대. 발급된 JWT 는 이 값을 함께 들고 다니고, 가드가 매 요청 대조한다.
+   *
+   * 로그인 세션이 길어진 만큼(180일) 토큰을 되돌려 받을 수단이 있어야 한다.
+   * 이 값을 1 올리면 그 사용자에게 나간 **모든 기기의 토큰이 즉시 무효**가 된다.
+   * 기기별로 끊을 수는 없다 — 그러려면 세션 테이블이 따로 필요하다.
+   *
+   * 예전 토큰에는 이 클레임이 없으므로 가드가 `?? 0` 으로 읽는다.
+   * 기본값을 0 이 아닌 값으로 바꾸면 기존 사용자가 전부 로그아웃된다.
+   */
+  @Column('int', {
+    default: 0,
+    nullable: false,
+    comment: '토큰 세대. 올리면 발급된 JWT 가 전부 무효가 된다',
+  })
+  tokenVersion: number;
+
   @OneToMany(() => PlanScheduleEntity, (schedule) => schedule.planUser, {
     cascade: true,
   })

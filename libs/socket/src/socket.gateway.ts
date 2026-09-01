@@ -49,9 +49,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * id 만 알면 남의 이름으로 메시지를 넣을 수 있었다.
    *
    * 웹·안드로이드·iOS 모두 이미 `auth: { token }` 을 보내고 있어 클라이언트
-   * 변경 없이 켤 수 있다. 카카오 토큰 재검증(PlanApiGuard 가 하는 일)까지
-   * 매 연결마다 하지는 않는다 — JWT 는 우리가 서명한 것이고, 소켓 연결마다
-   * 외부 API 를 때리면 채팅 진입이 느려진다.
+   * 변경 없이 켤 수 있다. 검증 내용은 `PlanApiGuard` 와 같다 — 서명·만료와
+   * 토큰 세대를 본다. 세대를 빠뜨리면 `POST /plan/auth/logout/all` 로 회수한
+   * 토큰이 HTTP 는 막히는데 소켓은 그대로 붙어, 회수가 반쪽이 된다.
    */
   async handleConnection(client: Socket) {
     try {
@@ -63,6 +63,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const planUser = await this.planUserRepositoryService.getById(
         payload.planUserId ?? payload.sub,
       );
+
+      // 이 클레임이 없던 시절의 토큰은 0 으로 읽어 그대로 통과시킨다
+      if ((payload.tokenVersion ?? 0) !== (planUser.tokenVersion ?? 0)) {
+        throw new Error('token revoked');
+      }
 
       (client as any).planUser = planUser;
     } catch (error) {

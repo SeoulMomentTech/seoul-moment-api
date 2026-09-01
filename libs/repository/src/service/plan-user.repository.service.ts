@@ -65,6 +65,41 @@ export class PlanUserRepositoryService {
     });
   }
 
+  /**
+   * 인증용 조회. 없으면 예외 대신 null 을 준다.
+   *
+   * `getById` 를 쓰면 탈퇴/오래된 토큰이 404 로 나가는데, 그건 "요청한 자원이
+   * 없다" 는 뜻이라 프론트가 세션 만료로 알아채지 못한다. 가드가 401 로
+   * 바꿔 던지도록 판단을 넘긴다.
+   *
+   * 소프트 삭제된 행은 TypeORM 이 기본으로 제외하므로 탈퇴한 사용자의 토큰은
+   * 여기서 이미 걸린다.
+   */
+  async findById(id: string): Promise<PlanUserEntity | null> {
+    return this.planUserRepository.findOneBy({ id });
+  }
+
+  /**
+   * 토큰 세대를 1 올려 이미 발급된 JWT 를 전부 무효로 만든다.
+   *
+   * 엔티티를 읽어 save 하지 않고 원자적 증가로 쓴다 — 여러 요청이 겹쳐도
+   * 세대가 뒤로 밀리지 않아야 한다(회수는 늦어지면 의미가 없다).
+   */
+  async incrementTokenVersion(id: string): Promise<void> {
+    await this.planUserRepository.increment({ id }, 'tokenVersion', 1);
+  }
+
+  /**
+   * 마지막 접속 일시만 갱신한다.
+   *
+   * 가드가 매 요청 부르던 자리라 엔티티 전체를 save 하지 않는다 — 그 방식은
+   * 모든 컬럼을 쓰는 UPDATE 라, 같은 사용자의 요청이 겹치면 오래된 스냅샷이
+   * 방금 저장한 값을 덮어쓸 수 있었다.
+   */
+  async touchLastLoginDate(id: string, at: Date): Promise<void> {
+    await this.planUserRepository.update({ id }, { lastLoginDate: at });
+  }
+
   async getById(id: string): Promise<PlanUserEntity> {
     const result = await this.planUserRepository.findOneBy({ id });
 
@@ -122,6 +157,9 @@ export class PlanUserRepositoryService {
     planUser.profileImageUrl = null;
     planUser.weddingVenue = null;
     planUser.status = PlanUserStatus.DELETE;
+    // 나가 있는 토큰을 함께 끊는다. 소프트 삭제만으로도 가드의 조회가
+    // 실패하지만, 되살리는 일이 생기더라도 옛 토큰이 살아 돌아오면 안 된다.
+    planUser.tokenVersion = (planUser.tokenVersion ?? 0) + 1;
 
     await this.planUserRepository.save(planUser);
 
