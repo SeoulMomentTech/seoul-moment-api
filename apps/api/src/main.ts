@@ -35,6 +35,7 @@ import { AdminImageModule } from './module/admin/image/admin.image.module';
 import { AdminNewsModule } from './module/admin/news/admin.news.module';
 import { AdminProductModule } from './module/admin/product/admin.product.module';
 import { AdminPromotionModule } from './module/admin/promotion/admin.promotion.module';
+import { AdminShippingModule } from './module/admin/shipping/admin.shipping.module';
 import { AdminUserModule } from './module/admin/user/admin.user.module';
 import { RATE_LIMIT_DISABLED_ENVS } from './module/ai-consult/ai-consult.dto';
 import { AiConsultModule } from './module/ai-consult/ai-consult.module';
@@ -58,9 +59,12 @@ import { PlanScheduleModule } from './module/plen/schedule/plan-schedule.module'
 import { PlanSettingModule } from './module/plen/setting/plan-setting.module';
 import { PlanUserModule } from './module/plen/user/plan.user.module';
 import { ProductModule } from './module/product/product.module';
+import { ShippingModule } from './module/shipping/shipping.module';
 import { UserAuthModule } from './module/user/auth/user.auth.module';
+import { UserCartModule } from './module/user/cart/user.cart.module';
 import { UserImageModule } from './module/user/image/user.image.module';
 import { UserLikeModule } from './module/user/like/user.like.module';
+import { UserOrderModule } from './module/user/order/user.order.module';
 import { UserRecentModule } from './module/user/recent/user.recent.module';
 import { UserModule } from './module/user/user.module';
 
@@ -98,6 +102,7 @@ async function bootstrap() {
       AdminNewsModule,
       AdminArticleModule,
       AdminProductModule,
+      AdminShippingModule,
       AdminUserModule,
       AdminPromotionModule,
       AdminBrandPromotionModule,
@@ -118,9 +123,12 @@ async function bootstrap() {
       NewsModule,
       PartnerModule,
       ProductModule,
+      ShippingModule,
       UserAuthModule,
+      UserCartModule,
       UserImageModule,
       UserLikeModule,
+      UserOrderModule,
       UserRecentModule,
       UserModule,
       AiConsultModule,

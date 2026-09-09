@@ -32,6 +32,7 @@ import { ChatModule } from './plen/chat/chat.module';
 import { PlanNotificationModule } from './plen/notification/plan-notification.module';
 import { PlanModule } from './plen/plan.module';
 import { ProductModule } from './product/product.module';
+import { ShippingModule } from './shipping/shipping.module';
 import { UserModule } from './user/user.module';
 
 @Module({
@@ -72,6 +73,7 @@ import { UserModule } from './user/user.module';
     BrandPromotionModule,
     UserModule,
     AiConsultModule,
+    ShippingModule,
   ],
   controllers: [
     HealthController,

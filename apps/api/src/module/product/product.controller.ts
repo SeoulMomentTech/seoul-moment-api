@@ -257,9 +257,10 @@ export class ProductController {
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Product detail with Multilingual Support',
+    summary: 'Product detail with Multilingual Support -- deprecated',
+    deprecated: true,
     description:
-      'Returns product detail in the specified language. Supports Korean (ko), English (en), and Chinese (zh).',
+      'GET /product/v1/:id 를 사용할 것. v1 은 옵션 조합(variants)과 재고를 함께 내려주고, 실제 청구액과 무관해진 shippingCost 를 제외한다. 응답 스펙 유지를 위해 이 엔드포인트는 변경하지 않는다.',
   })
   @ApiHeader({
     name: 'Accept-language',

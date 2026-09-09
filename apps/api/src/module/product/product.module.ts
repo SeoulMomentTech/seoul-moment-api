@@ -6,6 +6,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { ProductLikeCountModule } from './like-count/product-like-count.module';
 import { ProductController } from './product.controller';
 import { ProductService } from './product.service';
+import { V1ProductController } from './v1/v1.product.controller';
+import { V1ProductService } from './v1/v1.product.service';
 import { OptionalUserGuard } from '../../guard/optional-user.guard';
 
 @Module({
@@ -16,8 +18,8 @@ import { OptionalUserGuard } from '../../guard/optional-user.guard';
     }),
     ProductLikeCountModule,
   ],
-  controllers: [ProductController],
-  providers: [ProductService, OptionalUserGuard],
+  controllers: [ProductController, V1ProductController],
+  providers: [ProductService, V1ProductService, OptionalUserGuard],
   exports: [ProductService],
 })
 export class ProductModule {}
