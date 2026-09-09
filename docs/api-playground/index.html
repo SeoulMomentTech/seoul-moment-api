@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>설정·로그인 · SM API Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="_common.css">
+</head>
+<body>
+<main>
+  <h1>설정 · 로그인</h1>
+  <p class="sub">여기서 토큰을 받아두면 다른 페이지에서 그대로 씁니다.</p>
+  <div id="hint"></div>
+
+  <div class="card">
+    <h2><span class="verb get">GET</span> 서버 연결 확인 <span class="path">/health</span></h2>
+    <div class="card-body">
+      <div class="row">
+        <button id="ping">확인</button>
+        <span class="hint">Base 주소가 맞는지, 서버가 떠 있는지 먼저 봅니다.</span>
+      </div>
+      <div id="pingOut"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="verb post">POST</span> 사용자 회원가입 + 로그인 <span class="path">/user/auth/signup · /user/auth/login</span></h2>
+    <div class="card-body">
+      <div class="grid">
+        <div class="field">
+          <label>email</label>
+          <input id="email" placeholder="test@example.com">
+        </div>
+        <div class="field">
+          <label>password</label>
+          <input id="password" value="Test1234!abcd">
+        </div>
+        <div class="field">
+          <label>nickname (가입용)</label>
+          <input id="nickname" placeholder="tester1">
+        </div>
+      </div>
+      <div class="row">
+        <button id="fill" class="ghost">임의 계정 채우기</button>
+        <button id="signup" class="ghost">가입만</button>
+        <button id="login">로그인만</button>
+        <button id="signupLogin">가입 + 로그인</button>
+        <button id="clearToken" class="ghost">토큰 지우기</button>
+      </div>
+      <p class="hint">로그인 응답의 <code>data.token</code> 이 ONE_TIME_TOKEN 입니다. 이 값을 저장해 <code>Authorization: Bearer</code> 로 씁니다.</p>
+      <div id="authOut"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>사용자 프로필 — 기본 배송지</h2>
+    <div class="card-body">
+      <p class="hint">주문에서 <code>useDefaultShipping: true</code> 를 쓰려면 프로필 주소와 전화번호가 채워져 있어야 합니다. 비어 있으면 주문 생성이 400 으로 떨어집니다.</p>
+      <div class="row">
+        <button id="getProfile" class="ghost">프로필 조회</button>
+        <button id="getInfo" class="ghost">계정 정보 조회 (phone)</button>
+      </div>
+      <div class="grid">
+        <div class="field"><label>name</label><input id="pName" value="李佳蓉"></div>
+        <div class="field"><label>postalCode</label><input id="pPostal" value="110"></div>
+        <div class="field"><label>city</label><input id="pCity" value="臺北市"></div>
+        <div class="field"><label>district</label><input id="pDistrict" value="信義區"></div>
+        <div class="field"><label>detailAddress</label><input id="pDetail" value="松高路 11號 5樓"></div>
+      </div>
+      <div class="row">
+        <button id="saveProfile">프로필 저장 (PATCH /user/profile)</button>
+      </div>
+      <p class="hint">전화번호는 인증 플로우가 따로 있어 여기서 넣지 못합니다. 비어 있으면 DB 에서 직접 채우세요 —
+        <code>UPDATE "user" SET phone='+886912345678' WHERE email='...';</code></p>
+      <div id="profileOut"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="verb post">POST</span> 관리자 로그인 <span class="path">/admin/auth/*</span></h2>
+    <div class="card-body">
+      <p class="hint">배송비 정책 페이지에서만 필요합니다. 가입 → 로그인 → one-time-token 3단계를 한 번에 처리합니다.</p>
+      <div class="grid">
+        <div class="field"><label>email</label><input id="aEmail" value="playground-admin@test.com"></div>
+        <div class="field"><label>password</label><input id="aPassword" value="TestAdmin1234!"></div>
+        <div class="field"><label>name</label><input id="aName" value="플레이그라운드"></div>
+      </div>
+      <div class="row">
+        <button id="adminLogin">관리자 토큰 받기</button>
+        <button id="clearAdmin" class="ghost">관리자 토큰 지우기</button>
+      </div>
+      <div id="adminOut"></div>
+    </div>
+  </div>
+</main>
+
+<script src="_common.js"></script>
+<script>
+mountShell('index.html');
+$('#hint').appendChild(connectionHint());
+
+const savedEmail = ls(STORE.email);
+if (savedEmail) $('#email').value = savedEmail;
+
+function randomSuffix() {
+  return Math.random().toString(36).slice(2, 8);
+}
+
+$('#fill').addEventListener('click', () => {
+  const s = randomSuffix();
+  $('#email').value = `pg_${s}@test.com`;
+  $('#nickname').value = `pg_${s}`;
+});
+
+$('#ping').addEventListener('click', async () => {
+  const res = await api('GET', '/health', { auth: false, lang: false });
+  showResult('#pingOut', res, 'GET /health');
+});
+
+async function doSignup() {
+  const body = {
+    email: $('#email').value.trim(),
+    password: $('#password').value,
+    nickname: $('#nickname').value.trim(),
+  };
+  return api('POST', '/user/auth/signup', { body, auth: false });
+}
+
+async function doLogin() {
+  const email = $('#email').value.trim();
+  const res = await api('POST', '/user/auth/login', {
+    body: { email, password: $('#password').value },
+    auth: false,
+  });
+  const token = res.body && res.body.data && res.body.data.token;
+  if (token) {
+    cfg.setToken(token);
+    ls(STORE.email, email);
+  }
+  return res;
+}
+
+$('#signup').addEventListener('click', async () => {
+  showResult('#authOut', await doSignup(), 'POST /user/auth/signup');
+});
+
+$('#login').addEventListener('click', async () => {
+  const res = await doLogin();
+  showResult('#authOut', res, 'POST /user/auth/login');
+  if (res.status === 200) location.reload();
+});
+
+$('#signupLogin').addEventListener('click', async () => {
+  const signup = await doSignup();
+  if (signup.status !== 204 && signup.status !== 201 && signup.status !== 409) {
+    showResult('#authOut', signup, 'POST /user/auth/signup (실패)');
+    return;
+  }
+  const res = await doLogin();
+  showResult('#authOut', res, 'signup → login');
+  if (res.status === 200) location.reload();
+});
+
+$('#clearToken').addEventListener('click', () => {
+  cfg.setToken(null);
+  location.reload();
+});
+
+$('#getProfile').addEventListener('click', async () => {
+  const res = await api('GET', '/user/profile');
+  showResult('#profileOut', res, 'GET /user/profile');
+  const d = res.body && res.body.data;
+  if (d) {
+    if (d.name) $('#pName').value = d.name;
+    if (d.postalCode) $('#pPostal').value = d.postalCode;
+    if (d.city) $('#pCity').value = d.city;
+    if (d.district) $('#pDistrict').value = d.district;
+    if (d.detailAddress) $('#pDetail').value = d.detailAddress;
+  }
+});
+
+$('#getInfo').addEventListener('click', async () => {
+  showResult('#profileOut', await api('GET', '/user/info'), 'GET /user/info');
+});
+
+$('#saveProfile').addEventListener('click', async () => {
+  const body = {
+    name: $('#pName').value.trim(),
+    postalCode: $('#pPostal').value.trim(),
+    city: $('#pCity').value.trim(),
+    district: $('#pDistrict').value.trim(),
+    detailAddress: $('#pDetail').value.trim(),
+  };
+  showResult('#profileOut', await api('PATCH', '/user/profile', { body }), 'PATCH /user/profile');
+});
+
+$('#adminLogin').addEventListener('click', async () => {
+  const email = $('#aEmail').value.trim();
+  const password = $('#aPassword').value;
+
+  await api('POST', '/admin/auth/signup', {
+    body: { email, password, name: $('#aName').value.trim() },
+    auth: false,
+  });
+
+  const login = await api('POST', '/admin/auth/login', {
+    body: { email, password },
+    auth: false,
+  });
+  const refreshToken = login.body && login.body.data && login.body.data.refreshToken;
+  if (!refreshToken) {
+    showResult('#adminOut', login, 'POST /admin/auth/login (refreshToken 없음)');
+    return;
+  }
+
+  const res = await fetch(cfg.base().replace(/\/$/, '') + '/admin/auth/one-time-token', {
+    headers: { Authorization: `Bearer ${refreshToken}` },
+  });
+  const body = await res.json().catch(() => null);
+  const oneTime = body && body.data && body.data.oneTimeToken;
+  if (oneTime) cfg.setAdminToken(oneTime);
+
+  showResult('#adminOut', { status: res.status, ok: res.ok, ms: 0, body }, 'GET /admin/auth/one-time-token');
+  if (oneTime) location.reload();
+});
+
+$('#clearAdmin').addEventListener('click', () => {
+  cfg.setAdminToken(null);
+  location.reload();
+});
+</script>
+</body>
+</html>

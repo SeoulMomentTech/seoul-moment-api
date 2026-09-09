@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상품 상세 · SEOUL MOMENT</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="_shop.css">
+<style>
+  .sm-detail {
+    display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 80px;
+    max-width: 1200px; margin: 0 auto; padding: 50px 20px 60px;
+  }
+  @media (max-width: 1040px) { .sm-detail { grid-template-columns: 1fr; gap: var(--s6); padding-top: 24px; } }
+
+  .gallery .main { aspect-ratio: 1; background: #efe9df; border: 1px solid var(--sm-hair); background-size: cover; background-position: center; }
+  .gallery .thumbs { display: flex; gap: 8px; margin-top: 8px; }
+  .gallery .thumbs i { width: 64px; height: 64px; display: block; border: 1px solid var(--sm-hair); background: #efe9df; }
+  .gallery .thumbs i.on { border-color: #000; }
+
+  .sm-ptitle { display: flex; gap: 16px; align-items: flex-start; padding-bottom: 20px; }
+  .sm-ptitle h1 { flex: 1 1 0; min-width: 0; font-size: var(--t4); font-weight: 700; line-height: 1.35; letter-spacing: -0.02em; margin: 0; }
+
+  .sm-brandrow { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+  .sm-brandrow .ab { display: flex; align-items: center; gap: 8px; font-size: var(--b3); }
+
+  .sm-meta { border-bottom: 1px solid var(--sm-rule); padding: 10px 0 20px; display: grid; gap: 20px; }
+  .sm-prices { display: grid; gap: 12px; }
+  .sm-prices .r { display: flex; align-items: center; font-size: var(--b3); }
+  .sm-prices .r .k { width: 110px; flex: none; color: var(--sm-ink80); }
+  .sm-prices .was { color: var(--sm-ink40); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+  .sm-prices .now { display: flex; align-items: center; gap: 8px; }
+  .sm-prices .now b { font-size: var(--b1); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .sm-prices .now .off { color: var(--sm-brand); font-size: var(--b5); font-weight: 700; }
+
+  .sm-info { display: grid; gap: 16px; padding: 20px 0 0; font-size: var(--b3); color: var(--sm-ink80); }
+  .sm-info .r { display: flex; }
+  .sm-info .r .k { width: 110px; flex: none; }
+
+  .opts { display: grid; gap: 10px; padding: 20px 0 0; }
+  .opt-group { display: grid; gap: 8px; }
+  .opt-group > .lb { font-size: var(--b4); color: var(--sm-ink80); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--sm-line); border-radius: 4px; background: #fff; color: var(--sm-fg);
+    padding: 10px 14px; font-size: var(--b3); cursor: pointer; font-family: inherit;
+  }
+  .chip.on { border-color: var(--sm-fg); border-width: 1.5px; font-weight: 600; }
+  .chip:disabled { color: var(--sm-ink40); background: var(--sm-hair); cursor: not-allowed; text-decoration: line-through; }
+
+  .draft { background: var(--sm-hair); padding: 12px 16px; margin-top: 16px; }
+  .draft .line { display: flex; align-items: center; gap: 16px; padding: 10px 0; }
+  .draft .line .lbl { flex: 1 1 0; min-width: 0; font-size: var(--b3); color: var(--sm-ink80); }
+  .draft .line .p { font-size: var(--b3); font-weight: 600; color: var(--sm-price); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .sm-total { display: flex; align-items: center; gap: 8px; justify-content: flex-end; padding: 16px 0 0; }
+  .sm-total .k { font-size: var(--b5); }
+  .sm-total .v { font-size: var(--b1); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .sm-cta { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
+  .sm-cta .sm-btn { flex: 1 1 0; }
+
+  .notice { font-size: var(--b5); color: var(--sm-neutral); margin-top: 12px; line-height: 1.6; }
+
+  .picker { display: flex; gap: 8px; align-items: center; padding: 0 20px 8px; max-width: 1200px; margin: 0 auto; }
+  .picker input { width: 96px; }
+  .picker span { font-size: var(--b5); color: var(--sm-neutral); }
+</style>
+</head>
+<body>
+
+<div class="picker">
+  <span>상품 ID</span>
+  <input class="sm-input" id="pid" type="number" min="1" value="1" style="padding:8px 10px">
+  <button class="sm-btn sm out" id="go">불러오기</button>
+</div>
+
+<div id="root"><div class="skeleton">불러오는 중…</div></div>
+
+<script src="_shop.js"></script>
+<script>
+mountDevBar();
+mountHeader('index');
+
+let detail = null;
+const picked = {};
+
+const qs = new URLSearchParams(location.search);
+if (qs.get('id')) $('#pid').value = qs.get('id');
+
+function optionAxes() {
+  return detail && detail.option ? Object.entries(detail.option) : [];
+}
+
+/** 고른 값들로 SKU 하나를 특정한다. 없으면 판매하지 않는 조합이다 */
+function matchVariant(partial) {
+  const chosen = Object.values(partial).filter((v) => v !== undefined);
+  if (chosen.length !== optionAxes().length || chosen.length === 0) return null;
+  const key = chosen.slice().sort((a, b) => a - b).join(',');
+  return (detail.variants || []).find(
+    (v) => v.optionValueIds.slice().sort((a, b) => a - b).join(',') === key,
+  );
+}
+
+/** 이 값을 골랐을 때 살 수 있는 조합이 하나라도 있는지 — 없으면 칩을 죽인다 */
+function valueSelectable(axis, valueId) {
+  const trial = { ...picked, [axis]: valueId };
+  const chosen = Object.entries(trial).filter(([, v]) => v !== undefined);
+  return (detail.variants || []).some((v) => {
+    if (v.isSoldOut) return false;
+    return chosen.every(([, id]) => v.optionValueIds.includes(id));
+  });
+}
+
+function render() {
+  const root = $('#root');
+  root.innerHTML = '';
+  if (!detail) return;
+
+  const variant = matchVariant(picked);
+  const unitPrice = detail.discountPrice || detail.price;
+  const rate = detail.discountPrice && detail.price
+    ? Math.round((1 - detail.discountPrice / detail.price) * 100)
+    : 0;
+
+  const main = el('div', { class: 'main' });
+  if (detail.detailImg) main.style.backgroundImage = `url("${detail.detailImg}")`;
+
+  const axes = optionAxes().map(([axis, values]) =>
+    el('div', { class: 'opt-group' }, [
+      el('span', { class: 'lb', text: axis }),
+      el('div', { class: 'chips' }, values.map((val) => {
+        const on = picked[axis] === val.id;
+        const selectable = valueSelectable(axis, val.id);
+        return el('button', {
+          class: 'chip' + (on ? ' on' : ''),
+          disabled: !selectable && !on,
+          onclick: () => { picked[axis] = on ? undefined : val.id; render(); },
+        }, val.value || String(val.id));
+      })),
+    ]),
+  );
+
+  const chosenCount = Object.values(picked).filter((v) => v !== undefined).length;
+  const allChosen = chosenCount === optionAxes().length && optionAxes().length > 0;
+
+  const draft = allChosen
+    ? variant
+      ? el('div', { class: 'draft' }, [
+          el('div', { class: 'line' }, [
+            el('span', { class: 'lbl', text: optionAxes().map(([a]) => {
+              const v = (detail.option[a] || []).find((x) => x.id === picked[a]);
+              return v ? v.value : '';
+            }).filter(Boolean).join(' / ') }),
+            el('span', { class: 'p', text: nt(unitPrice) }),
+          ]),
+          variant.isSoldOut
+            ? el('p', { class: 'notice', style: 'color: var(--sm-danger); margin:0', text: '품절된 옵션입니다.' })
+            : variant.stockQuantity <= 5
+              ? el('p', { class: 'notice', style: 'margin:0', text: `${variant.stockQuantity}개 남았습니다.` })
+              : null,
+        ])
+      : el('div', { class: 'draft' }, [
+          el('p', { class: 'notice', style: 'margin:0; color: var(--sm-danger)', text: '선택하신 조합은 판매하지 않습니다.' }),
+        ])
+    : null;
+
+  const canAdd = !!variant && !variant.isSoldOut;
+
+  root.appendChild(
+    el('div', { class: 'sm-detail' }, [
+      el('div', { class: 'gallery' }, [
+        main,
+        el('div', { class: 'thumbs' }, [
+          el('i', { class: 'on' }), el('i'), el('i'), el('i'),
+        ]),
+      ]),
+      el('div', {}, [
+        el('div', { class: 'sm-ptitle' }, [el('h1', { text: detail.name || '(이름 없음)' })]),
+        el('div', { class: 'sm-brandrow' }, [
+          el('span', { class: 'ab' }, [
+            el('span', { class: 'brand-dot' }),
+            el('span', { text: (detail.brand && detail.brand.name) || '브랜드' }),
+          ]),
+        ]),
+        el('div', { class: 'sm-meta' }, [
+          el('div', { class: 'sm-prices' }, [
+            rate > 0
+              ? el('div', { class: 'r' }, [
+                  el('span', { class: 'k', text: '정가' }),
+                  el('span', { class: 'was', text: nt(detail.price) }),
+                ])
+              : null,
+            el('div', { class: 'r' }, [
+              el('span', { class: 'k', text: '판매가' }),
+              el('span', { class: 'now' }, [
+                el('b', { text: nt(unitPrice) }),
+                rate > 0 ? el('span', { class: 'off', text: rate + '%' }) : null,
+              ]),
+            ]),
+          ]),
+        ]),
+        el('div', { class: 'sm-info' }, [
+          el('div', { class: 'r' }, [
+            el('span', { class: 'k', text: '배송' }),
+            el('span', { text: `주문 1건당 ${nt(shippingPolicy.baseFee)} · 외섬 ${nt(shippingPolicy.remoteIslandFee)}` }),
+          ]),
+          el('div', { class: 'r' }, [
+            el('span', { class: 'k', text: '무료배송' }),
+            el('span', { text: `${nt(shippingPolicy.freeShippingThreshold)} 이상 구매 시` }),
+          ]),
+          el('div', { class: 'r' }, [
+            el('span', { class: 'k', text: '출고' }),
+            el('span', { text: `영업일 기준 ${detail.shippingInfo ?? '-'}일` }),
+          ]),
+          detail.origin
+            ? el('div', { class: 'r' }, [
+                el('span', { class: 'k', text: '원산지' }),
+                el('span', { text: detail.origin }),
+              ])
+            : null,
+        ]),
+        el('div', { class: 'opts' }, axes),
+        draft,
+        allChosen && variant && !variant.isSoldOut
+          ? el('div', { class: 'sm-total' }, [
+              el('span', { class: 'k', text: '총 상품 금액' }),
+              el('span', { class: 'v', text: nt(unitPrice) }),
+            ])
+          : null,
+        el('div', { class: 'sm-cta' }, [
+          el('button', {
+            class: 'sm-btn out',
+            disabled: !canAdd,
+            onclick: () => addToCart(variant, false),
+          }, '장바구니'),
+          el('button', {
+            class: 'sm-btn',
+            disabled: !canAdd,
+            onclick: () => addToCart(variant, true),
+          }, '바로 구매'),
+        ]),
+        el('p', {
+          class: 'notice',
+          text: '옵션을 모두 고르면 담을 수 있습니다. 판매하지 않는 조합과 품절 옵션은 선택되지 않습니다.',
+        }),
+      ]),
+    ]),
+  );
+}
+
+let shippingPolicy = { baseFee: 0, remoteIslandFee: 0, freeShippingThreshold: 0 };
+
+async function addToCart(variant, goCart) {
+  if (!variant) return;
+  if (!shop.token()) { toast('로그인이 필요합니다', { bad: true }); return; }
+
+  const res = await apiCall('POST', '/user/cart', {
+    body: { productVariantId: variant.id, quantity: 1 },
+  });
+
+  if (!res.ok) { toast(errorText(res, '담지 못했습니다.'), { bad: true }); return; }
+
+  refreshBadge();
+  if (goCart) { location.href = 'cart.html'; return; }
+  toast('장바구니에 담았습니다', {
+    actionText: '장바구니 보기',
+    onAction: () => { location.href = 'cart.html'; },
+  });
+}
+
+async function load() {
+  const id = Number($('#pid').value);
+  $('#root').innerHTML = '<div class="skeleton">불러오는 중…</div>';
+
+  const [policyRes, res] = await Promise.all([
+    apiCall('GET', '/shipping-policy', { auth: false }),
+    apiCall('GET', `/product/v1/${id}`),
+  ]);
+
+  if (policyRes.ok && policyRes.data) shippingPolicy = policyRes.data;
+
+  if (!res.ok) {
+    $('#root').innerHTML = '';
+    $('#root').appendChild(
+      el('div', { class: 'sm-empty' }, [
+        el('span', { class: 'ico' }, [icon('alert')]),
+        el('h2', { text: '상품을 찾을 수 없습니다' }),
+        el('p', { text: errorText(res) + ' 상품 ID 를 바꿔 다시 시도해보세요.' }),
+      ]),
+    );
+    return;
+  }
+
+  detail = res.data;
+  for (const k of Object.keys(picked)) delete picked[k];
+
+  // 축이 하나뿐이면 고를 것도 없으니 바로 잡아준다
+  const axes = optionAxes();
+  if (axes.length === 1 && axes[0][1].length === 1) picked[axes[0][0]] = axes[0][1][0].id;
+
+  render();
+}
+
+$('#go').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>

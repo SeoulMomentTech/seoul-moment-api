@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>배송비 정책 · SM API Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="_common.css">
+</head>
+<body>
+<main>
+  <h1>배송비 정책</h1>
+  <p class="sub">요율과 외섬 지역을 바꿔가며 주문 금액이 어떻게 달라지는지 확인합니다.</p>
+  <div id="hint"></div>
+
+  <div class="card">
+    <h2><span class="verb get">GET</span> 공개 조회 <span class="path">/shipping-policy</span></h2>
+    <div class="card-body">
+      <div class="row">
+        <button id="loadPublic">조회</button>
+        <span class="hint">인증이 필요 없습니다. 프론트가 안내 문구에 쓰는 값입니다.</span>
+      </div>
+      <div id="publicView"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>요율 수정 <span class="path">GET · PATCH /admin/shipping/policy</span></h2>
+    <div class="card-body">
+      <p class="hint">관리자 토큰이 필요합니다 — <a href="index.html">설정 페이지</a>에서 받아두세요.</p>
+      <div class="grid">
+        <div class="field"><label>baseFee (본섬)</label><input id="baseFee" type="number" min="0"></div>
+        <div class="field"><label>remoteIslandFee (외섬 정상가)</label><input id="remoteFee" type="number" min="0"></div>
+        <div class="field"><label>freeShippingThreshold</label><input id="threshold" type="number" min="0"></div>
+        <div class="field">
+          <label>remoteIslandPromotion</label>
+          <select id="promo">
+            <option value="true">true — 외섬도 본섬 요율</option>
+            <option value="false">false — 외섬 정상 요금</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <button id="loadAdmin" class="ghost">현재 값 불러오기</button>
+        <button id="savePolicy">저장</button>
+      </div>
+      <p class="hint">프로모션을 끝낼 때 <code>remoteIslandFee</code> 를 60 으로 덮어쓰지 마세요. <code>remoteIslandPromotion</code> 을 false 로 바꾸면 정상 요금이 살아납니다.</p>
+      <div id="policyOut"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>
+      외섬 지역 <span class="path">/admin/shipping/remote-area</span>
+      <span class="spacer"></span>
+      <button id="loadAreas" class="ghost">목록</button>
+      <button id="seedAreas">기본 5건 넣기</button>
+    </h2>
+    <div class="card-body">
+      <div class="row">
+        <div class="field" style="width: 170px"><label>city (縣市)</label><input id="aCity" placeholder="澎湖縣"></div>
+        <div class="field" style="width: 170px"><label>district — 비우면 縣 전체</label><input id="aDistrict" placeholder="綠島鄉"></div>
+        <button id="addArea" style="align-self: end">추가</button>
+      </div>
+      <div id="areaView"><div class="empty">목록을 눌러 불러오세요.</div></div>
+      <p class="hint">
+        澎湖縣 · 金門縣 · 連江縣 은 縣 전체가 외섬이라 district 를 비웁니다.
+        綠島鄉 · 蘭嶼鄉 은 臺東縣 소속이라 district 까지 넣어야 합니다 — 같은 縣의 臺東市 는 본섬이어야 하니까요.
+      </p>
+      <div id="areaOut"></div>
+    </div>
+  </div>
+</main>
+
+<script src="_common.js"></script>
+<script>
+mountShell('shipping.html');
+$('#hint').appendChild(connectionHint());
+
+const SEED = [
+  { city: '澎湖縣', district: null },
+  { city: '金門縣', district: null },
+  { city: '連江縣', district: null },
+  { city: '臺東縣', district: '綠島鄉' },
+  { city: '臺東縣', district: '蘭嶼鄉' },
+];
+
+function renderPolicy(target, data) {
+  const box = $(target);
+  box.innerHTML = '';
+  if (!data) return;
+
+  const effectiveRemote = data.remoteIslandPromotion ? data.baseFee : data.remoteIslandFee;
+
+  box.appendChild(
+    el('div', { class: 'summary', style: 'margin-top: 10px' }, [
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '본섬' }),
+        el('span', { class: 'v', text: money(data.baseFee) }),
+      ]),
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '외섬 정상 요금' }),
+        el('span', { class: 'v', text: money(data.remoteIslandFee) }),
+      ]),
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '외섬 실제 청구액 (프로모션 반영)' }),
+        el('span', { class: 'v', text: money(effectiveRemote) }),
+      ]),
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '무료배송 기준' }),
+        el('span', { class: 'v', text: money(data.freeShippingThreshold) }),
+      ]),
+      el('div', {
+        class: 'note',
+        text: data.remoteIslandPromotion
+          ? '프로모션 중 — 외섬도 본섬 요율이 적용됩니다'
+          : '프로모션 종료 — 외섬은 정상 요금입니다',
+      }),
+    ]),
+  );
+}
+
+function fillForm(data) {
+  if (!data) return;
+  $('#baseFee').value = data.baseFee;
+  $('#remoteFee').value = data.remoteIslandFee;
+  $('#threshold').value = data.freeShippingThreshold;
+  $('#promo').value = String(data.remoteIslandPromotion);
+}
+
+$('#loadPublic').addEventListener('click', async () => {
+  const res = await api('GET', '/shipping-policy', { auth: false });
+  showResult('#policyOut', res, 'GET /shipping-policy');
+  renderPolicy('#publicView', res.body && res.body.data);
+  fillForm(res.body && res.body.data);
+});
+
+$('#loadAdmin').addEventListener('click', async () => {
+  const res = await api('GET', '/admin/shipping/policy', { auth: 'admin' });
+  showResult('#policyOut', res, 'GET /admin/shipping/policy');
+  fillForm(res.body && res.body.data);
+});
+
+$('#savePolicy').addEventListener('click', async () => {
+  const body = {
+    baseFee: Number($('#baseFee').value),
+    remoteIslandFee: Number($('#remoteFee').value),
+    freeShippingThreshold: Number($('#threshold').value),
+    remoteIslandPromotion: $('#promo').value === 'true',
+  };
+  const res = await api('PATCH', '/admin/shipping/policy', { body, auth: 'admin' });
+  showResult('#policyOut', res, 'PATCH /admin/shipping/policy');
+  if (res.ok) $('#loadPublic').click();
+});
+
+async function loadAreas() {
+  const res = await api('GET', '/admin/shipping/remote-area', { auth: 'admin' });
+  showResult('#areaOut', res, 'GET /admin/shipping/remote-area');
+
+  const list = (res.body && res.body.data && res.body.data.list) || [];
+  const view = $('#areaView');
+  view.innerHTML = '';
+
+  if (list.length === 0) {
+    view.appendChild(el('div', { class: 'empty', text: '등록된 외섬 지역이 없습니다. 전부 본섬 요율로 계산됩니다.' }));
+    return;
+  }
+
+  view.appendChild(
+    el('div', { class: 'tablewrap' }, [
+      el('table', {}, [
+        el('thead', {}, [
+          el('tr', {}, [
+            el('th', { text: 'id' }),
+            el('th', { text: 'city' }),
+            el('th', { text: 'district' }),
+            el('th', { text: '범위' }),
+            el('th', { text: '활성' }),
+            el('th', { text: '' }),
+          ]),
+        ]),
+        el('tbody', {}, list.map((a) =>
+          el('tr', { class: a.isActive ? '' : 'off' }, [
+            el('td', { class: 'n', text: String(a.id) }),
+            el('td', { text: a.city }),
+            el('td', { text: a.district || '—' }),
+            el('td', {}, [
+              el('span', {
+                class: 'tag',
+                text: a.district ? '해당 區/鄉만' : '縣 전체',
+              }),
+            ]),
+            el('td', {}, [
+              a.isActive
+                ? el('span', { class: 'tag ok', text: 'active' })
+                : el('span', { class: 'tag bad', text: 'off' }),
+            ]),
+            el('td', {}, [
+              el('button', {
+                class: 'danger',
+                text: '삭제',
+                onclick: async () => {
+                  const r = await api('DELETE', `/admin/shipping/remote-area/${a.id}`, { auth: 'admin' });
+                  showResult('#areaOut', r, `DELETE /admin/shipping/remote-area/${a.id}`);
+                  loadAreas();
+                },
+              }),
+            ]),
+          ]),
+        )),
+      ]),
+    ]),
+  );
+}
+
+$('#loadAreas').addEventListener('click', loadAreas);
+
+$('#addArea').addEventListener('click', async () => {
+  const body = { city: $('#aCity').value.trim() };
+  const district = $('#aDistrict').value.trim();
+  if (district) body.district = district;
+
+  const res = await api('POST', '/admin/shipping/remote-area', { body, auth: 'admin' });
+  showResult('#areaOut', res, 'POST /admin/shipping/remote-area');
+  if (res.ok) {
+    $('#aCity').value = '';
+    $('#aDistrict').value = '';
+    loadAreas();
+  }
+});
+
+$('#seedAreas').addEventListener('click', async () => {
+  let added = 0;
+  let skipped = 0;
+  for (const area of SEED) {
+    const body = { city: area.city };
+    if (area.district) body.district = area.district;
+    const res = await api('POST', '/admin/shipping/remote-area', { body, auth: 'admin' });
+    if (res.status === 201) added++;
+    else if (res.status === 409) skipped++;
+    else {
+      showResult('#areaOut', res, `POST ${area.city} ${area.district || '(전체)'}`);
+      return;
+    }
+  }
+  showResult(
+    '#areaOut',
+    { status: 200, ok: true, ms: 0, body: { added, skipped, note: '409 는 이미 등록된 지역입니다' } },
+    '기본 5건 등록',
+  );
+  loadAreas();
+});
+</script>
+</body>
+</html>

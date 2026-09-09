@@ -1,0 +1,196 @@
+/* ============================================================
+   Seoul Moment — 스토어프론트 시안
+   토큰은 order-mockup.html(DESIGN.md §2.1)에서 그대로 가져왔다.
+   앱에 다크 모드가 없으므로 단일 라이트 테마로 고정한다.
+   ============================================================ */
+:root {
+  color-scheme: light;
+
+  --sm-bg: #ffffff;
+  --sm-fg: #171717;
+  --sm-brand: #f37b2a;
+  --sm-neutral: #707070;
+  --sm-danger: #ff383c;
+
+  --sm-line: rgba(0, 0, 0, 0.2);
+  --sm-rule: rgba(0, 0, 0, 0.1);
+  --sm-hair: rgba(0, 0, 0, 0.05);
+  --sm-ink80: rgba(0, 0, 0, 0.8);
+  --sm-ink40: rgba(0, 0, 0, 0.4);
+  --sm-price: #212529;
+
+  --t2: 32px; --t3: 24px; --t4: 20px;
+  --b1: 18px; --b2: 16px; --b3: 14px; --b4: 13px; --b5: 12px;
+
+  --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
+  --s6: 32px; --s7: 48px; --s8: 72px;
+
+  --sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, "Noto Sans KR", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--sm-bg);
+  color: var(--sm-fg);
+  font-family: var(--sans);
+  font-size: var(--b3);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img { max-width: 100%; display: block; }
+svg { display: block; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--sm-brand); outline-offset: 2px; }
+
+/* ---------- 헤더 ---------- */
+.sm-header {
+  height: 56px; border-bottom: 1px solid var(--sm-hair);
+  display: flex; align-items: center; padding: 0 20px;
+  position: sticky; top: 0; background: var(--sm-bg); z-index: 30;
+}
+.sm-header-in {
+  width: 100%; max-width: 1280px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 40px;
+}
+.sm-wordmark { font-size: 15px; font-weight: 700; letter-spacing: 0.14em; white-space: nowrap; }
+.sm-nav { display: flex; align-items: center; gap: 40px; list-style: none; margin: 0; padding: 0; }
+.sm-cluster { display: flex; align-items: center; gap: 40px; }
+.sm-lnk { font-size: var(--b3); }
+.sm-lnk.on { font-weight: 600; }
+
+.sm-cart-btn { position: relative; display: block; }
+.sm-cart-btn > svg { width: 22px; height: 22px; }
+.sm-badge {
+  position: absolute; top: -5px; right: -7px; min-width: 17px; height: 17px; padding: 0 4px;
+  background: var(--sm-brand); color: #fff; border-radius: 999px;
+  font-size: 10.5px; font-weight: 600; line-height: 17px; text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.sm-badge[hidden] { display: none; }
+
+@media (max-width: 760px) {
+  .sm-header-in { gap: 12px; }
+  .sm-cluster { gap: 18px; }
+  .sm-nav { gap: 18px; }
+  .sm-nav .hide-m { display: none; }
+}
+
+/* ---------- 공용 컨트롤 ---------- */
+.sm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 16px 20px; border-radius: 4px; background: var(--sm-fg); color: #fff;
+  font-size: var(--b2); font-weight: 600; line-height: 1; border: 1px solid var(--sm-fg);
+  cursor: pointer;
+}
+.sm-btn:hover { opacity: .9; }
+.sm-btn.out { background: #fff; color: var(--sm-fg); border-color: var(--sm-line); }
+.sm-btn.block { width: 100%; }
+.sm-btn.sm { padding: 10px 14px; font-size: var(--b3); }
+.sm-btn:disabled { background: rgba(0,0,0,.1); color: var(--sm-ink40); border-color: transparent; cursor: not-allowed; }
+
+.sm-select {
+  background: #fff; border: 1px solid var(--sm-line); border-radius: 4px;
+  padding: 15px 12px; font-size: var(--b3); line-height: 1; width: 100%;
+  font-family: inherit; color: var(--sm-fg);
+}
+.sm-input {
+  background: #fff; border: 1px solid var(--sm-line); border-radius: 4px;
+  padding: 15px 12px; font-size: var(--b3); line-height: 1; width: 100%;
+  font-family: inherit; color: var(--sm-fg);
+}
+.sm-input.bad, .sm-select.bad { border-color: var(--sm-danger); }
+.sm-err { font-size: var(--b5); color: var(--sm-danger); }
+
+/* 수량 스테퍼 */
+.sm-step {
+  width: 86px; flex: none; background: #fff; border: 1px solid var(--sm-line); border-radius: 4px;
+  padding: 7px; display: flex; align-items: center; gap: 6px;
+}
+.sm-step button {
+  padding: 2px; display: grid; place-items: center; background: none; border: 0; cursor: pointer;
+}
+.sm-step button svg { width: 12px; height: 12px; color: var(--sm-neutral); }
+.sm-step button:disabled svg { color: rgba(0,0,0,.18); cursor: not-allowed; }
+.sm-step .q {
+  flex: 1 1 0; min-width: 0; text-align: center; font-size: var(--b5);
+  font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
+}
+
+/* 체크박스 — 브랜드 오렌지는 할인율·별점 전용이라 검정을 쓴다 */
+.sm-cb {
+  width: 20px; height: 20px; flex: none; border: 1.5px solid var(--sm-line); border-radius: 3px;
+  background: #fff; display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+.sm-cb > svg { width: 13px; height: 13px; color: #fff; opacity: 0; }
+.sm-cb.on, .sm-cb.mixed { background: var(--sm-fg); border-color: var(--sm-fg); }
+.sm-cb.on > svg { opacity: 1; }
+.sm-cb.mixed::after { content: ""; width: 9px; height: 1.5px; background: #fff; border-radius: 1px; position: absolute; }
+
+/* ---------- 페이지 골격 ---------- */
+.sm-page { max-width: 1280px; margin: 0 auto; padding: 40px 20px 60px; }
+@media (max-width: 760px) { .sm-page { padding: 24px 20px 40px; } }
+
+.sm-h1 { display: flex; align-items: baseline; gap: 10px; margin-bottom: 20px; }
+.sm-h1 h1 { font-size: var(--t3); font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.sm-h1 .c { font-size: var(--t4); font-weight: 700; color: var(--sm-brand); font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  .sm-h1 h1 { font-size: var(--t4); }
+  .sm-h1 .c { font-size: var(--b1); }
+}
+
+.sm-cols { display: grid; grid-template-columns: minmax(0,1fr) 360px; gap: 40px; align-items: start; }
+@media (max-width: 1120px) { .sm-cols { grid-template-columns: 1fr; gap: var(--s6); } }
+
+.sticky { position: sticky; top: 76px; }
+@media (max-width: 1120px) { .sticky { position: static; } }
+
+/* 이미지 자리 — 실제 URL 이 없으면 색 블록으로 대체한다 */
+.thumb { background: #efe9df; border: 1px solid var(--sm-hair); aspect-ratio: 1; width: 100%; }
+.thumb.cover { background-size: cover; background-position: center; }
+
+.brand-dot { width: 28px; height: 28px; border-radius: 999px; flex: none; background: #e8ded2; border: 1px solid var(--sm-hair); }
+
+/* ---------- 토스트 ---------- */
+.toast-wrap {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+  z-index: 100; display: grid; gap: 8px; width: min(356px, calc(100vw - 40px));
+}
+.toast {
+  background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.10); padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px; font-size: var(--b3);
+}
+.toast .ic { width: 18px; height: 18px; flex: none; color: #16803c; }
+.toast.bad .ic { color: var(--sm-danger); }
+.toast .tx { flex: 1; }
+.toast .act { font-size: var(--b3); font-weight: 600; color: var(--sm-brand); white-space: nowrap; cursor: pointer; }
+
+/* ---------- 빈 상태 / 로딩 ---------- */
+.sm-empty { display: grid; justify-items: center; gap: 16px; padding: 72px 20px; text-align: center; }
+.sm-empty .ico { color: rgba(0,0,0,.2); }
+.sm-empty .ico svg { width: 40px; height: 40px; }
+.sm-empty h2 { font-size: var(--b1); font-weight: 600; margin: 0; }
+.sm-empty p { margin: -6px 0 0; font-size: var(--b3); color: var(--sm-neutral); max-width: 34ch; }
+
+.skeleton { padding: 60px 20px; text-align: center; color: var(--sm-ink40); font-size: var(--b3); }
+
+/* ---------- 개발용 바 ---------- */
+.devbar {
+  background: #1b1815; color: #ece6de; font-family: var(--mono); font-size: 11px;
+  padding: 6px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.devbar input { background: #24201c; border: 1px solid #38322c; color: #ece6de; font-family: inherit; font-size: 11px; padding: 3px 6px; }
+.devbar a { color: #7aa9bb; text-decoration: underline; }
+.devbar .ok { color: #8fd6a4; }
+.devbar .no { color: #ff9b8a; }
+.devbar .spacer { margin-left: auto; }
+.devbar button { background: #38322c; color: #ece6de; border: 0; font-family: inherit; font-size: 11px; padding: 3px 8px; cursor: pointer; }

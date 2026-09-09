@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>장바구니 · SEOUL MOMENT</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="_shop.css">
+<style>
+  /* 선택 바 */
+  .sm-selbar {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s4);
+    border-top: 1px solid var(--sm-rule); border-bottom: 1px solid var(--sm-rule); padding: 13px 0;
+  }
+  .sm-selbar .l { display: flex; align-items: center; gap: 10px; font-size: var(--b3); }
+  .sm-selbar .l .n { color: var(--sm-neutral); font-variant-numeric: tabular-nums; }
+  .sm-selbar .r { display: flex; align-items: center; gap: 12px; font-size: var(--b3); color: var(--sm-neutral); }
+  .sm-selbar .r button { background: none; border: 0; font-size: var(--b3); color: var(--sm-neutral); cursor: pointer; padding: 0; }
+  .sm-selbar .r .sep { width: 1px; height: 11px; background: var(--sm-line); }
+
+  /* 브랜드 그룹 */
+  .sm-group { padding-top: 28px; }
+  .sm-group-head { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--sm-rule); }
+  .sm-group-head .bn { font-size: var(--b2); font-weight: 600; letter-spacing: -0.01em; }
+  .sm-group-head .st { margin-left: auto; font-size: var(--b3); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* 라인 */
+  .sm-line {
+    display: grid; grid-template-columns: 20px 120px minmax(0,1fr) 32px; gap: 16px;
+    padding: 20px 0; border-bottom: 1px solid rgba(0,0,0,.06); align-items: start;
+  }
+  .sm-line.off { opacity: .5; }
+  .sm-line .name { font-size: var(--b2); line-height: 1.45; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .sm-line .opt { font-size: var(--b5); color: var(--sm-neutral); margin-bottom: 10px; }
+  .sm-line .price { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+  .sm-line .price .was { font-size: var(--b4); color: var(--sm-ink40); text-decoration: line-through; }
+  .sm-line .price .now { font-size: var(--b1); font-weight: 600; letter-spacing: -0.01em; }
+  .sm-line-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .sm-line .soldout { font-size: var(--b5); color: var(--sm-danger); font-weight: 600; }
+  .sm-del {
+    width: 32px; height: 32px; display: grid; place-items: center; color: var(--sm-neutral);
+    background: none; border: 0; cursor: pointer; margin: -4px -6px 0 0;
+  }
+  .sm-del svg { width: 16px; height: 16px; }
+
+  @media (max-width: 760px) {
+    .sm-line { grid-template-columns: 20px 90px minmax(0,1fr) 28px; gap: 12px; padding: 18px 0; }
+    .sm-line .name { font-size: var(--b3); }
+    .sm-line .price .now { font-size: var(--b2); }
+  }
+
+  /* 요약 */
+  .sm-summary { border: 1px solid var(--sm-line); padding: 24px; margin-top: 28px; }
+  .sm-summary .sel { font-size: var(--b3); color: var(--sm-neutral); font-variant-numeric: tabular-nums; }
+  .sm-summary .lab { font-size: var(--b3); margin-top: 14px; }
+  .sm-summary .tot { font-size: var(--t2); font-weight: 700; letter-spacing: -0.03em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .sm-summary hr { border: 0; border-top: 1px solid var(--sm-rule); margin: 20px 0 16px; }
+  .sm-summary .row { display: flex; justify-content: space-between; gap: var(--s4); font-size: var(--b3); padding: 3px 0; }
+  .sm-summary .row .v { color: var(--sm-neutral); font-variant-numeric: tabular-nums; }
+  .sm-summary .cta { margin-top: 20px; }
+  .sm-summary .foot { font-size: var(--b5); color: var(--sm-neutral); margin-top: 14px; line-height: 1.5; }
+  .freebar { margin-top: 12px; }
+  .freebar .track { height: 4px; background: var(--sm-hair); border-radius: 999px; overflow: hidden; }
+  .freebar .fill { height: 100%; background: var(--sm-brand); border-radius: 999px; transition: width 240ms ease; }
+  .freebar .msg { font-size: var(--b5); margin-top: 6px; color: var(--sm-brand); font-weight: 600; }
+  .freebar .msg.done { color: #16803c; }
+
+  /* 모바일 하단 고정 바 */
+  .sm-cartbar {
+    position: sticky; bottom: 0; border-top: 1px solid var(--sm-rule); background: #fff;
+    padding: 16px 20px; display: none; gap: 12px; grid-template-columns: 1fr;
+    filter: drop-shadow(0 -4px 5px rgba(0,0,0,0.06));
+  }
+  .sm-cartbar .row { display: flex; align-items: baseline; justify-content: space-between; }
+  .sm-cartbar .row .k { font-size: var(--b3); color: var(--sm-neutral); }
+  .sm-cartbar .row .v { font-size: var(--b1); font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  @media (max-width: 1120px) {
+    .sm-cartbar { display: grid; }
+    .sm-summary .cta { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sm-page" id="page">
+  <div class="sm-h1">
+    <h1>장바구니</h1>
+    <span class="c num" id="titleCount"></span>
+  </div>
+  <div id="body"><div class="skeleton">불러오는 중…</div></div>
+</div>
+
+<div class="sm-cartbar" id="mobileBar" hidden>
+  <div class="row"><span class="k">결제 예상 금액</span><span class="v num" id="mTotal">-</span></div>
+  <button class="sm-btn block" id="mOrder">주문하기</button>
+</div>
+
+<script src="_shop.js"></script>
+<script>
+mountDevBar();
+mountHeader('cart');
+
+const selected = new Set();
+let cart = null;
+// 요율 안내 문구는 정책값을 써야 한다. 장바구니 응답의 estimatedShippingFee 는
+// "지금 금액 기준으로 계산된 배송비"라 무료배송이면 0 이 되어 안내로 쓸 수 없다.
+let policy = { baseFee: 0, remoteIslandFee: 0, freeShippingThreshold: 0 };
+
+function lineNode(item) {
+  const on = selected.has(item.cartItemId);
+
+  const cb = el('button', {
+    class: 'sm-cb' + (on ? ' on' : ''),
+    'aria-label': '선택',
+    disabled: !item.isAvailable,
+    onclick: () => {
+      if (selected.has(item.cartItemId)) selected.delete(item.cartItemId);
+      else selected.add(item.cartItemId);
+      render();
+    },
+  }, [icon('check')]);
+
+  const qtyLabel = el('span', { class: 'q num', text: String(item.quantity) });
+  const stepper = el('div', { class: 'sm-step' }, [
+    el('button', {
+      'aria-label': '수량 감소',
+      disabled: item.quantity <= 1,
+      onclick: () => changeQty(item, item.quantity - 1),
+    }, [icon('minus')]),
+    qtyLabel,
+    el('button', {
+      'aria-label': '수량 증가',
+      disabled: item.quantity >= item.stockQuantity,
+      onclick: () => changeQty(item, item.quantity + 1),
+    }, [icon('plus')]),
+  ]);
+
+  const thumb = el('span', { class: 'thumb' + (item.imageUrl ? ' cover' : '') });
+  if (item.imageUrl) thumb.style.backgroundImage = `url("${item.imageUrl}")`;
+
+  const priceRow = el('div', { class: 'price' }, [
+    item.discountPrice && item.discountPrice < item.price
+      ? el('span', { class: 'was', text: nt(item.price) })
+      : null,
+    el('span', { class: 'now', text: nt(item.discountPrice || item.price) }),
+  ]);
+
+  return el('div', { class: 'sm-line' + (item.isAvailable ? '' : ' off') }, [
+    cb,
+    thumb,
+    el('div', {}, [
+      el('p', { class: 'name', text: item.productName || '(이름 없음)' }),
+      el('p', { class: 'opt', text: item.optionText || '옵션 없음' }),
+      priceRow,
+      el('div', { class: 'sm-line-foot' }, [
+        item.isAvailable ? stepper : el('span', { class: 'soldout', text: item.isSoldOut ? '품절' : '판매 중지' }),
+        item.isAvailable && item.stockQuantity <= 5
+          ? el('span', { class: 'opt', style: 'margin:0', text: `${item.stockQuantity}개 남음` })
+          : null,
+      ]),
+    ]),
+    el('button', { class: 'sm-del', 'aria-label': '삭제', onclick: () => removeLine(item) }, [icon('x')]),
+  ]);
+}
+
+function summaryNode() {
+  const chosen = chosenItems();
+  const productAmount = chosen.reduce((s, i) => s + i.totalPrice, 0);
+  const free = productAmount >= cart.freeShippingThreshold && productAmount > 0;
+  const shipping = productAmount === 0 ? 0 : free ? 0 : policy.baseFee;
+  const total = productAmount + shipping;
+  const left = Math.max(cart.freeShippingThreshold - productAmount, 0);
+  const pct = Math.min(100, cart.freeShippingThreshold ? (productAmount / cart.freeShippingThreshold) * 100 : 0);
+
+  $('#mTotal').textContent = nt(total);
+  $('#mobileBar').hidden = chosen.length === 0;
+
+  return el('div', { class: 'sm-summary' }, [
+    el('p', { class: 'sel', text: `선택한 상품 ${chosen.length}건` }),
+    el('p', { class: 'lab', text: '결제 예상 금액' }),
+    el('p', { class: 'tot', text: nt(total) }),
+    el('hr'),
+    el('div', { class: 'row' }, [el('span', {}, '상품 금액'), el('span', { class: 'v', text: nt(productAmount) })]),
+    el('div', { class: 'row' }, [
+      el('span', {}, '배송비'),
+      el('span', { class: 'v', text: free && productAmount > 0 ? '무료' : nt(shipping) }),
+    ]),
+    el('div', { class: 'freebar' }, [
+      el('div', { class: 'track' }, [el('div', { class: 'fill', style: `width:${pct}%` })]),
+      el('p', {
+        class: 'msg' + (left === 0 && productAmount > 0 ? ' done' : ''),
+        text: productAmount === 0
+          ? `${nt(cart.freeShippingThreshold)} 이상 구매 시 무료배송`
+          : left > 0
+            ? `${nt(left)} 더 담으면 무료배송`
+            : '무료배송이 적용됐습니다',
+      }),
+    ]),
+    el('div', { class: 'cta' }, [
+      el('button', {
+        class: 'sm-btn block',
+        disabled: chosen.length === 0,
+        onclick: goOrder,
+      }, '주문하기'),
+    ]),
+    el('p', {
+      class: 'foot',
+      text: `배송비는 주문 1건당 한 번 부과됩니다. 본섬 ${nt(policy.baseFee)} · 외섬 ${nt(policy.remoteIslandFee)} — 실제 금액은 주문서에서 배송지를 넣으면 확정됩니다.`,
+    }),
+  ]);
+}
+
+function chosenItems() {
+  if (!cart) return [];
+  return cart.brandGroups
+    .flatMap((g) => g.items)
+    .filter((i) => selected.has(i.cartItemId) && i.isAvailable);
+}
+
+function allAvailableIds() {
+  if (!cart) return [];
+  return cart.brandGroups.flatMap((g) => g.items).filter((i) => i.isAvailable).map((i) => i.cartItemId);
+}
+
+function render() {
+  const body = $('#body');
+  body.innerHTML = '';
+
+  if (!cart || cart.totalCount === 0) {
+    $('#titleCount').textContent = '';
+    $('#mobileBar').hidden = true;
+    body.appendChild(
+      el('div', { class: 'sm-empty' }, [
+        el('span', { class: 'ico' }, [icon('cart')]),
+        el('h2', { text: '장바구니가 비어 있습니다' }),
+        el('p', { text: '마음에 드는 상품을 담아보세요.' }),
+        el('a', { href: 'index.html' }, [el('button', { class: 'sm-btn out' }, '쇼핑 계속하기')]),
+      ]),
+    );
+    return;
+  }
+
+  $('#titleCount').textContent = cart.totalCount;
+
+  const available = allAvailableIds();
+  const allOn = available.length > 0 && available.every((id) => selected.has(id));
+  const someOn = available.some((id) => selected.has(id));
+
+  const selbar = el('div', { class: 'sm-selbar' }, [
+    el('div', { class: 'l' }, [
+      el('button', {
+        class: 'sm-cb' + (allOn ? ' on' : someOn ? ' mixed' : ''),
+        'aria-label': '전체 선택',
+        onclick: () => {
+          if (allOn) selected.clear();
+          else available.forEach((id) => selected.add(id));
+          render();
+        },
+      }, [icon('check')]),
+      el('span', {}, '전체 선택'),
+      el('span', { class: 'n', text: `(${chosenItems().length}/${available.length})` }),
+    ]),
+    el('div', { class: 'r' }, [
+      el('button', { text: '선택 삭제', onclick: removeSelected }),
+      el('span', { class: 'sep' }),
+      el('button', { text: '전체 비우기', onclick: clearAll }),
+    ]),
+  ]);
+
+  const left = el('div', {});
+  for (const group of cart.brandGroups) {
+    left.appendChild(
+      el('div', { class: 'sm-group' }, [
+        el('div', { class: 'sm-group-head' }, [
+          el('span', { class: 'brand-dot' }),
+          el('span', { class: 'bn', text: group.brandName || '브랜드' }),
+          el('span', { class: 'st num', text: nt(group.productAmount) }),
+        ]),
+        ...group.items.map(lineNode),
+      ]),
+    );
+  }
+
+  body.appendChild(selbar);
+  body.appendChild(
+    el('div', { class: 'sm-cols' }, [
+      left,
+      el('div', { class: 'sticky' }, [summaryNode()]),
+    ]),
+  );
+}
+
+async function load() {
+  if (!requireLogin($('#body'))) return;
+
+  const [policyRes, res] = await Promise.all([
+    apiCall('GET', '/shipping-policy', { auth: false }),
+    apiCall('GET', '/user/cart'),
+  ]);
+  if (policyRes.ok && policyRes.data) policy = policyRes.data;
+
+  if (!res.ok) {
+    $('#body').innerHTML = '';
+    $('#body').appendChild(
+      el('div', { class: 'sm-empty' }, [
+        el('span', { class: 'ico' }, [icon('alert')]),
+        el('h2', { text: '불러오지 못했습니다' }),
+        el('p', { text: errorText(res) }),
+      ]),
+    );
+    return;
+  }
+
+  cart = res.data;
+
+  // 처음 열면 살 수 있는 것을 전부 선택해 둔다 (실제 커머스 관례)
+  if (selected.size === 0) allAvailableIds().forEach((id) => selected.add(id));
+  else {
+    const alive = new Set(cart.brandGroups.flatMap((g) => g.items.map((i) => i.cartItemId)));
+    Array.from(selected).forEach((id) => { if (!alive.has(id)) selected.delete(id); });
+  }
+
+  render();
+  refreshBadge();
+}
+
+async function changeQty(item, quantity) {
+  if (quantity < 1 || quantity > item.stockQuantity) return;
+  const res = await apiCall('PATCH', `/user/cart/${item.cartItemId}`, { body: { quantity } });
+  if (!res.ok) { toast(errorText(res, '수량을 변경하지 못했습니다.'), { bad: true }); return; }
+  load();
+}
+
+async function removeLine(item) {
+  const res = await apiCall('DELETE', `/user/cart/${item.cartItemId}`);
+  if (!res.ok) { toast(errorText(res, '삭제하지 못했습니다.'), { bad: true }); return; }
+  selected.delete(item.cartItemId);
+  toast('장바구니에서 삭제했습니다');
+  load();
+}
+
+async function removeSelected() {
+  if (selected.size === 0) { toast('선택한 상품이 없습니다', { bad: true }); return; }
+  const res = await apiCall('DELETE', '/user/cart', { query: { ids: Array.from(selected).join(',') } });
+  if (!res.ok) { toast(errorText(res, '삭제하지 못했습니다.'), { bad: true }); return; }
+  selected.clear();
+  load();
+}
+
+async function clearAll() {
+  const res = await apiCall('DELETE', '/user/cart');
+  if (!res.ok) { toast(errorText(res, '비우지 못했습니다.'), { bad: true }); return; }
+  selected.clear();
+  load();
+}
+
+function goOrder() {
+  const ids = chosenItems().map((i) => i.cartItemId);
+  if (ids.length === 0) return;
+  location.href = 'order.html?cartItemIds=' + ids.join(',');
+}
+
+$('#mOrder').addEventListener('click', goOrder);
+
+load();
+</script>
+</body>
+</html>
