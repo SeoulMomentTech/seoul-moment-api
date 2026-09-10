@@ -404,11 +404,18 @@ export class PlanBragService {
   /**
    * 일정 한 줄을 스냅샷으로.
    *
-   * **시각(startTime)과 장소(location)·메모는 담지 않는다.** 안내 모달이
-   * 약속한 공개 범위 밖이고, 장소는 카카오에서 고르면 업체명이 그대로
-   * 들어가는 자리라 공개 범위가 조용히 넓어진다.
+   * **시각(startTime)과 메모(memo)는 담지 않는다.** 안내 모달이 약속한
+   * 공개 범위 밖이다.
+   *
+   * 장소는 담는다 — 상세 시트가 지도를 보여 준다. `decimal` 은 드라이버가
+   * **문자열로** 주므로 반드시 Number 로 바꾼다. 그대로 JSON 에 넣으면 앱이
+   * `new kakao.maps.LatLng("37.5")` 를 부르고 지도가 안 뜬다 (피드의
+   * lat/lng 이 같은 이유로 같은 처리를 한다).
    */
   private toItemSnapshot(schedule: PlanScheduleEntity): PlanBragItemSnapshot {
+    const num = (v: number | string | null | undefined) =>
+      v === null || v === undefined || v === '' ? null : Number(v);
+
     return {
       id: schedule.id,
       categoryName: schedule.categoryName,
@@ -416,6 +423,9 @@ export class PlanBragService {
       amount: schedule.amount ?? null,
       startDate: toDateString(schedule.startDate),
       status: schedule.status,
+      location: schedule.location?.trim() || null,
+      lat: num(schedule.locationLat),
+      lng: num(schedule.locationLng),
     };
   }
 }

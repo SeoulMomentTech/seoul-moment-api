@@ -22,6 +22,14 @@ export interface PlanBragItemSnapshot {
   startDate: string | null;
   /** 'COMPLETED' 면 완료, 그 밖은 예정 */
   status: string;
+  /**
+   * 장소. 카카오에서 고른 경우 **주소가 아니라 업체명**이 들어 있는 자리다
+   * ("SG웨딩홀"). 안 고르면 사람이 직접 적은 문자열이다.
+   */
+  location: string | null;
+  /** 지도를 그릴 좌표. 카카오에서 고른 경우에만 있다 */
+  lat: number | null;
+  lng: number | null;
 }
 
 /** 예산 막대·범례용 카테고리 집계. 지출 큰 순으로 담는다 */
@@ -52,9 +60,13 @@ export interface PlanBragCategorySnapshot {
  *
  * 공개 범위는 앱의 안내 모달(`BragToggle` 의 OPEN_FIELDS)이 글자 그대로
  * 약속한다 — 닉네임 · 결혼식 날짜 · 총예산 · 카테고리별 지출과 소계 ·
- * 일정 제목 · 일정별 금액. **그 목록에 없는 것을 여기 담지 말 것.** 특히
- * 일정의 시각(startTime)과 장소(location)는 담지 않는다 — 장소는 카카오에서
- * 고르면 업체명이 그대로 들어가는 자리라 공개 범위가 조용히 넓어진다.
+ * 일정 제목 · 일정별 금액 · **일정 장소**. **그 목록에 없는 것을 여기 담지
+ * 말 것.** 특히 일정의 **시각(startTime)과 메모(memo)** 는 담지 않는다.
+ *
+ * 장소는 나중에 더했다 — 상세 시트에 지도를 보여 주기 위해서다. 카카오에서
+ * 고르면 업체명이 그대로 들어가는 자리라 사실상 "어디서 했는지" 를 공개하는
+ * 것이고, 그래서 **안내 모달 문구를 먼저 고치고** 여기 담았다. 순서를 뒤집지
+ * 말 것. 그 전에 올린 스냅샷에는 장소가 없어 앱이 지도를 안 낸다.
  */
 @Index(['status', 'publishedAt'])
 @Index(['status', 'likeCount'])

@@ -154,28 +154,67 @@ describe('자랑하기 (E2E)', () => {
      * 공개 범위는 앱의 안내 모달이 글자 그대로 약속한 것까지다.
      * **여기 새 필드가 새면 동의받지 않은 것을 공개하게 된다.**
      */
-    it('일정의 시각·장소·메모를 담지 않는다', async () => {
+    it('일정의 시각·메모를 담지 않는다 (장소는 담는다)', async () => {
       const user = await createUser();
       await createSchedule(user, {
         startTime: '11:00',
-        location: '서울특별시 강남구 청담동 123-4',
+        location: 'SG 웨딩홀',
+        locationLat: 37.5006,
+        locationLng: 127.0364,
         memo: '헬퍼비 25만원 별도',
       });
 
       const bragId = await bragService.publish(user.id);
       const detail = await bragService.getPlanBragDetail(user.id, bragId);
 
+      // **이 목록이 곧 공개 범위다.** 늘리려면 안내 모달의 OPEN_FIELDS 를
+      // 먼저 고쳐야 한다 — 여기 새 필드가 새면 동의받지 않은 것을 공개한다
       expect(Object.keys(detail.items[0]).sort()).toEqual([
         'amount',
         'categoryName',
         'id',
+        'lat',
+        'lng',
+        'location',
         'startDate',
         'status',
         'title',
       ]);
       expect(JSON.stringify(detail.items)).not.toContain('11:00');
-      expect(JSON.stringify(detail.items)).not.toContain('청담동');
       expect(JSON.stringify(detail.items)).not.toContain('헬퍼비');
+    });
+
+    /**
+     * `decimal` 은 드라이버가 문자열로 준다. 그대로 내보내면 앱이
+     * `new kakao.maps.LatLng("37.5")` 를 불러 지도가 안 뜬다.
+     */
+    it('좌표를 문자열이 아니라 숫자로 준다', async () => {
+      const user = await createUser();
+      await createSchedule(user, {
+        location: 'SG 웨딩홀',
+        locationLat: 37.5006,
+        locationLng: 127.0364,
+      });
+
+      const bragId = await bragService.publish(user.id);
+      const detail = await bragService.getPlanBragDetail(user.id, bragId);
+
+      expect(detail.items[0].location).toBe('SG 웨딩홀');
+      expect(typeof detail.items[0].lat).toBe('number');
+      expect(typeof detail.items[0].lng).toBe('number');
+      expect(detail.items[0].lat).toBeCloseTo(37.5006, 3);
+    });
+
+    it('장소를 안 고른 일정은 좌표가 null 이다', async () => {
+      const user = await createUser();
+      await createSchedule(user, { location: null });
+
+      const bragId = await bragService.publish(user.id);
+      const detail = await bragService.getPlanBragDetail(user.id, bragId);
+
+      expect(detail.items[0].location).toBeNull();
+      expect(detail.items[0].lat).toBeNull();
+      expect(detail.items[0].lng).toBeNull();
     });
 
     it('배우자가 있으면 두 이름이 나란히 붙는다', async () => {
