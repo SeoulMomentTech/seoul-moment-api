@@ -38,9 +38,12 @@ export class UserCartController {
 
   @Post()
   @ApiOperation({
-    summary: '장바구니 담기',
+    summary: '장바구니 담기 (단건 · 다건)',
     description:
-      '이미 담긴 SKU 면 라인을 늘리지 않고 수량을 더한다. 헤더 뱃지를 바로 갱신할 수 있도록 담은 뒤의 총 라인 수를 함께 반환한다.',
+      '상품상세에서 옵션 조합을 여러 개 골라 한 번에 담을 수 있어 items 는 항상 배열이다. 한 개만 담을 때도 길이 1 배열로 보낸다. ' +
+      '이미 담긴 SKU 면 라인을 늘리지 않고 수량을 더한다. ' +
+      '하나라도 담을 수 없으면 전부 담지 않는다 — 재고가 모자라면 409 의 data 에 어느 SKU 가 몇 개 남았는지 실어 보낸다. ' +
+      '헤더 뱃지를 바로 갱신할 수 있도록 담은 뒤의 총 라인 수를 함께 반환한다.',
   })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(UserOneTimeTokenGuard)
@@ -52,7 +55,7 @@ export class UserCartController {
     @Request() req: any,
     @Body() body: PostUserCartRequest,
   ): Promise<ResponseDataDto<PostUserCartResponse>> {
-    const data = await this.userCartService.createCartItem(req.user.id, body);
+    const data = await this.userCartService.createCartItems(req.user.id, body);
 
     return new ResponseDataDto(data);
   }

@@ -524,24 +524,39 @@ img, svg { max-width: 100%; }
         <span class="auth">Bearer</span>
       </div>
       <div class="api-body">
-        <p>이미 담긴 SKU 면 <strong>라인이 늘지 않고 수량이 더해집니다.</strong> 헤더 뱃지를 바로 갱신할 수 있도록 담은 뒤의 총 라인 수를 함께 돌려줍니다.</p>
+        <p><strong>단건·다건이 같은 API 입니다.</strong> 상품상세에서 옵션 조합을 여러 개 골라 한 번에 담는 화면이 있어 <code>items</code> 는 항상 배열입니다 — 한 개만 담을 때도 길이 1 배열로 보냅니다. 이미 담긴 SKU 면 <strong>라인이 늘지 않고 수량이 더해집니다.</strong> 헤더 뱃지를 바로 갱신할 수 있도록 담은 뒤의 총 라인 수를 함께 돌려줍니다.</p>
         <div class="pair">
           <div class="block">
             <span class="lb">Request</span>
 <pre>{
-  <span class="k">"productVariantId"</span>: 101,
-  <span class="k">"quantity"</span>: 2      <span class="c">// 1 ~ 999</span>
+  <span class="k">"items"</span>: [                     <span class="c">// 1 ~ 50 건</span>
+    { <span class="k">"productVariantId"</span>: 101, <span class="k">"quantity"</span>: 2 },  <span class="c">// quantity 1 ~ 999</span>
+    { <span class="k">"productVariantId"</span>: 102, <span class="k">"quantity"</span>: 1 }
+  ]
 }</pre>
           </div>
           <div class="block">
             <span class="lb">Response 201</span>
 <pre>{
-  <span class="k">"cartItemId"</span>: 12,
+  <span class="k">"items"</span>: [                     <span class="c">// 요청 순서 그대로</span>
+    { <span class="k">"productVariantId"</span>: 101, <span class="k">"cartItemId"</span>: 12, <span class="k">"quantity"</span>: 5 },
+    { <span class="k">"productVariantId"</span>: 102, <span class="k">"cartItemId"</span>: 13, <span class="k">"quantity"</span>: 1 }
+  ],
   <span class="k">"totalCount"</span>: 3   <span class="c">// 라인 수 (수량 합 아님)</span>
 }</pre>
           </div>
         </div>
-        <p><strong>409</strong> 는 재고 부족입니다. <strong>누적 수량</strong> 기준이라, 이미 2개 담긴 상태에서 재고가 3인데 2개를 더 담으면 409 입니다.</p>
+        <p>응답의 <code>quantity</code> 는 <strong>이미 담겨 있던 수량이 더해진 최종 값</strong>입니다. 한 요청에 같은 SKU 가 두 번 들어오면 서버가 합쳐서 한 라인으로 담습니다.</p>
+        <p><strong>하나라도 담을 수 없으면 전부 담기지 않습니다.</strong> 절반만 담기면 선택 패널이 어떤 상태여야 하는지 애매해지기 때문입니다. 재고 부족이면 <strong>409</strong>, 없는 SKU 면 <strong>404</strong> 이고, 어느 것이 문제인지 <code>data</code> 에 실려 옵니다 — 해당 줄에 바로 표시하면 됩니다.</p>
+<pre><span class="c">// 409</span>
+{ <span class="k">"message"</span>: "Not enough stock. productVariantId: 102, available: 1, requested: 2",
+  <span class="k">"code"</span>: "CONFLICT",
+  <span class="k">"data"</span>: { <span class="k">"productVariantId"</span>: 102, <span class="k">"available"</span>: 1, <span class="k">"requested"</span>: 2 } }
+
+<span class="c">// 404</span>
+{ <span class="k">"code"</span>: "NOT_FOUND_DATA",
+  <span class="k">"data"</span>: { <span class="k">"productVariantIds"</span>: [999999] } }</pre>
+        <p>재고는 <strong>누적 수량</strong> 기준입니다. 이미 2개 담긴 상태에서 재고가 3인데 2개를 더 담으면 409 입니다.</p>
       </div>
     </div>
 

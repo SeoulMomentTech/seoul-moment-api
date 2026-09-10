@@ -167,10 +167,10 @@ describe('UserOrderController (E2E)', () => {
     const res = await request(app.getHttpServer())
       .post(CART_BASE)
       .set('Authorization', `Bearer ${token}`)
-      .send({ productVariantId, quantity });
+      .send({ items: [{ productVariantId, quantity }] });
     expect(res.status).toBe(201);
 
-    return res.body.data.cartItemId;
+    return res.body.data.items[0].cartItemId;
   }
 
   function preview(token: string, body: Record<string, unknown>) {

@@ -158,10 +158,17 @@ describe('UserCartController (E2E)', () => {
   }
 
   function addToCart(token: string, productVariantId: number, quantity = 1) {
+    return addItemsToCart(token, [{ productVariantId, quantity }]);
+  }
+
+  function addItemsToCart(
+    token: string,
+    items: Array<{ productVariantId: number; quantity: number }>,
+  ) {
     return request(app.getHttpServer())
       .post(CART_BASE)
       .set('Authorization', `Bearer ${token}`)
-      .send({ productVariantId, quantity });
+      .send({ items });
   }
 
   function getCart(token: string) {
@@ -184,6 +191,9 @@ describe('UserCartController (E2E)', () => {
       // Then
       expect(res.status).toBe(201);
       expect(res.body.data.totalCount).toBe(1);
+      expect(res.body.data.items).toHaveLength(1);
+      expect(res.body.data.items[0].productVariantId).toBe(productVariantId);
+      expect(res.body.data.items[0].quantity).toBe(2);
 
       const rows = await dataSource.query(
         `SELECT quantity FROM cart_item WHERE user_id = $1 AND product_variant_id = $2`,
@@ -257,7 +267,7 @@ describe('UserCartController (E2E)', () => {
       // When
       const res = await request(app.getHttpServer())
         .post(CART_BASE)
-        .send({ productVariantId, quantity: 1 });
+        .send({ items: [{ productVariantId, quantity: 1 }] });
 
       // Then
       expect(res.status).toBe(401);
@@ -270,6 +280,119 @@ describe('UserCartController (E2E)', () => {
 
       // When
       const res = await addToCart(oneTimeToken, productVariantId, 0);
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('여러 SKU를 한 번에 담으면 요청 순서대로 라인이 생긴다', async () => {
+      // Given - 상품상세에서 옵션 조합 2개를 골라 한 번에 담는 화면
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const navyM = await createVariant({ stockQuantity: 5 });
+      const navyS = await createVariant({ stockQuantity: 5 });
+
+      // When
+      const res = await addItemsToCart(oneTimeToken, [
+        { productVariantId: navyM.productVariantId, quantity: 2 },
+        { productVariantId: navyS.productVariantId, quantity: 1 },
+      ]);
+
+      // Then
+      expect(res.status).toBe(201);
+      expect(res.body.data.totalCount).toBe(2);
+      expect(
+        res.body.data.items.map((item: any) => item.productVariantId),
+      ).toEqual([navyM.productVariantId, navyS.productVariantId]);
+      expect(res.body.data.items.map((item: any) => item.quantity)).toEqual([
+        2, 1,
+      ]);
+
+      const rows = await dataSource.query(
+        `SELECT quantity FROM cart_item WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(2);
+    });
+
+    it('한 요청에 같은 SKU가 두 번 오면 수량을 합쳐 한 라인으로 담는다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const { productVariantId } = await createVariant({ stockQuantity: 10 });
+
+      // When
+      const res = await addItemsToCart(oneTimeToken, [
+        { productVariantId, quantity: 2 },
+        { productVariantId, quantity: 3 },
+      ]);
+
+      // Then
+      expect(res.status).toBe(201);
+      expect(res.body.data.items).toHaveLength(1);
+      expect(res.body.data.items[0].quantity).toBe(5);
+
+      const rows = await dataSource.query(
+        `SELECT quantity FROM cart_item WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].quantity).toBe(5);
+    });
+
+    it('여러 건 중 하나라도 재고가 모자라면 전부 담기지 않고 409와 실패한 SKU를 반환한다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const enough = await createVariant({ stockQuantity: 5 });
+      const scarce = await createVariant({ stockQuantity: 1 });
+
+      // When
+      const res = await addItemsToCart(oneTimeToken, [
+        { productVariantId: enough.productVariantId, quantity: 1 },
+        { productVariantId: scarce.productVariantId, quantity: 2 },
+      ]);
+
+      // Then
+      expect(res.status).toBe(409);
+      expect(res.body.data).toEqual({
+        productVariantId: scarce.productVariantId,
+        available: 1,
+        requested: 2,
+      });
+
+      const rows = await dataSource.query(
+        `SELECT quantity FROM cart_item WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(0);
+    });
+
+    it('여러 건 중 하나라도 없는 SKU면 전부 담기지 않고 404를 반환한다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const { productVariantId } = await createVariant({ stockQuantity: 5 });
+
+      // When
+      const res = await addItemsToCart(oneTimeToken, [
+        { productVariantId, quantity: 1 },
+        { productVariantId: 999_999, quantity: 1 },
+      ]);
+
+      // Then
+      expect(res.status).toBe(404);
+      expect(res.body.data.productVariantIds).toEqual([999_999]);
+
+      const rows = await dataSource.query(
+        `SELECT quantity FROM cart_item WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(0);
+    });
+
+    it('items가 빈 배열이면 400을 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+
+      // When
+      const res = await addItemsToCart(oneTimeToken, []);
 
       // Then
       expect(res.status).toBe(400);
@@ -430,7 +553,7 @@ describe('UserCartController (E2E)', () => {
       const { oneTimeToken } = await signUpAndLogin();
       const { productVariantId } = await createVariant({ stockQuantity: 10 });
       const created = await addToCart(oneTimeToken, productVariantId, 1);
-      const cartItemId = created.body.data.cartItemId;
+      const cartItemId = created.body.data.items[0].cartItemId;
 
       // When
       const res = await request(app.getHttpServer())
@@ -456,7 +579,7 @@ describe('UserCartController (E2E)', () => {
 
       // When
       const res = await request(app.getHttpServer())
-        .patch(`${CART_BASE}/${created.body.data.cartItemId}`)
+        .patch(`${CART_BASE}/${created.body.data.items[0].cartItemId}`)
         .set('Authorization', `Bearer ${oneTimeToken}`)
         .send({ quantity: 5 });
 
@@ -473,7 +596,7 @@ describe('UserCartController (E2E)', () => {
 
       // When
       const res = await request(app.getHttpServer())
-        .patch(`${CART_BASE}/${created.body.data.cartItemId}`)
+        .patch(`${CART_BASE}/${created.body.data.items[0].cartItemId}`)
         .set('Authorization', `Bearer ${other.oneTimeToken}`)
         .send({ quantity: 2 });
 
@@ -492,7 +615,7 @@ describe('UserCartController (E2E)', () => {
 
       // When
       const deleteRes = await request(app.getHttpServer())
-        .delete(`${CART_BASE}/${created.body.data.cartItemId}`)
+        .delete(`${CART_BASE}/${created.body.data.items[0].cartItemId}`)
         .set('Authorization', `Bearer ${oneTimeToken}`);
 
       const reAdd = await addToCart(oneTimeToken, productVariantId, 1);
@@ -522,7 +645,9 @@ describe('UserCartController (E2E)', () => {
       // When
       const res = await request(app.getHttpServer())
         .delete(CART_BASE)
-        .query({ ids: `${a.body.data.cartItemId},${b.body.data.cartItemId}` })
+        .query({
+          ids: `${a.body.data.items[0].cartItemId},${b.body.data.items[0].cartItemId}`,
+        })
         .set('Authorization', `Bearer ${oneTimeToken}`);
 
       // Then

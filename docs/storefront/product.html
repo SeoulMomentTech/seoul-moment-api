@@ -256,7 +256,7 @@ async function addToCart(variant, goCart) {
   if (!shop.token()) { toast('로그인이 필요합니다', { bad: true }); return; }
 
   const res = await apiCall('POST', '/user/cart', {
-    body: { productVariantId: variant.id, quantity: 1 },
+    body: { items: [{ productVariantId: variant.id, quantity: 1 }] },
   });
 
   if (!res.ok) { toast(errorText(res, '담지 못했습니다.'), { bad: true }); return; }

@@ -69,8 +69,27 @@ export class CartRepositoryService {
     return this.cartItemRepository.findOne({ where: { id, userId } });
   }
 
+  /** 여러 SKU 를 한 번에 담을 때. 없는 것은 결과에서 빠진다 */
+  async findByUserIdAndVariantIds(
+    userId: number,
+    productVariantIds: number[],
+  ): Promise<CartItemEntity[]> {
+    if (productVariantIds.length === 0) {
+      return [];
+    }
+
+    return this.cartItemRepository.find({
+      where: { userId, productVariantId: In(productVariantIds) },
+    });
+  }
+
   async save(entity: CartItemEntity): Promise<CartItemEntity> {
     return this.cartItemRepository.save(entity);
+  }
+
+  /** 트랜잭션 안에서 쓰인다. 하나라도 실패하면 전부 롤백된다 */
+  async saveMany(entities: CartItemEntity[]): Promise<CartItemEntity[]> {
+    return this.cartItemRepository.save(entities);
   }
 
   async countByUserId(userId: number): Promise<number> {

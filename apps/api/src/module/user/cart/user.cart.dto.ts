@@ -1,15 +1,17 @@
 import { MultilingualTextEntity } from '@app/repository/entity/multilingual-text.entity';
 import { ProductVariantEntity } from '@app/repository/entity/product-variant.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { plainToInstance, Transform } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayNotEmpty,
   IsArray,
   IsDefined,
   IsInt,
   IsOptional,
   IsPositive,
   Max,
+  ValidateNested,
 } from 'class-validator';
 
 import {
@@ -21,6 +23,9 @@ import { MultilingualFieldDto } from '../../dto/multilingual.dto';
 
 /** 한 번에 담을 수 있는 최대 수량. 오타로 999999 가 들어오는 것을 막는다 */
 export const MAX_CART_QUANTITY = 999;
+
+/** 한 요청에 담을 수 있는 SKU 수. 상품 하나의 옵션 조합을 모두 골라도 이 안에 든다 */
+export const MAX_CART_ITEMS = 50;
 
 /**
  * 옵션값 ID -> 표시 문자열 모음.
@@ -123,10 +128,10 @@ export class CartTextBundleDto {
   }
 }
 
-export class PostUserCartRequest {
+export class PostUserCartItemRequest {
   @ApiProperty({
     description: '상품 변형(SKU) ID. 상품상세 v1 응답의 variants[].id',
-    example: 1,
+    example: 101,
   })
   @IsInt()
   @IsPositive()
@@ -142,6 +147,22 @@ export class PostUserCartRequest {
   @Max(MAX_CART_QUANTITY)
   @IsDefined()
   quantity: number;
+}
+
+export class PostUserCartRequest {
+  @ApiProperty({
+    description:
+      '담을 SKU 목록. 한 개만 담을 때도 길이 1 배열로 보낸다. ' +
+      '같은 SKU 가 두 번 들어오면 수량을 합쳐서 처리한다.',
+    type: [PostUserCartItemRequest],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(MAX_CART_ITEMS)
+  @ValidateNested({ each: true })
+  @Type(() => PostUserCartItemRequest)
+  @IsDefined()
+  items: PostUserCartItemRequest[];
 }
 
 export class PatchUserCartRequest {
@@ -181,15 +202,36 @@ export class DeleteUserCartRequest {
   ids?: number[];
 }
 
-export class PostUserCartResponse {
+export class PostUserCartItemResponse {
+  @ApiProperty({ description: '상품 변형(SKU) ID', example: 101 })
+  productVariantId: number;
+
   @ApiProperty({ description: '장바구니 라인 ID', example: 1 })
   cartItemId: number;
+
+  @ApiProperty({
+    description: '합산된 뒤의 라인 수량. 이미 담겨 있던 수량이 더해진 값이다',
+    example: 3,
+  })
+  quantity: number;
+
+  static from(productVariantId: number, cartItemId: number, quantity: number) {
+    return plainToInstance(this, { productVariantId, cartItemId, quantity });
+  }
+}
+
+export class PostUserCartResponse {
+  @ApiProperty({
+    description: '담긴 라인. 요청한 순서를 그대로 지킨다',
+    type: [PostUserCartItemResponse],
+  })
+  items: PostUserCartItemResponse[];
 
   @ApiProperty({ description: '담긴 뒤의 장바구니 라인 수', example: 3 })
   totalCount: number;
 
-  static from(cartItemId: number, totalCount: number) {
-    return plainToInstance(this, { cartItemId, totalCount });
+  static from(items: PostUserCartItemResponse[], totalCount: number) {
+    return plainToInstance(this, { items, totalCount });
   }
 }
 

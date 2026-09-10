@@ -16,6 +16,7 @@ import {
   CartTextBundleDto,
   GetUserCartBrandGroupResponse,
   GetUserCartResponse,
+  PostUserCartItemResponse,
   PostUserCartRequest,
   PostUserCartResponse,
 } from './user.cart.dto';
@@ -31,47 +32,99 @@ export class UserCartService {
   ) {}
 
   /**
+   * 단건·다건을 한 경로로 받는다. 상품상세에서 옵션 조합을 여러 개 골라
+   * 한 번에 담는 화면이 있어 items 는 항상 배열이다.
+   *
    * 같은 SKU 를 다시 담으면 라인을 늘리지 않고 수량을 더한다.
    * (user_id, product_variant_id) UNIQUE 제약과 짝이 되는 동작이다.
+   *
+   * 하나라도 담을 수 없으면 전부 담지 않는다. 절반만 담기면 화면의
+   * 선택 패널이 어떤 상태여야 하는지가 애매해진다.
    */
   @Transactional()
-  async createCartItem(
+  async createCartItems(
     userId: number,
     dto: PostUserCartRequest,
   ): Promise<PostUserCartResponse> {
-    const variant =
-      await this.productRepositoryService.findProductVariantDetailById(
-        dto.productVariantId,
-      );
+    const requested = this.mergeRequestedQuantities(dto.items);
+    const variantIds = Array.from(requested.keys());
 
-    if (!variant) {
-      throw new ServiceError(
-        `No exist product variant ID: ${dto.productVariantId}`,
-        ServiceErrorCode.NOT_FOUND_DATA,
+    const stocks = await this.loadStocks(variantIds);
+    const exists = await this.cartRepositoryService.findByUserIdAndVariantIds(
+      userId,
+      variantIds,
+    );
+    const existMap = new Map(
+      exists.map((cartItem) => [cartItem.productVariantId, cartItem]),
+    );
+
+    const entities = variantIds.map((variantId) => {
+      const quantity =
+        (existMap.get(variantId)?.quantity ?? 0) +
+        (requested.get(variantId) ?? 0);
+
+      this.assertStock(variantId, stocks.get(variantId) ?? 0, quantity);
+
+      return plainToInstance(CartItemEntity, {
+        ...(existMap.has(variantId) ? { id: existMap.get(variantId)?.id } : {}),
+        userId,
+        productVariantId: variantId,
+        quantity,
+      });
+    });
+
+    const saved = await this.cartRepositoryService.saveMany(entities);
+    const savedMap = new Map(
+      saved.map((cartItem) => [cartItem.productVariantId, cartItem]),
+    );
+    const totalCount = await this.cartRepositoryService.countByUserId(userId);
+
+    return PostUserCartResponse.from(
+      variantIds.map((variantId) =>
+        PostUserCartItemResponse.from(
+          variantId,
+          savedMap.get(variantId)?.id ?? 0,
+          savedMap.get(variantId)?.quantity ?? 0,
+        ),
+      ),
+      totalCount,
+    );
+  }
+
+  /** 같은 SKU 가 여러 줄로 들어와도 한 라인으로 합친다. 첫 등장 순서를 지킨다 */
+  private mergeRequestedQuantities(
+    items: PostUserCartRequest['items'],
+  ): Map<number, number> {
+    const merged = new Map<number, number>();
+
+    for (const item of items) {
+      merged.set(
+        item.productVariantId,
+        (merged.get(item.productVariantId) ?? 0) + item.quantity,
       );
     }
 
-    const exist = await this.cartRepositoryService.findByUserIdAndVariantId(
-      userId,
-      dto.productVariantId,
+    return merged;
+  }
+
+  /** 없는 SKU 가 하나라도 있으면 담기 전에 끊는다 */
+  private async loadStocks(variantIds: number[]): Promise<Map<number, number>> {
+    const variants =
+      await this.productRepositoryService.getProductVariantsByIds(variantIds);
+    const stocks = new Map(
+      variants.map((variant) => [variant.id, variant.stockQuantity]),
     );
+    const missing = variantIds.filter((id) => !stocks.has(id));
 
-    const nextQuantity = (exist?.quantity ?? 0) + dto.quantity;
+    if (missing.length > 0) {
+      throw new ServiceError(
+        `No exist product variant ID: ${missing.join(', ')}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+        { productVariantIds: missing },
+      );
+    }
 
-    this.assertStock(variant.stockQuantity, nextQuantity);
-
-    const saved = await this.cartRepositoryService.save(
-      plainToInstance(CartItemEntity, {
-        ...(exist ? { id: exist.id } : {}),
-        userId,
-        productVariantId: dto.productVariantId,
-        quantity: nextQuantity,
-      }),
-    );
-
-    const totalCount = await this.cartRepositoryService.countByUserId(userId);
-
-    return PostUserCartResponse.from(saved.id, totalCount);
+    return stocks;
   }
 
   async getCart(
@@ -122,7 +175,11 @@ export class UserCartService {
         cartItem.productVariantId,
       );
 
-    this.assertStock(variant?.stockQuantity ?? 0, quantity);
+    this.assertStock(
+      cartItem.productVariantId,
+      variant?.stockQuantity ?? 0,
+      quantity,
+    );
 
     cartItem.quantity = quantity;
 
@@ -231,11 +288,24 @@ export class UserCartService {
     );
   }
 
-  private assertStock(stockQuantity: number, requestedQuantity: number) {
+  /**
+   * 여러 건을 한 번에 담을 때 화면이 어느 줄을 빨갛게 칠할지 알아야 하므로
+   * 어떤 SKU 가 몇 개 남았는지를 응답 data 에 실어 보낸다.
+   */
+  private assertStock(
+    productVariantId: number,
+    stockQuantity: number,
+    requestedQuantity: number,
+  ) {
     if (stockQuantity < requestedQuantity) {
       throw new ServiceError(
-        `Not enough stock. available: ${stockQuantity}, requested: ${requestedQuantity}`,
+        `Not enough stock. productVariantId: ${productVariantId}, available: ${stockQuantity}, requested: ${requestedQuantity}`,
         ServiceErrorCode.CONFLICT,
+        {
+          productVariantId,
+          available: stockQuantity,
+          requested: requestedQuantity,
+        },
       );
     }
   }

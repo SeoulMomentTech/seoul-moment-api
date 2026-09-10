@@ -146,7 +146,7 @@ function renderPicker() {
           ...(variant.isSoldOut ? { disabled: '' } : {}),
           onclick: async () => {
             const res = await api('POST', '/user/cart', {
-              body: { productVariantId: variant.id, quantity: 1 },
+              body: { items: [{ productVariantId: variant.id, quantity: 1 }] },
             });
             showResult('#rawOut', res, 'POST /user/cart');
           },
@@ -200,7 +200,7 @@ function renderVariants() {
                 ...(v.isSoldOut ? { disabled: '' } : {}),
                 onclick: async () => {
                   const res = await api('POST', '/user/cart', {
-                    body: { productVariantId: v.id, quantity: 1 },
+                    body: { items: [{ productVariantId: v.id, quantity: 1 }] },
                   });
                   showResult('#rawOut', res, 'POST /user/cart');
                 },
