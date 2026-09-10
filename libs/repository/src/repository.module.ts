@@ -44,6 +44,8 @@ import { OptionEntity } from './entity/option.entity';
 import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
 import { PlanActivityEntity } from './entity/plan-activity.entity';
+import { PlanBragLikeEntity } from './entity/plan-brag-like.entity';
+import { PlanBragEntity } from './entity/plan-brag.entity';
 import { PlanCategoryEntity } from './entity/plan-category.entity';
 import { PlanFeedPostEntity } from './entity/plan-feed-post.entity';
 import { PlanFeedVoteEntity } from './entity/plan-feed-vote.entity';
@@ -88,6 +90,8 @@ import { NewsRepositoryService } from './service/news.repository.service';
 import { OptionRepositoryService } from './service/option.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
 import { PlanActivityRepositoryService } from './service/plan-activity.repository.service';
+import { PlanBragLikeRepositoryService } from './service/plan-brag-like.repository.service';
+import { PlanBragRepositoryService } from './service/plan-brag.repository.service';
 import { PlanCategoryRepositoryService } from './service/plan-category.repository.service';
 import { PlanFeedVoteRepositoryService } from './service/plan-feed-vote.repository.service';
 import { PlanFeedRepositoryService } from './service/plan-feed.repository.service';
@@ -147,6 +151,8 @@ import { UserRepositoryService } from './service/user.repository.service';
       PlanActivityEntity,
       PlanFeedPostEntity,
       PlanFeedVoteEntity,
+      PlanBragEntity,
+      PlanBragLikeEntity,
       PlanScheduleEntity,
       PlanCategoryEntity,
       PlanUserCategoryEntity,
@@ -200,6 +206,8 @@ import { UserRepositoryService } from './service/user.repository.service';
     PlanActivityRepositoryService,
     PlanFeedRepositoryService,
     PlanFeedVoteRepositoryService,
+    PlanBragRepositoryService,
+    PlanBragLikeRepositoryService,
     PlanScheduleRepositoryService,
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
@@ -232,6 +240,8 @@ import { UserRepositoryService } from './service/user.repository.service';
     PlanActivityRepositoryService,
     PlanFeedRepositoryService,
     PlanFeedVoteRepositoryService,
+    PlanBragRepositoryService,
+    PlanBragLikeRepositoryService,
     PlanScheduleRepositoryService,
     PlanCategoryRepositoryService,
     PlanUserRoomRepositoryService,
