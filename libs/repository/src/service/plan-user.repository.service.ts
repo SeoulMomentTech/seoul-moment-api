@@ -2,7 +2,7 @@ import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { PlanUserEntity } from '../entity/plan-user.entity';
 import { PlanUserStatus, PlatformType } from '../enum/plan-user.enum';
@@ -75,6 +75,15 @@ export class PlanUserRepositoryService {
    * 소프트 삭제된 행은 TypeORM 이 기본으로 제외하므로 탈퇴한 사용자의 토큰은
    * 여기서 이미 걸린다.
    */
+  /**
+   * 여러 사람을 한 번에. 자랑하기 목록이 한 장에 20명을 그리는데 사람마다
+   * 따로 물으면 쿼리가 20번 나간다.
+   */
+  async findByIds(ids: string[]): Promise<PlanUserEntity[]> {
+    if (ids.length === 0) return [];
+    return this.planUserRepository.find({ where: { id: In(ids) } });
+  }
+
   async findById(id: string): Promise<PlanUserEntity | null> {
     return this.planUserRepository.findOneBy({ id });
   }

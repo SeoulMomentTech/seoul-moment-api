@@ -1,8 +1,4 @@
-import {
-  PlanBragCategorySnapshot,
-  PlanBragEntity,
-  PlanBragItemSnapshot,
-} from '@app/repository/entity/plan-brag.entity';
+import { PlanBragEntity } from '@app/repository/entity/plan-brag.entity';
 import {
   PlanBragSort,
   PlanBragStatus,
@@ -12,6 +8,52 @@ import { Type } from 'class-transformer';
 import { IsEnum, IsNumber, IsOptional } from 'class-validator';
 
 import { daysUntilWedding, toDateString } from './plan-brag.util';
+
+/** 예산 막대·범례 한 줄. 지출 큰 순으로 담는다 */
+export interface PlanBragCategoryView {
+  categoryName: string;
+  /** 실제 지출 (만원) */
+  usedAmount: number;
+}
+
+/**
+ * 상세에 실리는 플랜 한 줄.
+ *
+ * **시각(startTime)과 메모(memo)는 없다.** 안내 모달이 약속한 공개 범위
+ * 밖이다. 장소는 지도를 그리려고 담는다.
+ */
+export interface PlanBragItemView {
+  id: number;
+  categoryName: string;
+  title: string;
+  /** 만원 단위. 안 정했으면 null */
+  amount: number | null;
+  /** 'YYYY-MM-DD'. 날짜 미정이면 null */
+  startDate: string | null;
+  /** 'COMPLETED' 면 완료, 그 밖은 예정 */
+  status: string;
+  /** 카카오에서 고른 경우 **주소가 아니라 업체명**이다 ("SG웨딩홀") */
+  location: string | null;
+  lat: number | null;
+  lng: number | null;
+}
+
+/**
+ * 볼 때마다 그 사람의 지금 플랜에서 새로 만드는 값.
+ *
+ * `plan_brag` 에는 "올렸다" 는 사실만 있고 이 값들은 저장하지 않는다 —
+ * 켜 둔 뒤에 플랜을 고치면 자랑하기도 같이 바뀌어야 한다.
+ */
+export interface PlanBragLiveFacts {
+  nickname: string;
+  weddingDate: Date | string | null;
+  totalBudget: number;
+  usedAmount: number;
+  plannedAmount: number;
+  planCount: number;
+  doneCount: number;
+  categoryChart: PlanBragCategoryView[];
+}
 
 export class GetPlanBragListRequest {
   @ApiPropertyOptional({ description: '페이지 번호', example: 1, default: 1 })
@@ -54,9 +96,7 @@ export class GetPlanBragResponse {
   weddingDate: string | null;
 
   @ApiProperty({
-    description:
-      '남은 일수. **저장값이 아니라 읽을 때 다시 센다** — 스냅샷이라고 ' +
-      'D-24 를 박아 두면 반년 뒤에도 D-24 라고 적힌다',
+    description: '남은 일수. 저장값이 아니라 읽을 때 다시 센다',
     example: 66,
     nullable: true,
   })
@@ -94,20 +134,25 @@ export class GetPlanBragResponse {
 
   static from(
     entity: PlanBragEntity,
+    facts: PlanBragLiveFacts,
     viewerPlanUserId: string,
     likedIds: Set<number>,
+    /** 카드 칩 개수. 그 이상은 카드가 두 줄이 되어 벽돌이 흐트러진다 */
+    chipCount = 5,
   ): GetPlanBragResponse {
     const response = new GetPlanBragResponse();
     response.bragId = entity.id;
-    response.nickname = entity.nickname;
-    response.weddingDate = toDateString(entity.weddingDate);
-    response.dday = daysUntilWedding(entity.weddingDate);
-    response.totalBudget = entity.totalBudget;
-    response.usedAmount = entity.usedAmount;
-    response.plannedAmount = entity.plannedAmount;
-    response.planCount = entity.planCount;
-    response.doneCount = entity.doneCount;
-    response.categories = entity.categories ?? [];
+    response.nickname = facts.nickname;
+    response.weddingDate = toDateString(facts.weddingDate);
+    response.dday = daysUntilWedding(facts.weddingDate);
+    response.totalBudget = facts.totalBudget;
+    response.usedAmount = facts.usedAmount;
+    response.plannedAmount = facts.plannedAmount;
+    response.planCount = facts.planCount;
+    response.doneCount = facts.doneCount;
+    response.categories = facts.categoryChart
+      .slice(0, chipCount)
+      .map((row) => row.categoryName);
     response.likeCount = entity.likeCount;
     response.liked = likedIds.has(entity.id);
     response.publishedAt = entity.publishedAt;
@@ -121,7 +166,7 @@ export class GetPlanBragDetailResponse extends GetPlanBragResponse {
   @ApiProperty({
     description: '예산 막대·범례. 지출 큰 순. 앱은 상위 4개에만 색을 준다',
   })
-  categoryChart: PlanBragCategorySnapshot[];
+  categoryChart: PlanBragCategoryView[];
 
   @ApiProperty({
     description:
@@ -129,19 +174,21 @@ export class GetPlanBragDetailResponse extends GetPlanBragResponse {
       '앱이 한다 — 소계는 지출과 예정을 함께 세야 하는데 그 규칙을 서버에 ' +
       '두면 문구 하나 고치는 데 배포가 묶인다',
   })
-  items: PlanBragItemSnapshot[];
+  items: PlanBragItemView[];
 
   static fromDetail(
     entity: PlanBragEntity,
+    facts: PlanBragLiveFacts,
+    items: PlanBragItemView[],
     viewerPlanUserId: string,
     likedIds: Set<number>,
   ): GetPlanBragDetailResponse {
     const response = Object.assign(
       new GetPlanBragDetailResponse(),
-      GetPlanBragResponse.from(entity, viewerPlanUserId, likedIds),
+      GetPlanBragResponse.from(entity, facts, viewerPlanUserId, likedIds),
     );
-    response.categoryChart = entity.categoryChart ?? [];
-    response.items = entity.items ?? [];
+    response.categoryChart = facts.categoryChart;
+    response.items = items;
     return response;
   }
 }

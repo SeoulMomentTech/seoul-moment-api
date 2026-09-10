@@ -243,6 +243,76 @@ export class PlanScheduleRepositoryService {
     return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
   }
 
+  /**
+   * 자랑하기가 쓰는 집계. **여러 사람 것을 한 번에** 센다.
+   *
+   * 자랑하기는 스냅샷이 아니라 라이브라, 목록 한 장(20명)을 그릴 때마다
+   * 사람마다 따로 물으면 쿼리가 20번 나간다. planUserId 를 모아 한 번에
+   * 묻고 서비스가 사람별로 접는다.
+   *
+   * 범위는 `getList` 와 **같다** — 내가 만든 일정 가운데 방이 없거나
+   * **내가 방장인 방**의 것. 남의 방에 조언자로 들어가 만든 일정은 내
+   * 플랜이 아니므로 뺀다.
+   */
+  async getBragTotals(planUserIds: string[]): Promise<
+    Array<{
+      planUserId: string;
+      categoryName: string;
+      usedAmount: number;
+      plannedAmount: number;
+      total: number;
+      done: number;
+    }>
+  > {
+    if (planUserIds.length === 0) return [];
+
+    const rows = await this.planScheduleRepository
+      .createQueryBuilder('ps')
+      .leftJoin('ps.planUserRoom', 'room')
+      .select('ps.plan_user_id', 'planUserId')
+      .addSelect('ps.category_name', 'categoryName')
+      .addSelect(
+        `SUM(CASE WHEN ps.status = :completed THEN COALESCE(ps.amount, 0) ELSE 0 END)`,
+        'usedAmount',
+      )
+      .addSelect(
+        `SUM(CASE WHEN ps.status <> :completed THEN COALESCE(ps.amount, 0) ELSE 0 END)`,
+        'plannedAmount',
+      )
+      .addSelect('COUNT(*)', 'total')
+      .addSelect(
+        `SUM(CASE WHEN ps.status = :completed THEN 1 ELSE 0 END)`,
+        'done',
+      )
+      .where('ps.plan_user_id IN (:...planUserIds)', { planUserIds })
+      .andWhere('ps.status IN (:...statusList)', {
+        statusList: [PlanScheduleStatus.NORMAL, PlanScheduleStatus.COMPLETED],
+      })
+      .andWhere(
+        '(ps.plan_user_room_id IS NULL OR room.owner_id = ps.plan_user_id)',
+      )
+      .setParameter('completed', PlanScheduleStatus.COMPLETED)
+      .groupBy('ps.plan_user_id')
+      .addGroupBy('ps.category_name')
+      .getRawMany<{
+        planUserId: string;
+        categoryName: string;
+        usedAmount: string;
+        plannedAmount: string;
+        total: string;
+        done: string;
+      }>();
+
+    return rows.map((row) => ({
+      planUserId: row.planUserId,
+      categoryName: row.categoryName,
+      usedAmount: Number(row.usedAmount ?? 0),
+      plannedAmount: Number(row.plannedAmount ?? 0),
+      total: Number(row.total ?? 0),
+      done: Number(row.done ?? 0),
+    }));
+  }
+
   async getCategoryChartList(
     id?: string,
     roomId?: number,

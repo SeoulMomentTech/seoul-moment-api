@@ -2,11 +2,7 @@ import { DatabaseSort } from '@app/common/enum/global.enum';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { PlanBragLikeEntity } from '@app/repository/entity/plan-brag-like.entity';
-import {
-  PlanBragCategorySnapshot,
-  PlanBragEntity,
-  PlanBragItemSnapshot,
-} from '@app/repository/entity/plan-brag.entity';
+import { PlanBragEntity } from '@app/repository/entity/plan-brag.entity';
 import { PlanScheduleEntity } from '@app/repository/entity/plan-schedule.entity';
 import { PlanUserEntity } from '@app/repository/entity/plan-user.entity';
 import {
@@ -31,21 +27,31 @@ import {
   GetPlanBragListRequest,
   GetPlanBragMyStatusResponse,
   GetPlanBragResponse,
+  PlanBragCategoryView,
+  PlanBragItemView,
   PlanBragLikeResponse,
+  PlanBragLiveFacts,
 } from './plan-brag.dto';
 import { coupleNickname, toDateString } from './plan-brag.util';
 
 /**
- * 스냅샷을 뜰 때 훑는 일정 상한.
+ * 상세에서 훑는 일정 상한.
  *
  * 플랜 보드가 `count=10000` 으로 전부 받는 것과 같은 자리다. 여기서 잘리면
  * 자랑하기에 보이는 플랜 수가 실제와 달라지므로 넉넉히 잡는다.
  */
-const SNAPSHOT_SCAN_COUNT = 10000;
+const ITEM_SCAN_COUNT = 10000;
 
-/** 목록 카드에 붙는 칩 개수. 그 이상은 카드가 두 줄이 되어 벽돌이 흐트러진다 */
-const CARD_CATEGORY_COUNT = 5;
-
+/**
+ * 자랑하기.
+ *
+ * **`plan_brag` 에는 "올렸다" 는 사실만 있다.** 예산·개수·카테고리·플랜
+ * 목록은 저장하지 않고, 볼 때마다 그 사람의 지금 플랜에서 새로 만든다 —
+ * 켜 둔 뒤에 일정을 고치거나 장소를 더하면 자랑하기도 같이 바뀌어야 한다.
+ *
+ * 처음에는 올리는 순간의 스냅샷을 복사해 뒀는데 틀렸다. "수정하지 못하고 볼
+ * 수만 있다" 는 **보는 사람** 이야기이지 올린 사람 이야기가 아니다.
+ */
 @Injectable()
 export class PlanBragService {
   constructor(
@@ -68,15 +74,30 @@ export class PlanBragService {
         count: query.count ?? 20,
       });
 
-    const likedIds = await this.planBragLikeRepositoryService.findMyLikedIds(
-      viewerPlanUserId,
-      entities.map((entity) => entity.id),
-    );
+    if (entities.length === 0) return [[], total];
+
+    const planUserIds = entities.map((entity) => entity.planUserId);
+    const [factsById, likedIds] = await Promise.all([
+      this.buildFacts(planUserIds),
+      this.planBragLikeRepositoryService.findMyLikedIds(
+        viewerPlanUserId,
+        entities.map((entity) => entity.id),
+      ),
+    ]);
 
     return [
-      entities.map((entity) =>
-        GetPlanBragResponse.from(entity, viewerPlanUserId, likedIds),
-      ),
+      entities
+        .map((entity) => {
+          const facts = factsById.get(entity.planUserId);
+          if (!facts) return null;
+          return GetPlanBragResponse.from(
+            entity,
+            facts,
+            viewerPlanUserId,
+            likedIds,
+          );
+        })
+        .filter((row): row is GetPlanBragResponse => row !== null),
       total,
     ];
   }
@@ -101,13 +122,26 @@ export class PlanBragService {
       );
     }
 
-    const likedIds = await this.planBragLikeRepositoryService.findMyLikedIds(
-      viewerPlanUserId,
-      [entity.id],
-    );
+    const [factsById, likedIds, items] = await Promise.all([
+      this.buildFacts([entity.planUserId]),
+      this.planBragLikeRepositoryService.findMyLikedIds(viewerPlanUserId, [
+        entity.id,
+      ]),
+      this.loadItems(entity.planUserId),
+    ]);
+
+    const facts = factsById.get(entity.planUserId);
+    if (!facts) {
+      throw new ServiceError(
+        'Plan brag owner not found',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
 
     return GetPlanBragDetailResponse.fromDetail(
       entity,
+      facts,
+      items,
       viewerPlanUserId,
       likedIds,
     );
@@ -120,15 +154,13 @@ export class PlanBragService {
   }
 
   /**
-   * 자랑하기에 올린다. 지금 내 플랜의 **스냅샷을 뜬다.**
+   * 자랑하기에 올린다.
    *
-   * **이미 올라가 있으면 아무것도 하지 않는다.** 앱이 "올린 뒤에는 고칠 수
-   * 없어요. 고치려면 내렸다가 다시 올려요" 라고 약속했는데, 여기서 다시
-   * 스냅샷을 뜨면 켠 채로 예산을 고쳐도 남의 화면이 따라 바뀐다 — 약속이
-   * 조용히 깨진다.
+   * **스냅샷을 뜨지 않는다.** 켜 두는 동안 내 플랜이 그대로 보인다 — 일정을
+   * 더하거나 장소를 붙이면 자랑하기도 같이 바뀐다.
    *
-   * 내려가 있던 것을 다시 올리면 **행을 그대로 쓰고 스냅샷만 새로 뜬다.**
-   * 그래서 좋아요가 이어진다.
+   * 이미 올라가 있으면 아무것도 하지 않는다(멱등). 내려가 있던 것을 다시
+   * 올리면 같은 행을 쓰므로 좋아요가 이어진다.
    */
   @Transactional()
   async publish(planUserId: string): Promise<number> {
@@ -146,21 +178,10 @@ export class PlanBragService {
       );
     }
 
-    const { user, nickname } = await this.requirePublishable(planUserId);
-    const snapshot = await this.buildSnapshot(planUserId);
+    await this.requirePublishable(planUserId);
 
     const entity = existing ?? new PlanBragEntity();
     entity.planUserId = planUserId;
-    entity.nickname = nickname;
-    entity.weddingDate = user.weddingDate;
-    entity.totalBudget = user.budget;
-    entity.usedAmount = snapshot.usedAmount;
-    entity.plannedAmount = snapshot.plannedAmount;
-    entity.planCount = snapshot.planCount;
-    entity.doneCount = snapshot.doneCount;
-    entity.categories = snapshot.categories;
-    entity.categoryChart = snapshot.categoryChart;
-    entity.items = snapshot.items;
     entity.status = PlanBragStatus.PUBLISHED;
     entity.publishedAt = new Date();
     // likeCount 는 건드리지 않는다 — 다시 올릴 때 이어받는 값이다
@@ -175,9 +196,7 @@ export class PlanBragService {
    * **온보딩을 마치지 않은 사람은 자랑할 내용이 없다.** 이름이 비면 카드에
    * 부를 이름이 없고, 날짜·예산이 비면 카드의 두 줄이 통째로 빈다.
    */
-  private async requirePublishable(
-    planUserId: string,
-  ): Promise<{ user: PlanUserEntity; nickname: string }> {
+  private async requirePublishable(planUserId: string): Promise<void> {
     const user = await this.planUserRepositoryService.getById(planUserId);
     const nickname = await this.buildNickname(planUserId, user.name);
 
@@ -187,8 +206,6 @@ export class PlanBragService {
         ServiceErrorCode.BAD_REQUEST,
       );
     }
-
-    return { user, nickname };
   }
 
   /**
@@ -286,46 +303,91 @@ export class PlanBragService {
     return brag;
   }
 
-  /** "지수 · 현우". 배우자가 없으면 내 이름 하나다 */
-  private async buildNickname(
-    planUserId: string,
-    ownerName: string,
-  ): Promise<string> {
-    const room =
-      await this.planUserRoomRepositoryService.findByOwnerId(planUserId);
-    if (!room) return coupleNickname({ name: ownerName });
+  /**
+   * 지금 플랜에서 카드에 필요한 값을 만든다. **여러 사람 것을 한 번에.**
+   *
+   * 목록 한 장이 20명이라, 사람마다 따로 물으면 쿼리가 20번씩 나간다.
+   * 사용자·배우자·집계를 각각 한 번씩만 묻고 사람별로 접는다.
+   */
+  private async buildFacts(
+    planUserIds: string[],
+  ): Promise<Map<string, PlanBragLiveFacts>> {
+    const unique = [...new Set(planUserIds)];
+    const [users, nicknames, totals] = await Promise.all([
+      this.planUserRepositoryService.findByIds(unique),
+      this.buildNicknames(unique),
+      this.planScheduleRepositoryService.getBragTotals(unique),
+    ]);
 
-    const spouse =
-      await this.planUserRoomMemberRepositoryService.findSpouseByRoomId(
-        room.id,
-      );
-    if (!spouse) return coupleNickname({ name: ownerName });
-
-    const spouseUser = await this.planUserRepositoryService.findById(
-      spouse.planUserId,
+    const byUser = new Map<string, PlanUserEntity>(
+      users.map((user) => [user.id, user]),
     );
-    return coupleNickname({ name: ownerName }, spouseUser);
+    const rowsByUser = new Map<string, typeof totals>();
+    totals.forEach((row) => {
+      const list = rowsByUser.get(row.planUserId) ?? [];
+      list.push(row);
+      rowsByUser.set(row.planUserId, list);
+    });
+
+    const result = new Map<string, PlanBragLiveFacts>();
+    unique.forEach((id) => {
+      const user = byUser.get(id);
+      if (!user) return;
+      result.set(
+        id,
+        this.foldFacts(
+          user,
+          nicknames.get(id) ?? coupleNickname({ name: user.name }),
+          rowsByUser.get(id) ?? [],
+        ),
+      );
+    });
+
+    return result;
   }
 
-  /**
-   * 지금 내 플랜을 그대로 복사한다.
-   *
-   * 금액은 전부 **만원 단위**로, 앱의 다른 화면과 같다. 지출은 완료한
-   * 일정만, 예정은 아직 완료하지 않은 일정만 센다 — 홈 예산 막대의
-   * 분홍/회색과 뜻이 같아야 한다.
-   */
-  private async buildSnapshot(planUserId: string): Promise<{
-    usedAmount: number;
-    plannedAmount: number;
-    planCount: number;
-    doneCount: number;
-    categories: string[];
-    categoryChart: PlanBragCategorySnapshot[];
-    items: PlanBragItemSnapshot[];
-  }> {
+  /** 한 사람의 집계 줄들을 카드 한 장의 값으로 접는다 */
+  private foldFacts(
+    user: PlanUserEntity,
+    nickname: string,
+    rows: Array<{
+      categoryName: string;
+      usedAmount: number;
+      plannedAmount: number;
+      total: number;
+      done: number;
+    }>,
+  ): PlanBragLiveFacts {
+    /*
+      막대·범례는 **지출 큰 순**이다. 앱이 상위 4개에만 색을 주고 나머지는
+      "그 외" 로 합치므로, 순서가 뒤집히면 같은 카테고리의 색이 매번 바뀐다.
+      아직 한 푼도 안 쓴 카테고리는 막대에 낼 것이 없어 뺀다.
+    */
+    const categoryChart: PlanBragCategoryView[] = rows
+      .filter((row) => row.usedAmount > 0)
+      .map((row) => ({
+        categoryName: row.categoryName,
+        usedAmount: row.usedAmount,
+      }))
+      .sort((a, b) => b.usedAmount - a.usedAmount);
+
+    return {
+      nickname,
+      weddingDate: user.weddingDate ?? null,
+      totalBudget: user.budget ?? 0,
+      usedAmount: rows.reduce((n, row) => n + row.usedAmount, 0),
+      plannedAmount: rows.reduce((n, row) => n + row.plannedAmount, 0),
+      planCount: rows.reduce((n, row) => n + row.total, 0),
+      doneCount: rows.reduce((n, row) => n + row.done, 0),
+      categoryChart,
+    };
+  }
+
+  /** 상세에 실을 플랜 목록. 최신순 */
+  private async loadItems(planUserId: string): Promise<PlanBragItemView[]> {
     const [schedules] = await this.planScheduleRepositoryService.getList(
       1,
-      SNAPSHOT_SCAN_COUNT,
+      ITEM_SCAN_COUNT,
       planUserId,
       undefined,
       undefined,
@@ -334,85 +396,22 @@ export class PlanBragService {
       DatabaseSort.DESC,
     );
 
-    const totals = this.sumSchedules(schedules);
-    const categoryChart = this.toCategoryChart(totals.usedByCategory);
-
-    return {
-      usedAmount: totals.usedAmount,
-      plannedAmount: totals.plannedAmount,
-      planCount: schedules.length,
-      doneCount: totals.doneCount,
-      categories: categoryChart
-        .slice(0, CARD_CATEGORY_COUNT)
-        .map((row) => row.categoryName),
-      categoryChart,
-      items: schedules.map((schedule) => this.toItemSnapshot(schedule)),
-    };
+    return schedules
+      .filter((schedule) => schedule.status !== PlanScheduleStatus.DELETE)
+      .map((schedule) => this.toItemView(schedule));
   }
 
   /**
-   * 지출·예정·완료 개수를 한 번에 센다.
-   *
-   * 지출은 **완료한 일정만**, 예정은 아직 완료하지 않은 일정만이다 — 홈
-   * 예산 막대의 분홍/회색과 뜻이 같아야 한다.
-   */
-  private sumSchedules(schedules: PlanScheduleEntity[]): {
-    usedAmount: number;
-    plannedAmount: number;
-    doneCount: number;
-    usedByCategory: Map<string, number>;
-  } {
-    let usedAmount = 0;
-    let plannedAmount = 0;
-    let doneCount = 0;
-    const usedByCategory = new Map<string, number>();
-
-    for (const schedule of schedules) {
-      const amount = schedule.amount ?? 0;
-
-      if (schedule.status === PlanScheduleStatus.COMPLETED) {
-        usedAmount += amount;
-        doneCount += 1;
-        usedByCategory.set(
-          schedule.categoryName,
-          (usedByCategory.get(schedule.categoryName) ?? 0) + amount,
-        );
-      } else {
-        plannedAmount += amount;
-      }
-    }
-
-    return { usedAmount, plannedAmount, doneCount, usedByCategory };
-  }
-
-  /**
-   * 막대·범례는 **지출 큰 순**이다.
-   *
-   * 앱이 상위 4개에만 색을 주고 나머지는 무채색으로 떨어뜨리므로, 순서가
-   * 뒤집히면 같은 카테고리의 색이 매번 바뀐다. 아직 한 푼도 안 쓴
-   * 카테고리는 막대에 낼 것이 없어 뺀다.
-   */
-  private toCategoryChart(
-    usedByCategory: Map<string, number>,
-  ): PlanBragCategorySnapshot[] {
-    return [...usedByCategory]
-      .filter(([, amount]) => amount > 0)
-      .map(([categoryName, amount]) => ({ categoryName, usedAmount: amount }))
-      .sort((a, b) => b.usedAmount - a.usedAmount);
-  }
-
-  /**
-   * 일정 한 줄을 스냅샷으로.
+   * 일정 한 줄을 응답으로.
    *
    * **시각(startTime)과 메모(memo)는 담지 않는다.** 안내 모달이 약속한
    * 공개 범위 밖이다.
    *
    * 장소는 담는다 — 상세 시트가 지도를 보여 준다. `decimal` 은 드라이버가
    * **문자열로** 주므로 반드시 Number 로 바꾼다. 그대로 JSON 에 넣으면 앱이
-   * `new kakao.maps.LatLng("37.5")` 를 부르고 지도가 안 뜬다 (피드의
-   * lat/lng 이 같은 이유로 같은 처리를 한다).
+   * `new kakao.maps.LatLng("37.5")` 를 부르고 지도가 안 뜬다.
    */
-  private toItemSnapshot(schedule: PlanScheduleEntity): PlanBragItemSnapshot {
+  private toItemView(schedule: PlanScheduleEntity): PlanBragItemView {
     const num = (v: number | string | null | undefined) =>
       v === null || v === undefined || v === '' ? null : Number(v);
 
@@ -427,5 +426,43 @@ export class PlanBragService {
       lat: num(schedule.locationLat),
       lng: num(schedule.locationLng),
     };
+  }
+
+  /** "지수 · 현우". 배우자가 없으면 내 이름 하나다 */
+  private async buildNickname(
+    planUserId: string,
+    ownerName: string,
+  ): Promise<string> {
+    return (
+      (await this.buildNicknames([planUserId])).get(planUserId) ??
+      coupleNickname({ name: ownerName })
+    );
+  }
+
+  /** 여러 사람의 이름을 한 번에. 목록에서 사람마다 방을 묻지 않으려고 */
+  private async buildNicknames(
+    planUserIds: string[],
+  ): Promise<Map<string, string>> {
+    const users = await this.planUserRepositoryService.findByIds(planUserIds);
+    const nameById = new Map(users.map((user) => [user.id, user.name]));
+    const result = new Map<string, string>();
+
+    await Promise.all(
+      planUserIds.map(async (id) => {
+        const ownerName = nameById.get(id) ?? '';
+        const room = await this.planUserRoomRepositoryService.findByOwnerId(id);
+        const spouse = room
+          ? await this.planUserRoomMemberRepositoryService.findSpouseByRoomId(
+              room.id,
+            )
+          : null;
+        const spouseUser = spouse
+          ? await this.planUserRepositoryService.findById(spouse.planUserId)
+          : null;
+        result.set(id, coupleNickname({ name: ownerName }, spouseUser));
+      }),
+    );
+
+    return result;
   }
 }

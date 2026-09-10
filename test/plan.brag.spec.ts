@@ -107,7 +107,7 @@ describe('자랑하기 (E2E)', () => {
   const findBrag = (planUserId: string) =>
     dataSource.getRepository(PlanBragEntity).findOne({ where: { planUserId } });
 
-  describe('올리기 — 스냅샷', () => {
+  describe('올리기 — 라이브', () => {
     it('지출·예정·개수를 지금 플랜에서 그대로 뜬다', async () => {
       const user = await createUser();
       await createSchedule(user, { categoryName: '예식장', amount: 620 });
@@ -241,22 +241,65 @@ describe('자랑하기 (E2E)', () => {
     });
 
     /**
-     * 앱이 "올린 뒤에는 고칠 수 없어요" 라고 약속했다. 여기서 다시 스냅샷을
-     * 뜨면 켠 채로 예산을 고쳐도 남의 화면이 따라 바뀐다 — 약속이 조용히
-     * 깨지는 자리다.
+     * **이 기능의 핵심이다.** 스냅샷이 아니라 라이브다 — 켜 둔 뒤에 플랜을
+     * 고치면 자랑하기도 같이 바뀐다.
+     *
+     * 처음에는 올리는 순간을 복사해 뒀는데, 그러면 나중에 일정을 더하거나
+     * 장소를 붙여도 자랑하기는 얼어붙은 채로 남았다. 고치려면 토글을 껐다
+     * 켜야 한다는 것을 사람이 알 방법이 없었다.
      */
-    it('이미 올라가 있으면 다시 스냅샷을 뜨지 않는다', async () => {
+    it('켜 둔 뒤에 플랜을 고치면 자랑하기도 같이 바뀐다', async () => {
       const user = await createUser();
       await createSchedule(user, { amount: 300 });
 
-      const first = await bragService.publish(user.id);
+      const bragId = await bragService.publish(user.id);
+      expect(
+        (await bragService.getPlanBragDetail(user.id, bragId)).planCount,
+      ).toBe(1);
+
       await createSchedule(user, { amount: 999, title: '나중에 추가한 일정' });
+
+      const detail = await bragService.getPlanBragDetail(user.id, bragId);
+      expect(detail.planCount).toBe(2);
+      expect(detail.usedAmount).toBe(1299);
+      expect(detail.items.map((v) => v.title)).toContain('나중에 추가한 일정');
+    });
+
+    /**
+     * 사용자가 실제로 걸린 자리 — "자랑하기를 켠 뒤에 지도를 추가할 수도
+     * 있잖아". 스냅샷이던 시절에는 영영 안 보였다.
+     */
+    it('켠 뒤에 장소를 붙이면 지도가 보인다', async () => {
+      const user = await createUser();
+      const schedule = await createSchedule(user, { location: null });
+      const bragId = await bragService.publish(user.id);
+
+      expect(
+        (await bragService.getPlanBragDetail(user.id, bragId)).items[0]
+          .location,
+      ).toBeNull();
+
+      await dataSource.getRepository(PlanScheduleEntity).update(schedule.id, {
+        location: 'SG 웨딩홀',
+        locationLat: 37.5006,
+        locationLng: 127.0364,
+      });
+
+      const after = await bragService.getPlanBragDetail(user.id, bragId);
+      expect(after.items[0].location).toBe('SG 웨딩홀');
+      expect(after.items[0].lat).toBeCloseTo(37.5006, 3);
+    });
+
+    it('두 번 올려도 같은 장이고 publishedAt 이 안 밀린다', async () => {
+      const user = await createUser();
+      await createSchedule(user);
+
+      const first = await bragService.publish(user.id);
+      const before = (await findBrag(user.id))?.publishedAt;
       const second = await bragService.publish(user.id);
 
       expect(second).toBe(first);
-      const detail = await bragService.getPlanBragDetail(user.id, first);
-      expect(detail.planCount).toBe(1);
-      expect(detail.usedAmount).toBe(300);
+      expect((await findBrag(user.id))?.publishedAt).toEqual(before);
     });
   });
 
@@ -288,7 +331,7 @@ describe('자랑하기 (E2E)', () => {
       expect(row?.status).toBe(PlanBragStatus.UNPUBLISHED);
     });
 
-    it('내렸다 다시 올리면 좋아요가 이어지고 스냅샷은 새로 뜬다', async () => {
+    it('내렸다 다시 올리면 좋아요가 이어진다', async () => {
       const user = await createUser();
       const viewer = await createUser();
       await createSchedule(user, { amount: 300 });
@@ -375,6 +418,50 @@ describe('자랑하기 (E2E)', () => {
     });
   });
 
+  describe('라이브', () => {
+    it('예산과 이름을 고치면 카드도 따라 바뀐다', async () => {
+      const user = await createUser({ name: '지수', budget: 4200 });
+      await createSchedule(user);
+      const bragId = await bragService.publish(user.id);
+
+      await dataSource
+        .getRepository(PlanUserEntity)
+        .update(user.id, { name: '지수야', budget: 5000 });
+
+      const detail = await bragService.getPlanBragDetail(user.id, bragId);
+      expect(detail.nickname).toBe('지수야');
+      expect(detail.totalBudget).toBe(5000);
+    });
+
+    /**
+     * 남의 방에 조언자로 들어가 만든 일정은 내 플랜이 아니다.
+     * 범위가 `getList`(홈·보드가 쓰는 것)와 같아야 한다.
+     */
+    it('남의 방에서 만든 일정은 내 자랑하기에 안 들어간다', async () => {
+      const me = await createUser();
+      const other = await createUser();
+      const otherRoom = await dataSource
+        .getRepository(PlanUserRoomEntity)
+        .save(plainToInstance(PlanUserRoomEntity, { ownerId: other.id }));
+
+      await createSchedule(me, { amount: 100 });
+      await createSchedule(me, {
+        amount: 900,
+        title: '남의 방에 적은 일정',
+        planUserRoomId: otherRoom.id,
+      });
+
+      const bragId = await bragService.publish(me.id);
+      const detail = await bragService.getPlanBragDetail(me.id, bragId);
+
+      expect(detail.planCount).toBe(1);
+      expect(detail.usedAmount).toBe(100);
+      expect(detail.items.map((v) => v.title)).not.toContain(
+        '남의 방에 적은 일정',
+      );
+    });
+  });
+
   describe('목록', () => {
     it('liked · isMine 은 요청한 사람 기준이다', async () => {
       const me = await createUser();
@@ -412,8 +499,8 @@ describe('자랑하기 (E2E)', () => {
     });
 
     /**
-     * 스냅샷이라고 D-24 를 박아 두면 반년 뒤에도 D-24 라고 적힌다.
-     * 날짜는 저장하고 남은 일수는 읽을 때 다시 센다.
+     * 남은 일수는 저장하지 않는다. 결혼식 날짜만 사용자 행에 있고,
+     * 읽을 때마다 오늘 기준으로 다시 센다.
      */
     it('D-day 는 저장값이 아니라 읽을 때 다시 센다', async () => {
       const user = await createUser({ weddingDate: '2026-11-14' });
