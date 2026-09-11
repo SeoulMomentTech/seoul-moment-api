@@ -527,4 +527,75 @@ describe('견적 후기 피드 (E2E)', () => {
       postableScheduleCount: 1,
     });
   });
+
+  // ── 카테고리 시세 ────────────────────────────────────────────────
+  describe('카테고리 시세', () => {
+    /** 같은 카테고리로 금액만 다른 후기를 n 건 만든다 */
+    async function postMany(categoryName: string, amounts: number[]) {
+      for (const amount of amounts) {
+        const user = await createUser();
+        const schedule = await createSchedule(user, { categoryName, amount });
+        await post(user, schedule.id);
+      }
+    }
+
+    it('평균이 아니라 중앙값을 준다 — 한 건이 통째로 흔들지 않는다', async () => {
+      /*
+        100·110·120·130·99999. 평균은 20,091 이지만 중앙값은 120 이다.
+        단위를 잘못 적은 한 건(99999)이 평균만 망가뜨린다.
+      */
+      await postMany('스드메', [100, 110, 120, 130, 99999]);
+
+      const stats = await feedService.getCategoryStats();
+      const sdm = stats.find((s) => s.categoryName === '스드메');
+
+      expect(sdm).toBeDefined();
+      expect(sdm.median).toBe(120);
+      expect(sdm.total).toBe(5);
+    });
+
+    it('표본이 적은 카테고리는 아예 빠진다', async () => {
+      await postMany('예물', [200, 300, 400]);
+
+      const stats = await feedService.getCategoryStats();
+
+      expect(stats.find((s) => s.categoryName === '예물')).toBeUndefined();
+    });
+
+    it('금액을 비공개한 후기는 표본에 들어가지 않는다', async () => {
+      await postMany('웨딩홀', [100, 200, 300, 400, 500]);
+      for (let i = 0; i < 3; i += 1) {
+        const user = await createUser();
+        const schedule = await createSchedule(user, {
+          categoryName: '웨딩홀',
+          amount: 99999,
+        });
+        await post(user, schedule.id, { isAmountPublic: false });
+      }
+
+      const stats = await feedService.getCategoryStats();
+      const hall = stats.find((s) => s.categoryName === '웨딩홀');
+
+      expect(hall.total).toBe(5);
+      expect(hall.median).toBe(300);
+    });
+
+    it('사분위로 가운데 절반을 알려준다', async () => {
+      await postMany('신혼여행', [100, 200, 300, 400, 500]);
+
+      const stats = await feedService.getCategoryStats();
+      const trip = stats.find((s) => s.categoryName === '신혼여행');
+
+      expect(trip.p25).toBe(200);
+      expect(trip.p75).toBe(400);
+      expect(trip.p25).toBeLessThan(trip.median);
+      expect(trip.median).toBeLessThan(trip.p75);
+    });
+
+    it('후기가 없으면 빈 배열이다', async () => {
+      const stats = await feedService.getCategoryStats();
+
+      expect(stats).toEqual([]);
+    });
+  });
 });

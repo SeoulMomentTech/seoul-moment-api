@@ -24,6 +24,7 @@ import { Transactional } from 'typeorm-transactional';
 import {
   GetPlanFeedListRequest,
   GetPlanFeedMyStatusResponse,
+  GetPlanFeedCategoryStatsResponse,
   GetPlanFeedResponse,
   GetPostableScheduleResponse,
   PlanFeedVoteResponse,
@@ -53,6 +54,14 @@ function placeColumns(body: PostPlanFeedRequest) {
     lng: body.lng ?? null,
   };
 }
+
+/**
+ * 시세를 보여 줄 최소 표본 수.
+ *
+ * 세 건으로 "중앙값 245만원" 이라고 적으면 읽는 사람은 그걸 시세로 믿는다.
+ * 적을 때는 아무것도 안 보여 주는 편이 정직하다.
+ */
+const MIN_STATS_SAMPLE = 5;
 
 @Injectable()
 export class PlanFeedService {
@@ -392,6 +401,24 @@ export class PlanFeedService {
       amount: schedule.amount ?? null,
       sourceScheduleId: schedule.id,
     };
+  }
+
+  /**
+   * 카테고리별 시세.
+   *
+   * **표본이 적은 카테고리는 아예 빼고 준다.** 세 건으로 시세를 말하는 건
+   * 조작보다 큰 거짓말이라, 부르는 쪽이 실수로 그리는 일이 없게 서버에서
+   * 먼저 걸러 낸다. 화면은 받은 것만 그리면 된다.
+   *
+   * 금액을 공개한 후기만 센다(리포지토리에서 거른다) — 비공개는 표본이
+   * 아니다.
+   */
+  async getCategoryStats(): Promise<GetPlanFeedCategoryStatsResponse[]> {
+    const rows = await this.planFeedRepositoryService.findCategoryStats();
+
+    return rows
+      .filter((row) => row.total >= MIN_STATS_SAMPLE)
+      .map((row) => plainToInstance(GetPlanFeedCategoryStatsResponse, row));
   }
 
   private async requirePublishedPost(id: number): Promise<PlanFeedPostEntity> {

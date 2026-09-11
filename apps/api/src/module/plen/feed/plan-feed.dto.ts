@@ -356,3 +356,33 @@ export class GetPostableScheduleResponse {
   @ApiPropertyOptional({ description: '날짜' })
   startDate: Date | null;
 }
+
+/**
+ * 카테고리별 시세. 상세 화면이 "이게 비싼 건가?" 에 답할 때 쓴다.
+ *
+ * **평균이 아니라 중앙값·사분위다.** 자기 신고 금액이라 단위를 잘못 적은
+ * 한 건이 평균을 통째로 흔든다. "가운데 절반이 300~450만원" 이
+ * "평균 372만원" 보다 정직하고 실제로 더 쓸모 있다.
+ *
+ * 금액을 공개한 후기만 센다 — 비공개는 표본에서 빠진다.
+ */
+export class GetPlanFeedCategoryStatsResponse {
+  @ApiProperty({ description: '카테고리', example: '스드메' })
+  categoryName: string;
+
+  @ApiProperty({
+    description:
+      '표본 수. **적으면 화면에 내지 않기 위해** 함께 준다 — 세 건으로 시세를 말하는 건 조작보다 큰 거짓말이다',
+    example: 61,
+  })
+  total: number;
+
+  @ApiProperty({ description: '중앙값 (만원)', example: 245 })
+  median: number;
+
+  @ApiProperty({ description: '25 분위 (만원)', example: 180 })
+  p25: number;
+
+  @ApiProperty({ description: '75 분위 (만원)', example: 320 })
+  p75: number;
+}

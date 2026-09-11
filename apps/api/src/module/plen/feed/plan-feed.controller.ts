@@ -20,6 +20,7 @@ import { PlanApiGuard } from 'apps/api/src/guard/kakao.guard';
 
 import {
   GetPlanFeedListRequest,
+  GetPlanFeedCategoryStatsResponse,
   GetPlanFeedMyStatusResponse,
   GetPlanFeedResponse,
   GetPostableScheduleResponse,
@@ -60,6 +61,24 @@ export class PlanFeedController {
     );
 
     return new ResponseListDto(result, total);
+  }
+
+  @Get('stats')
+  @ApiOperation({
+    summary: '카테고리별 시세',
+    description:
+      '중앙값과 사분위수로 준다. 평균은 단위를 잘못 적은 한 건이 통째로 흔든다. ' +
+      '표본이 적은 카테고리는 아예 빠진다 — 세 건으로 시세를 말하지 않는다.',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseList(GetPlanFeedCategoryStatsResponse)
+  async getPlanFeedCategoryStats(): Promise<
+    ResponseListDto<GetPlanFeedCategoryStatsResponse>
+  > {
+    const result = await this.planFeedService.getCategoryStats();
+
+    return new ResponseListDto(result, result.length);
   }
 
   @Get('my')
