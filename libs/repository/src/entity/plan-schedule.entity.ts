@@ -64,6 +64,26 @@ export class PlanScheduleEntity extends CommonEntity {
   @Column('text', { nullable: true })
   memo: string;
 
+  /**
+   * 돈이 나갔는가. **일정이 끝났는가(`status`)와 다른 축이다.**
+   *
+   * 예식장 계약금을 미리 내고 예식은 내년인 경우가 흔한데, 예전에는 축이
+   * 하나뿐이라 그 돈이 "예정" 으로 잡혔다 — 이미 통장에서 빠져나간 돈이
+   * 예산에 안 잡혔다. 반대로 끝났는데 아직 정산 안 한 경우도 있다.
+   *
+   * **`null` 은 "예전 데이터" 라는 뜻이다.** 이 컬럼이 생기기 전에는 완료가
+   * 곧 결제였으므로, 값이 없으면 `status === COMPLETED` 로 읽는다
+   * (`isSchedulePaid` / `PAID_SQL`). 그래야 쌓여 있는 일정을 건드리지 않고도
+   * 예산이 예전과 똑같이 나온다 — 마이그레이션이 필요 없는 이유다.
+   * **`false` 와 `null` 을 같게 다루지 말 것.**
+   */
+  @Column('boolean', {
+    name: 'is_paid',
+    nullable: true,
+    comment: '결제 완료 여부. null 이면 status=COMPLETED 로 판단한다',
+  })
+  isPaid: boolean | null;
+
   @Column('enum', {
     enum: PlanScheduleStatus,
     nullable: false,

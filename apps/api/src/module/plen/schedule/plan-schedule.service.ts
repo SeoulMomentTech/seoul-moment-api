@@ -10,7 +10,10 @@ import {
   PlanActivityTargetType,
   PlanActivityType,
 } from '@app/repository/enum/plan-activity.enum';
-import { PlanScheduleStatus } from '@app/repository/enum/plan-schedule.enum';
+import {
+  isSchedulePaid,
+  PlanScheduleStatus,
+} from '@app/repository/enum/plan-schedule.enum';
 import { PlanUserRoomMemberPermission } from '@app/repository/enum/plan-user-room-member.enum';
 import { ChatRepositoryService } from '@app/repository/service/chat.repository.service';
 import { PlanCategoryRepositoryService } from '@app/repository/service/plan-category.repository.service';
@@ -29,6 +32,7 @@ import {
   GetPlanScheduleResponse,
   PatchPlanScheduleRequest,
   PatchPlanScheduleResponse,
+  PatchPlanSchedulePaidResponse,
   PatchPlanScheduleStatusResponse,
   PostPlanScheduleRequest,
   PostPlanScheduleResponse,
@@ -81,6 +85,12 @@ export class PlanScheduleService {
         title: postPlanScheduleRequest.title,
         payType: postPlanScheduleRequest.payType,
         amount: postPlanScheduleRequest.amount,
+        /*
+          안 주면 `null` 로 둔다 — "완료 여부를 따라간다" 는 뜻이다.
+          `false` 로 채우면 예전 화면이 만든 완료 일정이 미결제로 잡혀
+          예산의 지출이 통째로 사라진다.
+        */
+        isPaid: postPlanScheduleRequest.isPaid ?? null,
         startDate: postPlanScheduleRequest.startDate
           ? new Date(postPlanScheduleRequest.startDate)
           : null,
@@ -313,6 +323,7 @@ export class PlanScheduleService {
       title: body.title,
       payType: body.payType,
       amount: body.amount,
+      isPaid: body.isPaid,
       // 보내지 않은 필드는 건드리지 않는다. save() 는 undefined 는 무시하지만
       // null 은 그대로 써 버려서, 예전처럼 무조건 null 을 넣으면 날짜만 빼고
       // PATCH 할 때(보드 드래그 등) 다른 화면의 값이 조용히 지워진다.
@@ -389,6 +400,32 @@ export class PlanScheduleService {
     return PatchPlanScheduleStatusResponse.from(updatedPlanSchedule);
   }
 
+  /**
+   * 결제만 뒤집는다.
+   *
+   * **일정 상태를 같이 건드리지 않는다.** 두 축이 따로 놀아야 "계약금을
+   * 미리 냈다"(예정 + 결제)와 "끝났는데 아직 정산 안 했다"(완료 + 미결제)를
+   * 둘 다 적을 수 있다. 예전에는 축이 하나라 앞의 돈이 예산에서 빠졌다.
+   */
+  async patchPlanSchedulePaid(
+    id: number,
+    isPaid: boolean,
+    planUserId: string,
+  ): Promise<PatchPlanSchedulePaidResponse> {
+    const planSchedule = await this.getAuthorizedPlanSchedule(
+      id,
+      planUserId,
+      true,
+    );
+
+    const updated = await this.planScheduleRepositoryService.update({
+      id: planSchedule.id,
+      isPaid,
+    });
+
+    return PatchPlanSchedulePaidResponse.from(updated);
+  }
+
   async getCalendarList(
     planUserId: string,
     month: number,
@@ -416,11 +453,16 @@ export class PlanScheduleService {
       const dayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
       const existing = dayMap.get(dayStr) ?? [];
-      // status를 함께 내려줘야 달력에서 완료된 일정을 구분해 표시할 수 있다
+      /*
+        status 를 함께 내려줘야 달력에서 완료된 일정을 구분해 표시할 수 있다.
+        `isPaid` 도 같이 낸다 — 달력 위의 "이번 달 지출 / 예정" 은 일정이
+        끝났는지가 아니라 **돈이 나갔는지**로 갈라야 한다.
+      */
       existing.push({
         id: schedule.id,
         title: schedule.title,
         status: schedule.status,
+        isPaid: isSchedulePaid(schedule),
         categoryName: schedule.categoryName,
         amount: schedule.amount ?? null,
         startTime: schedule.startTime ?? null,

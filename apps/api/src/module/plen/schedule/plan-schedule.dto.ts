@@ -1,5 +1,6 @@
 import { PlanScheduleEntity } from '@app/repository/entity/plan-schedule.entity';
 import {
+  isSchedulePaid,
   PlanSchedulePayType,
   PlanScheduleSortColumn,
   PlanScheduleStatus,
@@ -8,6 +9,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsDefined,
   IsEnum,
   IsNumber,
@@ -71,6 +73,16 @@ export class PostPlanScheduleRequest {
   @IsNumber()
   @IsDefined()
   amount: number;
+
+  @ApiPropertyOptional({
+    description:
+      '결제를 마쳤는지. **일정 완료와 다른 축이다** — 계약금을 미리 낸 ' +
+      '일정은 예정이어도 이미 쓴 돈이다. 안 주면 완료 여부를 따라간다.',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isPaid?: boolean;
 
   @ApiPropertyOptional({
     description: '시작 날짜',
@@ -193,6 +205,16 @@ export class PostPlanScheduleResponse {
   @IsDefined()
   amount: number;
 
+  @ApiPropertyOptional({
+    description:
+      '결제를 마쳤는지. **일정 완료와 다른 축이다** — 계약금을 미리 낸 ' +
+      '일정은 예정이어도 이미 쓴 돈이다. 안 주면 완료 여부를 따라간다.',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isPaid?: boolean;
+
   @ApiProperty({
     description: '시작 날짜',
     example: '2025-02-24',
@@ -244,6 +266,7 @@ export class PostPlanScheduleResponse {
       title: entity.title,
       payType: entity.payType,
       amount: entity.amount,
+      isPaid: isSchedulePaid(entity),
       startDate: entity.startDate,
       startTime: entity.startTime ?? null,
       location: entity.location,
@@ -308,6 +331,14 @@ export class GetPlanScheduleResponse {
   @IsDefined()
   status: PlanScheduleStatus;
 
+  @ApiProperty({
+    description: '결제를 마쳤는지. 일정 완료와 다른 축이다',
+    example: false,
+  })
+  @IsBoolean()
+  @IsDefined()
+  isPaid: boolean;
+
   @ApiPropertyOptional({
     description: '장소. 홈의 "다가오는 일정"이 일정 아래에 붙여 보여준다',
     example: '청담 브라이덜',
@@ -322,6 +353,7 @@ export class GetPlanScheduleResponse {
       categoryName: entity.categoryName,
       title: entity.title,
       amount: entity.amount,
+      isPaid: isSchedulePaid(entity),
       startDate: entity.startDate,
       startTime: entity.startTime ?? null,
       status: entity.status,
@@ -468,6 +500,7 @@ export class GetPlanScheduleDetailResponse {
       categoryName: entity.categoryName,
       title: entity.title,
       amount: entity.amount,
+      isPaid: isSchedulePaid(entity),
       startDate: entity.startDate,
       startTime: entity.startTime ?? null,
       location: entity.location,
@@ -523,6 +556,16 @@ export class PatchPlanScheduleRequest {
   @IsNumber()
   @IsDefined()
   amount: number;
+
+  @ApiPropertyOptional({
+    description:
+      '결제를 마쳤는지. **일정 완료와 다른 축이다** — 계약금을 미리 낸 ' +
+      '일정은 예정이어도 이미 쓴 돈이다. 안 주면 완료 여부를 따라간다.',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isPaid?: boolean;
 
   @ApiPropertyOptional({
     description: '시작 날짜',
@@ -619,6 +662,16 @@ export class PatchPlanScheduleResponse {
   @IsDefined()
   amount: number;
 
+  @ApiPropertyOptional({
+    description:
+      '결제를 마쳤는지. **일정 완료와 다른 축이다** — 계약금을 미리 낸 ' +
+      '일정은 예정이어도 이미 쓴 돈이다. 안 주면 완료 여부를 따라간다.',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isPaid?: boolean;
+
   @ApiProperty({
     description: '시작 날짜',
     example: '2025-02-24',
@@ -669,6 +722,7 @@ export class PatchPlanScheduleResponse {
       title: entity.title,
       payType: entity.payType,
       amount: entity.amount,
+      isPaid: isSchedulePaid(entity),
       startDate: entity.startDate,
       startTime: entity.startTime ?? null,
       location: entity.location,
@@ -688,6 +742,14 @@ export class PatchPlanScheduleStatusRequest {
   @IsEnum(PlanScheduleStatus)
   @IsDefined()
   status: PlanScheduleStatus;
+
+  @ApiProperty({
+    description: '결제를 마쳤는지. 일정 완료와 다른 축이다',
+    example: false,
+  })
+  @IsBoolean()
+  @IsDefined()
+  isPaid: boolean;
 }
 
 export class PatchPlanScheduleStatusResponse {
@@ -707,6 +769,14 @@ export class PatchPlanScheduleStatusResponse {
   @IsEnum(PlanScheduleStatus)
   @IsDefined()
   status: PlanScheduleStatus;
+
+  @ApiProperty({
+    description: '결제를 마쳤는지. 일정 완료와 다른 축이다',
+    example: false,
+  })
+  @IsBoolean()
+  @IsDefined()
+  isPaid: boolean;
 
   static from(entity: PlanScheduleEntity) {
     return plainToInstance(this, {
@@ -729,6 +799,14 @@ export class GetCalendarDayItem {
     enum: PlanScheduleStatus,
   })
   status: PlanScheduleStatus;
+
+  @ApiProperty({
+    description:
+      '결제를 마쳤는지. 달력 위의 "이번 달 지출 / 예정" 은 일정이 끝났는지가 ' +
+      '아니라 돈이 나갔는지로 가른다',
+    example: false,
+  })
+  isPaid: boolean;
 
   @ApiProperty({ description: '카테고리명', example: '예식장' })
   categoryName: string;
@@ -782,4 +860,34 @@ export class GetCalendarListRequest {
   @Type(() => Number)
   @IsOptional()
   roomId?: number;
+}
+
+/**
+ * 결제만 뒤집는다. **일정 상태는 건드리지 않는다** — 두 축이 따로 놀아야
+ * "미리 낸 계약금" 과 "끝났는데 아직 정산 안 함" 을 둘 다 적을 수 있다.
+ */
+export class PatchPlanSchedulePaidRequest {
+  @ApiProperty({ description: '결제를 마쳤는지', example: true })
+  @IsBoolean()
+  @IsDefined()
+  isPaid: boolean;
+}
+
+export class PatchPlanSchedulePaidResponse {
+  @ApiProperty({ description: 'ID', example: 1 })
+  @IsNumber()
+  @IsDefined()
+  id: number;
+
+  @ApiProperty({ description: '결제를 마쳤는지', example: true })
+  @IsBoolean()
+  @IsDefined()
+  isPaid: boolean;
+
+  static from(entity: PlanScheduleEntity) {
+    return plainToInstance(this, {
+      id: entity.id,
+      isPaid: isSchedulePaid(entity),
+    });
+  }
 }

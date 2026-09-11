@@ -173,6 +173,7 @@ describe('자랑하기 (E2E)', () => {
         'amount',
         'categoryName',
         'id',
+        'isPaid',
         'lat',
         'lng',
         'location',

@@ -27,6 +27,8 @@ import {
   GetPlanScheduleResponse,
   PatchPlanScheduleRequest,
   PatchPlanScheduleResponse,
+  PatchPlanSchedulePaidRequest,
+  PatchPlanSchedulePaidResponse,
   PatchPlanScheduleStatusRequest,
   PatchPlanScheduleStatusResponse,
   PostPlanScheduleNotificationRequest,
@@ -182,6 +184,30 @@ export class PlanScheduleController {
     const result = await this.planScheduleService.patchPlanScheduleStatus(
       id,
       body.status,
+      req.user.id,
+    );
+
+    return new ResponseDataDto(result);
+  }
+
+  @Patch('paid/:id(\d+)')
+  @ApiOperation({
+    summary: '플랜 스케줄 결제 여부 수정',
+    description:
+      '일정 상태는 건드리지 않는다. 계약금을 미리 낸 경우처럼 ' +
+      '"예정인데 결제는 끝난" 일정을 적기 위한 자리다.',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(PlanApiGuard)
+  @ResponseData(PatchPlanSchedulePaidResponse)
+  async patchPlanSchedulePaid(
+    @Request() req: PlanUserRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: PatchPlanSchedulePaidRequest,
+  ): Promise<ResponseDataDto<PatchPlanSchedulePaidResponse>> {
+    const result = await this.planScheduleService.patchPlanSchedulePaid(
+      id,
+      body.isPaid,
       req.user.id,
     );
 

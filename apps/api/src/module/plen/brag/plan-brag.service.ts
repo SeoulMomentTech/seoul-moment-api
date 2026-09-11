@@ -12,6 +12,7 @@ import {
 import {
   PlanScheduleSortColumn,
   PlanScheduleStatus,
+  isSchedulePaid,
 } from '@app/repository/enum/plan-schedule.enum';
 import { PlanBragLikeRepositoryService } from '@app/repository/service/plan-brag-like.repository.service';
 import { PlanBragRepositoryService } from '@app/repository/service/plan-brag.repository.service';
@@ -422,6 +423,7 @@ export class PlanBragService {
       amount: schedule.amount ?? null,
       startDate: toDateString(schedule.startDate),
       status: schedule.status,
+      isPaid: isSchedulePaid(schedule),
       location: schedule.location?.trim() || null,
       lat: num(schedule.locationLat),
       lng: num(schedule.locationLng),

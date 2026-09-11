@@ -20,6 +20,7 @@ import { PlanScheduleEntity } from '../entity/plan-schedule.entity';
 import {
   PlanScheduleSortColumn,
   PlanScheduleStatus,
+  paidSql,
 } from '../enum/plan-schedule.enum';
 
 /**
@@ -201,46 +202,73 @@ export class PlanScheduleRepositoryService {
     return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
   }
 
+  /**
+   * 아직 **안 낸** 돈.
+   *
+   * 예전에는 `status = NORMAL` 이었다. 그러면 계약금을 미리 낸 일정이
+   * 일정만 예정이라는 이유로 "아직 안 쓴 돈" 에 잡힌다 — 통장에서는 이미
+   * 빠져나갔는데도. 이제 **결제 여부**로 가른다 (`paidSql`).
+   */
   async getPlannedUseAmount(id: string, roomId?: number): Promise<number> {
-    const result = await this.planScheduleRepository.find({
-      where: ownScope({ status: PlanScheduleStatus.NORMAL }, id, roomId),
-      select: { amount: true },
-    });
-
-    return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
+    return this.sumAmount(id, roomId, false);
   }
 
   async getPlannedUseAmountByRoomId(roomId: number): Promise<number> {
-    const result = await this.planScheduleRepository.find({
-      where: {
-        status: PlanScheduleStatus.NORMAL,
-        planUserRoomId: roomId,
-      },
-      select: { amount: true },
-    });
-
-    return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
+    return this.sumAmountByRoomId(roomId, false);
   }
 
+  /** 이미 **낸** 돈. 일정이 끝났는지와 무관하다 */
   async getUsedAmount(id: string, roomId?: number): Promise<number> {
-    const result = await this.planScheduleRepository.find({
-      where: ownScope({ status: PlanScheduleStatus.COMPLETED }, id, roomId),
-      select: { amount: true },
-    });
-
-    return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
+    return this.sumAmount(id, roomId, true);
   }
 
   async getUsedAmountByRoomId(roomId: number): Promise<number> {
-    const result = await this.planScheduleRepository.find({
-      where: {
-        status: PlanScheduleStatus.COMPLETED,
-        planUserRoomId: roomId,
-      },
-      select: { amount: true },
-    });
+    return this.sumAmountByRoomId(roomId, true);
+  }
 
-    return result.reduce((acc, curr) => acc + (curr.amount ?? 0), 0) ?? 0;
+  /** 결제 여부로 가른 금액 합. 지운 일정은 뺀다 */
+  private async sumAmount(
+    planUserId: string,
+    roomId: number | undefined,
+    paid: boolean,
+  ): Promise<number> {
+    const qb = this.planScheduleRepository
+      .createQueryBuilder('ps')
+      .leftJoin('ps.planUserRoom', 'room')
+      .select('COALESCE(SUM(ps.amount), 0)', 'total')
+      .where('ps.plan_user_id = :planUserId', { planUserId })
+      .andWhere('ps.status <> :deleted', {
+        deleted: PlanScheduleStatus.DELETE,
+      })
+      .andWhere(`${paidSql('ps')} = :paid`, { paid });
+
+    if (roomId) {
+      qb.andWhere('ps.plan_user_room_id = :roomId', { roomId });
+    } else {
+      qb.andWhere(
+        '(ps.plan_user_room_id IS NULL OR room.owner_id = ps.plan_user_id)',
+      );
+    }
+
+    const row = await qb.getRawOne<{ total: string }>();
+    return Number(row?.total ?? 0);
+  }
+
+  private async sumAmountByRoomId(
+    roomId: number,
+    paid: boolean,
+  ): Promise<number> {
+    const row = await this.planScheduleRepository
+      .createQueryBuilder('ps')
+      .select('COALESCE(SUM(ps.amount), 0)', 'total')
+      .where('ps.plan_user_room_id = :roomId', { roomId })
+      .andWhere('ps.status <> :deleted', {
+        deleted: PlanScheduleStatus.DELETE,
+      })
+      .andWhere(`${paidSql('ps')} = :paid`, { paid })
+      .getRawOne<{ total: string }>();
+
+    return Number(row?.total ?? 0);
   }
 
   /**
@@ -272,11 +300,11 @@ export class PlanScheduleRepositoryService {
       .select('ps.plan_user_id', 'planUserId')
       .addSelect('ps.category_name', 'categoryName')
       .addSelect(
-        `SUM(CASE WHEN ps.status = :completed THEN COALESCE(ps.amount, 0) ELSE 0 END)`,
+        `SUM(CASE WHEN ${paidSql('ps')} THEN COALESCE(ps.amount, 0) ELSE 0 END)`,
         'usedAmount',
       )
       .addSelect(
-        `SUM(CASE WHEN ps.status <> :completed THEN COALESCE(ps.amount, 0) ELSE 0 END)`,
+        `SUM(CASE WHEN NOT ${paidSql('ps')} THEN COALESCE(ps.amount, 0) ELSE 0 END)`,
         'plannedAmount',
       )
       .addSelect('COUNT(*)', 'total')
@@ -323,7 +351,8 @@ export class PlanScheduleRepositoryService {
       .select('ps.categoryName', 'categoryName')
       .addSelect(`SUM(ps.amount)`, 'totalAmount')
       .addSelect(
-        `SUM(CASE WHEN ps.status = :completedStatus THEN ps.amount ELSE 0 END)`,
+        // 완료가 아니라 **결제** 기준이다 — 미리 낸 계약금도 쓴 돈이다
+        `SUM(CASE WHEN ${paidSql('ps')} THEN ps.amount ELSE 0 END)`,
         'usedAmount',
       )
       .where('1=1')

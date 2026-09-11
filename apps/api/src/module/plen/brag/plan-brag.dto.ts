@@ -30,8 +30,10 @@ export interface PlanBragItemView {
   amount: number | null;
   /** 'YYYY-MM-DD'. 날짜 미정이면 null */
   startDate: string | null;
-  /** 'COMPLETED' 면 완료, 그 밖은 예정 */
+  /** 'COMPLETED' 면 완료, 그 밖은 예정 — **일정 이야기다** */
   status: string;
+  /** 돈이 나갔는지. 일정 완료와 다른 축이다 */
+  isPaid: boolean;
   /** 카카오에서 고른 경우 **주소가 아니라 업체명**이다 ("SG웨딩홀") */
   location: string | null;
   lat: number | null;
