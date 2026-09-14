@@ -14,6 +14,7 @@ import { AdminMemberModule } from './member/admin.member.module';
 import { AdminNewsModule } from './news/admin.news.module';
 import { AdminProductModule } from './product/admin.product.module';
 import { AdminPromotionModule } from './promotion/admin.promotion.module';
+import { AdminShippingModule } from './shipping/admin.shipping.module';
 import { AdminUserModule } from './user/admin.user.module';
 
 @Module({
@@ -31,6 +32,7 @@ import { AdminUserModule } from './user/admin.user.module';
     AdminMemberModule,
     AdminBrandPromotionModule,
     AdminPromotionModule,
+    AdminShippingModule,
   ],
   providers: [OneTimeTokenStrategy, RefreshTokenStrategy],
 })

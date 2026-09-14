@@ -5,8 +5,10 @@ import { UserOneTimeTokenStrategy } from 'apps/api/src/strategy/user-one-time-to
 import { UserRefreshTokenStrategy } from 'apps/api/src/strategy/user-refresh-token.strategy';
 
 import { UserAuthModule } from './auth/user.auth.module';
+import { UserCartModule } from './cart/user.cart.module';
 import { UserImageModule } from './image/user.image.module';
 import { UserLikeModule } from './like/user.like.module';
+import { UserOrderModule } from './order/user.order.module';
 import { UserRecentModule } from './recent/user.recent.module';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
@@ -18,6 +20,8 @@ import { UserWithdrawModule } from './withdraw/user.withdraw.module';
     S3Module,
     UserAuthModule,
     UserImageModule,
+    UserCartModule,
+    UserOrderModule,
     UserLikeModule,
     UserRecentModule,
     UserWithdrawModule,

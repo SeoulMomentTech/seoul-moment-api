@@ -879,4 +879,55 @@ export class ProductRepositoryService implements OnModuleInit {
   async deleteProductItemById(id: number) {
     return this.productItemRepository.delete(id);
   }
+
+  /**
+   * 장바구니·주문이 SKU 를 검증할 때 쓴다.
+   * 가격은 product_item 에, 브랜드는 product 를 한 단계 더 타야 나온다.
+   */
+  async findProductVariantDetailById(
+    id: number,
+  ): Promise<ProductVariantEntity | null> {
+    return this.productVariantRepository
+      .createQueryBuilder('pv')
+      .leftJoinAndSelect('pv.productItem', 'pi')
+      .leftJoinAndSelect('pi.product', 'p')
+      .leftJoinAndSelect('p.brand', 'b')
+      .where('pv.id = :id', { id })
+      .getOne();
+  }
+
+  /** 옵션 조합까지 붙여서 여러 SKU 를 한 번에 가져온다 */
+  async getProductVariantsByIds(
+    ids: number[],
+  ): Promise<ProductVariantEntity[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return this.productVariantRepository
+      .createQueryBuilder('pv')
+      .leftJoinAndSelect('pv.variantOptions', 'vo')
+      .leftJoinAndSelect('vo.optionValue', 'ov')
+      .leftJoinAndSelect('ov.option', 'o')
+      .where('pv.id IN (:...ids)', { ids })
+      .orderBy('pv.id', 'ASC')
+      .getMany();
+  }
+
+  /**
+   * 상품상세 v1 전용. 기존 getProductOption 은 GROUP BY 로 옵션값을 뭉개서
+   * 어느 variant 조합인지가 사라지므로, 조합·재고를 그대로 내려줄 조회가 따로 필요하다.
+   */
+  async findVariantsByProductItemId(
+    productItemId: number,
+  ): Promise<ProductVariantEntity[]> {
+    return this.productVariantRepository
+      .createQueryBuilder('pv')
+      .leftJoinAndSelect('pv.variantOptions', 'vo')
+      .leftJoinAndSelect('vo.optionValue', 'ov')
+      .leftJoinAndSelect('ov.option', 'o')
+      .where('pv.productItemId = :productItemId', { productItemId })
+      .orderBy('pv.id', 'ASC')
+      .getMany();
+  }
 }

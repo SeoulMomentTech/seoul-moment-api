@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주문 · SM API Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="_common.css">
+</head>
+<body>
+<main>
+  <h1>주문</h1>
+  <p class="sub">배송지를 바꾸면 배송비가 달라집니다. preview 로 금액을 확인하고 주문을 만듭니다.</p>
+  <div id="hint"></div>
+
+  <div class="card">
+    <h2><span class="verb post">POST</span> 주문서 금액 미리보기 <span class="path">/user/order/preview</span></h2>
+    <div class="card-body">
+      <div class="field">
+        <label>cartItemIds (쉼표로 구분)</label>
+        <input id="cartItemIds" placeholder="12,13">
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label>city (縣市)</label>
+          <input id="city" value="臺北市" list="cityList">
+          <datalist id="cityList">
+            <option value="臺北市"></option>
+            <option value="臺東縣"></option>
+            <option value="澎湖縣"></option>
+            <option value="金門縣"></option>
+            <option value="連江縣"></option>
+          </datalist>
+        </div>
+        <div class="field">
+          <label>district (區/鄉)</label>
+          <input id="district" value="信義區" list="districtList">
+          <datalist id="districtList">
+            <option value="信義區"></option>
+            <option value="臺東市"></option>
+            <option value="綠島鄉"></option>
+            <option value="蘭嶼鄉"></option>
+            <option value="馬公市"></option>
+          </datalist>
+        </div>
+      </div>
+      <div class="row">
+        <button id="preview">미리보기</button>
+        <button class="ghost" data-addr="臺北市|信義區">본섬 (臺北市 信義區)</button>
+        <button class="ghost" data-addr="澎湖縣|馬公市">외섬 (澎湖縣)</button>
+        <button class="ghost" data-addr="臺東縣|綠島鄉">외섬 (臺東縣 綠島鄉)</button>
+        <button class="ghost" data-addr="臺東縣|臺東市">본섬 (臺東縣 臺東市)</button>
+      </div>
+      <p class="hint">같은 <code>臺東縣</code> 이라도 <code>綠島鄉</code> 은 외섬, <code>臺東市</code> 는 본섬입니다. 버튼으로 바로 비교해 보세요.</p>
+      <div id="previewView"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="verb post">POST</span> 주문 생성 <span class="path">/user/order</span></h2>
+    <div class="card-body">
+      <div class="row">
+        <div class="field" style="width: 180px">
+          <label>paymentMethod</label>
+          <select id="paymentMethod">
+            <option value="LINE_PAY">LINE_PAY</option>
+            <option value="ECPAY">ECPAY</option>
+          </select>
+        </div>
+        <label class="row" style="gap: 6px; align-self: end; padding-bottom: 6px">
+          <input type="checkbox" id="useDefault" checked>
+          <span>기본 배송지 사용</span>
+        </label>
+      </div>
+
+      <div id="shippingFields" hidden>
+        <div class="grid">
+          <div class="field"><label>recipientName</label><input id="sName" value="李佳蓉"></div>
+          <div class="field"><label>phone</label><input id="sPhone" value="+886912345678"></div>
+          <div class="field"><label>postalCode</label><input id="sPostal" value="110"></div>
+          <div class="field"><label>city</label><input id="sCity" value="臺北市"></div>
+          <div class="field"><label>district</label><input id="sDistrict" value="信義區"></div>
+          <div class="field"><label>detailAddress</label><input id="sDetail" value="松高路 11號 5樓"></div>
+          <div class="field"><label>requestMessage (선택)</label><input id="sMemo" placeholder="부재 시 경비실"></div>
+        </div>
+        <p class="hint">직접 입력을 쓰면 <b>여기 적은 city/district 로</b> 배송비가 계산됩니다. 위 미리보기 주소와 다르면 금액도 달라집니다.</p>
+      </div>
+
+      <p class="hint" id="defaultHint">
+        기본 배송지는 <code>user_profile</code> 과 <code>user.phone</code> 을 씁니다.
+        비어 있으면 400 이 납니다 — <a href="index.html">설정 페이지</a>에서 먼저 채우세요.
+      </p>
+
+      <div class="row">
+        <button id="createOrder">주문 생성</button>
+      </div>
+      <div id="createOut"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="verb get">GET</span> 주문 상세 <span class="path">/user/order/:id</span></h2>
+    <div class="card-body">
+      <div class="row">
+        <div class="field" style="width: 150px">
+          <label>orderId</label>
+          <input id="orderId" type="number" min="1">
+        </div>
+        <button id="loadOrder" style="align-self: end">조회</button>
+      </div>
+      <div id="orderView"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>원본 응답</h2>
+    <div class="card-body">
+      <div id="rawOut"><div class="empty">아직 호출하지 않았습니다.</div></div>
+    </div>
+  </div>
+</main>
+
+<script src="_common.js"></script>
+<script>
+mountShell('order.html');
+$('#hint').appendChild(connectionHint());
+
+const qs = new URLSearchParams(location.search);
+if (qs.get('cartItemIds')) $('#cartItemIds').value = qs.get('cartItemIds');
+
+function idList() {
+  return $('#cartItemIds').value
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+}
+
+$$('button[data-addr]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const [city, district] = btn.dataset.addr.split('|');
+    $('#city').value = city;
+    $('#district').value = district;
+    $('#preview').click();
+  });
+});
+
+function renderAmount(target, data, isPreview) {
+  const box = $(target);
+  box.innerHTML = '';
+  if (!data) return;
+
+  const lines = [
+    ['상품 금액', money(data.totalProductAmount)],
+    [isPreview ? '배송비 (확정)' : '배송비', money(data.shippingFee)],
+    ['외섬 여부', data.isRemoteIsland ? '외섬 — 예 ' : '본섬 — 아니오'],
+  ];
+
+  box.appendChild(
+    el('div', { class: 'summary', style: 'margin-top: 10px' }, [
+      ...lines.map(([k, v]) =>
+        el('div', { class: 'line' }, [
+          el('span', { class: 'k', text: k }),
+          el('span', { class: 'v', text: v }),
+        ]),
+      ),
+      el('div', { class: 'line total' }, [
+        el('span', { class: 'k', text: '최종 결제 금액' }),
+        el('span', { class: 'v', text: money(data.totalAmount) }),
+      ]),
+      data.amountToFreeShipping !== undefined
+        ? el('div', {
+            class: 'note',
+            text:
+              data.amountToFreeShipping > 0
+                ? `${money(data.amountToFreeShipping)} 더 담으면 무료배송 (기준 ${money(data.freeShippingThreshold)})`
+                : `무료배송 적용 중 (기준 ${money(data.freeShippingThreshold)})`,
+          })
+        : null,
+    ]),
+  );
+}
+
+$('#preview').addEventListener('click', async () => {
+  const res = await api('POST', '/user/order/preview', {
+    body: {
+      cartItemIds: idList(),
+      city: $('#city').value.trim(),
+      district: $('#district').value.trim(),
+    },
+  });
+  showResult('#rawOut', res, 'POST /user/order/preview');
+  renderAmount('#previewView', res.body && res.body.data, true);
+});
+
+$('#useDefault').addEventListener('change', (e) => {
+  $('#shippingFields').hidden = e.target.checked;
+  $('#defaultHint').hidden = !e.target.checked;
+});
+
+$('#createOrder').addEventListener('click', async () => {
+  const useDefault = $('#useDefault').checked;
+  const body = {
+    cartItemIds: idList(),
+    paymentMethod: $('#paymentMethod').value,
+    useDefaultShipping: useDefault,
+  };
+
+  if (!useDefault) {
+    body.shipping = {
+      recipientName: $('#sName').value.trim(),
+      phone: $('#sPhone').value.trim(),
+      postalCode: $('#sPostal').value.trim(),
+      city: $('#sCity').value.trim(),
+      district: $('#sDistrict').value.trim(),
+      detailAddress: $('#sDetail').value.trim(),
+    };
+    const memo = $('#sMemo').value.trim();
+    if (memo) body.shipping.requestMessage = memo;
+  }
+
+  const res = await api('POST', '/user/order', { body });
+  showResult('#createOut', res, 'POST /user/order');
+
+  const data = res.body && res.body.data;
+  if (data && data.orderId) {
+    $('#orderId').value = data.orderId;
+    $('#loadOrder').click();
+  }
+});
+
+$('#loadOrder').addEventListener('click', async () => {
+  const id = Number($('#orderId').value);
+  const res = await api('GET', `/user/order/${id}`);
+  showResult('#rawOut', res, `GET /user/order/${id}`);
+
+  const data = res.body && res.body.data;
+  const view = $('#orderView');
+  view.innerHTML = '';
+  if (!data) return;
+
+  view.appendChild(
+    el('div', { class: 'summary', style: 'margin-top: 10px' }, [
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '주문번호' }),
+        el('span', { class: 'v', text: data.orderNumber || '-' }),
+      ]),
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '상태 / 결제수단' }),
+        el('span', { class: 'v', text: `${data.status} / ${data.paymentMethod || '-'}` }),
+      ]),
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '배송지' }),
+        el('span', {
+          class: 'v',
+          text: data.shipping
+            ? `${data.shipping.city} ${data.shipping.district} ${data.shipping.detailAddress}`
+            : '-',
+        }),
+      ]),
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '배송비 (스냅샷)' }),
+        el('span', { class: 'v', text: money(data.shippingFee) + (data.isRemoteIsland ? ' · 외섬' : '') }),
+      ]),
+      el('div', { class: 'line total' }, [
+        el('span', { class: 'k', text: '결제 금액' }),
+        el('span', { class: 'v', text: money(data.totalAmount) }),
+      ]),
+    ]),
+  );
+
+  view.appendChild(
+    el('div', { class: 'tablewrap', style: 'margin-top: 10px' }, [
+      el('table', {}, [
+        el('thead', {}, [
+          el('tr', {}, [
+            el('th', { text: '상품 (스냅샷)' }),
+            el('th', { text: '옵션' }),
+            el('th', { text: '브랜드' }),
+            el('th', { text: '수량' }),
+            el('th', { text: '금액' }),
+          ]),
+        ]),
+        el('tbody', {}, (data.items || []).map((it) =>
+          el('tr', {}, [
+            el('td', { text: it.productName || '-' }),
+            el('td', { class: 'mono', text: it.optionText || '-' }),
+            el('td', { text: it.brandName || '-' }),
+            el('td', { class: 'n', text: String(it.quantity) }),
+            el('td', { class: 'n', text: money(it.totalPrice) }),
+          ]),
+        )),
+      ]),
+    ]),
+  );
+});
+</script>
+</body>
+</html>

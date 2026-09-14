@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SEOUL MOMENT</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="_shop.css">
+<style>
+  .hero {
+    max-width: 1280px; margin: 0 auto; padding: 40px 20px 24px;
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  .hero h1 { font-size: var(--t3); font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .hero .c { font-size: var(--b3); color: var(--sm-neutral); font-variant-numeric: tabular-nums; }
+  .hero .ship { margin-left: auto; font-size: var(--b5); color: var(--sm-neutral); }
+  .hero .ship b { color: var(--sm-brand); }
+
+  .grid {
+    max-width: 1280px; margin: 0 auto; padding: 0 20px 60px;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px 20px;
+  }
+  @media (max-width: 1040px) { .grid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+  @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 24px 12px; } }
+
+  .pcard { display: block; }
+  .pcard .img {
+    aspect-ratio: 3/4; background: #efe9df; border: 1px solid var(--sm-hair);
+    background-size: cover; background-position: center; margin-bottom: 10px;
+  }
+  .pcard .b { font-size: var(--b5); font-weight: 600; color: var(--sm-ink80); }
+  .pcard .n {
+    font-size: var(--b3); line-height: 1.4; margin: 3px 0 6px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .pcard .p { font-size: var(--b3); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pcard .r { font-size: var(--b5); color: var(--sm-neutral); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+  .pcard .r .star { color: var(--sm-brand); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Product</h1>
+  <span class="c" id="count"></span>
+  <span class="ship" id="ship"></span>
+</div>
+
+<div class="grid" id="grid"></div>
+<div id="fallback"></div>
+
+<script src="_shop.js"></script>
+<script>
+mountDevBar();
+mountHeader('index');
+
+function card(p) {
+  const img = el('span', { class: 'img' });
+  if (p.image) img.style.backgroundImage = `url("${p.image}")`;
+
+  return el('a', { class: 'pcard', href: `product.html?id=${p.id}` }, [
+    img,
+    el('p', { class: 'b', text: p.brandName || '브랜드' }),
+    el('p', { class: 'n', text: p.productName || '(이름 없음)' }),
+    el('p', { class: 'p', text: nt(p.price) }),
+    el('p', { class: 'r' }, [
+      el('span', { class: 'star', text: '★' }),
+      el('span', { text: `${p.reviewAverage ?? '-'} (${p.review ?? 0})` }),
+    ]),
+  ]);
+}
+
+async function load() {
+  const [listRes, policyRes] = await Promise.all([
+    apiCall('GET', '/product', { query: { page: 1, count: 24 }, auth: false }),
+    apiCall('GET', '/shipping-policy', { auth: false }),
+  ]);
+
+  if (policyRes.ok && policyRes.data) {
+    const d = policyRes.data;
+    $('#ship').innerHTML =
+      `배송비 ${nt(d.baseFee)} · <b>${nt(d.freeShippingThreshold)} 이상 무료배송</b>`;
+  }
+
+  const grid = $('#grid');
+  grid.innerHTML = '';
+
+  if (!listRes.ok) {
+    $('#fallback').appendChild(
+      el('div', { class: 'sm-empty' }, [
+        el('span', { class: 'ico' }, [icon('alert')]),
+        el('h2', { text: '상품을 불러오지 못했습니다' }),
+        el('p', { text: errorText(listRes) }),
+      ]),
+    );
+    return;
+  }
+
+  const list = (listRes.body && listRes.body.data && listRes.body.data.list) || [];
+  const total = (listRes.body && listRes.body.data && listRes.body.data.total) || 0;
+  $('#count').textContent = `${total}개`;
+
+  if (list.length === 0) {
+    $('#fallback').appendChild(
+      el('div', { class: 'sm-empty' }, [
+        el('h2', { text: '등록된 상품이 없습니다' }),
+        el('p', { text: '어드민에서 상품과 옵션(SKU)을 먼저 등록해주세요.' }),
+      ]),
+    );
+    return;
+  }
+
+  list.forEach((p) => grid.appendChild(card(p)));
+}
+
+load();
+</script>
+</body>
+</html>

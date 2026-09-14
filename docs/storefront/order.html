@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주문서 · SEOUL MOMENT</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="_shop.css">
+<style>
+  /* 주문서는 서류 성격이라 섹션 구분을 장바구니보다 강하게 준다 */
+  .sm-sec { border-top: 1px solid var(--sm-fg); padding: 20px 0 32px; }
+  .sm-sec > h2 { font-size: var(--b1); font-weight: 700; letter-spacing: -.02em; margin: 0 0 16px; }
+  .sm-sec .hint { font-size: var(--b5); color: var(--sm-neutral); margin-top: 8px; line-height: 1.5; }
+
+  .sm-obrand { border-bottom: 1px solid var(--sm-rule); padding-bottom: 16px; }
+  .sm-obrand + .sm-obrand { margin-top: 24px; }
+  .sm-obrand-head { display: flex; align-items: center; gap: 8px; padding-bottom: 12px; }
+  .sm-obrand-head .bn { font-size: var(--b3); font-weight: 600; }
+  .sm-oline { display: grid; grid-template-columns: 80px minmax(0,1fr) auto; gap: 12px; align-items: start; padding: 12px 0; }
+  .sm-oline .t { width: 80px; height: 80px; background: #efe9df; border: 1px solid var(--sm-hair); background-size: cover; background-position: center; }
+  .sm-oline .nm { font-size: var(--b3); line-height: 1.45; margin: 0; }
+  .sm-oline .op, .sm-oline .qt { font-size: var(--b5); color: var(--sm-neutral); margin: 6px 0 0; }
+  .sm-oline .am { font-size: var(--b3); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
+
+  .sm-fields { display: grid; gap: 16px; }
+  .sm-field { display: grid; gap: 8px; }
+  .sm-field > .lb { font-size: var(--b4); color: var(--sm-ink80); }
+  .sm-field > .lb .req { color: var(--sm-danger); margin-left: 2px; }
+  .sm-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sm-addr { display: grid; grid-template-columns: 96px 1fr 1fr; gap: 8px; }
+  @media (max-width: 560px) { .sm-addr, .sm-two { grid-template-columns: 1fr; } }
+  .sm-check-row { display: flex; align-items: center; gap: 8px; font-size: var(--b3); margin-bottom: 16px; }
+  .saved-addr { background: var(--sm-hair); padding: 16px; border-radius: 4px; display: grid; gap: 8px; }
+  .saved-addr p { margin: 0; font-size: var(--b3); color: var(--sm-ink80); line-height: 1.5; }
+  .saved-addr p.nm { font-weight: 600; color: var(--sm-fg); }
+
+  .sm-pays { display: grid; gap: 8px; }
+  .sm-pay {
+    display: flex; align-items: center; gap: 12px; border: 1px solid var(--sm-line);
+    border-radius: 4px; padding: 16px; background: #fff; cursor: pointer; width: 100%;
+    font-family: inherit; text-align: left;
+  }
+  .sm-pay.on { border-color: var(--sm-fg); border-width: 1.5px; padding: 15.5px; }
+  .sm-pay .dot { width: 18px; height: 18px; flex: none; border-radius: 999px; border: 1.5px solid var(--sm-line); display: grid; place-items: center; }
+  .sm-pay.on .dot { border-color: var(--sm-fg); }
+  .sm-pay.on .dot::after { content: ""; width: 9px; height: 9px; border-radius: 999px; background: var(--sm-fg); }
+  .sm-pay .mark { height: 20px; padding: 0 8px; border-radius: 3px; display: grid; place-items: center; font-size: 10.5px; font-weight: 700; flex: none; color: #fff; }
+  .sm-pay .nm { font-size: var(--b3); font-weight: 500; }
+  .sm-pay .sub { font-size: var(--b5); color: var(--sm-neutral); margin-left: auto; }
+
+  .sm-agree { border: 1px solid var(--sm-line); border-radius: 4px; padding: 16px; display: grid; gap: 12px; }
+  .sm-agree .top { display: flex; align-items: flex-start; gap: 8px; font-size: var(--b3); line-height: 1.5; cursor: pointer; }
+  .sm-agree .terms { display: grid; gap: 8px; padding-left: 28px; }
+  .sm-agree .terms span { font-size: var(--b5); color: var(--sm-neutral); display: flex; justify-content: space-between; }
+
+  .sm-paysum { border: 1px solid var(--sm-line); padding: 24px; }
+  .sm-paysum h3 { font-size: var(--b2); font-weight: 700; margin: 0 0 18px; }
+  .sm-paysum .row { display: flex; justify-content: space-between; gap: var(--s4); font-size: var(--b3); padding: 6px 0; }
+  .sm-paysum .row .v { font-variant-numeric: tabular-nums; }
+  .sm-paysum hr { border: 0; border-top: 1px solid var(--sm-rule); margin: 16px 0; }
+  .sm-paysum .final { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s4); }
+  .sm-paysum .final .k { font-size: var(--b3); font-weight: 600; }
+  .sm-paysum .final .v { font-size: var(--t3); font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .sm-paysum .cta { margin-top: 20px; }
+  .sm-paysum .foot { font-size: var(--b5); color: var(--sm-neutral); margin-top: 14px; line-height: 1.5; }
+
+  .sm-paybar {
+    position: sticky; bottom: 0; border-top: 1px solid var(--sm-rule); background: #fff;
+    padding: 16px 20px; display: none; gap: 12px;
+    filter: drop-shadow(0 -4px 5px rgba(0,0,0,0.06));
+  }
+  .sm-paybar .row { display: flex; align-items: baseline; justify-content: space-between; }
+  .sm-paybar .row .k { font-size: var(--b3); color: var(--sm-neutral); }
+  .sm-paybar .row .v { font-size: var(--b1); font-weight: 700; font-variant-numeric: tabular-nums; }
+  @media (max-width: 1120px) {
+    .sm-paybar { display: grid; }
+    .sm-paysum .cta { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sm-page">
+  <div class="sm-h1"><h1>주문서</h1></div>
+  <div id="body"><div class="skeleton">불러오는 중…</div></div>
+</div>
+
+<div class="sm-paybar" id="payBar" hidden>
+  <div class="row"><span class="k">최종 결제 금액</span><span class="v num" id="barTotal">-</span></div>
+  <button class="sm-btn block" id="barPay">결제하기</button>
+</div>
+
+<script src="_shop.js"></script>
+<script>
+mountDevBar();
+mountHeader('cart');
+
+const qs = new URLSearchParams(location.search);
+const cartItemIds = (qs.get('cartItemIds') || '')
+  .split(',').map((s) => Number(s.trim())).filter((n) => n > 0);
+
+const state = {
+  useDefault: true,
+  paymentMethod: 'LINE_PAY',
+  agreed: false,
+  preview: null,
+  profile: null,
+  phone: '',
+  shipping: { recipientName: '', phone: '', postalCode: '', city: '臺北市', district: '信義區', detailAddress: '', requestMessage: '' },
+};
+
+const CITIES = ['臺北市', '新北市', '桃園市', '臺中市', '臺南市', '高雄市', '臺東縣', '澎湖縣', '金門縣', '連江縣'];
+const DISTRICTS = {
+  '臺北市': ['信義區', '大安區', '中山區'],
+  '臺東縣': ['臺東市', '綠島鄉', '蘭嶼鄉'],
+  '澎湖縣': ['馬公市', '湖西鄉'],
+  '金門縣': ['金城鎮'],
+  '連江縣': ['南竿鄉', '北竿鄉'],
+};
+
+function currentAddress() {
+  if (state.useDefault && state.profile) {
+    return { city: state.profile.city || '', district: state.profile.district || '' };
+  }
+  return { city: state.shipping.city, district: state.shipping.district };
+}
+
+function defaultReady() {
+  const p = state.profile;
+  return !!(p && p.name && p.postalCode && p.city && p.district && p.detailAddress && state.phone);
+}
+
+async function loadPreview() {
+  const addr = currentAddress();
+  if (!addr.city || !addr.district) { state.preview = null; render(); return; }
+
+  const res = await apiCall('POST', '/user/order/preview', {
+    body: { cartItemIds, city: addr.city, district: addr.district },
+  });
+
+  state.preview = res.ok ? res.data : null;
+  if (!res.ok) toast(errorText(res, '금액을 계산하지 못했습니다.'), { bad: true });
+  render();
+}
+
+function orderItemsSection() {
+  const p = state.preview;
+  if (!p) return el('section', { class: 'sm-sec' }, [el('h2', {}, '주문 상품')]);
+
+  const groups = p.brandGroups.map((g) =>
+    el('div', { class: 'sm-obrand' }, [
+      el('div', { class: 'sm-obrand-head' }, [
+        el('span', { class: 'brand-dot' }),
+        el('span', { class: 'bn', text: g.brandName || '브랜드' }),
+      ]),
+      ...g.items.map((it) => {
+        const t = el('span', { class: 't' });
+        if (it.imageUrl) t.style.backgroundImage = `url("${it.imageUrl}")`;
+        return el('div', { class: 'sm-oline' }, [
+          t,
+          el('div', {}, [
+            el('p', { class: 'nm', text: it.productName || '(이름 없음)' }),
+            el('p', { class: 'op', text: it.optionText || '옵션 없음' }),
+            el('p', { class: 'qt', text: '수량 ' + it.quantity }),
+          ]),
+          el('span', { class: 'am', text: nt(it.totalPrice) }),
+        ]);
+      }),
+    ]),
+  );
+
+  const count = p.brandGroups.reduce((s, g) => s + g.items.length, 0);
+
+  return el('section', { class: 'sm-sec' }, [
+    el('h2', {}, ['주문 상품 ', el('span', { class: 'num', style: 'color: var(--sm-brand)', text: String(count) })]),
+    ...groups,
+    el('p', { class: 'hint', text: '수량 변경과 삭제는 장바구니에서 할 수 있습니다.' }),
+  ]);
+}
+
+function shippingSection() {
+  const useDefault = state.useDefault;
+  const p = state.profile;
+
+  const toggle = el('div', {
+    class: 'sm-check-row',
+    onclick: () => { state.useDefault = !state.useDefault; render(); loadPreview(); },
+  }, [
+    el('button', { class: 'sm-cb' + (useDefault ? ' on' : ''), 'aria-label': '기본 배송지 사용' }, [icon('check')]),
+    el('span', {}, '기본 배송지 사용'),
+  ]);
+
+  let inner;
+  if (useDefault) {
+    inner = defaultReady()
+      ? el('div', { class: 'saved-addr' }, [
+          el('p', { class: 'nm', text: p.name }),
+          el('p', { text: state.phone }),
+          el('p', { text: `${p.postalCode} ${p.city} ${p.district}` }),
+          el('p', { text: p.detailAddress }),
+        ])
+      : el('div', { class: 'saved-addr' }, [
+          el('p', { class: 'nm', style: 'color: var(--sm-danger)', text: '기본 배송지가 비어 있습니다' }),
+          el('p', { text: '마이페이지에서 주소와 연락처를 먼저 등록하거나, 체크를 풀고 직접 입력해주세요.' }),
+        ]);
+  } else {
+    const s = state.shipping;
+    const districts = DISTRICTS[s.city] || [];
+
+    inner = el('div', { class: 'sm-fields' }, [
+      el('div', { class: 'sm-two' }, [
+        field('받는 분', el('input', {
+          class: 'sm-input', value: s.recipientName, placeholder: '받는 분 이름',
+          oninput: (e) => { s.recipientName = e.target.value; },
+        })),
+        field('연락처', el('input', {
+          class: 'sm-input', value: s.phone, placeholder: '+886',
+          oninput: (e) => { s.phone = e.target.value; },
+        })),
+      ]),
+      el('div', { class: 'sm-field' }, [
+        el('span', { class: 'lb' }, ['주소', el('span', { class: 'req', text: '*' })]),
+        el('div', { class: 'sm-addr' }, [
+          el('input', {
+            class: 'sm-input num', value: s.postalCode, placeholder: '우편번호',
+            oninput: (e) => { s.postalCode = e.target.value; },
+          }),
+          el('select', {
+            class: 'sm-select',
+            onchange: (e) => {
+              s.city = e.target.value;
+              s.district = (DISTRICTS[s.city] || [''])[0];
+              render(); loadPreview();
+            },
+          }, CITIES.map((c) => el('option', { value: c, selected: c === s.city }, c))),
+          el('select', {
+            class: 'sm-select',
+            onchange: (e) => { s.district = e.target.value; loadPreview(); },
+          }, districts.map((d) => el('option', { value: d, selected: d === s.district }, d))),
+        ]),
+        el('input', {
+          class: 'sm-input', value: s.detailAddress, placeholder: '상세 주소',
+          oninput: (e) => { s.detailAddress = e.target.value; },
+        }),
+      ]),
+      field('배송 요청사항', el('input', {
+        class: 'sm-input', value: s.requestMessage, placeholder: '부재 시 경비실에 맡겨주세요',
+        oninput: (e) => { s.requestMessage = e.target.value; },
+      }), false),
+    ]);
+  }
+
+  return el('section', { class: 'sm-sec' }, [
+    el('h2', {}, '배송지'),
+    toggle,
+    inner,
+    state.preview && state.preview.isRemoteIsland
+      ? el('p', { class: 'hint', style: 'color: var(--sm-brand); font-weight:600', text: '외섬 지역이라 배송비가 다르게 적용됩니다.' })
+      : null,
+  ]);
+}
+
+function field(label, input, required = true) {
+  return el('div', { class: 'sm-field' }, [
+    el('span', { class: 'lb' }, [label, required ? el('span', { class: 'req', text: '*' }) : null]),
+    input,
+  ]);
+}
+
+function paymentSection() {
+  const opt = (value, mark, color, name, sub) =>
+    el('button', {
+      class: 'sm-pay' + (state.paymentMethod === value ? ' on' : ''),
+      onclick: () => { state.paymentMethod = value; render(); },
+    }, [
+      el('span', { class: 'dot' }),
+      el('span', { class: 'mark', style: `background:${color}`, text: mark }),
+      el('span', { class: 'nm', text: name }),
+      el('span', { class: 'sub', text: sub }),
+    ]);
+
+  return el('section', { class: 'sm-sec' }, [
+    el('h2', {}, '결제 수단'),
+    el('div', { class: 'sm-pays' }, [
+      opt('LINE_PAY', 'LINE Pay', '#06c755', 'LINE Pay', 'LINE 앱으로 이동'),
+      opt('ECPAY', 'ECPay', '#0b1f3a', '신용카드 · ATM · 편의점', 'ECPay 결제창으로 이동'),
+    ]),
+    el('p', { class: 'hint', text: '카드번호는 이 화면에서 받지 않습니다. 두 수단 모두 외부 결제창으로 이동합니다.' }),
+  ]);
+}
+
+function agreeSection() {
+  return el('section', { class: 'sm-sec' }, [
+    el('h2', {}, '주문 동의'),
+    el('div', { class: 'sm-agree' }, [
+      el('div', {
+        class: 'top',
+        onclick: () => { state.agreed = !state.agreed; render(); },
+      }, [
+        el('button', { class: 'sm-cb' + (state.agreed ? ' on' : ''), 'aria-label': '동의' }, [icon('check')]),
+        el('span', {}, ['주문 내용을 확인했으며 결제에 동의합니다', el('span', { style: 'color: var(--sm-danger)', text: '*' })]),
+      ]),
+      el('div', { class: 'terms' }, [
+        el('span', {}, [el('span', {}, '구매조건 및 결제대행 서비스 약관 동의'), el('span', { style: 'text-decoration: underline' }, '보기')]),
+        el('span', {}, [el('span', {}, '개인정보 제3자 제공 동의 (배송)'), el('span', { style: 'text-decoration: underline' }, '보기')]),
+      ]),
+    ]),
+  ]);
+}
+
+function canPay() {
+  if (!state.preview || !state.agreed) return false;
+  if (state.useDefault) return defaultReady();
+  const s = state.shipping;
+  return !!(s.recipientName && s.phone && s.postalCode && s.city && s.district && s.detailAddress);
+}
+
+function summarySection() {
+  const p = state.preview;
+  const total = p ? p.totalAmount : 0;
+  $('#barTotal').textContent = nt(total);
+  $('#payBar').hidden = !p;
+  $('#barPay').disabled = !canPay();
+
+  return el('div', { class: 'sm-paysum' }, [
+    el('h3', {}, '결제 금액'),
+    el('div', { class: 'row' }, [el('span', {}, '상품 금액'), el('span', { class: 'v', text: nt(p ? p.totalProductAmount : 0) })]),
+    el('div', { class: 'row' }, [
+      el('span', {}, '배송비'),
+      el('span', { class: 'v', text: p && p.shippingFee === 0 ? '무료' : nt(p ? p.shippingFee : 0) }),
+    ]),
+    p && p.isRemoteIsland
+      ? el('div', { class: 'row' }, [el('span', { style: 'color: var(--sm-neutral); font-size: var(--b5)' }, '외섬 지역'), el('span', {})])
+      : null,
+    el('hr'),
+    el('div', { class: 'final' }, [
+      el('span', { class: 'k', text: '최종 결제 금액' }),
+      el('span', { class: 'v', text: nt(total) }),
+    ]),
+    el('div', { class: 'cta' }, [
+      el('button', { class: 'sm-btn block', disabled: !canPay(), onclick: submit }, '결제하기'),
+    ]),
+    el('p', {
+      class: 'foot',
+      text: p && p.amountToFreeShipping > 0
+        ? `${nt(p.amountToFreeShipping)} 더 담으면 무료배송입니다.`
+        : '배송비는 주문 1건당 한 번 부과됩니다.',
+    }),
+  ]);
+}
+
+function render() {
+  const body = $('#body');
+  if (!requireLogin(body)) return;
+
+  if (cartItemIds.length === 0) {
+    body.innerHTML = '';
+    body.appendChild(
+      el('div', { class: 'sm-empty' }, [
+        el('span', { class: 'ico' }, [icon('cart')]),
+        el('h2', { text: '주문할 상품이 없습니다' }),
+        el('p', { text: '장바구니에서 상품을 선택한 뒤 주문해주세요.' }),
+        el('a', { href: 'cart.html' }, [el('button', { class: 'sm-btn' }, '장바구니로')]),
+      ]),
+    );
+    return;
+  }
+
+  body.innerHTML = '';
+  body.appendChild(
+    el('div', { class: 'sm-cols' }, [
+      el('div', {}, [orderItemsSection(), shippingSection(), paymentSection(), agreeSection()]),
+      el('div', { class: 'sticky' }, [summarySection()]),
+    ]),
+  );
+}
+
+async function submit() {
+  if (!canPay()) return;
+
+  const body = {
+    cartItemIds,
+    paymentMethod: state.paymentMethod,
+    useDefaultShipping: state.useDefault,
+  };
+  if (!state.useDefault) {
+    const s = state.shipping;
+    body.shipping = {
+      recipientName: s.recipientName, phone: s.phone, postalCode: s.postalCode,
+      city: s.city, district: s.district, detailAddress: s.detailAddress,
+    };
+    if (s.requestMessage) body.shipping.requestMessage = s.requestMessage;
+  }
+
+  const res = await apiCall('POST', '/user/order', { body });
+  if (!res.ok) { toast(errorText(res, '주문을 만들지 못했습니다.'), { bad: true }); return; }
+
+  // 결제 연동 전이라 여기서 완료 화면으로 보낸다.
+  // 실제로는 이 시점에 LINE Pay / ECPay 결제창으로 리다이렉트한다.
+  location.href = 'complete.html?orderId=' + res.data.orderId;
+}
+
+$('#barPay').addEventListener('click', submit);
+
+async function init() {
+  if (!requireLogin($('#body'))) return;
+
+  const [profileRes, infoRes] = await Promise.all([
+    apiCall('GET', '/user/profile'),
+    apiCall('GET', '/user/info'),
+  ]);
+
+  state.profile = profileRes.ok ? profileRes.data : null;
+  state.phone = (infoRes.ok && infoRes.data && infoRes.data.phone) || '';
+
+  if (!defaultReady()) state.useDefault = false;
+
+  await loadPreview();
+}
+
+init();
+</script>
+</body>
+</html>

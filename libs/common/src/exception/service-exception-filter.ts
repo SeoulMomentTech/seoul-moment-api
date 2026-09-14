@@ -26,10 +26,13 @@ export class ServiceErrorFilter implements ExceptionFilter {
       stack: exception.stack,
     });
 
+    const data = exception.getData();
+
     response.status(status).json({
       message: exception.message,
       code: exception.getCode(),
       traceId: this.logger.getTraceId(),
+      ...(data ? { data } : {}),
     });
   }
 }

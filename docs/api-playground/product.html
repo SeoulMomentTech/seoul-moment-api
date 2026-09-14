@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상품상세 v1 · SM API Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="_common.css">
+</head>
+<body>
+<main>
+  <h1>상품상세 v1</h1>
+  <p class="sub">옵션 조합을 고르면 variantId 가 잡힙니다. 존재하지 않는 조합과 품절이 실제로 어떻게 갈리는지 볼 수 있습니다.</p>
+  <div id="hint"></div>
+
+  <div class="card">
+    <h2><span class="verb get">GET</span> 조회 <span class="path">/product/v1/:id</span></h2>
+    <div class="card-body">
+      <div class="row">
+        <div class="field" style="width: 160px">
+          <label>productItemId</label>
+          <input id="itemId" type="number" min="1" placeholder="1">
+        </div>
+        <button id="load" style="align-self: end">v1 조회</button>
+        <button id="loadV0" class="ghost" style="align-self: end">구버전(v0)도 조회</button>
+      </div>
+      <p class="hint">v1 은 <code>variants</code> 가 추가되고 <code>shippingCost</code> 가 빠집니다. 두 응답을 비교해 보세요.</p>
+    </div>
+  </div>
+
+  <div class="card" id="pickCard" hidden>
+    <h2>옵션 조합 고르기</h2>
+    <div class="card-body">
+      <div id="summary"></div>
+      <div id="options"></div>
+      <div id="matched"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>SKU 목록</h2>
+    <div class="card-body">
+      <div id="variantView"><div class="empty">아직 조회하지 않았습니다.</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>원본 응답</h2>
+    <div class="card-body">
+      <div id="rawOut"><div class="empty">아직 호출하지 않았습니다.</div></div>
+    </div>
+  </div>
+</main>
+
+<script src="_common.js"></script>
+<script>
+mountShell('product.html');
+$('#hint').appendChild(connectionHint());
+
+let detail = null;
+const picked = {}; // optionType -> optionValueId
+
+function optionEntries() {
+  if (!detail || !detail.option) return [];
+  return Object.entries(detail.option);
+}
+
+/** 고른 조합과 정확히 일치하는 variant 를 찾는다 (프론트가 해야 할 일 그대로) */
+function findVariant() {
+  const chosen = Object.values(picked).filter((v) => v !== undefined);
+  const total = optionEntries().length;
+  if (chosen.length !== total || total === 0) return null;
+
+  const key = chosen.slice().sort((a, b) => a - b).join(',');
+  return (detail.variants || []).find(
+    (v) => v.optionValueIds.slice().sort((a, b) => a - b).join(',') === key,
+  );
+}
+
+function renderPicker() {
+  const box = $('#options');
+  box.innerHTML = '';
+
+  for (const [type, values] of optionEntries()) {
+    const buttons = values.map((val) => {
+      const on = picked[type] === val.id;
+      return el('button', {
+        class: on ? '' : 'ghost',
+        text: `${val.value ?? '(이름없음)'} · ${val.id}`,
+        onclick: () => {
+          picked[type] = on ? undefined : val.id;
+          renderPicker();
+        },
+      });
+    });
+
+    box.appendChild(
+      el('div', { class: 'field', style: 'margin-bottom: 10px' }, [
+        el('label', { text: type }),
+        el('div', { class: 'row' }, buttons),
+      ]),
+    );
+  }
+
+  const matched = $('#matched');
+  matched.innerHTML = '';
+
+  const chosenCount = Object.values(picked).filter((v) => v !== undefined).length;
+  if (chosenCount < optionEntries().length) {
+    matched.appendChild(el('div', { class: 'hint', text: '옵션을 모두 고르면 SKU 가 잡힙니다.' }));
+    return;
+  }
+
+  const variant = findVariant();
+  if (!variant) {
+    matched.appendChild(
+      el('div', { class: 'banner' }, [
+        el('span', { html: '<b>존재하지 않는 조합입니다.</b> 축별 목록만 보면 있는 것처럼 보이지만 실제 SKU 가 없습니다 — 이 경우 선택을 막아야 합니다.' }),
+      ]),
+    );
+    return;
+  }
+
+  matched.appendChild(
+    el('div', { class: 'summary' }, [
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: 'productVariantId' }),
+        el('span', { class: 'v', text: String(variant.id) }),
+      ]),
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: 'sku' }),
+        el('span', { class: 'v', text: variant.sku }),
+      ]),
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '재고' }),
+        el('span', { class: 'v', text: String(variant.stockQuantity) }),
+      ]),
+      variant.isSoldOut
+        ? el('div', { class: 'note', text: '품절 — 담기 버튼을 비활성화해야 합니다.' })
+        : null,
+      el('div', { class: 'row', style: 'margin-top: 6px' }, [
+        el('button', {
+          text: '장바구니에 담기',
+          ...(variant.isSoldOut ? { disabled: '' } : {}),
+          onclick: async () => {
+            const res = await api('POST', '/user/cart', {
+              body: { items: [{ productVariantId: variant.id, quantity: 1 }] },
+            });
+            showResult('#rawOut', res, 'POST /user/cart');
+          },
+        }),
+        el('a', { href: `cart.html?variantId=${variant.id}` }, [
+          el('button', { class: 'ghost', text: '장바구니 페이지로 →' }),
+        ]),
+      ]),
+    ]),
+  );
+}
+
+function renderVariants() {
+  const view = $('#variantView');
+  view.innerHTML = '';
+
+  const variants = (detail && detail.variants) || [];
+  if (variants.length === 0) {
+    view.appendChild(el('div', { class: 'empty', text: 'variants 가 없습니다. v1 로 조회했는지 확인하세요.' }));
+    return;
+  }
+
+  view.appendChild(
+    el('div', { class: 'tablewrap' }, [
+      el('table', {}, [
+        el('thead', {}, [
+          el('tr', {}, [
+            el('th', { text: 'id' }),
+            el('th', { text: 'sku' }),
+            el('th', { text: 'optionValueIds' }),
+            el('th', { text: '재고' }),
+            el('th', { text: '상태' }),
+            el('th', { text: '' }),
+          ]),
+        ]),
+        el('tbody', {}, variants.map((v) =>
+          el('tr', { class: v.isSoldOut ? 'off' : '' }, [
+            el('td', { class: 'n', text: String(v.id) }),
+            el('td', { class: 'mono', text: v.sku }),
+            el('td', { class: 'mono', text: v.optionValueIds.join(', ') }),
+            el('td', { class: 'n', text: String(v.stockQuantity) }),
+            el('td', {}, [
+              v.isSoldOut
+                ? el('span', { class: 'tag bad', text: '품절' })
+                : el('span', { class: 'tag ok', text: '판매중' }),
+            ]),
+            el('td', {}, [
+              el('button', {
+                class: 'ghost',
+                text: '담기',
+                ...(v.isSoldOut ? { disabled: '' } : {}),
+                onclick: async () => {
+                  const res = await api('POST', '/user/cart', {
+                    body: { items: [{ productVariantId: v.id, quantity: 1 }] },
+                  });
+                  showResult('#rawOut', res, 'POST /user/cart');
+                },
+              }),
+            ]),
+          ]),
+        )),
+      ]),
+    ]),
+  );
+}
+
+function renderSummary() {
+  const box = $('#summary');
+  box.innerHTML = '';
+  if (!detail) return;
+
+  box.appendChild(
+    el('div', { class: 'summary', style: 'margin-bottom: 12px' }, [
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: detail.name || '(이름 없음)' }),
+        el('span', { class: 'v', text: money(detail.discountPrice || detail.price) }),
+      ]),
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '브랜드' }),
+        el('span', { class: 'v', text: (detail.brand && detail.brand.name) || '-' }),
+      ]),
+      el('div', { class: 'line' }, [
+        el('span', { class: 'k', text: '출고 소요일 (shippingInfo)' }),
+        el('span', { class: 'v', text: String(detail.shippingInfo ?? '-') }),
+      ]),
+      el('div', {
+        class: 'note',
+        text:
+          detail.shippingCost === undefined
+            ? 'shippingCost 없음 — v1 응답이 맞습니다'
+            : 'shippingCost 가 있습니다 — v0 응답입니다',
+      }),
+    ]),
+  );
+}
+
+$('#load').addEventListener('click', async () => {
+  const id = Number($('#itemId').value);
+  const res = await api('GET', `/product/v1/${id}`, { auth: cfg.token() ? 'user' : false });
+  showResult('#rawOut', res, `GET /product/v1/${id}`);
+
+  detail = res.body && res.body.data;
+  for (const k of Object.keys(picked)) delete picked[k];
+
+  $('#pickCard').hidden = !detail;
+  renderSummary();
+  renderPicker();
+  renderVariants();
+});
+
+$('#loadV0').addEventListener('click', async () => {
+  const id = Number($('#itemId').value);
+  const res = await api('GET', `/product/${id}`, { auth: cfg.token() ? 'user' : false });
+  showResult('#rawOut', res, `GET /product/${id} (deprecated)`);
+});
+</script>
+</body>
+</html>

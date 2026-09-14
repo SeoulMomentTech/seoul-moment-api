@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주문 완료 · SEOUL MOMENT</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="_shop.css">
+<style>
+  .sm-done { display: grid; justify-items: center; gap: 14px; padding: 64px 20px 40px; text-align: center; }
+  .sm-done .ic { color: #16803c; }
+  .sm-done .ic svg { width: 44px; height: 44px; }
+  .sm-done h1 { font-size: var(--t4); font-weight: 700; letter-spacing: -.02em; margin: 0; }
+  .sm-done p { font-size: var(--b3); color: var(--sm-neutral); margin: 0; }
+  .sm-done .no { font-family: var(--mono); font-size: var(--b3); background: var(--sm-hair); padding: 8px 14px; border-radius: 4px; margin-top: 4px; }
+  .sm-donesum {
+    border-top: 1px solid var(--sm-rule); border-bottom: 1px solid var(--sm-rule);
+    padding: 20px 0; display: grid; gap: 14px; max-width: 480px; margin: 8px auto 0; width: 100%;
+  }
+  .sm-donesum .r { display: flex; gap: 16px; font-size: var(--b3); }
+  .sm-donesum .r .k { width: 88px; flex: none; color: var(--sm-neutral); }
+  .sm-donesum .r .v { min-width: 0; }
+  .sm-donecta { display: flex; gap: 8px; max-width: 480px; margin: 24px auto 0; width: 100%; }
+  .sm-donecta .sm-btn { flex: 1 1 0; }
+  .items { max-width: 480px; margin: 20px auto 0; width: 100%; display: grid; gap: 12px; }
+  .items .it { display: grid; grid-template-columns: 56px minmax(0,1fr) auto; gap: 12px; align-items: center; text-align: left; }
+  .items .it .t { width: 56px; height: 56px; background: #efe9df; border: 1px solid var(--sm-hair); background-size: cover; background-position: center; }
+  .items .it .nm { font-size: var(--b4); margin: 0; }
+  .items .it .op { font-size: var(--b5); color: var(--sm-neutral); margin: 4px 0 0; }
+  .items .it .am { font-size: var(--b4); font-weight: 600; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div id="root"><div class="skeleton">불러오는 중…</div></div>
+
+<script src="_shop.js"></script>
+<script>
+mountDevBar();
+mountHeader('index');
+
+const orderId = Number(new URLSearchParams(location.search).get('orderId'));
+
+const PAY_LABEL = { LINE_PAY: 'LINE Pay', ECPAY: 'ECPay (신용카드 · ATM · 편의점)' };
+
+async function load() {
+  const root = $('#root');
+  if (!requireLogin(root)) return;
+
+  const res = await apiCall('GET', `/user/order/${orderId}`);
+  if (!res.ok) {
+    root.innerHTML = '';
+    root.appendChild(el('div', { class: 'sm-empty' }, [
+      el('span', { class: 'ico' }, [icon('alert')]),
+      el('h2', { text: '주문을 찾을 수 없습니다' }),
+      el('p', { text: errorText(res) }),
+      el('a', { href: 'cart.html' }, [el('button', { class: 'sm-btn out' }, '장바구니로')]),
+    ]));
+    return;
+  }
+
+  const o = res.data;
+  const s = o.shipping || {};
+
+  root.innerHTML = '';
+  root.appendChild(el('div', {}, [
+    el('div', { class: 'sm-done' }, [
+      el('span', { class: 'ic' }, [icon('ok')]),
+      el('h1', { text: '주문이 접수되었습니다' }),
+      el('p', { text: '결제 연동 전이라 결제 대기 상태입니다. 주문 내역은 마이페이지에서 확인할 수 있습니다.' }),
+      el('span', { class: 'no', text: o.orderNumber || '-' }),
+    ]),
+    el('div', { style: 'padding: 0 20px 40px' }, [
+      el('div', { class: 'sm-donesum' }, [
+        row('결제 수단', PAY_LABEL[o.paymentMethod] || o.paymentMethod || '-'),
+        row('상품 금액', nt(o.totalProductAmount)),
+        row('배송비', o.shippingFee === 0 ? '무료' : nt(o.shippingFee) + (o.isRemoteIsland ? ' (외섬)' : '')),
+        row('결제 금액', nt(o.totalAmount)),
+        row('배송지', `${s.recipientName || '-'}\n${s.postalCode || ''} ${s.city || ''} ${s.district || ''}\n${s.detailAddress || ''}`),
+      ]),
+      el('div', { class: 'items' }, (o.items || []).map((it) => {
+        const t = el('span', { class: 't' });
+        if (it.imageUrl) t.style.backgroundImage = `url("${it.imageUrl}")`;
+        return el('div', { class: 'it' }, [
+          t,
+          el('div', {}, [
+            el('p', { class: 'nm', text: it.productName || '-' }),
+            el('p', { class: 'op', text: `${it.optionText || '옵션 없음'} · 수량 ${it.quantity}` }),
+          ]),
+          el('span', { class: 'am', text: nt(it.totalPrice) }),
+        ]);
+      })),
+      el('div', { class: 'sm-donecta' }, [
+        el('a', { href: 'cart.html', style: 'flex:1 1 0' }, [el('button', { class: 'sm-btn out block' }, '장바구니')]),
+        el('a', { href: 'index.html', style: 'flex:1 1 0' }, [el('button', { class: 'sm-btn block' }, '쇼핑 계속하기')]),
+      ]),
+    ]),
+  ]));
+}
+
+function row(k, v) {
+  return el('div', { class: 'r' }, [
+    el('span', { class: 'k', text: k }),
+    el('span', { class: 'v', style: 'white-space: pre-line', text: v }),
+  ]);
+}
+
+load();
+</script>
+</body>
+</html>

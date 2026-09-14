@@ -22,6 +22,7 @@ import { BrandPromotionEntity } from './entity/brand-promotion.entity';
 import { BrandSectionImageEntity } from './entity/brand-section-image.entity';
 import { BrandSectionEntity } from './entity/brand-section.entity';
 import { BrandEntity } from './entity/brand.entity';
+import { CartItemEntity } from './entity/cart-item.entity';
 import { CategoryEntity } from './entity/category.entity';
 import { ChatMessageEntity } from './entity/chat-message.entity';
 import { ChatRoomMemberEntity } from './entity/chat-room-member.entity';
@@ -41,6 +42,9 @@ import { NewsSectionEntity } from './entity/news-section.entity';
 import { NewsEntity } from './entity/news.entity';
 import { OptionValueEntity } from './entity/option-value.entity';
 import { OptionEntity } from './entity/option.entity';
+import { OrderItemEntity } from './entity/order-item.entity';
+import { OrderShippingEntity } from './entity/order-shipping.entity';
+import { OrderEntity } from './entity/order.entity';
 import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
 import { PlanActivityEntity } from './entity/plan-activity.entity';
@@ -65,6 +69,8 @@ import { ProductItemEntity } from './entity/product-item.entity';
 import { ProductVariantEntity } from './entity/product-variant.entity';
 import { ProductEntity } from './entity/product.entity';
 import { PromotionEntity } from './entity/promotion.entity';
+import { ShippingPolicyEntity } from './entity/shipping-policy.entity';
+import { ShippingRemoteAreaEntity } from './entity/shipping-remote-area.entity';
 import { UserBrandLikeEntity } from './entity/user-brand-like.entity';
 import { UserFitEntity } from './entity/user-fit.entity';
 import { UserLookbookLikeEntity } from './entity/user-lookbook-like.entity';
@@ -82,12 +88,14 @@ import { AiConsultLogRepositoryService } from './service/ai-consult-log.reposito
 import { ArticleRepositoryService } from './service/article.repository.service';
 import { BrandPromotionRepositoryService } from './service/brand-promotion.repository.service';
 import { BrandRepositoryService } from './service/brand.repository.service';
+import { CartRepositoryService } from './service/cart.repository.service';
 import { CategoryRepositoryService } from './service/category.repository.service';
 import { ChatRepositoryService } from './service/chat.repository.service';
 import { HomeRepositoryService } from './service/home.repository.service';
 import { LanguageRepositoryService } from './service/language.repository.service';
 import { NewsRepositoryService } from './service/news.repository.service';
 import { OptionRepositoryService } from './service/option.repository.service';
+import { OrderRepositoryService } from './service/order.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
 import { PlanActivityRepositoryService } from './service/plan-activity.repository.service';
 import { PlanBragLikeRepositoryService } from './service/plan-brag-like.repository.service';
@@ -102,6 +110,7 @@ import { PlanUserRoomRepositoryService } from './service/plan-user-room.reposito
 import { PlanUserRepositoryService } from './service/plan-user.repository.service';
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
+import { ShippingRepositoryService } from './service/shipping.repository.service';
 import { UserSnsRepositoryService } from './service/user-sns.repository.service';
 import { UserWithdrawRepositoryService } from './service/user-withdraw.repository.service';
 import { UserLikeRepositoryService } from './service/user.like.repository.service';
@@ -185,6 +194,12 @@ import { UserRepositoryService } from './service/user.repository.service';
       UserLookbookLikeEntity,
       LookbookCommentEntity,
       AiConsultLogEntity,
+      CartItemEntity,
+      OrderEntity,
+      OrderItemEntity,
+      OrderShippingEntity,
+      ShippingPolicyEntity,
+      ShippingRemoteAreaEntity,
     ]),
   ],
   providers: [
@@ -221,6 +236,9 @@ import { UserRepositoryService } from './service/user.repository.service';
     UserSnsRepositoryService,
     UserWithdrawRepositoryService,
     AiConsultLogRepositoryService,
+    CartRepositoryService,
+    OrderRepositoryService,
+    ShippingRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -255,6 +273,9 @@ import { UserRepositoryService } from './service/user.repository.service';
     UserSnsRepositoryService,
     UserWithdrawRepositoryService,
     AiConsultLogRepositoryService,
+    CartRepositoryService,
+    OrderRepositoryService,
+    ShippingRepositoryService,
   ],
 })
 export class RepositoryModule {}
