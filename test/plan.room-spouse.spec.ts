@@ -284,4 +284,41 @@ describe('신랑·신부 지정과 함께 보는 사람 권한 (E2E)', () => {
     // Then
     expect(rooms.some((r) => r.isCouple)).toBe(false);
   });
+
+  /**
+   * 이름을 비워 두면 화면에 '채팅방' 이라는 말만 남는다. 방이 여럿인 사람은
+   * 어느 방이 누구와의 대화인지 구별할 수 없다.
+   */
+  it('채팅방 이름은 두 사람 이름으로 지어진다', async () => {
+    // Given
+    const owner = await createUser();
+    const joiner = await createUser();
+
+    // When
+    await join(owner, joiner);
+
+    // Then - 들어온 사람 먼저, 초대한 사람(방장) 다음
+    const rooms = await userService.getUserChatRoomList(owner.id);
+    expect(rooms).toHaveLength(1);
+    expect(rooms[0].name).toBe(`${joiner.name}, ${owner.name}의 채팅방`);
+  });
+
+  it('이름이 없는 사람이 있으면 채팅방 이름을 비워 둔다', async () => {
+    // Given - 이름을 아직 안 넣은 사람 (응답이 '채팅방' 으로 채운다)
+    const owner = await createUser();
+    const joiner = await dataSource.getRepository(PlanUserEntity).save(
+      plainToInstance(PlanUserEntity, {
+        name: null,
+        roomShareCode: faker.string.uuid(),
+        budget: 4200,
+      }),
+    );
+
+    // When
+    await join(owner, joiner);
+
+    // Then
+    const rooms = await userService.getUserChatRoomList(owner.id);
+    expect(rooms[0].name).toBe('채팅방');
+  });
 });

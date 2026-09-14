@@ -65,6 +65,15 @@ export class GetPlanRoomResponse {
   })
   name: string;
 
+  @ApiPropertyOptional({
+    description:
+      '예식장. 방장이 아직 안 정했으면 비어 있다. 배우자로 귀속된 사람의 ' +
+      '프로필 화면이 이 값을 그대로 보여 준다 — 결혼식은 한 번이라 ' +
+      '예식장도 하나다.',
+    example: '그랜드 웨딩홀',
+  })
+  weddingVenue?: string | null;
+
   @ApiProperty({
     description: '플랜 유저 방 멤버 목록',
     example: [
@@ -93,6 +102,7 @@ export class GetPlanRoomResponse {
       weddingDate: entity.weddingDate,
       budget: entity.budget,
       name: entity.name,
+      weddingVenue: entity.weddingVenue ?? null,
       members,
     });
   }

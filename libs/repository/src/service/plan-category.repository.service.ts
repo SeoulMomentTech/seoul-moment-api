@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 
 import { PlanAllCategoryDto } from '../dto/plan-category.dto';
 import { PlanCategoryEntity } from '../entity/plan-category.entity';
@@ -36,38 +36,40 @@ export class PlanCategoryRepositoryService implements OnModuleInit {
     }
   }
 
+  /** 내가 만든 카테고리 */
+  private async findUserCategories(
+    userId: string,
+  ): Promise<PlanUserCategoryEntity[]> {
+    return this.planUserCategoryRepository.find({
+      select: ['id', 'name'],
+      where: { planUserId: userId },
+    });
+  }
+
+  /**
+   * 방에서 공유된 카테고리. **만든 사람을 함께 읽는다** — 화면이 'room'
+   * 이라는 영어 한 단어 대신 "민지 추가!" 라고 말하려면 이름이 필요하다.
+   */
+  private async findRoomCategories(
+    roomId: number,
+  ): Promise<PlanUserCategoryEntity[]> {
+    return this.planUserCategoryRepository.find({
+      select: { id: true, name: true, planUser: { id: true, name: true } },
+      relations: { planUser: true },
+      where: { planUserRoomId: roomId },
+    });
+  }
+
   async findAll(
     userId?: string,
     roomId?: number,
   ): Promise<PlanAllCategoryDto[]> {
-    let planUserCategories: PlanUserCategoryEntity[] = [];
-    let planRoomCategories: PlanUserCategoryEntity[] = [];
-
-    const userCategoryFindOptions: FindManyOptions<PlanUserCategoryEntity> = {
-      select: ['id', 'name'],
-    };
-
-    const roomCategoryFindOptions: FindManyOptions<PlanUserCategoryEntity> = {
-      select: ['id', 'name'],
-    };
-
-    const planCategories = await this.planCategoryRepository.find({
-      select: ['id', 'name'],
-    });
-
-    if (userId) {
-      userCategoryFindOptions.where = { planUserId: userId };
-      planUserCategories = await this.planUserCategoryRepository.find(
-        userCategoryFindOptions,
-      );
-    }
-
-    if (roomId) {
-      roomCategoryFindOptions.where = { planUserRoomId: roomId };
-      planRoomCategories = await this.planUserCategoryRepository.find(
-        roomCategoryFindOptions,
-      );
-    }
+    const [planCategories, planUserCategories, planRoomCategories] =
+      await Promise.all([
+        this.planCategoryRepository.find({ select: ['id', 'name'] }),
+        userId ? this.findUserCategories(userId) : [],
+        roomId ? this.findRoomCategories(roomId) : [],
+      ]);
 
     return [
       ...planCategories.map((c) =>
@@ -77,7 +79,12 @@ export class PlanCategoryRepositoryService implements OnModuleInit {
         PlanAllCategoryDto.from(c.id, c.name, PlanCategoryType.USER),
       ),
       ...planRoomCategories.map((c) =>
-        PlanAllCategoryDto.from(c.id, c.name, PlanCategoryType.ROOM),
+        PlanAllCategoryDto.from(
+          c.id,
+          c.name,
+          PlanCategoryType.ROOM,
+          c.planUser?.name ?? undefined,
+        ),
       ),
     ];
   }

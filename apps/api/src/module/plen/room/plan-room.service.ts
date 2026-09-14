@@ -230,10 +230,24 @@ export class PlanRoomService {
       planUserRoom.id,
     );
 
+    /*
+      채팅방 이름을 비워 두면 화면에 '채팅방' 이라는 말만 남는다. 방이 여러
+      개인 사람에게는 어느 방이 누구와의 대화인지 알 수 없어서, 만들 때
+      두 사람의 이름으로 짓는다 — 들어온 사람 먼저, 초대한 사람(방장) 다음.
+      이름은 나중에 바꿀 수 있고(`PATCH /plan/chat/room/{id}`), 둘 중 하나라도
+      이름이 없으면 예전처럼 비워 둔다(응답이 '채팅방' 으로 채운다).
+    */
+    const joinedUser = await this.planUserRepositoryService.findById(userId);
+    const chatRoomName =
+      joinedUser?.name && ownerUserEntity.name
+        ? `${joinedUser.name}, ${ownerUserEntity.name}의 채팅방`
+        : undefined;
+
     const chatRoomEntity =
       await this.chatMessageRepositoryService.createChatRoom(
         plainToInstance(ChatRoomEntity, {
           planUserRoomId: planUserRoom.id,
+          name: chatRoomName,
         }),
       );
 
