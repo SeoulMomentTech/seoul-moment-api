@@ -53,6 +53,9 @@ export class ChatRoomResponse {
   })
   id: number;
 
+  @ApiProperty({ description: '이 채팅방이 속한 플랜 방 ID', example: 1 })
+  planUserRoomId: number;
+
   @ApiProperty({
     description: '채팅방 이름',
     example: '채팅방 이름',
@@ -70,6 +73,7 @@ export class ChatRoomResponse {
   static from(entity: ChatRoomEntity, coupleIds?: string[]) {
     return plainToInstance(this, {
       id: entity.id,
+      planUserRoomId: entity.planUserRoomId,
       name: entity.name ?? '채팅방',
       memberList: entity.members.map((member) =>
         GetChatRoomMemberResponse.from(member.planUser),

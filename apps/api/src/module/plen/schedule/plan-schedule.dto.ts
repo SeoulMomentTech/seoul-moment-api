@@ -8,6 +8,7 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance, Type } from 'class-transformer';
 import {
+  ValidateIf,
   IsArray,
   IsBoolean,
   IsDefined,
@@ -514,13 +515,14 @@ export class GetPlanScheduleDetailResponse {
 }
 
 export class PatchPlanScheduleRequest {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '카테고리 이름',
     example: '저녁 식사',
   })
   @IsString()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsDefined()
-  categoryName: string;
+  categoryName?: string;
 
   @ApiPropertyOptional({
     description: '추가 카테고리 이름 리스트',
@@ -531,31 +533,34 @@ export class PatchPlanScheduleRequest {
   @IsString({ each: true })
   addCategoryNameList?: string[];
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '제목',
     example: '저녁 식사',
   })
   @IsString()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsDefined()
-  title: string;
+  title?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '결제 타입',
     example: 'CREDIT',
     enum: PlanSchedulePayType,
   })
   @IsEnum(PlanSchedulePayType)
+  @ValidateIf((_object, value) => value !== undefined)
   @IsDefined()
-  payType: PlanSchedulePayType;
+  payType?: PlanSchedulePayType;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '금액',
     example: 10000,
   })
   @Type(() => Number)
   @IsNumber()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsDefined()
-  amount: number;
+  amount?: number;
 
   @ApiPropertyOptional({
     description:
@@ -743,13 +748,12 @@ export class PatchPlanScheduleStatusRequest {
   @IsDefined()
   status: PlanScheduleStatus;
 
-  @ApiProperty({
-    description: '결제를 마쳤는지. 일정 완료와 다른 축이다',
-    example: false,
+  @ApiPropertyOptional({
+    description: '호환용 필드. 결제 변경은 paid API를 사용한다',
   })
   @IsBoolean()
-  @IsDefined()
-  isPaid: boolean;
+  @IsOptional()
+  isPaid?: boolean;
 }
 
 export class PatchPlanScheduleStatusResponse {
@@ -782,6 +786,7 @@ export class PatchPlanScheduleStatusResponse {
     return plainToInstance(this, {
       id: entity.id,
       status: entity.status,
+      isPaid: isSchedulePaid(entity),
     });
   }
 }

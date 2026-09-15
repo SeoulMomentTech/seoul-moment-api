@@ -12,6 +12,7 @@ import {
   DeletePlanUserDeviceTokenRequest,
   GetPlanUserAmountCategory,
   GetPlanUserAmountResponse,
+  GetPlanUserResponse,
   GetPlanUserRoomMemberResponse,
   GetUserChatRoomResponse,
   PatchPlanUserRequest,
@@ -30,6 +31,15 @@ export class PlanUserService {
     private readonly chatRoomRepositoryService: ChatRepositoryService,
     private readonly planUserDeviceTokenRepositoryService: PlanUserDeviceTokenRepositoryService,
   ) {}
+
+  async getPlanUser(user: PlanUserEntity): Promise<GetPlanUserResponse> {
+    const [room, members, chatRooms] = await Promise.all([
+      this.planUserRoomRepositoryService.findByOwnerId(user.id),
+      this.getPlanUserRoomMemberListByUserId(user.id),
+      this.getUserChatRoomList(user.id),
+    ]);
+    return GetPlanUserResponse.from(user, members, chatRooms, room?.id ?? null);
+  }
 
   /**
    * FCM 기기 토큰 등록. 앱은 토큰이 바뀔 때마다·로그인 직후마다 부르므로
@@ -173,7 +183,7 @@ export class PlanUserService {
       );
 
     return planUserRoomMemberList.map((v) =>
-      GetPlanUserRoomMemberResponse.from(v.planUser),
+      GetPlanUserRoomMemberResponse.from(v.planUser, v.permission),
     );
   }
 

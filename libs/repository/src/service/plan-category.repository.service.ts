@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 
 import { PlanAllCategoryDto } from '../dto/plan-category.dto';
 import { PlanCategoryEntity } from '../entity/plan-category.entity';
@@ -110,7 +110,7 @@ export class PlanCategoryRepositoryService implements OnModuleInit {
 
   async updatePlanUserRoomId(planUserId: string, planUserRoomId: number) {
     await this.planUserCategoryRepository.update(
-      { planUserId },
+      { planUserId, planUserRoomId: IsNull() },
       { planUserRoomId },
     );
   }

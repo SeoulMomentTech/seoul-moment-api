@@ -43,13 +43,8 @@ export class PlanUserController {
   async getPlanUser(
     @Request() req: PlanUserRequest,
   ): Promise<ResponseDataDto<GetPlanUserResponse>> {
-    const roomMemberList =
-      await this.planUserService.getPlanUserRoomMemberListByUserId(req.user.id);
-    const chatRoomList = await this.planUserService.getUserChatRoomList(
-      req.user.id,
-    );
     return new ResponseDataDto(
-      GetPlanUserResponse.from(req.user, roomMemberList, chatRoomList),
+      await this.planUserService.getPlanUser(req.user),
     );
   }
 
