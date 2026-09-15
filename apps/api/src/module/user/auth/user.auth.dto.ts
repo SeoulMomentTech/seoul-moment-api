@@ -4,9 +4,11 @@ import {
   IsBoolean,
   IsDefined,
   IsEmail,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
+  MaxLength,
 } from 'class-validator';
 
 import { PostPhoneVerifyRequest as CommonPostPhoneVerifyRequest } from '../../auth/auth.dto';
@@ -420,6 +422,84 @@ export class PostPasswordPhoneVerifyResponse {
   static from(token: string) {
     return plainToInstance(this, {
       token,
+    });
+  }
+}
+
+/**
+ * LINE Bot 전용 회원 인증 - 인증 코드 발송 요청.
+ * LINE Bot 은 웹 로그인 흐름(emailToken)을 태울 수 없으므로 lineUserId 를
+ * 그대로 받아 연결된 회원을 찾는다. email 은 본인 확인용이라, 회원의
+ * 이메일과 일치할 때만 코드를 보낸다.
+ */
+export class PostLineBotEmailCodeRequest {
+  @ApiProperty({
+    description:
+      'LINE Messaging API 가 주는 사용자 ID. ' +
+      'LINE 로그인으로 연결된 회원을 찾는 데 쓴다.',
+    example: 'U4af4980629...',
+  })
+  @IsString()
+  @IsDefined()
+  @MaxLength(255)
+  lineUserId: string;
+
+  @ApiProperty({
+    description:
+      '사용자가 LINE Bot 에 입력한 이메일. 회원 이메일과 일치해야 한다.',
+    example: 'test@test.com',
+  })
+  @IsEmail()
+  @IsDefined()
+  email: string;
+}
+
+/**
+ * LINE Bot 전용 회원 인증 - 인증 코드 검증 요청.
+ * 코드는 lineUserId 로 저장돼 있으므로 이메일을 다시 받지 않는다.
+ */
+export class PostLineBotEmailVerifyRequest {
+  @ApiProperty({
+    description: 'LINE Messaging API 가 주는 사용자 ID',
+    example: 'U4af4980629...',
+  })
+  @IsString()
+  @IsDefined()
+  @MaxLength(255)
+  lineUserId: string;
+
+  @ApiProperty({
+    description: '메일로 받은 6자리 인증 코드',
+    example: '123456',
+  })
+  @IsString()
+  @IsDefined()
+  @Matches(/^\d{6}$/, { message: 'code는 6자리 숫자여야 합니다.' })
+  code: string;
+}
+
+/** 인증에 성공한 회원 정보. LINE Bot 이 lineUserId ↔ 회원 매핑을 저장하는 데 쓴다. */
+export class PostLineBotEmailVerifyResponse {
+  @ApiProperty({ description: '회원 ID', example: 1 })
+  @IsNumber()
+  @IsDefined()
+  userId: number;
+
+  @ApiProperty({ description: '회원 이메일', example: 'test@test.com' })
+  @IsEmail()
+  @IsDefined()
+  email: string;
+
+  @ApiProperty({ description: '회원 닉네임', example: 'nickname' })
+  @IsString()
+  @IsDefined()
+  nickname: string;
+
+  static from(user: { id: number; email: string; nickname: string }) {
+    return plainToInstance(this, {
+      userId: user.id,
+      email: user.email,
+      nickname: user.nickname,
     });
   }
 }

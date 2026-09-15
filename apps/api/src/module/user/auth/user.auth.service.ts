@@ -24,6 +24,9 @@ import { Transactional } from 'typeorm-transactional';
 
 import {
   PostGoogleSignupRequest,
+  PostLineBotEmailCodeRequest,
+  PostLineBotEmailVerifyRequest,
+  PostLineBotEmailVerifyResponse,
   PostLineEmailCodeRequest,
   PostLineEmailVerifyRequest,
   PostLineSignupRequest,
@@ -142,6 +145,77 @@ export class UserAuthService {
     request: PostLineEmailVerifyRequest,
   ): Promise<PostSnsLoginResponse> {
     return this.snsEmailVerify(UserSnsProvider.LINE, request);
+  }
+
+  /**
+   * LINE Bot 전용 회원 인증 - 인증 코드 발송.
+   *
+   * 웹의 line/email/code 와 달리 emailToken 을 쓰지 않는다. Bot 은 로그인
+   * 흐름을 태울 수 없고 lineUserId 만 들고 있기 때문이다. 대신 이미 LINE 이
+   * 연결된 회원만 대상으로 하고, 입력한 이메일이 그 회원의 이메일과 일치할
+   * 때만 코드를 보낸다. 일치 검사 없이 보내면 lineUserId 를 아는 쪽이 임의의
+   * 주소로 우리 이름의 메일을 뿌릴 수 있다.
+   */
+  async lineBotEmailCode({
+    lineUserId,
+    email,
+  }: PostLineBotEmailCodeRequest): Promise<void> {
+    const user = await this.getUserByLineUserId(lineUserId);
+
+    if (user.email.toLowerCase() !== email.trim().toLowerCase()) {
+      throw new ServiceError(
+        '회원 정보와 이메일이 일치하지 않습니다.',
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
+
+    // 코드는 회원 이메일로 보내되 캐시 키는 lineUserId 로 둔다. 검증 요청이
+    // 이메일을 다시 주지 않기도 하고, 이메일을 키로 쓰면 회원가입·비밀번호
+    // 찾기 코드와 같은 자리를 써서 서로 덮어쓴다.
+    await this.commonAuthService.authEmailWithKey(
+      this.lineBotEmailCacheKey(lineUserId),
+      user.email,
+    );
+  }
+
+  /**
+   * LINE Bot 전용 회원 인증 - 인증 코드 검증.
+   * 성공하면 Bot 이 lineUserId ↔ 회원 매핑을 저장할 수 있도록 회원 정보를 준다.
+   */
+  async lineBotEmailVerify({
+    lineUserId,
+    code,
+  }: PostLineBotEmailVerifyRequest): Promise<PostLineBotEmailVerifyResponse> {
+    // 코드 발급 뒤 연결이 끊겼을 수 있으므로 검증 시점에 다시 확인한다.
+    const user = await this.getUserByLineUserId(lineUserId);
+
+    await this.commonAuthService.verifyEmailWithKey(
+      this.lineBotEmailCacheKey(lineUserId),
+      parseInt(code, 10),
+    );
+
+    return PostLineBotEmailVerifyResponse.from(user);
+  }
+
+  /** LINE 이 연결된 회원을 찾는다. 연결된 적이 없으면 404 로 끊는다. */
+  private async getUserByLineUserId(lineUserId: string): Promise<UserEntity> {
+    const linkedSns = await this.userSnsRepositoryService.findByProvider(
+      UserSnsProvider.LINE,
+      lineUserId,
+    );
+
+    if (!linkedSns) {
+      throw new ServiceError(
+        'LINE 계정에 연결된 회원이 없습니다.',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return this.userRepositoryService.getUserById(linkedSns.userId);
+  }
+
+  private lineBotEmailCacheKey(lineUserId: string): string {
+    return `${RedisKey.LINE_BOT_EMAIL}:${lineUserId}`;
   }
 
   /**

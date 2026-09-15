@@ -2,6 +2,8 @@ export enum RedisKey {
   SIGNUP_PHONE = 'signup_phone',
   PASSWORD_PHONE = 'password_phone',
   INFO_PHONE = 'info_phone',
+  /** LINE Bot 회원 인증 코드. 키가 lineUserId 라 다른 이메일 인증 흐름과 섞이지 않는다. */
+  LINE_BOT_EMAIL = 'line_bot_email',
   USER_RECENT = 'user_recent',
   PRODUCT_LIKE_COUNT = 'product_like_count',
   GOOGLE_SHEET_ID = 'google_sheet_id',
