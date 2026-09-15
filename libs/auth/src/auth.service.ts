@@ -47,6 +47,20 @@ export class CommonAuthService {
   }
 
   async authEmail(email: string) {
+    return this.authEmailWithKey(email, email);
+  }
+
+  async verifyEmail(email: string, code: number) {
+    return this.verifyEmailWithKey(email, code);
+  }
+
+  /**
+   * 인증 코드를 메일로 보내고 cacheKey 에 저장한다.
+   * 수신자와 캐시 키를 분리해 두는 이유는, 검증 시점에 이메일을 다시 받지 않는
+   * 흐름(LINE Bot 처럼 식별자만 들고 오는 경우) 때문이다. 키를 이메일로 두면
+   * 회원가입·비밀번호 찾기 코드와 같은 자리를 써서 서로 덮어쓴다.
+   */
+  async authEmailWithKey(cacheKey: string, email: string) {
     const code = Math.floor(100000 + Math.random() * 900000);
 
     // 발송 성공을 확인한 뒤에 코드를 저장한다. 발송을 기다리지 않으면
@@ -66,11 +80,11 @@ export class CommonAuthService {
       );
     }
 
-    await this.cacheService.set(email, code, 60 * 5);
+    await this.cacheService.set(cacheKey, code, 60 * 5);
   }
 
-  async verifyEmail(email: string, code: number) {
-    const cachedCode = await this.cacheService.find(email);
+  async verifyEmailWithKey(cacheKey: string, code: number) {
+    const cachedCode = await this.cacheService.find(cacheKey);
 
     if (!cachedCode) {
       throw new ServiceError(
@@ -86,7 +100,7 @@ export class CommonAuthService {
       );
     }
 
-    await this.cacheService.del(email);
+    await this.cacheService.del(cacheKey);
   }
 
   async verifyPhone(phone: string, code: number, redisKey?: RedisKey) {
