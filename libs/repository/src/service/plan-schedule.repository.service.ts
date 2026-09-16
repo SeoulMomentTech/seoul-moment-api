@@ -26,7 +26,8 @@ import {
 /**
  * "이 사람의 플랜" 의 범위.
  *
- * 방을 주면 그 방만, 안 주면 **개인 일정 + 내가 방장인 방의 일정** 둘 다다.
+ * 방을 주면 작성자와 무관하게 그 방 전체를 본다. 방이 없으면 개인 일정과
+ * 내가 방장인 방 전체(배우자가 작성한 일정 포함)를 함께 본다.
  * 가입할 때 방이 하나 생기고 앱이 일정을 그 방에 붙이기 때문에, 개인만
  * 보면 사실상 아무것도 안 보인다.
  *
@@ -41,10 +42,10 @@ function ownScope(
   planUserId: string,
   roomId?: number,
 ): FindOptionsWhere<PlanScheduleEntity>[] {
-  if (roomId) return [{ ...base, planUserId, planUserRoomId: roomId }];
+  if (roomId) return [{ ...base, planUserRoomId: roomId }];
   return [
     { ...base, planUserId, planUserRoomId: IsNull() },
-    { ...base, planUserId, planUserRoom: { ownerId: planUserId } },
+    { ...base, planUserRoom: { ownerId: planUserId } },
   ];
 }
 
@@ -143,29 +144,7 @@ export class PlanScheduleRepositoryService {
       baseCondition.categoryName = categoryName;
     }
 
-    if (planUserId) {
-      baseCondition.planUserId = planUserId;
-    }
-
-    const whereConditions: FindOptionsWhere<PlanScheduleEntity>[] = [];
-
-    if (planUserRoomId) {
-      whereConditions.push({
-        ...baseCondition,
-        planUserRoomId,
-      });
-    } else {
-      whereConditions.push(
-        {
-          ...baseCondition,
-          planUserRoomId: IsNull(),
-        },
-        {
-          ...baseCondition,
-          planUserRoom: { ownerId: planUserId },
-        },
-      );
-    }
+    const whereConditions = ownScope(baseCondition, planUserId, planUserRoomId);
 
     return this.planScheduleRepository.findAndCount({
       where: whereConditions,
@@ -236,7 +215,7 @@ export class PlanScheduleRepositoryService {
       .createQueryBuilder('ps')
       .leftJoin('ps.planUserRoom', 'room')
       .select('COALESCE(SUM(ps.amount), 0)', 'total')
-      .where('ps.plan_user_id = :planUserId', { planUserId })
+      .where('1=1')
       .andWhere('ps.status <> :deleted', {
         deleted: PlanScheduleStatus.DELETE,
       })
@@ -246,7 +225,8 @@ export class PlanScheduleRepositoryService {
       qb.andWhere('ps.plan_user_room_id = :roomId', { roomId });
     } else {
       qb.andWhere(
-        '(ps.plan_user_room_id IS NULL OR room.owner_id = ps.plan_user_id)',
+        '((ps.plan_user_room_id IS NULL AND ps.plan_user_id = :planUserId) OR room.owner_id = :planUserId)',
+        { planUserId },
       );
     }
 
@@ -278,9 +258,8 @@ export class PlanScheduleRepositoryService {
    * 사람마다 따로 물으면 쿼리가 20번 나간다. planUserId 를 모아 한 번에
    * 묻고 서비스가 사람별로 접는다.
    *
-   * 범위는 `getList` 와 **같다** — 내가 만든 일정 가운데 방이 없거나
-   * **내가 방장인 방**의 것. 남의 방에 조언자로 들어가 만든 일정은 내
-   * 플랜이 아니므로 뺀다.
+   * 범위는 `getList` 와 같다 — 개인 일정과 내가 방장인 방의 모든 일정.
+   * 공동 일정은 작성자가 아닌 방장에게 집계한다.
    */
   async getBragTotals(planUserIds: string[]): Promise<
     Array<{
@@ -294,10 +273,12 @@ export class PlanScheduleRepositoryService {
   > {
     if (planUserIds.length === 0) return [];
 
+    const owner =
+      'CASE WHEN ps.plan_user_room_id IS NULL THEN ps.plan_user_id ELSE room.owner_id END';
     const rows = await this.planScheduleRepository
       .createQueryBuilder('ps')
       .leftJoin('ps.planUserRoom', 'room')
-      .select('ps.plan_user_id', 'planUserId')
+      .select(owner, 'planUserId')
       .addSelect('ps.category_name', 'categoryName')
       .addSelect(
         `SUM(CASE WHEN ${paidSql('ps')} THEN COALESCE(ps.amount, 0) ELSE 0 END)`,
@@ -312,15 +293,12 @@ export class PlanScheduleRepositoryService {
         `SUM(CASE WHEN ps.status = :completed THEN 1 ELSE 0 END)`,
         'done',
       )
-      .where('ps.plan_user_id IN (:...planUserIds)', { planUserIds })
+      .where(`${owner} IN (:...planUserIds)`, { planUserIds })
       .andWhere('ps.status IN (:...statusList)', {
         statusList: [PlanScheduleStatus.NORMAL, PlanScheduleStatus.COMPLETED],
       })
-      .andWhere(
-        '(ps.plan_user_room_id IS NULL OR room.owner_id = ps.plan_user_id)',
-      )
       .setParameter('completed', PlanScheduleStatus.COMPLETED)
-      .groupBy('ps.plan_user_id')
+      .groupBy(owner)
       .addGroupBy('ps.category_name')
       .getRawMany<{
         planUserId: string;
@@ -348,6 +326,7 @@ export class PlanScheduleRepositoryService {
   ): Promise<GetPlanUserAmountCategory[]> {
     const query = this.planScheduleRepository
       .createQueryBuilder('ps')
+      .leftJoin('ps.planUserRoom', 'room')
       .select('ps.categoryName', 'categoryName')
       .addSelect(`SUM(ps.amount)`, 'totalAmount')
       .addSelect(
@@ -365,12 +344,13 @@ export class PlanScheduleRepositoryService {
       })
       .groupBy('ps.categoryName');
 
-    if (id) {
-      query.andWhere('ps.planUserId = :id', { id });
-    }
-
     if (roomId) {
       query.andWhere('ps.planUserRoomId = :roomId', { roomId });
+    } else if (id) {
+      query.andWhere(
+        '((ps.plan_user_room_id IS NULL AND ps.plan_user_id = :id) OR room.owner_id = :id)',
+        { id },
+      );
     }
 
     if (categoryName) {
@@ -394,7 +374,7 @@ export class PlanScheduleRepositoryService {
 
   async updatePlanUserRoomId(planUserId: string, planUserRoomId: number) {
     await this.planScheduleRepository.update(
-      { planUserId },
+      { planUserId, planUserRoomId: IsNull() },
       { planUserRoomId },
     );
   }

@@ -114,13 +114,15 @@ export class PlanScheduleController {
   @UseGuards(PlanApiGuard)
   @ResponseList(GetPlanScheduleResponse)
   async getPlanScheduleRoomListByRoomId(
-    @Param('roomId') roomId: number,
+    @Request() req: PlanUserRequest,
+    @Param('roomId', ParseIntPipe) roomId: number,
     @Query() query: GetPlanScheduleListRequest,
   ): Promise<ResponseListDto<GetPlanScheduleResponse>> {
     const [result, total] =
       await this.planScheduleService.getPlanScheduleRoomPlanListByRoomId(
         roomId,
         query,
+        req.user.id,
       );
 
     return new ResponseListDto(result, total);

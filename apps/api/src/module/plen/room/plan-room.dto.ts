@@ -33,14 +33,15 @@ export class GetPlanRoomMemberResponse {
   })
   permission: PlanUserRoomMemberPermission;
 
-  static from(entity: PlanUserEntity) {
+  static from(
+    entity: PlanUserEntity,
+    permission: PlanUserRoomMemberPermission,
+  ) {
     return plainToInstance(this, {
       planUserId: entity.id,
       name: entity.name,
       image: entity.getProfileImageUrl(),
-      permission: entity.members.find(
-        (member) => member.planUserId === entity.id,
-      )?.permission,
+      permission,
     });
   }
 }

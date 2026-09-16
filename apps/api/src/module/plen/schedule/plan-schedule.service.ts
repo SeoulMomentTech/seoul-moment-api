@@ -58,10 +58,12 @@ export class PlanScheduleService {
     id: string,
     postPlanScheduleRequest: PostPlanScheduleRequest,
   ): Promise<PostPlanScheduleResponse> {
-    if (postPlanScheduleRequest.roomId) {
-      const planUserRoom = await this.planUserRoomRepositoryService.getByRoomId(
-        postPlanScheduleRequest.roomId,
-      );
+    const roomId =
+      postPlanScheduleRequest.roomId ??
+      (await this.planUserRoomRepositoryService.findByOwnerId(id))?.id;
+    if (roomId) {
+      const planUserRoom =
+        await this.planUserRoomRepositoryService.getByRoomId(roomId);
 
       const planUserRoomMember =
         await this.planUserRoomMemberRepositoryService.getByRoomIdAndPlanUserId(
@@ -80,7 +82,7 @@ export class PlanScheduleService {
     const planSchedule = await this.planScheduleRepositoryService.create(
       plainToInstance(PlanScheduleEntity, {
         planUserId: id,
-        planUserRoomId: postPlanScheduleRequest.roomId,
+        planUserRoomId: roomId,
         categoryName: postPlanScheduleRequest.categoryName,
         title: postPlanScheduleRequest.title,
         payType: postPlanScheduleRequest.payType,
@@ -108,7 +110,7 @@ export class PlanScheduleService {
           plainToInstance(PlanUserCategoryEntity, {
             planUserId: id,
             name,
-            planUserRoomId: postPlanScheduleRequest.roomId,
+            planUserRoomId: roomId,
           }),
         ),
       );
@@ -117,7 +119,7 @@ export class PlanScheduleService {
     await this.planActivityService.record({
       type: PlanActivityType.SCHEDULE_CREATED,
       planUserId: id,
-      planUserRoomId: postPlanScheduleRequest.roomId,
+      planUserRoomId: roomId,
       targetType: PlanActivityTargetType.SCHEDULE,
       targetId: planSchedule.id,
       targetTitle: planSchedule.title,
@@ -188,7 +190,12 @@ export class PlanScheduleService {
   async getPlanScheduleRoomPlanListByRoomId(
     roomId: number,
     request: GetPlanScheduleListRequest,
+    planUserId: string,
   ): Promise<[GetPlanScheduleResponse[], number]> {
+    await this.planUserRoomMemberRepositoryService.getByRoomIdAndPlanUserId(
+      roomId,
+      planUserId,
+    );
     const planUserRoom =
       await this.planUserRoomRepositoryService.getByRoomId(roomId);
 
@@ -219,8 +226,8 @@ export class PlanScheduleService {
    * 이 검사가 없으면 로그인한 사용자가 스케줄 ID(순차 증가)만 바꿔가며
    * 다른 사용자의 스케줄을 조회·수정·삭제할 수 있다.
    *
-   * - 본인이 만든 스케줄이면 허용
-   * - 방에 속한 스케줄이면 그 방의 멤버여야 하고,
+   * - 방 없는 개인 일정은 작성자만 허용
+   * - 방에 속한 일정은 작성자도 현재 그 방의 멤버여야 하고,
    *   쓰기 작업(수정·삭제·상태변경)은 READ 권한이면 거부
    */
   private async getAuthorizedPlanSchedule(
@@ -230,7 +237,10 @@ export class PlanScheduleService {
   ) {
     const planSchedule = await this.planScheduleRepositoryService.getById(id);
 
-    if (planSchedule.planUserId === planUserId) {
+    if (
+      !planSchedule.planUserRoomId &&
+      planSchedule.planUserId === planUserId
+    ) {
       return planSchedule;
     }
 
@@ -397,6 +407,8 @@ export class PlanScheduleService {
       });
     }
 
+    // save() returns only the patched fields; preserve the stored payment axis.
+    updatedPlanSchedule.isPaid = planSchedule.isPaid;
     return PatchPlanScheduleStatusResponse.from(updatedPlanSchedule);
   }
 
@@ -433,7 +445,10 @@ export class PlanScheduleService {
     roomId?: number,
   ): Promise<GetCalendarListResponse[]> {
     if (roomId) {
-      await this.planUserRoomRepositoryService.getByRoomId(roomId);
+      await this.planUserRoomMemberRepositoryService.getByRoomIdAndPlanUserId(
+        roomId,
+        planUserId,
+      );
     }
 
     const planSchedules =

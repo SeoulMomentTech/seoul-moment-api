@@ -168,6 +168,18 @@ export class PlanRoomService {
       );
 
     if (planUserRoomMember) {
+      if (
+        asSpouse &&
+        planUserRoomMember.permission !== PlanUserRoomMemberPermission.SPOUSE
+      ) {
+        const spouse =
+          await this.planUserRoomMemberRepositoryService.findSpouseByRoomId(
+            planUserRoom.id,
+          );
+        if (!spouse) {
+          await this.patchPlanRoomSpouse(ownerUserEntity.id, userId);
+        }
+      }
       return;
     }
 
@@ -178,12 +190,10 @@ export class PlanRoomService {
       : null;
     const grantSpouse = asSpouse && !existingSpouse;
 
-    await this.planUserRoomMemberRepositoryService.create(
-      plainToInstance(PlanUserRoomMemberEntity, {
-        roomId: planUserRoom.id,
-        planUserId: ownerUserEntity.id,
-        permission: PlanUserRoomMemberPermission.OWNER,
-      }),
+    await this.createIfNotExistsPlanUserRoomMember(
+      planUserRoom,
+      ownerUserEntity.id,
+      PlanUserRoomMemberPermission.OWNER,
     );
 
     await this.planUserRoomMemberRepositoryService.create(
@@ -381,7 +391,7 @@ export class PlanRoomService {
       );
 
     return planUserRoomMemberList.map((v) =>
-      GetPlanRoomMemberResponse.from(v.planUser),
+      GetPlanRoomMemberResponse.from(v.planUser, v.permission),
     );
   }
 
@@ -397,7 +407,7 @@ export class PlanRoomService {
       );
 
     return planUserRoomMemberList.map((v) =>
-      GetPlanRoomMemberResponse.from(v.planUser),
+      GetPlanRoomMemberResponse.from(v.planUser, v.permission),
     );
   }
 

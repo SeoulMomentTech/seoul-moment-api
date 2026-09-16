@@ -76,10 +76,11 @@ export class GetPlanUserResponse {
   id: string;
 
   @ApiProperty({
-    description: '방 ID',
+    description: '방 ID. 아직 공유 방이 없으면 null',
     example: 1,
+    nullable: true,
   })
-  roomId: number;
+  roomId: number | null;
 
   @ApiProperty({
     description: '웨딩 날짜',
@@ -163,10 +164,11 @@ export class GetPlanUserResponse {
     entity: PlanUserEntity,
     members: GetPlanUserRoomMemberResponse[] = [],
     chatRooms: GetUserChatRoomResponse[] = [],
+    roomId: number | null = entity.room?.id ?? null,
   ) {
     return plainToInstance(this, {
       id: entity.id,
-      roomId: entity?.room?.id,
+      roomId,
       weddingDate: entity.weddingDate,
       budget: entity.budget,
       name: entity.name,
@@ -359,14 +361,15 @@ export class GetPlanUserRoomMemberResponse {
   })
   permission: PlanUserRoomMemberPermission;
 
-  static from(entity: PlanUserEntity) {
+  static from(
+    entity: PlanUserEntity,
+    permission: PlanUserRoomMemberPermission,
+  ) {
     return plainToInstance(this, {
       planUserId: entity.id,
       name: entity.name,
       image: entity.getProfileImageUrl(),
-      permission: entity.members.find(
-        (member) => member.planUserId === entity.id,
-      )?.permission,
+      permission,
     });
   }
 }

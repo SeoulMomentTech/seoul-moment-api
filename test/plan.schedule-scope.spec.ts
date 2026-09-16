@@ -127,8 +127,9 @@ describe('일정 범위 — 목록·캘린더·금액이 같은 것을 본다 (E
   it('방 id 를 주면 그 방 것만 본다', async () => {
     // Given
     const user = await createUser();
-    const room = await createRoom(user);
+    // 방을 만들기 전의 개인 일정은 명시적으로 지정한 방에 포함하지 않는다.
     await add(user, '개인 일정', 100);
+    const room = await createRoom(user);
     await add(user, '방 일정', 200, room.id);
 
     // When
