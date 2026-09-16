@@ -15,12 +15,16 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Max,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
 
 import { CartAmountDto } from '../cart/cart.calculator';
-import { GetUserCartBrandGroupResponse } from '../cart/user.cart.dto';
+import {
+  GetUserCartBrandGroupResponse,
+  MAX_CART_QUANTITY,
+} from '../cart/user.cart.dto';
 
 /** 한 주문에 담을 수 있는 라인 수 상한 */
 export const MAX_ORDER_LINE = 100;
@@ -72,9 +76,32 @@ export class UserOrderShippingRequest {
   requestMessage?: string;
 }
 
-export class PostUserOrderPreviewRequest {
+export class UserOrderDirectItemRequest {
   @ApiProperty({
-    description: '주문할 장바구니 라인 ID 목록',
+    description: '상품 변형(SKU) ID. 상품상세 v1 응답의 variants[].id',
+    example: 101,
+  })
+  @IsInt()
+  @IsPositive()
+  @IsDefined()
+  productVariantId: number;
+
+  @ApiProperty({ description: '수량', example: 1 })
+  @IsInt()
+  @IsPositive()
+  @Max(MAX_CART_QUANTITY)
+  @IsDefined()
+  quantity: number;
+}
+
+/**
+ * 주문 라인을 어디서 가져올지. 장바구니에서 주문하면 cartItemIds,
+ * 상품상세 "구매하기" 면 items 를 보낸다. 둘 중 정확히 하나만 보내야 한다.
+ */
+export class UserOrderLineSourceRequest {
+  @ApiPropertyOptional({
+    description:
+      '장바구니에서 주문할 때 — 주문할 장바구니 라인 ID 목록. items 와 함께 보낼 수 없다',
     example: [1, 2],
     type: [Number],
   })
@@ -83,42 +110,50 @@ export class PostUserOrderPreviewRequest {
   @IsPositive({ each: true })
   @ArrayMinSize(1)
   @ArrayMaxSize(MAX_ORDER_LINE)
-  @IsDefined()
-  cartItemIds: number[];
+  @IsOptional()
+  cartItemIds?: number[];
 
-  @ApiProperty({
-    description: '배송지 縣市. 배송비가 지역으로 정해지므로 필수다',
+  @ApiPropertyOptional({
+    description:
+      '상품상세 "구매하기" 일 때 — 장바구니를 거치지 않고 SKU·수량을 바로 넘긴다. ' +
+      '장바구니에 담긴 수량과 합산하지 않는다. 같은 SKU 가 여러 줄이면 수량을 합친다. ' +
+      'cartItemIds 와 함께 보낼 수 없다',
+    type: [UserOrderDirectItemRequest],
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_ORDER_LINE)
+  @ValidateNested({ each: true })
+  @Type(() => UserOrderDirectItemRequest)
+  @IsOptional()
+  items?: UserOrderDirectItemRequest[];
+}
+
+export class PostUserOrderPreviewRequest extends UserOrderLineSourceRequest {
+  @ApiPropertyOptional({
+    description:
+      '배송지 縣市. 생략하면 본섬 기준 예상 배송비를 내려준다 (isShippingEstimated=true)',
     example: '臺北市',
   })
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
-  city: string;
+  @IsOptional()
+  city?: string;
 
-  @ApiProperty({
-    description: '배송지 區/鄉. 綠島鄉·蘭嶼鄉 은 臺東縣이지만 외섬이다',
+  @ApiPropertyOptional({
+    description:
+      '배송지 區/鄉. 綠島鄉·蘭嶼鄉 은 臺東縣이지만 외섬이다. 생략하면 예상 배송비다',
     example: '信義區',
   })
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
-  district: string;
+  @IsOptional()
+  district?: string;
 }
 
-export class PostUserOrderRequest {
-  @ApiProperty({
-    description: '주문할 장바구니 라인 ID 목록',
-    example: [1, 2],
-    type: [Number],
-  })
-  @IsArray()
-  @IsInt({ each: true })
-  @IsPositive({ each: true })
-  @ArrayMinSize(1)
-  @ArrayMaxSize(MAX_ORDER_LINE)
-  @IsDefined()
-  cartItemIds: number[];
-
+export class PostUserOrderRequest extends UserOrderLineSourceRequest {
   @ApiProperty({
     description: '결제 수단',
     enum: PaymentMethod,
@@ -157,13 +192,21 @@ export class PostUserOrderPreviewResponse {
   totalProductAmount: number;
 
   @ApiProperty({
-    description: '확정 배송비. 배송지 지역과 무료배송 판정이 모두 반영된 값',
+    description:
+      '배송비. 배송지 지역과 무료배송 판정이 반영된 값. isShippingEstimated 가 true 면 본섬 기준 예상값',
     example: 60,
   })
   shippingFee: number;
 
   @ApiProperty({ description: '외섬 여부', example: false })
   isRemoteIsland: boolean;
+
+  @ApiProperty({
+    description:
+      '배송비가 예상값인지. city·district 를 생략하면 true 이고 본섬 기준으로 계산된다',
+    example: false,
+  })
+  isShippingEstimated: boolean;
 
   @ApiProperty({ description: '무료배송 임계금액', example: 1150 })
   freeShippingThreshold: number;
@@ -177,12 +220,14 @@ export class PostUserOrderPreviewResponse {
   static from(
     groups: GetUserCartBrandGroupResponse[],
     amount: CartAmountDto,
+    isShippingEstimated: boolean,
   ): PostUserOrderPreviewResponse {
     return plainToInstance(this, {
       brandGroups: groups,
       totalProductAmount: amount.totalProductAmount,
       shippingFee: amount.shippingFee,
       isRemoteIsland: amount.isRemoteIsland,
+      isShippingEstimated,
       freeShippingThreshold: amount.freeShippingThreshold,
       amountToFreeShipping: amount.amountToFreeShipping,
       totalAmount: amount.totalAmount,

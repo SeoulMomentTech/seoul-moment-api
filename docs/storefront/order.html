@@ -99,6 +99,26 @@ const qs = new URLSearchParams(location.search);
 const cartItemIds = (qs.get('cartItemIds') || '')
   .split(',').map((s) => Number(s.trim())).filter((n) => n > 0);
 
+/** 상품상세 "바로 구매" 로 들어온 경우: order.html?items=101:1 */
+const directItems = (qs.get('items') || '')
+  .split(',')
+  .map((chunk) => chunk.trim())
+  .filter(Boolean)
+  .map((chunk) => {
+    const [id, qty] = chunk.split(':');
+    return { productVariantId: Number(id), quantity: Number(qty || 1) };
+  })
+  .filter((item) => item.productVariantId > 0);
+
+/** 주문 API 는 cartItemIds 와 items 중 하나만 받는다 */
+function lineSource() {
+  return directItems.length > 0 ? { items: directItems } : { cartItemIds };
+}
+
+function hasLines() {
+  return cartItemIds.length > 0 || directItems.length > 0;
+}
+
 const state = {
   useDefault: true,
   paymentMethod: 'LINE_PAY',
@@ -132,11 +152,15 @@ function defaultReady() {
 
 async function loadPreview() {
   const addr = currentAddress();
-  if (!addr.city || !addr.district) { state.preview = null; render(); return; }
+  const body = lineSource();
 
-  const res = await apiCall('POST', '/user/order/preview', {
-    body: { cartItemIds, city: addr.city, district: addr.district },
-  });
+  // 주소가 아직 없으면 빼고 부른다 — 본섬 기준 예상 배송비가 내려온다.
+  if (addr.city && addr.district) {
+    body.city = addr.city;
+    body.district = addr.district;
+  }
+
+  const res = await apiCall('POST', '/user/order/preview', { body });
 
   state.preview = res.ok ? res.data : null;
   if (!res.ok) toast(errorText(res, '금액을 계산하지 못했습니다.'), { bad: true });
@@ -326,9 +350,15 @@ function summarySection() {
     el('h3', {}, '결제 금액'),
     el('div', { class: 'row' }, [el('span', {}, '상품 금액'), el('span', { class: 'v', text: nt(p ? p.totalProductAmount : 0) })]),
     el('div', { class: 'row' }, [
-      el('span', {}, '배송비'),
+      el('span', {}, p && p.isShippingEstimated ? '예상 배송비' : '배송비'),
       el('span', { class: 'v', text: p && p.shippingFee === 0 ? '무료' : nt(p ? p.shippingFee : 0) }),
     ]),
+    p && p.isShippingEstimated
+      ? el('div', { class: 'row' }, [
+          el('span', { style: 'color: var(--sm-neutral); font-size: var(--b5)' }, '배송지를 입력하면 배송비가 확정됩니다'),
+          el('span', {}),
+        ])
+      : null,
     p && p.isRemoteIsland
       ? el('div', { class: 'row' }, [el('span', { style: 'color: var(--sm-neutral); font-size: var(--b5)' }, '외섬 지역'), el('span', {})])
       : null,
@@ -353,7 +383,7 @@ function render() {
   const body = $('#body');
   if (!requireLogin(body)) return;
 
-  if (cartItemIds.length === 0) {
+  if (!hasLines()) {
     body.innerHTML = '';
     body.appendChild(
       el('div', { class: 'sm-empty' }, [
@@ -379,7 +409,7 @@ async function submit() {
   if (!canPay()) return;
 
   const body = {
-    cartItemIds,
+    ...lineSource(),
     paymentMethod: state.paymentMethod,
     useDefaultShipping: state.useDefault,
   };

@@ -669,11 +669,27 @@ img, svg { max-width: 100%; }
       </div>
       <div class="api-body">
         <p><strong>DB 를 건드리지 않습니다.</strong> 주문서 진입 시 한 번, 그리고 <strong>주소(縣市·區)를 바꿀 때마다</strong> 다시 부르세요. 배송비가 주소로 정해지기 때문입니다. <code>Accept-language</code> 필요.</p>
+        <p>주문 라인을 넘기는 방법이 둘입니다. <strong>둘 중 정확히 하나만</strong> 보내세요 (같이 보내거나 둘 다 빼면 <strong>400</strong>).</p>
+        <ul>
+          <li><code>cartItemIds</code> — 장바구니에서 선택한 라인으로 주문할 때</li>
+          <li><code>items</code> — 상품상세 <strong>"구매하기"</strong>. 장바구니를 거치지 않습니다. 담기 API 로 우회하지 마세요 — 담기는 이미 담긴 수량과 <strong>합산</strong>되어 주문 수량이 틀어집니다.</li>
+        </ul>
         <div class="pair">
           <div class="block">
-            <span class="lb">Request</span>
+            <span class="lb">Request — 장바구니에서 주문</span>
 <pre>{
   <span class="k">"cartItemIds"</span>: [12, 13],  <span class="c">// 1 ~ 100건</span>
+  <span class="k">"city"</span>: <span class="s">"臺北市"</span>,
+  <span class="k">"district"</span>: <span class="s">"信義區"</span>
+}</pre>
+          </div>
+          <div class="block">
+            <span class="lb">Request — 상품상세 "구매하기"</span>
+<pre>{
+  <span class="k">"items"</span>: [
+    { <span class="k">"productVariantId"</span>: 101, <span class="k">"quantity"</span>: 2 }
+  ],
+  <span class="c">// city·district 를 빼면 본섬 기준 예상 배송비가 옵니다</span>
   <span class="k">"city"</span>: <span class="s">"臺北市"</span>,
   <span class="k">"district"</span>: <span class="s">"信義區"</span>
 }</pre>
@@ -683,15 +699,18 @@ img, svg { max-width: 100%; }
 <pre>{
   <span class="k">"brandGroups"</span>: [ <span class="c">/* GET /user/cart 와 동일 */</span> ],
   <span class="k">"totalProductAmount"</span>: 900,
-  <span class="k">"shippingFee"</span>: 60,        <span class="c">// 확정값</span>
+  <span class="k">"shippingFee"</span>: 60,
   <span class="k">"isRemoteIsland"</span>: false,
+  <span class="k">"isShippingEstimated"</span>: false,  <span class="c">// true 면 본섬 기준 예상값</span>
   <span class="k">"freeShippingThreshold"</span>: 1150,
   <span class="k">"amountToFreeShipping"</span>: 250,
   <span class="k">"totalAmount"</span>: 960
 }</pre>
           </div>
         </div>
-        <p>존재하지 않거나 남의 <code>cartItemIds</code> 가 하나라도 섞이면 <strong>404</strong> 입니다.</p>
+        <p>존재하지 않거나 남의 <code>cartItemIds</code> 가 하나라도 섞이면 <strong>404</strong>, <code>items</code> 의 <code>productVariantId</code> 가 없어도 <strong>404</strong> 입니다.</p>
+        <p><code>items</code> 로 부르면 <code>brandGroups[].items[].cartItemId</code> 는 <strong><code>null</code></strong> 입니다 — 장바구니 라인이 아니기 때문입니다. 수량 변경 UI 를 이 값으로 그리고 있다면 주의하세요.</p>
+        <p><strong>주소를 아직 등록하지 않은 회원</strong>은 <code>city</code>·<code>district</code> 를 빼고 부르면 됩니다. <code>isShippingEstimated: true</code> 로 본섬 기준 예상 배송비가 내려오니, 화면에는 "예상 배송비"로 표시하고 주소를 고른 뒤 다시 부르세요.</p>
       </div>
     </div>
 
@@ -707,15 +726,18 @@ img, svg { max-width: 100%; }
           <div class="block">
             <span class="lb">Request — 기본 배송지 사용</span>
 <pre>{
+  <span class="c">// preview 와 같이 cartItemIds 또는 items 중 하나</span>
   <span class="k">"cartItemIds"</span>: [12, 13],
   <span class="k">"paymentMethod"</span>: <span class="s">"LINE_PAY"</span>,  <span class="c">// 또는 "ECPAY"</span>
   <span class="k">"useDefaultShipping"</span>: true
 }</pre>
           </div>
           <div class="block">
-            <span class="lb">Request — 직접 입력</span>
+            <span class="lb">Request — 직접 입력 + "구매하기"</span>
 <pre>{
-  <span class="k">"cartItemIds"</span>: [12],
+  <span class="k">"items"</span>: [
+    { <span class="k">"productVariantId"</span>: 101, <span class="k">"quantity"</span>: 1 }
+  ],
   <span class="k">"paymentMethod"</span>: <span class="s">"ECPAY"</span>,
   <span class="k">"useDefaultShipping"</span>: false,
   <span class="k">"shipping"</span>: {
@@ -738,6 +760,7 @@ img, svg { max-width: 100%; }
   <span class="k">"totalAmount"</span>: 960
 }</pre>
         </div>
+        <p><code>items</code> 로 만든 주문은 <strong>장바구니를 전혀 건드리지 않습니다</strong> — 담기지도, 비워지지도 않습니다. 재고가 모자라면 <strong>409</strong> 이고 주문은 만들어지지 않습니다.</p>
         <p><strong><code>useDefaultShipping: true</code></strong> 면 서버가 <code>GET /user/profile</code>(주소)과 <code>GET /user/info</code>(전화번호)에 해당하는 값을 읽어 씁니다. 하나라도 비어 있으면 <strong>400</strong> 이니, 주문서에서 미리 채워졌는지 확인하고 비면 프로필 입력으로 유도하세요. <strong>기본 배송지 조회 전용 API 는 따로 만들지 않았습니다</strong> — 기존 두 API 를 조합하면 됩니다.</p>
       </div>
     </div>

@@ -896,6 +896,29 @@ export class ProductRepositoryService implements OnModuleInit {
       .getOne();
   }
 
+  /**
+   * 상품상세 "구매하기" 로 주문서를 그릴 때. 장바구니 상세 조회와 같은 모양
+   * (가격·브랜드·옵션 텍스트)이 필요해서 같은 조인을 건다. 없는 SKU 는 결과에서 빠진다.
+   */
+  async findVariantDetailListByIds(
+    ids: number[],
+  ): Promise<ProductVariantEntity[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return this.productVariantRepository
+      .createQueryBuilder('pv')
+      .leftJoinAndSelect('pv.productItem', 'pi')
+      .leftJoinAndSelect('pi.product', 'p')
+      .leftJoinAndSelect('p.brand', 'b')
+      .leftJoinAndSelect('pv.variantOptions', 'vo')
+      .leftJoinAndSelect('vo.optionValue', 'ov')
+      .leftJoinAndSelect('ov.option', 'o')
+      .where('pv.id IN (:...ids)', { ids })
+      .getMany();
+  }
+
   /** 옵션 조합까지 붙여서 여러 SKU 를 한 번에 가져온다 */
   async getProductVariantsByIds(
     ids: number[],

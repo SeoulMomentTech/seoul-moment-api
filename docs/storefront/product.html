@@ -232,12 +232,12 @@ function render() {
           el('button', {
             class: 'sm-btn out',
             disabled: !canAdd,
-            onclick: () => addToCart(variant, false),
+            onclick: () => addToCart(variant),
           }, '장바구니'),
           el('button', {
             class: 'sm-btn',
             disabled: !canAdd,
-            onclick: () => addToCart(variant, true),
+            onclick: () => buyNow(variant),
           }, '바로 구매'),
         ]),
         el('p', {
@@ -251,7 +251,18 @@ function render() {
 
 let shippingPolicy = { baseFee: 0, remoteIslandFee: 0, freeShippingThreshold: 0 };
 
-async function addToCart(variant, goCart) {
+/**
+ * 바로 구매는 장바구니를 거치지 않는다. 담기 API 로 우회하면 이미 담긴
+ * 수량과 합산되어 주문 수량이 틀어진다. 주문서가 items 로 직접 받는다.
+ */
+function buyNow(variant) {
+  if (!variant) return;
+  if (!shop.token()) { toast('로그인이 필요합니다', { bad: true }); return; }
+
+  location.href = `order.html?items=${variant.id}:1`;
+}
+
+async function addToCart(variant) {
   if (!variant) return;
   if (!shop.token()) { toast('로그인이 필요합니다', { bad: true }); return; }
 
@@ -262,7 +273,6 @@ async function addToCart(variant, goCart) {
   if (!res.ok) { toast(errorText(res, '담지 못했습니다.'), { bad: true }); return; }
 
   refreshBadge();
-  if (goCart) { location.href = 'cart.html'; return; }
   toast('장바구니에 담았습니다', {
     actionText: '장바구니 보기',
     onAction: () => { location.href = 'cart.html'; },

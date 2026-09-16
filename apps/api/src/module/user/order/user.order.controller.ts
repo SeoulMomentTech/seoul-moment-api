@@ -33,9 +33,12 @@ export class UserOrderController {
 
   @Post('preview')
   @ApiOperation({
-    summary: '주문서 금액 미리보기',
+    summary: '주문서 금액 미리보기 (장바구니 주문 · 상품상세 구매하기)',
     description:
-      '배송비가 배송지 지역으로 정해지므로 縣市·區 를 함께 받는다. 주소를 바꾸면 다시 호출해야 한다. DB 를 변경하지 않는다.',
+      '장바구니에서 주문하면 cartItemIds, 상품상세 "구매하기" 면 items[{productVariantId, quantity}] 를 보낸다. 둘 중 정확히 하나만 보낸다. ' +
+      '"구매하기" 는 장바구니에 저장하지 않고, 이미 담긴 수량과 합산하지도 않는다. ' +
+      '배송비가 배송지 지역으로 정해지므로 縣市·區 를 함께 받는다. 생략하면 본섬 기준 예상 배송비(isShippingEstimated=true)다. ' +
+      '주소를 바꾸면 다시 호출해야 한다. DB 를 변경하지 않는다.',
   })
   @ApiHeader({
     name: 'Accept-language',
@@ -46,8 +49,14 @@ export class UserOrderController {
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(UserOneTimeTokenGuard)
   @ResponseData(PostUserOrderPreviewResponse)
-  @ResponseException(HttpStatus.NOT_FOUND, 'Cart item not found')
-  @ResponseException(HttpStatus.BAD_REQUEST, 'Bad request')
+  @ResponseException(
+    HttpStatus.NOT_FOUND,
+    'Cart item or product variant not found',
+  )
+  @ResponseException(
+    HttpStatus.BAD_REQUEST,
+    'Exactly one of cartItemIds or items is required',
+  )
   async postUserOrderPreview(
     @Request() req: any,
     @Body() body: PostUserOrderPreviewRequest,
@@ -66,6 +75,7 @@ export class UserOrderController {
   @ApiOperation({
     summary: '주문 생성 (결제하기 직전)',
     description:
+      'preview 와 같이 cartItemIds 또는 items("구매하기") 중 하나를 보낸다. ' +
       '주문은 PENDING 으로 생성되고 재고는 차감하지 않는다. 장바구니도 비우지 않는다 — 결제 성공 후에 비운다.',
   })
   @ApiHeader({
@@ -77,9 +87,15 @@ export class UserOrderController {
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(UserOneTimeTokenGuard)
   @ResponseData(PostUserOrderResponse, HttpStatus.CREATED)
-  @ResponseException(HttpStatus.NOT_FOUND, 'Cart item not found')
+  @ResponseException(
+    HttpStatus.NOT_FOUND,
+    'Cart item or product variant not found',
+  )
   @ResponseException(HttpStatus.CONFLICT, 'Some cart items are not purchasable')
-  @ResponseException(HttpStatus.BAD_REQUEST, 'Shipping address is incomplete')
+  @ResponseException(
+    HttpStatus.BAD_REQUEST,
+    'Shipping address is incomplete / exactly one of cartItemIds or items is required',
+  )
   async postUserOrder(
     @Request() req: any,
     @Body() body: PostUserOrderRequest,
