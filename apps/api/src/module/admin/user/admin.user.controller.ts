@@ -15,7 +15,11 @@ export class AdminUserController {
   constructor(private readonly adminUserService: AdminUserService) {}
 
   @Get()
-  @ApiOperation({ summary: '관리자 리스트' })
+  @ApiOperation({
+    summary: '관리자 계정 목록',
+    description:
+      '어드민 로그인 계정(admin 테이블) 목록이다. 서울모먼트 회원은 `/admin/member` 를 쓴다.',
+  })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @AdminRole('super_admin')
   @UseGuards(AdminRoleGuard)

@@ -737,6 +737,333 @@ describe('UserOrderController (E2E)', () => {
   });
 
   // -------------------------------------------------------------------------
+  describe('상품상세 "구매하기" — items 로 바로 주문', () => {
+    it('장바구니에 담지 않고도 주문서 금액을 계산한다', async () => {
+      // Given - 장바구니가 비어 있다
+      const { oneTimeToken } = await signUpAndLogin();
+      const { productVariantId } = await createVariant({ price: 500 });
+
+      // When
+      const res = await preview(oneTimeToken, {
+        items: [{ productVariantId, quantity: 2 }],
+        ...MAIN_ISLAND,
+      });
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.totalProductAmount).toBe(1000);
+      expect(res.body.data.shippingFee).toBe(60);
+      expect(res.body.data.totalAmount).toBe(1060);
+      expect(res.body.data.isShippingEstimated).toBe(false);
+
+      const line = res.body.data.brandGroups[0].items[0];
+      expect(line.cartItemId).toBeNull();
+      expect(line.productVariantId).toBe(productVariantId);
+      expect(line.quantity).toBe(2);
+    });
+
+    it('미리보기가 장바구니에 라인을 만들지 않는다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      const { productVariantId } = await createVariant({ price: 500 });
+
+      // When
+      await preview(oneTimeToken, {
+        items: [{ productVariantId, quantity: 1 }],
+        ...MAIN_ISLAND,
+      });
+
+      // Then
+      const rows = await dataSource.query(
+        `SELECT id FROM cart_item WHERE user_id = $1`,
+        [userId],
+      );
+      expect(rows).toHaveLength(0);
+    });
+
+    it('이미 장바구니에 담긴 SKU 라도 수량을 합산하지 않는다', async () => {
+      // Given - 담기 API 는 수량을 합산하지만 "구매하기" 는 고른 수량 그대로여야 한다
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await setUserProfile(userId);
+      const { productVariantId } = await createVariant({
+        price: 500,
+        stockQuantity: 10,
+      });
+      await addToCart(oneTimeToken, productVariantId, 2);
+
+      // When - 상세에서 1개만 바로 구매한다
+      const res = await createOrder(oneTimeToken, {
+        items: [{ productVariantId, quantity: 1 }],
+        paymentMethod: 'LINE_PAY',
+        useDefaultShipping: true,
+      });
+
+      // Then - 주문은 1개, 장바구니의 2개는 그대로 남는다
+      expect(res.status).toBe(201);
+      expect(res.body.data.totalAmount).toBe(560);
+
+      const itemRows = await dataSource.query(
+        `SELECT quantity, total_price FROM order_item WHERE order_id = $1`,
+        [res.body.data.orderId],
+      );
+      expect(itemRows).toHaveLength(1);
+      expect(itemRows[0].quantity).toBe(1);
+      expect(itemRows[0].total_price).toBe(500);
+
+      const cartRows = await dataSource.query(
+        `SELECT quantity FROM cart_item WHERE user_id = $1`,
+        [userId],
+      );
+      expect(cartRows).toHaveLength(1);
+      expect(cartRows[0].quantity).toBe(2);
+    });
+
+    it('주문 스냅샷은 장바구니 경로와 똑같이 남는다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await setUserProfile(userId);
+      const { productItemId, productVariantId } = await createVariant({
+        price: 700,
+      });
+
+      // When
+      const res = await createOrder(oneTimeToken, {
+        items: [{ productVariantId, quantity: 1 }],
+        paymentMethod: 'LINE_PAY',
+        useDefaultShipping: true,
+      });
+
+      // Then
+      expect(res.status).toBe(201);
+
+      const rows = await dataSource.query(
+        `SELECT product_item_id, product_variant_id, sku_snapshot,
+                unit_price, unit_discount_price, total_price
+           FROM order_item WHERE order_id = $1`,
+        [res.body.data.orderId],
+      );
+      expect(rows[0].product_item_id).toBe(productItemId);
+      expect(rows[0].product_variant_id).toBe(productVariantId);
+      expect(rows[0].sku_snapshot).toBeTruthy();
+      expect(rows[0].unit_price).toBe(700);
+      expect(rows[0].total_price).toBe(700);
+    });
+
+    it('같은 SKU 가 여러 줄로 오면 한 라인으로 합친다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await setUserProfile(userId);
+      const { productVariantId } = await createVariant({
+        price: 500,
+        stockQuantity: 10,
+      });
+
+      // When
+      const res = await createOrder(oneTimeToken, {
+        items: [
+          { productVariantId, quantity: 1 },
+          { productVariantId, quantity: 2 },
+        ],
+        paymentMethod: 'LINE_PAY',
+        useDefaultShipping: true,
+      });
+
+      // Then
+      expect(res.status).toBe(201);
+
+      const rows = await dataSource.query(
+        `SELECT quantity FROM order_item WHERE order_id = $1`,
+        [res.body.data.orderId],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].quantity).toBe(3);
+    });
+
+    it('여러 SKU 를 한 번에 주문해도 배송비는 1회만 붙는다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await setUserProfile(userId);
+      const first = await createVariant({ price: 300 });
+      const second = await createVariant({ price: 200 });
+
+      // When
+      const res = await createOrder(oneTimeToken, {
+        items: [
+          { productVariantId: first.productVariantId, quantity: 1 },
+          { productVariantId: second.productVariantId, quantity: 1 },
+        ],
+        paymentMethod: 'LINE_PAY',
+        useDefaultShipping: true,
+      });
+
+      // Then
+      expect(res.status).toBe(201);
+      expect(res.body.data.totalAmount).toBe(560);
+    });
+
+    it('재고보다 많이 사려고 하면 409를 반환하고 주문을 만들지 않는다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await setUserProfile(userId);
+      const { productVariantId } = await createVariant({
+        price: 500,
+        stockQuantity: 1,
+      });
+
+      // When
+      const res = await createOrder(oneTimeToken, {
+        items: [{ productVariantId, quantity: 3 }],
+        paymentMethod: 'LINE_PAY',
+        useDefaultShipping: true,
+      });
+
+      // Then
+      expect(res.status).toBe(409);
+
+      const rows = await dataSource.query(`SELECT id FROM "order"`);
+      expect(rows).toHaveLength(0);
+    });
+
+    it('없는 SKU 면 404를 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+
+      // When
+      const res = await preview(oneTimeToken, {
+        items: [{ productVariantId: 999999, quantity: 1 }],
+        ...MAIN_ISLAND,
+      });
+
+      // Then
+      expect(res.status).toBe(404);
+    });
+
+    it('cartItemIds 와 items 를 함께 보내면 400을 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+      const { productVariantId } = await createVariant({ price: 500 });
+      const cartItemId = await addToCart(oneTimeToken, productVariantId);
+
+      // When
+      const res = await preview(oneTimeToken, {
+        cartItemIds: [cartItemId],
+        items: [{ productVariantId, quantity: 1 }],
+        ...MAIN_ISLAND,
+      });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('둘 다 보내지 않으면 400을 반환한다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+
+      // When
+      const res = await preview(oneTimeToken, { ...MAIN_ISLAND });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('cartItemIds 를 null 로 보내도 400을 반환한다', async () => {
+      // Given - @IsOptional 이 null 을 통과시켜 500 이 나던 구멍
+      const { oneTimeToken } = await signUpAndLogin();
+
+      // When
+      const res = await preview(oneTimeToken, {
+        cartItemIds: null,
+        ...MAIN_ISLAND,
+      });
+
+      // Then
+      expect(res.status).toBe(400);
+    });
+
+    it('preview 금액과 실제 주문 금액이 일치한다', async () => {
+      // Given
+      const { userId, oneTimeToken } = await signUpAndLogin();
+      await setUserProfile(userId, '澎湖縣');
+      const { productVariantId } = await createVariant({ price: 700 });
+
+      // When
+      const previewRes = await preview(oneTimeToken, {
+        items: [{ productVariantId, quantity: 1 }],
+        city: '澎湖縣',
+        district: '馬公市',
+      });
+      const orderRes = await createOrder(oneTimeToken, {
+        items: [{ productVariantId, quantity: 1 }],
+        paymentMethod: 'LINE_PAY',
+        useDefaultShipping: true,
+      });
+
+      // Then
+      expect(previewRes.body.data.shippingFee).toBe(100);
+      expect(orderRes.body.data.totalAmount).toBe(
+        previewRes.body.data.totalAmount,
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('POST /user/order/preview — 배송지 없이 부르기', () => {
+    it('city·district 를 생략하면 본섬 기준 예상 배송비를 준다', async () => {
+      // Given - 주소를 아직 등록하지 않은 회원도 주문서를 그릴 수 있어야 한다
+      const { oneTimeToken } = await signUpAndLogin();
+      const { productVariantId } = await createVariant({ price: 500 });
+      const cartItemId = await addToCart(oneTimeToken, productVariantId);
+
+      // When
+      const res = await preview(oneTimeToken, { cartItemIds: [cartItemId] });
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.isShippingEstimated).toBe(true);
+      expect(res.body.data.isRemoteIsland).toBe(false);
+      expect(res.body.data.shippingFee).toBe(60);
+      expect(res.body.data.totalAmount).toBe(560);
+    });
+
+    it('district 만 빠져도 예상값으로 처리한다', async () => {
+      // Given - 縣만으로는 외섬 판정이 갈리는 臺東縣 같은 경우가 있다
+      const { oneTimeToken } = await signUpAndLogin();
+      const { productVariantId } = await createVariant({ price: 500 });
+
+      // When
+      const res = await preview(oneTimeToken, {
+        items: [{ productVariantId, quantity: 1 }],
+        city: '澎湖縣',
+      });
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.isShippingEstimated).toBe(true);
+      expect(res.body.data.isRemoteIsland).toBe(false);
+      expect(res.body.data.shippingFee).toBe(60);
+    });
+
+    it('주소를 모두 보내면 예상값이 아니다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+      const { productVariantId } = await createVariant({ price: 500 });
+      const cartItemId = await addToCart(oneTimeToken, productVariantId);
+
+      // When
+      const res = await preview(oneTimeToken, {
+        cartItemIds: [cartItemId],
+        city: '澎湖縣',
+        district: '馬公市',
+      });
+
+      // Then
+      expect(res.body.data.isShippingEstimated).toBe(false);
+      expect(res.body.data.isRemoteIsland).toBe(true);
+      expect(res.body.data.shippingFee).toBe(100);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   describe('GET /user/order/:id', () => {
     it('주문 상세를 반환한다', async () => {
       // Given

@@ -82,6 +82,7 @@ import { UserEntity } from './entity/user.entity';
 import { UserRecentEntity } from './entity/user.recent.entity';
 import { VariantOptionEntity } from './entity/variant-option.entity';
 import { SortOrderHelper } from './helper/sort-order.helper';
+import { AdminMemberRepositoryService } from './service/admin-member.repository.service';
 import { AdminRoleRepositoryService } from './service/admin-role.repository.service';
 import { AdminRepositoryService } from './service/admin.repository.service';
 import { AiConsultLogRepositoryService } from './service/ai-consult-log.repository.service';
@@ -239,6 +240,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     CartRepositoryService,
     OrderRepositoryService,
     ShippingRepositoryService,
+    AdminMemberRepositoryService,
   ],
   exports: [
     SortOrderHelper,
@@ -276,6 +278,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     CartRepositoryService,
     OrderRepositoryService,
     ShippingRepositoryService,
+    AdminMemberRepositoryService,
   ],
 })
 export class RepositoryModule {}

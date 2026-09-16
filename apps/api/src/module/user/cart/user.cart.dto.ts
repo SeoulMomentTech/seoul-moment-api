@@ -245,8 +245,13 @@ export class GetUserCartCountResponse {
 }
 
 export class GetUserCartItemResponse {
-  @ApiProperty({ description: '장바구니 라인 ID', example: 1 })
-  cartItemId: number;
+  @ApiProperty({
+    description:
+      '장바구니 라인 ID. 주문서 미리보기를 items("구매하기")로 부르면 장바구니 라인이 아니라 null 이다',
+    example: 1,
+    nullable: true,
+  })
+  cartItemId: number | null;
 
   @ApiProperty({ description: '상품 아이템 ID', example: 10 })
   productItemId: number;
@@ -295,7 +300,7 @@ export class GetUserCartItemResponse {
     const productItem = variant?.productItem;
 
     return plainToInstance(this, {
-      cartItemId: line.cartItem.id,
+      cartItemId: line.cartItem.id ?? null,
       productItemId: productItem?.id ?? null,
       productVariantId: line.cartItem.productVariantId,
       productName: texts.getProductName(productItem?.product?.id),

@@ -18,13 +18,27 @@
   <div class="card">
     <h2><span class="verb post">POST</span> 주문서 금액 미리보기 <span class="path">/user/order/preview</span></h2>
     <div class="card-body">
-      <div class="field">
+      <div class="row">
+        <div class="field" style="width: 220px">
+          <label>주문 라인 가져오기</label>
+          <select id="lineSource">
+            <option value="cart">장바구니에서 (cartItemIds)</option>
+            <option value="items">상품상세 구매하기 (items)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" id="cartSourceField">
         <label>cartItemIds (쉼표로 구분)</label>
         <input id="cartItemIds" placeholder="12,13">
       </div>
+      <div class="field" id="itemsSourceField" hidden>
+        <label>items — <code>productVariantId:수량</code> 을 쉼표로 구분</label>
+        <input id="directItems" placeholder="101:2, 102:1">
+        <p class="hint">장바구니에 담지 않고 바로 주문서를 그립니다. 이미 담긴 수량과 합산되지 않습니다.</p>
+      </div>
       <div class="grid">
         <div class="field">
-          <label>city (縣市)</label>
+          <label>city (縣市) — 비우면 예상 배송비</label>
           <input id="city" value="臺北市" list="cityList">
           <datalist id="cityList">
             <option value="臺北市"></option>
@@ -35,7 +49,7 @@
           </datalist>
         </div>
         <div class="field">
-          <label>district (區/鄉)</label>
+          <label>district (區/鄉) — 비우면 예상 배송비</label>
           <input id="district" value="信義區" list="districtList">
           <datalist id="districtList">
             <option value="信義區"></option>
@@ -52,6 +66,7 @@
         <button class="ghost" data-addr="澎湖縣|馬公市">외섬 (澎湖縣)</button>
         <button class="ghost" data-addr="臺東縣|綠島鄉">외섬 (臺東縣 綠島鄉)</button>
         <button class="ghost" data-addr="臺東縣|臺東市">본섬 (臺東縣 臺東市)</button>
+        <button class="ghost" data-addr="|">주소 없음 (예상 배송비)</button>
       </div>
       <p class="hint">같은 <code>臺東縣</code> 이라도 <code>綠島鄉</code> 은 외섬, <code>臺東市</code> 는 본섬입니다. 버튼으로 바로 비교해 보세요.</p>
       <div id="previewView"></div>
@@ -137,6 +152,39 @@ function idList() {
     .filter((n) => Number.isInteger(n) && n > 0);
 }
 
+/** "101:2, 102" -> [{productVariantId: 101, quantity: 2}, {productVariantId: 102, quantity: 1}] */
+function directItems() {
+  return $('#directItems').value
+    .split(',')
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .map((chunk) => {
+      const [id, qty] = chunk.split(':');
+      return {
+        productVariantId: Number(id),
+        quantity: Number(qty || 1),
+      };
+    })
+    .filter((item) => Number.isInteger(item.productVariantId) && item.productVariantId > 0);
+}
+
+/** cartItemIds 와 items 는 둘 중 하나만 보내야 한다 — 함께 보내면 400 */
+function lineSource() {
+  return $('#lineSource').value === 'items'
+    ? { items: directItems() }
+    : { cartItemIds: idList() };
+}
+
+// .field 는 display:grid 라 hidden 속성만으로는 숨겨지지 않는다
+function syncLineSource() {
+  const isItems = $('#lineSource').value === 'items';
+  $('#cartSourceField').style.display = isItems ? 'none' : '';
+  $('#itemsSourceField').style.display = isItems ? '' : 'none';
+}
+
+$('#lineSource').addEventListener('change', syncLineSource);
+syncLineSource();
+
 $$('button[data-addr]').forEach((btn) => {
   btn.addEventListener('click', () => {
     const [city, district] = btn.dataset.addr.split('|');
@@ -153,7 +201,14 @@ function renderAmount(target, data, isPreview) {
 
   const lines = [
     ['상품 금액', money(data.totalProductAmount)],
-    [isPreview ? '배송비 (확정)' : '배송비', money(data.shippingFee)],
+    [
+      isPreview
+        ? data.isShippingEstimated
+          ? '배송비 (예상 · 본섬 기준)'
+          : '배송비 (확정)'
+        : '배송비',
+      money(data.shippingFee),
+    ],
     ['외섬 여부', data.isRemoteIsland ? '외섬 — 예 ' : '본섬 — 아니오'],
   ];
 
@@ -183,13 +238,15 @@ function renderAmount(target, data, isPreview) {
 }
 
 $('#preview').addEventListener('click', async () => {
-  const res = await api('POST', '/user/order/preview', {
-    body: {
-      cartItemIds: idList(),
-      city: $('#city').value.trim(),
-      district: $('#district').value.trim(),
-    },
-  });
+  const body = lineSource();
+  const city = $('#city').value.trim();
+  const district = $('#district').value.trim();
+
+  // 빈 문자열은 400 이다. 예상 배송비로 보려면 키 자체를 빼야 한다.
+  if (city) body.city = city;
+  if (district) body.district = district;
+
+  const res = await api('POST', '/user/order/preview', { body });
   showResult('#rawOut', res, 'POST /user/order/preview');
   renderAmount('#previewView', res.body && res.body.data, true);
 });
@@ -202,7 +259,7 @@ $('#useDefault').addEventListener('change', (e) => {
 $('#createOrder').addEventListener('click', async () => {
   const useDefault = $('#useDefault').checked;
   const body = {
-    cartItemIds: idList(),
+    ...lineSource(),
     paymentMethod: $('#paymentMethod').value,
     useDefaultShipping: useDefault,
   };

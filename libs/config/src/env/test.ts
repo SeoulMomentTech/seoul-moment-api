@@ -6,7 +6,7 @@ import { SupportEnv } from '../enum/config.enum';
 // LLM 미호출 모드로 동작하므로 getTestApp() 부팅이 깨지지 않는다.
 const getConfig = (): ConfigImpl => ({
   NODE_ENV: SupportEnv.TEST,
-  PORT: 3001,
+  PORT: parseInt(process.env.PORT || '3001'),
   API_VERSION: 'v1',
 
   IMAGE_DOMAIN_NAME: process.env.IMAGE_DOMAIN_NAME || '',
