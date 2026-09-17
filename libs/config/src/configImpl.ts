@@ -35,6 +35,8 @@ export interface ConfigImpl {
 
   // LINE Login (id_token audience = channel ID)
   LINE_CHANNEL_ID: string;
+  /** LINE Bot 전용 API 를 부를 때 요구하는 공유 시크릿 */
+  LINE_BOT_API_KEY: string;
 
   /**
    * Firebase 서비스 계정 키(JSON 원문 또는 base64). FCM 발송 자격증명이다.

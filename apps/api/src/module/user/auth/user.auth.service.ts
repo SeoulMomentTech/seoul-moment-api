@@ -1,6 +1,7 @@
 import { JwtType } from '@app/auth/auth.dto';
 import { CommonAuthService } from '@app/auth/auth.service';
 import { RedisKey } from '@app/cache/cache.dto';
+import { CacheService } from '@app/cache/cache.service';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { LoggerService } from '@app/common/log/logger.service';
@@ -26,7 +27,8 @@ import {
   PostGoogleSignupRequest,
   PostLineBotEmailCodeRequest,
   PostLineBotEmailVerifyRequest,
-  PostLineBotEmailVerifyResponse,
+  PostLineBotLoginRequest,
+  PostLineBotMemberResponse,
   PostLineEmailCodeRequest,
   PostLineEmailVerifyRequest,
   PostLineSignupRequest,
@@ -41,6 +43,12 @@ import {
   PostUserSignUpRequest,
 } from './user.auth.dto';
 import { AuthService } from '../../auth/auth.service';
+
+/** 인증 코드와 같은 수명. 코드는 살아 있는데 주소만 사라지면 검증이 헛돈다 */
+const LINE_BOT_EMAIL_TTL_SECONDS = 60 * 5;
+
+/** user.nickname 컬럼 길이 */
+const NICKNAME_MAX_LENGTH = 255;
 
 /** SNS idToken 검증 결과. name/picture 는 provider가 주지 않으면 null 이다. */
 interface SnsLoginProfile {
@@ -58,6 +66,7 @@ export class UserAuthService {
     private readonly userRepositoryService: UserRepositoryService,
     private readonly userSnsRepositoryService: UserSnsRepositoryService,
     private readonly commonAuthService: CommonAuthService,
+    private readonly cacheService: CacheService,
     private readonly authService: AuthService,
     private readonly externalGoogleAuthService: ExternalGoogleAuthService,
     private readonly externalLineAuthService: ExternalLineAuthService,
@@ -148,74 +157,218 @@ export class UserAuthService {
   }
 
   /**
+   * LINE Bot 전용 회원 조회 + 로그인.
+   *
+   * lineUserId 로 연결된 회원이 있고 이메일까지 맞으면 그 자리에서 로그인
+   * 토큰을 준다. Bot 은 인증 없이 바로 주문을 이어갈 수 있다.
+   * 못 찾으면 404 이고, Bot 은 email/code → email/verify 인증으로 넘어간다.
+   */
+  async lineBotLogin({
+    lineUserId,
+    email,
+  }: PostLineBotLoginRequest): Promise<PostLineBotMemberResponse> {
+    const linkedSns = await this.userSnsRepositoryService.findByProvider(
+      UserSnsProvider.LINE,
+      lineUserId,
+    );
+    const user = linkedSns
+      ? await this.userRepositoryService.getUserById(linkedSns.userId)
+      : null;
+
+    // 연결이 없든 이메일이 다르든 Bot 이 할 일은 같다(이메일 인증으로 이동).
+    // 어느 쪽인지는 404 의 emailJoined 로 구분한다.
+    if (!user || user.email.toLowerCase() !== email) {
+      throw await this.lineBotMemberNotFound(email);
+    }
+
+    return this.buildLineBotMember(user);
+  }
+
+  /**
    * LINE Bot 전용 회원 인증 - 인증 코드 발송.
    *
    * 웹의 line/email/code 와 달리 emailToken 을 쓰지 않는다. Bot 은 로그인
-   * 흐름을 태울 수 없고 lineUserId 만 들고 있기 때문이다. 대신 이미 LINE 이
-   * 연결된 회원만 대상으로 하고, 입력한 이메일이 그 회원의 이메일과 일치할
-   * 때만 코드를 보낸다. 일치 검사 없이 보내면 lineUserId 를 아는 쪽이 임의의
-   * 주소로 우리 이름의 메일을 뿌릴 수 있다.
+   * 흐름을 태울 수 없고 lineUserId 만 들고 있기 때문이다.
+   *
+   * 가입 여부·LINE 연결 여부를 보지 않는다. 미가입 이메일이면 검증 단계에서
+   * 그대로 가입시키는 흐름이라, 여기서 막으면 Bot 만으로 가입할 수 없다.
    */
   async lineBotEmailCode({
     lineUserId,
     email,
   }: PostLineBotEmailCodeRequest): Promise<void> {
-    const user = await this.getUserByLineUserId(lineUserId);
-
-    if (user.email.toLowerCase() !== email.trim().toLowerCase()) {
-      throw new ServiceError(
-        '회원 정보와 이메일이 일치하지 않습니다.',
-        ServiceErrorCode.UNAUTHORIZED,
-      );
-    }
-
-    // 코드는 회원 이메일로 보내되 캐시 키는 lineUserId 로 둔다. 검증 요청이
-    // 이메일을 다시 주지 않기도 하고, 이메일을 키로 쓰면 회원가입·비밀번호
-    // 찾기 코드와 같은 자리를 써서 서로 덮어쓴다.
+    // 캐시 키는 lineUserId 로 둔다. 검증 요청이 이메일을 다시 주지 않기도 하고,
+    // 이메일을 키로 쓰면 회원가입·비밀번호 찾기 코드와 같은 자리를 써서
+    // 서로 덮어쓴다.
     await this.commonAuthService.authEmailWithKey(
       this.lineBotEmailCacheKey(lineUserId),
-      user.email,
+      email,
+    );
+
+    // 검증 요청이 이메일을 주지 않으므로 어느 주소로 보냈는지를 들고 있는다.
+    await this.cacheService.set(
+      this.lineBotEmailAddressCacheKey(lineUserId),
+      email,
+      LINE_BOT_EMAIL_TTL_SECONDS,
     );
   }
 
   /**
    * LINE Bot 전용 회원 인증 - 인증 코드 검증.
-   * 성공하면 Bot 이 lineUserId ↔ 회원 매핑을 저장할 수 있도록 회원 정보를 준다.
+   *
+   * 코드가 맞으면 메일함을 연 사람이 본인이라는 것이 확인된다. 그 자리에서
+   *  - 가입된 이메일이면 그 회원에 LINE 계정을 연결하고
+   *  - 미가입 이메일이면 회원을 만들어(자동 가입) 연결한다
+   * 어느 쪽이든 조회 API 와 같은 모양(회원 정보 + 로그인 토큰)을 돌려주므로
+   * Bot 은 분기 없이 다음 화면으로 넘어간다.
    */
+  @Transactional()
   async lineBotEmailVerify({
     lineUserId,
     code,
-  }: PostLineBotEmailVerifyRequest): Promise<PostLineBotEmailVerifyResponse> {
-    // 코드 발급 뒤 연결이 끊겼을 수 있으므로 검증 시점에 다시 확인한다.
-    const user = await this.getUserByLineUserId(lineUserId);
-
+  }: PostLineBotEmailVerifyRequest): Promise<PostLineBotMemberResponse> {
     await this.commonAuthService.verifyEmailWithKey(
       this.lineBotEmailCacheKey(lineUserId),
       parseInt(code, 10),
     );
 
-    return PostLineBotEmailVerifyResponse.from(user);
+    const addressKey = this.lineBotEmailAddressCacheKey(lineUserId);
+    const email = await this.cacheService.find(addressKey);
+
+    if (!email) {
+      throw new ServiceError(
+        '인증 코드가 만료되었습니다.',
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
+
+    await this.cacheService.del(addressKey);
+
+    const user = (await this.userRepositoryService.existUserByEmail(email))
+      ? await this.userRepositoryService.getUserByEmail(email)
+      : await this.createLineBotUser(email);
+
+    await this.linkLineBotAccount(user, lineUserId);
+
+    return this.buildLineBotMember(user);
   }
 
-  /** LINE 이 연결된 회원을 찾는다. 연결된 적이 없으면 404 로 끊는다. */
-  private async getUserByLineUserId(lineUserId: string): Promise<UserEntity> {
-    const linkedSns = await this.userSnsRepositoryService.findByProvider(
+  /**
+   * 인증만 마친 이메일로 회원을 만든다(Bot 자동 가입).
+   *
+   * 비밀번호는 SNS 가입과 같이 사용 불가한 임의값이다. 이메일 로그인은
+   * 못 하고 LINE Bot 또는 웹 LINE 로그인으로만 들어온다.
+   *
+   * 마케팅 수신은 전부 동의로 저장한다 — 동의 안내와 수집은 LINE Bot 대화에서
+   * 하기로 했고, 서버는 그 결과를 받는 자리가 없다. 동의 시각은 가입 시각이다.
+   */
+  private async createLineBotUser(email: string): Promise<UserEntity> {
+    const agreedAt = new Date();
+
+    return this.userRepositoryService.createUser(
+      plainToInstance(UserEntity, {
+        email,
+        password: await bcrypt.hash(randomBytes(48).toString('hex'), 10),
+        nickname: await this.buildLineBotNickname(email),
+        newProductDate: agreedAt,
+        adAgreeDate: agreedAt,
+        recommendDate: agreedAt,
+      }),
+    );
+  }
+
+  /**
+   * 닉네임을 받을 자리가 없어 이메일을 그대로 쓴다. UNIQUE 라 이미 쓰이고
+   * 있으면 짧은 꼬리를 붙인다. 컬럼이 255자라 넘치지 않게 자른다.
+   */
+  private async buildLineBotNickname(email: string): Promise<string> {
+    const base = email.slice(0, NICKNAME_MAX_LENGTH);
+
+    if (!(await this.userRepositoryService.existUserByNickname(base))) {
+      return base;
+    }
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const suffix = `-${randomBytes(3).toString('hex')}`;
+      const candidate = `${base.slice(0, NICKNAME_MAX_LENGTH - suffix.length)}${suffix}`;
+
+      if (!(await this.userRepositoryService.existUserByNickname(candidate))) {
+        return candidate;
+      }
+    }
+
+    throw new ServiceError(
+      '닉네임을 만들지 못했습니다. 잠시 후 다시 시도해주세요.',
+      ServiceErrorCode.INTERNAL_SERVER_ERROR,
+    );
+  }
+
+  /**
+   * 인증을 마친 회원에게 이 LINE 계정을 붙인다.
+   * user 1 : sns 1 규칙은 웹 흐름과 같게 지킨다.
+   */
+  private async linkLineBotAccount(
+    user: UserEntity,
+    lineUserId: string,
+  ): Promise<void> {
+    const existing = await this.userSnsRepositoryService.findByProvider(
       UserSnsProvider.LINE,
       lineUserId,
     );
 
-    if (!linkedSns) {
-      throw new ServiceError(
-        'LINE 계정에 연결된 회원이 없습니다.',
-        ServiceErrorCode.NOT_FOUND_DATA,
-      );
+    if (existing) {
+      if (existing.userId !== user.id) {
+        throw new ServiceError(
+          '이미 다른 계정에 연결된 LINE 계정입니다.',
+          ServiceErrorCode.CONFLICT,
+        );
+      }
+
+      return;
     }
 
-    return this.userRepositoryService.getUserById(linkedSns.userId);
+    await this.assertSnsNotLinked(user.id);
+
+    await this.userSnsRepositoryService.createUserSns({
+      userId: user.id,
+      provider: UserSnsProvider.LINE,
+      providerUserId: lineUserId,
+      providerEmail: user.email,
+    });
+  }
+
+  /** 조회·인증이 같은 모양을 돌려주도록 토큰 발급까지 한자리에서 한다. */
+  private async buildLineBotMember(
+    user: UserEntity,
+  ): Promise<PostLineBotMemberResponse> {
+    const tokens = await this.issueTokens(user.id);
+
+    return PostLineBotMemberResponse.from(user, tokens);
+  }
+
+  /**
+   * 조회 실패 404. 그 이메일이 우리 DB 에 있는지를 함께 실어 보낸다.
+   * Bot 이 "이메일 인증으로 연결" 과 "웹에서 회원가입" 을 갈라야 하기 때문이다.
+   */
+  private async lineBotMemberNotFound(email: string): Promise<ServiceError> {
+    const emailJoined =
+      await this.userRepositoryService.existUserByEmail(email);
+
+    return new ServiceError(
+      emailJoined
+        ? '이 LINE 계정에 연결된 회원이 없습니다. 이메일 인증이 필요합니다.'
+        : '가입된 회원이 없는 이메일입니다.',
+      ServiceErrorCode.NOT_FOUND_DATA,
+      { emailJoined },
+    );
   }
 
   private lineBotEmailCacheKey(lineUserId: string): string {
     return `${RedisKey.LINE_BOT_EMAIL}:${lineUserId}`;
+  }
+
+  private lineBotEmailAddressCacheKey(lineUserId: string): string {
+    return `${RedisKey.LINE_BOT_EMAIL}:${lineUserId}:address`;
   }
 
   /**

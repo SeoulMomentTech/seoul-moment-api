@@ -34,6 +34,7 @@ const getConfig = (): ConfigImpl => ({
   GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
 
   LINE_CHANNEL_ID: process.env.LINE_CHANNEL_ID || '',
+  LINE_BOT_API_KEY: process.env.LINE_BOT_API_KEY || '',
 
   FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT || '',
 
