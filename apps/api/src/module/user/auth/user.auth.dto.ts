@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { plainToInstance } from 'class-transformer';
+import { plainToInstance, Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsDefined,
@@ -446,13 +446,22 @@ export class PostLineBotEmailCodeRequest {
 
   @ApiProperty({
     description:
-      '사용자가 LINE Bot 에 입력한 이메일. 회원 이메일과 일치해야 한다.',
+      '사용자가 LINE Bot 에 입력한 이메일. 회원 이메일과 일치해야 한다. ' +
+      '대화창에서 받은 값이라 앞뒤 공백·대문자는 서버가 다듬는다.',
     example: 'test@test.com',
   })
+  // 채팅 입력이라 " Test@Test.com " 처럼 들어온다. 다듬기 전에 @IsEmail 이
+  // 먼저 돌면 400 이 나므로 여기서 정리한 값을 검증한다.
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   @IsEmail()
   @IsDefined()
   email: string;
 }
+
+/** LINE Bot 전용 회원 조회 + 로그인 요청. 코드 발송 요청과 본문이 같다. */
+export class PostLineBotLoginRequest extends PostLineBotEmailCodeRequest {}
 
 /**
  * LINE Bot 전용 회원 인증 - 인증 코드 검증 요청.
@@ -478,8 +487,12 @@ export class PostLineBotEmailVerifyRequest {
   code: string;
 }
 
-/** 인증에 성공한 회원 정보. LINE Bot 이 lineUserId ↔ 회원 매핑을 저장하는 데 쓴다. */
-export class PostLineBotEmailVerifyResponse {
+/**
+ * LINE Bot 이 받는 회원 정보 + 로그인 토큰.
+ * 조회(line-bot/login)와 인증(line-bot/email/verify)이 같은 모양을 돌려준다.
+ * Bot 은 lineUserId ↔ 회원 매핑을 저장하고, 토큰으로 바로 주문을 이어간다.
+ */
+export class PostLineBotMemberResponse {
   @ApiProperty({ description: '회원 ID', example: 1 })
   @IsNumber()
   @IsDefined()
@@ -490,16 +503,41 @@ export class PostLineBotEmailVerifyResponse {
   @IsDefined()
   email: string;
 
-  @ApiProperty({ description: '회원 닉네임', example: 'nickname' })
+  @ApiProperty({
+    description: '회원 닉네임. 비어 있으면 이메일을 그대로 내려준다',
+    example: 'nickname',
+  })
   @IsString()
   @IsDefined()
   nickname: string;
 
-  static from(user: { id: number; email: string; nickname: string }) {
+  @ApiProperty({
+    description: '로그인 토큰 (one time token). 회원 API 호출에 그대로 쓴다',
+    example: 'token',
+  })
+  @IsString()
+  @IsDefined()
+  token: string;
+
+  @ApiProperty({
+    description: '리프레시 토큰. 만료 시 one-time-token 재발급에 쓴다',
+    example: 'refreshToken',
+  })
+  @IsString()
+  @IsDefined()
+  refreshToken: string;
+
+  static from(
+    user: { id: number; email: string; nickname: string },
+    tokens: { token: string; refreshToken: string },
+  ) {
     return plainToInstance(this, {
       userId: user.id,
       email: user.email,
-      nickname: user.nickname,
+      // Bot 화면에 이름이 빈칸으로 뜨지 않도록 이메일로 대체한다.
+      nickname: user.nickname?.trim() || user.email,
+      token: tokens.token,
+      refreshToken: tokens.refreshToken,
     });
   }
 }

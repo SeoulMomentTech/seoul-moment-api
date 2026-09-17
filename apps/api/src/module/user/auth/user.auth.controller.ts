@@ -16,7 +16,11 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation } from '@nestjs/swagger';
+import {
+  LINE_BOT_KEY_HEADER,
+  LineBotKeyGuard,
+} from 'apps/api/src/guard/line-bot-key.guard';
 import { UserOneTimeTokenGuard } from 'apps/api/src/guard/user-one-time-token.guard';
 import { UserRefreshTokenGuard } from 'apps/api/src/guard/user-refresh-token.guard';
 import { plainToInstance } from 'class-transformer';
@@ -32,7 +36,8 @@ import {
   PostInfoPhoneVerifyRequest,
   PostLineBotEmailCodeRequest,
   PostLineBotEmailVerifyRequest,
-  PostLineBotEmailVerifyResponse,
+  PostLineBotLoginRequest,
+  PostLineBotMemberResponse,
   PostLineEmailCodeRequest,
   PostLineEmailVerifyRequest,
   PostLineLinkRequest,
@@ -93,24 +98,46 @@ const LINE_BOT_AUTH_FLOW = `**LINE Bot 회원 인증 플로우 (Bot 전용)**
 웹의 LINE 로그인 흐름과 별개다. Bot 은 idToken/emailToken 을 만들 수 없고
 Messaging API 가 주는 lineUserId 만 들고 있으므로, 그 값으로 회원을 찾는다.
 
+0. POST /user/auth/line-bot/login        { lineUserId, email }
+   - 이미 연결된 회원이면 **인증 없이** { userId, email, nickname, token, refreshToken } 반환
+   - 404 면 아래 1~2 로 간다. 404 본문의 data.emailJoined 로 분기한다
+       · emailJoined=true  → 가입은 돼 있고 이 LINE 계정만 연결 전 → 1단계로
+       · emailJoined=false → 우리 회원이 아님 → 웹 회원가입으로 안내
 1. POST /user/auth/line-bot/email/code   { lineUserId, email }
-   - lineUserId 로 LINE 이 연결된 회원을 찾는다
-   - 입력한 email 이 그 회원의 이메일과 같으면 회원 이메일로 6자리 코드를 발송
+   - 입력한 주소로 6자리 코드를 발송한다 (가입 여부를 보지 않는다)
 2. POST /user/auth/line-bot/email/verify { lineUserId, code }
-   - 코드 검증 후 { userId, email, nickname } 반환 → Bot 이 lineUserId ↔ 회원 매핑 저장
+   - 코드 검증 → 가입된 이메일이면 **LINE 계정을 연결**,
+     미가입 이메일이면 **회원을 자동 생성**한 뒤 연결
+   - 어느 쪽이든 0단계와 같은 응답(회원 정보 + 로그인 토큰)을 반환한다
+   - 이후부터는 0단계만으로 로그인된다
 
-전제: 해당 LINE 계정이 앱/웹에서 LINE 로그인으로 회원과 연결돼 있어야 한다
-(user_sns 에 LINE 행이 있어야 함). 연결 전이면 404 이므로 Bot 은 LINE 로그인
-안내로 보내야 한다. 코드는 5분간 유효하고, 캐시 키가 lineUserId 라 회원가입 ·
-비밀번호 찾기 인증 코드와 서로 덮어쓰지 않는다.`;
+호출 규칙: 세 API 모두 \`${LINE_BOT_KEY_HEADER}\` 헤더에 파트너와 나눠 가진
+시크릿을 실어야 한다. 없거나 틀리면 401 이다. Bot 서버에서만 부르는 API 라
+이 값이 사실상 호출 권한이다 — 클라이언트(LIFF/앱)에 심지 않는다.
+
+메일함을 여는 것으로 본인 확인이 끝나므로 2단계에서 가입·연결을 만든다.
+웹에서 LINE 로그인이나 회원가입을 먼저 하지 않아도 Bot 만으로 완성된다.
+자동 가입 회원은 비밀번호가 사용 불가한 임의값이라 이메일 로그인은 할 수 없고,
+닉네임은 이메일을 그대로 쓴다(중복이면 짧은 꼬리가 붙는다).
+마케팅 수신 동의는 받은 적이 없으므로 전부 미동의로 남는다.
+코드는 5분간 유효하고, 캐시 키가 lineUserId 라 회원가입 · 비밀번호 찾기
+인증 코드와 서로 덮어쓰지 않는다.
+
+공통 응답 규칙
+- \`token\` 은 웹 로그인과 같은 one time token 이라 회원 API(\`Authorization: Bearer\`)에 그대로 쓴다. 만료되면 \`refreshToken\` 으로 \`GET /user/auth/one-time-token\` 을 부른다.
+- \`nickname\` 이 비어 있는 회원은 \`email\` 을 대신 내려준다 — Bot 화면에 빈칸이 뜨지 않게 하기 위해서다.`;
+
+const LINE_BOT_LOGIN_DESCRIPTION = `${LINE_BOT_AUTH_FLOW}
+
+▶ 현재 API: **0단계** — lineUserId 로 연결된 회원을 찾아 이메일까지 맞으면 로그인 토큰을 준다. 연결이 없거나 이메일이 다르면 둘 다 **404** 다(Bot 이 할 일이 같다). 404 본문의 \`data.emailJoined\` 로 "이메일 인증으로 연결" 과 "웹 회원가입" 을 가른다.`;
 
 const LINE_BOT_CODE_DESCRIPTION = `${LINE_BOT_AUTH_FLOW}
 
-▶ 현재 API: **1단계** — lineUserId 로 연결된 회원을 찾고, 입력한 email 이 그 회원의 이메일과 일치할 때만 회원 이메일로 코드를 발송한다. 일치 검사를 두는 이유는 lineUserId 만 아는 쪽이 임의의 주소로 우리 이름의 메일을 보내게 두지 않기 위해서다.`;
+▶ 현재 API: **1단계** — 입력한 주소로 코드를 발송한다. 가입 여부도 LINE 연결 여부도 보지 않는다. 미가입 이메일은 2단계에서 그대로 가입되기 때문이다. 같은 lineUserId 로 다시 부르면 코드가 새로 덮어써진다.`;
 
 const LINE_BOT_VERIFY_DESCRIPTION = `${LINE_BOT_AUTH_FLOW}
 
-▶ 현재 API: **2단계** — 코드를 검증하고 인증된 회원 정보를 반환한다. 코드가 lineUserId 로 저장돼 있어 이메일을 다시 받지 않는다. 로그인 토큰은 발급하지 않는다(Bot 은 회원 식별만 필요).`;
+▶ 현재 API: **2단계** — 코드를 검증하고, 미가입이면 **회원을 만든 뒤**, 이 LINE 계정을 연결하고 회원 정보와 로그인 토큰을 반환한다. 코드가 lineUserId 로 저장돼 있어 이메일을 다시 받지 않는다. 이미 다른 회원에게 연결된 LINE 계정이거나, 회원에게 이미 다른 SNS 가 연결돼 있으면 409 다.`;
 
 @Controller('user/auth')
 export class UserAuthController {
@@ -330,20 +357,45 @@ export class UserAuthController {
     return new ResponseDataDto(plainToInstance(PostLineLoginResponse, result));
   }
 
+  @Post('line-bot/login')
+  @ApiOperation({
+    summary: '[LINE Bot] 회원 조회 + 로그인',
+    description: LINE_BOT_LOGIN_DESCRIPTION,
+  })
+  @ApiHeader({
+    name: LINE_BOT_KEY_HEADER,
+    required: true,
+    description: 'LINE Bot 전용 공유 시크릿',
+  })
+  @UseGuards(LineBotKeyGuard)
+  @HttpCode(HttpStatus.OK)
+  @ResponseData(PostLineBotMemberResponse)
+  @ResponseException(HttpStatus.UNAUTHORIZED, 'LINE Bot 인증 키 오류')
+  @ResponseException(
+    HttpStatus.NOT_FOUND,
+    '연결된 회원 없음 또는 이메일 불일치 (data.emailJoined 로 분기)',
+  )
+  async postLineBotLogin(
+    @Body() body: PostLineBotLoginRequest,
+  ): Promise<ResponseDataDto<PostLineBotMemberResponse>> {
+    const result = await this.userAuthService.lineBotLogin(body);
+
+    return new ResponseDataDto(result);
+  }
+
   @Post('line-bot/email/code')
   @ApiOperation({
     summary: '[LINE Bot] 회원 인증 코드 발송',
     description: LINE_BOT_CODE_DESCRIPTION,
   })
+  @ApiHeader({
+    name: LINE_BOT_KEY_HEADER,
+    required: true,
+    description: 'LINE Bot 전용 공유 시크릿',
+  })
+  @UseGuards(LineBotKeyGuard)
   @HttpCode(HttpStatus.OK)
-  @ResponseException(
-    HttpStatus.UNAUTHORIZED,
-    '입력한 이메일이 회원 이메일과 불일치',
-  )
-  @ResponseException(
-    HttpStatus.NOT_FOUND,
-    'lineUserId 로 연결된 회원 없음 (LINE 로그인 연결 필요)',
-  )
+  @ResponseException(HttpStatus.UNAUTHORIZED, 'LINE Bot 인증 키 오류')
   @ResponseException(HttpStatus.INTERNAL_SERVER_ERROR, '인증 메일 발송 실패')
   async postLineBotEmailCode(@Body() body: PostLineBotEmailCodeRequest) {
     await this.userAuthService.lineBotEmailCode(body);
@@ -354,16 +406,25 @@ export class UserAuthController {
     summary: '[LINE Bot] 회원 인증 코드 검증',
     description: LINE_BOT_VERIFY_DESCRIPTION,
   })
+  @ApiHeader({
+    name: LINE_BOT_KEY_HEADER,
+    required: true,
+    description: 'LINE Bot 전용 공유 시크릿',
+  })
+  @UseGuards(LineBotKeyGuard)
   @HttpCode(HttpStatus.OK)
-  @ResponseException(HttpStatus.UNAUTHORIZED, '인증 코드 만료 또는 불일치')
   @ResponseException(
-    HttpStatus.NOT_FOUND,
-    'lineUserId 로 연결된 회원 없음 (LINE 로그인 연결 필요)',
+    HttpStatus.UNAUTHORIZED,
+    '인증 코드 만료 · 불일치 또는 LINE Bot 인증 키 오류',
   )
-  @ResponseData(PostLineBotEmailVerifyResponse)
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '이미 다른 계정에 연결된 LINE 계정 또는 이미 다른 SNS 가 연결된 회원',
+  )
+  @ResponseData(PostLineBotMemberResponse)
   async postLineBotEmailVerify(
     @Body() body: PostLineBotEmailVerifyRequest,
-  ): Promise<ResponseDataDto<PostLineBotEmailVerifyResponse>> {
+  ): Promise<ResponseDataDto<PostLineBotMemberResponse>> {
     const result = await this.userAuthService.lineBotEmailVerify(body);
 
     return new ResponseDataDto(result);

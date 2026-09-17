@@ -1,4 +1,5 @@
 import { CommonAuthModule } from '@app/auth/auth.module';
+import { CacheModule } from '@app/cache/cache.module';
 import { Configuration } from '@app/config/configuration';
 import { S3Module } from '@app/external/aws/aws.module';
 import { ExternalGoogleModule } from '@app/external/google/google.module';
@@ -13,6 +14,7 @@ import { AuthModule } from '../../auth/auth.module';
 @Module({
   imports: [
     RepositoryModule,
+    CacheModule,
     CommonAuthModule.forRoot(Configuration.getConfig().JWT_SECRET),
     AuthModule,
     ExternalGoogleModule,

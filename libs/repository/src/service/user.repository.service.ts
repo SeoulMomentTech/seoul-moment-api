@@ -163,6 +163,10 @@ export class UserRepositoryService {
     return result;
   }
 
+  async existUserByNickname(nickname: string): Promise<boolean> {
+    return this.userRepository.exists({ where: { nickname } });
+  }
+
   async existUserByPhone(phone: string): Promise<boolean> {
     const result = await this.userRepository.exists({ where: { phone } });
 

@@ -3153,4 +3153,594 @@ describe('UserAuthController (E2E)', () => {
       });
     });
   });
+
+  // -----------------------------------------------------------------------
+  // LINE Bot 회원 인증 (Bot 전용)
+  // -----------------------------------------------------------------------
+  describe('LINE Bot 회원 인증', () => {
+    const BOT_KEY_HEADER = 'x-line-bot-key';
+    const BOT_KEY = 'test-line-bot-key';
+    const LOGIN_URL = `${BASE_URL}/line-bot/login`;
+    const CODE_URL = `${BASE_URL}/line-bot/email/code`;
+    const VERIFY_URL = `${BASE_URL}/line-bot/email/verify`;
+
+    function buildLineUserId() {
+      return `U${faker.string.alphanumeric(32).toLowerCase()}`;
+    }
+
+    /** 이메일로 가입만 한 회원. LINE 연결은 없다 */
+    async function createMember(overrides?: { nickname?: string }) {
+      const body = buildSignUpBody(overrides);
+      await request(app.getHttpServer())
+        .post(`${BASE_URL}/signup`)
+        .send(body)
+        .expect(204);
+
+      const [{ id }] = await dataSource.query(
+        `SELECT id FROM "user" WHERE email = $1`,
+        [body.email],
+      );
+
+      return { userId: id as number, ...body };
+    }
+
+    async function linkLine(userId: number, email: string) {
+      const lineUserId = buildLineUserId();
+      await dataSource.query(
+        `INSERT INTO user_sns (user_id, provider, provider_user_id, provider_email)
+         VALUES ($1, 'LINE', $2, $3)`,
+        [userId, lineUserId, email],
+      );
+
+      return lineUserId;
+    }
+
+    async function sendCode(lineUserId: string, email: string) {
+      const res = await request(app.getHttpServer())
+        .post(CODE_URL)
+        .set(BOT_KEY_HEADER, BOT_KEY)
+        .send({ lineUserId, email });
+      expect(res.status).toBe(200);
+
+      const code = await cacheService.find(`line_bot_email:${lineUserId}`);
+      expect(code).toMatch(/^\d{6}$/);
+
+      return code;
+    }
+
+    function expectMemberPayload(
+      data: Record<string, unknown>,
+      member: { userId: number; email: string; nickname: string },
+    ) {
+      expect(data.userId).toBe(member.userId);
+      expect(data.email).toBe(member.email);
+      expect(data.nickname).toBe(member.nickname);
+      expect(data.token).toEqual(expect.any(String));
+      expect(data.refreshToken).toEqual(expect.any(String));
+    }
+
+    describe('시크릿 헤더', () => {
+      it('헤더가 없으면 401을 반환한다', async () => {
+        // Given · When
+        const res = await request(app.getHttpServer()).post(LOGIN_URL).send({
+          lineUserId: buildLineUserId(),
+          email: faker.internet.email().toLowerCase(),
+        });
+
+        // Then
+        expect(res.status).toBe(401);
+      });
+
+      it('헤더 값이 틀리면 401을 반환한다', async () => {
+        // Given · When
+        const res = await request(app.getHttpServer())
+          .post(CODE_URL)
+          .set(BOT_KEY_HEADER, 'wrong-key')
+          .send({
+            lineUserId: buildLineUserId(),
+            email: faker.internet.email().toLowerCase(),
+          });
+
+        // Then
+        expect(res.status).toBe(401);
+      });
+
+      it('키가 맞아도 본문이 잘못되면 400이다 (가드가 먼저 통과했다는 뜻)', async () => {
+        // Given · When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId: buildLineUserId(), code: 'nope' });
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe('POST /user/auth/line-bot/login', () => {
+      it('연결된 회원이면 인증 없이 회원 정보와 토큰을 반환한다', async () => {
+        // Given
+        const member = await createMember();
+        const lineUserId = await linkLine(member.userId, member.email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(LOGIN_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, email: member.email });
+
+        // Then
+        expect(res.status).toBe(200);
+        expectMemberPayload(res.body.data, member);
+      });
+
+      it('발급된 토큰으로 회원 API를 바로 호출할 수 있다', async () => {
+        // Given
+        const member = await createMember();
+        const lineUserId = await linkLine(member.userId, member.email);
+        const loginRes = await request(app.getHttpServer())
+          .post(LOGIN_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, email: member.email })
+          .expect(200);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .get('/user/info')
+          .set('Authorization', `Bearer ${loginRes.body.data.token}`);
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.email).toBe(member.email);
+      });
+
+      it('가입은 했지만 LINE 연결 전이면 404 + emailJoined=true 를 반환한다', async () => {
+        // Given
+        const member = await createMember();
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(LOGIN_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId: buildLineUserId(), email: member.email });
+
+        // Then - Bot 은 이메일 인증(1단계)으로 간다
+        expect(res.status).toBe(404);
+        expect(res.body.data.emailJoined).toBe(true);
+      });
+
+      it('우리 회원이 아니면 404 + emailJoined=false 를 반환한다', async () => {
+        // Given · When
+        const res = await request(app.getHttpServer())
+          .post(LOGIN_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({
+            lineUserId: buildLineUserId(),
+            email: faker.internet.email().toLowerCase(),
+          });
+
+        // Then - Bot 은 웹 회원가입으로 안내한다
+        expect(res.status).toBe(404);
+        expect(res.body.data.emailJoined).toBe(false);
+      });
+
+      it('연결은 됐지만 이메일이 다르면 404를 반환한다', async () => {
+        // Given
+        const member = await createMember();
+        const lineUserId = await linkLine(member.userId, member.email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(LOGIN_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, email: faker.internet.email().toLowerCase() });
+
+        // Then
+        expect(res.status).toBe(404);
+        expect(res.body.data.emailJoined).toBe(false);
+      });
+
+      it('대소문자·앞뒤 공백이 달라도 같은 이메일로 본다', async () => {
+        // Given
+        const member = await createMember();
+        const lineUserId = await linkLine(member.userId, member.email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(LOGIN_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, email: `  ${member.email.toUpperCase()}  ` });
+
+        // Then
+        expect(res.status).toBe(200);
+      });
+    });
+
+    describe('POST /user/auth/line-bot/email/code', () => {
+      it('LINE 연결 전이어도 가입된 이메일이면 코드를 보낸다', async () => {
+        // Given - user_sns 에 LINE 행이 없다
+        const member = await createMember();
+        const lineUserId = buildLineUserId();
+        const spy = jest.spyOn(mailService, 'sendMailByTemplate');
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(CODE_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, email: member.email });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(await cacheService.find(`line_bot_email:${lineUserId}`)).toMatch(
+          /^\d{6}$/,
+        );
+        expect(spy).toHaveBeenCalledWith(
+          member.email,
+          expect.any(String),
+          expect.anything(),
+          expect.objectContaining({ code: expect.any(Number) }),
+        );
+      });
+
+      it('가입되지 않은 이메일도 그대로 코드를 보낸다 (검증 단계에서 가입시킨다)', async () => {
+        // Given
+        const lineUserId = buildLineUserId();
+        const email = faker.internet.email().toLowerCase();
+        const spy = jest.spyOn(mailService, 'sendMailByTemplate');
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(CODE_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, email });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(await cacheService.find(`line_bot_email:${lineUserId}`)).toMatch(
+          /^\d{6}$/,
+        );
+        expect(spy).toHaveBeenCalledWith(
+          email,
+          expect.any(String),
+          expect.anything(),
+          expect.objectContaining({ code: expect.any(Number) }),
+        );
+      });
+
+      it('다시 요청하면 코드가 새로 덮어써진다', async () => {
+        // Given
+        const member = await createMember();
+        const lineUserId = buildLineUserId();
+        const first = await sendCode(lineUserId, member.email);
+
+        // When
+        const second = await sendCode(lineUserId, member.email);
+
+        // Then
+        expect(second).not.toBe(first);
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code: first });
+        expect(res.status).toBe(401);
+      });
+
+      it('이메일 형식이 아니면 400을 반환한다', async () => {
+        // Given · When
+        const res = await request(app.getHttpServer())
+          .post(CODE_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId: buildLineUserId(), email: 'not-an-email' });
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe('POST /user/auth/line-bot/email/verify', () => {
+      it('코드가 맞으면 LINE 계정을 연결하고 회원 정보와 토큰을 반환한다', async () => {
+        // Given - 연결 전 회원
+        const member = await createMember();
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, member.email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code });
+
+        // Then
+        expect(res.status).toBe(200);
+        expectMemberPayload(res.body.data, member);
+
+        const rows = await dataSource.query(
+          `SELECT user_id FROM user_sns
+            WHERE provider = 'LINE' AND provider_user_id = $1`,
+          [lineUserId],
+        );
+        expect(rows).toHaveLength(1);
+        expect(rows[0].user_id).toBe(member.userId);
+      });
+
+      it('인증을 마치면 다음부터는 조회 API 만으로 로그인된다', async () => {
+        // Given
+        const member = await createMember();
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, member.email);
+        await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code })
+          .expect(200);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(LOGIN_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, email: member.email });
+
+        // Then
+        expect(res.status).toBe(200);
+        expectMemberPayload(res.body.data, member);
+      });
+
+      it('이미 연결된 회원이면 연결을 새로 만들지 않는다', async () => {
+        // Given
+        const member = await createMember();
+        const lineUserId = await linkLine(member.userId, member.email);
+        const code = await sendCode(lineUserId, member.email);
+
+        // When
+        await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code })
+          .expect(200);
+
+        // Then
+        const rows = await dataSource.query(
+          `SELECT provider_user_id FROM user_sns WHERE user_id = $1`,
+          [member.userId],
+        );
+        expect(rows).toHaveLength(1);
+      });
+
+      it('refreshToken 이 회원 행에 저장된다', async () => {
+        // Given
+        const member = await createMember();
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, member.email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code })
+          .expect(200);
+
+        // Then
+        const [row] = await dataSource.query(
+          `SELECT refresh_token FROM "user" WHERE id = $1`,
+          [member.userId],
+        );
+        expect(row.refresh_token).toBe(res.body.data.refreshToken);
+      });
+
+      it('nickname 이 비어 있으면 email 을 대신 내려준다', async () => {
+        // Given
+        const member = await createMember();
+        await dataSource.query(
+          `UPDATE "user" SET nickname = '   ' WHERE id = $1`,
+          [member.userId],
+        );
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, member.email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code })
+          .expect(200);
+
+        // Then
+        expect(res.body.data.nickname).toBe(member.email);
+      });
+
+      it('미가입 이메일이면 회원을 만들어 연결하고 로그인시킨다', async () => {
+        // Given - DB 에 없는 이메일
+        const email = faker.internet.email().toLowerCase();
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.email).toBe(email);
+        expect(res.body.data.nickname).toBe(email);
+        expect(res.body.data.token).toEqual(expect.any(String));
+
+        const [user] = await dataSource.query(
+          `SELECT id FROM "user" WHERE email = $1`,
+          [email],
+        );
+        expect(user.id).toBe(res.body.data.userId);
+
+        const sns = await dataSource.query(
+          `SELECT user_id FROM user_sns
+            WHERE provider = 'LINE' AND provider_user_id = $1`,
+          [lineUserId],
+        );
+        expect(sns[0].user_id).toBe(user.id);
+      });
+
+      it('자동 가입한 회원은 이메일 로그인을 할 수 없다', async () => {
+        // Given - 비밀번호가 사용 불가한 임의값이다
+        const email = faker.internet.email().toLowerCase();
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, email);
+        await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code })
+          .expect(200);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(`${BASE_URL}/login`)
+          .send({ email, password: 'password' });
+
+        // Then
+        expect(res.status).toBe(401);
+      });
+
+      it('이메일이 이미 닉네임으로 쓰이고 있으면 꼬리를 붙여 가입시킨다', async () => {
+        // Given - 다른 회원이 그 이메일을 닉네임으로 쓰고 있다
+        const email = faker.internet.email().toLowerCase();
+        const other = await createMember();
+        await dataSource.query(
+          `UPDATE "user" SET nickname = $1 WHERE id = $2`,
+          [email, other.userId],
+        );
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code });
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.nickname).not.toBe(email);
+        expect(res.body.data.nickname).toContain(email);
+      });
+
+      it('자동 가입 뒤 받은 토큰으로 장바구니 API를 호출할 수 있다', async () => {
+        // Given
+        const email = faker.internet.email().toLowerCase();
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, email);
+        const verifyRes = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code })
+          .expect(200);
+
+        // When - Bot 이 받은 토큰 그대로
+        const res = await request(app.getHttpServer())
+          .get('/user/cart/count')
+          .set('Authorization', `Bearer ${verifyRes.body.data.token}`);
+
+        // Then
+        expect(res.status).toBe(200);
+        expect(res.body.data.count).toBe(0);
+      });
+
+      it('이미 다른 회원에게 연결된 LINE 계정이면 409를 반환한다', async () => {
+        // Given - lineUserId 는 A 회원에게 연결돼 있는데 B 회원 이메일로 인증한다
+        const owner = await createMember();
+        const lineUserId = await linkLine(owner.userId, owner.email);
+        const other = await createMember();
+        const code = await sendCode(lineUserId, other.email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code });
+
+        // Then
+        expect(res.status).toBe(409);
+      });
+
+      it('이미 다른 SNS 가 연결된 회원이면 409를 반환한다', async () => {
+        // Given - 구글이 연결된 회원 (user 1 : sns 1 규칙)
+        const member = await createMember();
+        await dataSource.query(
+          `INSERT INTO user_sns (user_id, provider, provider_user_id, provider_email)
+           VALUES ($1, 'GOOGLE', $2, $3)`,
+          [member.userId, faker.string.numeric(21), member.email],
+        );
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, member.email);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code });
+
+        // Then
+        expect(res.status).toBe(409);
+      });
+
+      it('검증에 성공하면 코드가 지워져 재사용할 수 없다', async () => {
+        // Given
+        const member = await createMember();
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, member.email);
+        await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code })
+          .expect(200);
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code });
+
+        // Then
+        expect(res.status).toBe(401);
+      });
+
+      it('코드가 틀리면 401을 반환한다', async () => {
+        // Given
+        const member = await createMember();
+        const lineUserId = buildLineUserId();
+        const code = await sendCode(lineUserId, member.email);
+        const wrong = String((Number(code) + 1) % 1000000).padStart(6, '0');
+
+        // When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId, code: wrong });
+
+        // Then
+        expect(res.status).toBe(401);
+      });
+
+      it('코드를 받은 적 없는 lineUserId 면 401을 반환한다', async () => {
+        // Given · When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId: buildLineUserId(), code: '123456' });
+
+        // Then
+        expect(res.status).toBe(401);
+      });
+
+      it('code 가 6자리 숫자가 아니면 400을 반환한다', async () => {
+        // Given · When
+        const res = await request(app.getHttpServer())
+          .post(VERIFY_URL)
+          .set(BOT_KEY_HEADER, BOT_KEY)
+          .send({ lineUserId: buildLineUserId(), code: '12ab56' });
+
+        // Then
+        expect(res.status).toBe(400);
+      });
+    });
+  });
 });
