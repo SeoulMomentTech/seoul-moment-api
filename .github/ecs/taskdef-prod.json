@@ -96,6 +96,10 @@
           "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:LINE_CHANNEL_ID::"
         },
         {
+          "name": "LINE_BOT_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:LINE_BOT_API_KEY::"
+        },
+        {
           "name": "FIREBASE_SERVICE_ACCOUNT",
           "valueFrom": "arn:aws:secretsmanager:ap-east-2:156321659479:secret:seoul-moment-api-j95f9N:FIREBASE_SERVICE_ACCOUNT::"
         },
