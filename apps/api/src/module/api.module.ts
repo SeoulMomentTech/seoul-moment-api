@@ -24,6 +24,7 @@ import { BrandModule } from './brand/brand.module';
 import { BrandPromotionModule } from './brand/promotion/brand.promotion.module';
 import { CategoryModule } from './category/category.module';
 import { GoogleModule } from './google/google.module';
+import { GuestCartModule } from './guest/cart/guest.cart.module';
 import { HomeModule } from './home/home.module';
 import { LanguageModule } from './language/language.module';
 import { NewsModule } from './news/news.module';
@@ -72,6 +73,8 @@ import { UserModule } from './user/user.module';
     PlanNotificationModule,
     BrandPromotionModule,
     UserModule,
+    // 심사용 임시 모듈 — 심사 후 이 줄과 폴더를 함께 지운다
+    GuestCartModule,
     AiConsultModule,
     ShippingModule,
   ],

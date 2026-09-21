@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>게스트 장바구니 API 지도 (심사용)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* ============================================================
+   Seoul Moment — 화면별 API 지도
+   왼쪽: 실제 붙을 UI. 오른쪽: 그 요소가 부르는 API.
+   번호(핀)가 좌우를 잇는다. 호버하면 짝이 같이 켜진다.
+   ============================================================ */
+:root{
+  --paper:#f6f7f8; --surface:#fff; --sunken:#eff1f3; --field:#f4f6f7;
+  --ink:#14171b; --ink-2:#4a525c; --ink-3:#7d8894;
+  --rule:#dfe3e8; --rule-soft:#eaedf0;
+  --accent:#d4600c; --accent-ink:#a84c09; --accent-bg:#fdf1e7;
+  --slate:#4d6b79; --slate-bg:#e9f0f2;
+  --green:#2f7d5d; --green-bg:#e6f2ec;
+  --red:#b0413a; --red-bg:#fbecea;
+  --shadow:0 1px 2px rgba(20,23,27,.05);
+  --lift:0 6px 24px rgba(20,23,27,.08);
+  --sans:"IBM Plex Sans KR","IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --wrap:1180px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#111417; --surface:#181c20; --sunken:#14181b; --field:#1e2429;
+  --ink:#e7eaee; --ink-2:#a2acb7; --ink-3:#78838e;
+  --rule:#2b3138; --rule-soft:#23282e;
+  --accent:#f5883c; --accent-ink:#f7a163; --accent-bg:#2d1d11;
+  --slate:#8bb0bf; --slate-bg:#17242a;
+  --green:#63b891; --green-bg:#14251d;
+  --red:#e0837c; --red-bg:#2a1614;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --lift:0 6px 24px rgba(0,0,0,.5);
+}}
+:root[data-theme="dark"]{
+  --paper:#111417; --surface:#181c20; --sunken:#14181b; --field:#1e2429;
+  --ink:#e7eaee; --ink-2:#a2acb7; --ink-3:#78838e;
+  --rule:#2b3138; --rule-soft:#23282e;
+  --accent:#f5883c; --accent-ink:#f7a163; --accent-bg:#2d1d11;
+  --slate:#8bb0bf; --slate-bg:#17242a;
+  --green:#63b891; --green-bg:#14251d;
+  --red:#e0837c; --red-bg:#2a1614;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --lift:0 6px 24px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+     font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 28px}
+code,kbd{font-family:var(--mono);font-size:.86em}
+
+/* ---------- 표지 ---------- */
+.cover{padding:64px 0 40px}
+.eyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 12px}
+.cover h1{font-size:36px;line-height:1.24;margin:0 0 14px;letter-spacing:-.02em;font-weight:700}
+.cover .lede{font-size:16px;color:var(--ink-2);margin:0;max-width:60ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.meta span{font-size:12px;font-family:var(--mono);background:var(--surface);border:1px solid var(--rule);
+           border-radius:999px;padding:4px 11px;color:var(--ink-2)}
+
+/* ---------- 공통 규칙 카드 ---------- */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:34px 0 8px}
+.rule-card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.rule-card h4{margin:0 0 5px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.rule-card p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.rule-card p code{color:var(--ink);background:var(--sunken);padding:1px 5px;border-radius:4px}
+
+/* ---------- 목차 ---------- */
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 10px;padding-bottom:34px;border-bottom:1px solid var(--rule)}
+.toc a{font-size:13px;text-decoration:none;color:var(--ink-2);border:1px solid var(--rule);background:var(--surface);
+       border-radius:8px;padding:6px 12px;transition:.14s}
+.toc a:hover{border-color:var(--accent);color:var(--accent-ink)}
+.toc a b{font-family:var(--mono);color:var(--ink-3);margin-right:7px;font-weight:500}
+
+/* ---------- 화면 섹션 ---------- */
+.screen{padding:48px 0;border-bottom:1px solid var(--rule)}
+.screen-head{display:flex;align-items:baseline;gap:14px;margin-bottom:26px;flex-wrap:wrap}
+.screen-head .no{font-family:var(--mono);font-size:12px;font-weight:500;color:#fff;background:var(--accent);
+                 border-radius:6px;padding:3px 8px;letter-spacing:.04em}
+.screen-head h2{margin:0;font-size:23px;letter-spacing:-.015em;font-weight:700}
+.screen-head .route{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);background:var(--sunken);
+                    padding:2px 9px;border-radius:6px}
+.screen-head .sub{flex-basis:100%;margin:2px 0 0;font-size:14px;color:var(--ink-2)}
+
+.split{display:grid;grid-template-columns:372px minmax(0,1fr);gap:44px;align-items:start}
+@media (max-width:980px){.split{grid-template-columns:1fr;gap:28px}.ui-col{position:static !important}}
+.ui-col{position:sticky;top:22px}
+.col-tag{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:0 0 10px}
+
+/* ---------- 목업 프레임 ---------- */
+/* overflow:hidden 을 쓰면 프레임 밖으로 나가는 핀이 잘린다 —
+   대신 첫/마지막 자식에 라운드를 직접 물린다. */
+.phone{--r:20px;width:100%;max-width:372px;background:var(--surface);border:1px solid var(--rule);
+       border-radius:var(--r);box-shadow:var(--lift)}
+.desktop{--r:12px}
+.phone > :first-child, .phone > :first-child > :first-child{
+  border-top-left-radius:calc(var(--r) - 1px);border-top-right-radius:calc(var(--r) - 1px)}
+.phone > :last-child, .phone > :last-child > :last-child{
+  border-bottom-left-radius:calc(var(--r) - 1px);border-bottom-right-radius:calc(var(--r) - 1px)}
+.mk{font-size:13px;line-height:1.5}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--rule-soft)}
+.brandmark{font-size:12px;letter-spacing:.16em;font-weight:700}
+.icons{display:flex;align-items:center;gap:14px;color:var(--ink-2);font-size:15px}
+.cartbtn{position:relative;display:inline-block}
+.badge{position:absolute;top:-6px;right:-9px;min-width:16px;height:16px;border-radius:999px;background:var(--accent);
+       color:#fff;font-size:10px;font-weight:600;display:grid;place-items:center;padding:0 4px;font-family:var(--mono)}
+.langs{display:flex;gap:0;border-bottom:1px solid var(--rule-soft)}
+.langs span{flex:1;text-align:center;padding:8px 0;font-size:11.5px;color:var(--ink-3);font-family:var(--mono)}
+.langs span.on{color:var(--ink);border-bottom:2px solid var(--ink);font-weight:600}
+
+.hero{aspect-ratio:1/1;background:
+      repeating-linear-gradient(45deg,var(--sunken) 0 10px,transparent 10px 20px),var(--field);
+      display:grid;place-items:center;color:var(--ink-3);font-size:12px;font-family:var(--mono)}
+.pad{padding:14px}
+.brandline{display:flex;align-items:center;gap:7px;color:var(--ink-2);font-size:12px}
+.avatar{width:18px;height:18px;border-radius:999px;background:var(--slate-bg);border:1px solid var(--rule)}
+.pname{font-size:15px;font-weight:600;margin:6px 0 8px;letter-spacing:-.01em}
+.price{display:flex;align-items:baseline;gap:8px}
+.price .now{font-size:18px;font-weight:700}
+.price .was{font-size:12.5px;color:var(--ink-3);text-decoration:line-through}
+.price .off{font-size:12.5px;color:var(--accent);font-weight:600}
+.stars{font-size:11.5px;color:var(--ink-3);margin-top:4px}
+
+.optrow{margin-top:12px}
+.optrow .lbl{font-size:11px;color:var(--ink-3);margin-bottom:6px;letter-spacing:.04em}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:5px 11px;border:1px solid var(--rule);border-radius:7px;color:var(--ink-2);background:var(--surface)}
+.chip.on{border-color:var(--ink);color:var(--ink);font-weight:600}
+.chip.off{color:var(--ink-3);opacity:.5;text-decoration:line-through;background:var(--sunken)}
+
+.notice{margin-top:12px;background:var(--sunken);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--ink-2)}
+.notice b{color:var(--ink);font-weight:600}
+.bottombar{display:flex;gap:8px;padding:11px 14px;border-top:1px solid var(--rule-soft);background:var(--surface)}
+.btn{flex:1;text-align:center;padding:11px 0;border-radius:9px;font-size:13.5px;font-weight:600}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{border:1px solid var(--rule);color:var(--ink-2);flex:0 0 46px}
+.btn.mute{background:var(--sunken);color:var(--ink-3)}
+
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--rule-soft);
+          font-size:12px;color:var(--ink-2)}
+.sec-head b{font-size:13px;color:var(--ink);font-weight:600}
+.grouphead{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--rule-soft);background:var(--sunken)}
+.grouphead b{font-size:12.5px}
+.line{display:flex;gap:10px;padding:13px 14px;border-bottom:1px solid var(--rule-soft);position:relative}
+.thumb{width:56px;height:70px;border-radius:6px;flex:none;background:
+       repeating-linear-gradient(45deg,var(--sunken) 0 8px,transparent 8px 16px),var(--field);border:1px solid var(--rule-soft)}
+.line .body{flex:1;min-width:0}
+.line .nm{font-size:12.5px;font-weight:600;line-height:1.35}
+.line .opt{font-size:11.5px;color:var(--ink-3);margin-top:2px;font-family:var(--mono)}
+.line .pr{font-size:13px;font-weight:600;margin-top:6px}
+.line .pr s{font-weight:400;color:var(--ink-3);font-size:11.5px;margin-left:5px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:7px;margin-top:8px;overflow:hidden}
+.stepper i{font-style:normal;width:26px;height:26px;display:grid;place-items:center;font-size:13px;color:var(--ink-2)}
+.stepper b{width:30px;text-align:center;font-size:12.5px;font-family:var(--mono);border-left:1px solid var(--rule);
+           border-right:1px solid var(--rule);height:26px;line-height:26px;font-weight:500}
+.ckbox{width:16px;height:16px;border:1.5px solid var(--rule);border-radius:4px;flex:none;margin-top:2px}
+.ckbox.on{background:var(--accent);border-color:var(--accent);position:relative}
+.ckbox.on::after{content:"✓";position:absolute;inset:0;color:#fff;font-size:11px;display:grid;place-items:center}
+.soldout{position:absolute;inset:0;background:color-mix(in srgb,var(--surface) 88%,transparent);display:grid;place-items:center;
+         font-size:11.5px;color:var(--red);font-weight:600;letter-spacing:-.01em}
+
+.freebar{padding:12px 14px;border-bottom:1px solid var(--rule-soft)}
+.freebar .t{font-size:12px;color:var(--ink-2);margin-bottom:7px}
+.freebar .t b{color:var(--accent);font-weight:600}
+.track{height:5px;border-radius:999px;background:var(--sunken);overflow:hidden}
+.track i{display:block;height:100%;width:78%;background:var(--accent);border-radius:999px}
+.sum{padding:12px 14px;border-bottom:1px solid var(--rule-soft)}
+.sum .r{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);padding:3px 0}
+.sum .r.total{border-top:1px solid var(--rule-soft);margin-top:7px;padding-top:9px;color:var(--ink);font-weight:700;font-size:14.5px}
+.sum .r .muted{font-size:11px;color:var(--ink-3);font-weight:400}
+
+.fieldrow{padding:11px 14px;border-bottom:1px solid var(--rule-soft)}
+.fieldrow .lbl{font-size:11px;color:var(--ink-3);letter-spacing:.04em;margin-bottom:5px}
+.input{background:var(--field);border:1px solid var(--rule);border-radius:7px;padding:8px 10px;font-size:12.5px;color:var(--ink)}
+.input.ph{color:var(--ink-3)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--rule-soft);font-size:12.5px}
+.sw{width:34px;height:19px;border-radius:999px;background:var(--accent);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:999px;background:#fff}
+.sw.off{background:var(--rule)}
+.sw.off::after{right:auto;left:2px}
+.radio{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--rule-soft);font-size:12.5px}
+.dot{width:15px;height:15px;border-radius:999px;border:1.5px solid var(--rule);flex:none}
+.dot.on{border-color:var(--accent);border-width:5px}
+
+.done{padding:26px 14px 18px;text-align:center;border-bottom:1px solid var(--rule-soft)}
+.done .mark{width:42px;height:42px;border-radius:999px;background:var(--green-bg);color:var(--green);display:grid;
+            place-items:center;margin:0 auto 11px;font-size:19px}
+.done h3{margin:0 0 5px;font-size:15px;font-weight:700}
+.done .ordno{font-family:var(--mono);font-size:12.5px;color:var(--ink-2)}
+.pill{display:inline-block;font-size:11px;font-family:var(--mono);padding:2px 8px;border-radius:999px;
+      background:var(--accent-bg);color:var(--accent-ink);margin-top:7px;font-weight:600}
+.addr{padding:12px 14px;border-bottom:1px solid var(--rule-soft);font-size:12.5px;color:var(--ink-2);line-height:1.65}
+.addr b{color:var(--ink);font-weight:600}
+
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:.04em;
+        padding:8px 14px;border-bottom:1px solid var(--rule-soft);background:var(--sunken)}
+.tbl td{padding:9px 14px;border-bottom:1px solid var(--rule-soft);color:var(--ink-2)}
+.tbl td b{color:var(--ink);font-weight:600}
+.tbl .del{color:var(--red);font-size:11.5px}
+
+/* ---------- 핀 ---------- */
+.hl{position:relative}
+.pin{display:inline-grid;place-items:center;width:19px;height:19px;border-radius:999px;background:var(--accent);
+     color:#fff;font-size:11px;font-weight:700;font-family:var(--mono);flex:none;line-height:1}
+.hl > .pin{position:absolute;top:-8px;right:-8px;z-index:3;box-shadow:0 0 0 3px var(--surface)}
+.hl.pinleft > .pin{right:auto;left:-24px;top:-2px}
+.hl.lit{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px;background:var(--accent-bg)}
+
+/* ---------- API 컬럼 ---------- */
+.api-list{display:flex;flex-direction:column;gap:10px}
+.api-row{background:var(--surface);border:1px solid var(--rule);border-radius:11px;padding:13px 15px;box-shadow:var(--shadow);
+         transition:.14s;cursor:default}
+.api-row.lit{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-bg),var(--shadow)}
+.api-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.api-top .what{font-size:13.5px;font-weight:600}
+.m{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;padding:2px 7px;border-radius:5px}
+.m.get{background:var(--slate-bg);color:var(--slate)}
+.m.post{background:var(--accent-bg);color:var(--accent-ink)}
+.m.patch{background:var(--green-bg);color:var(--green)}
+.m.del{background:var(--red-bg);color:var(--red)}
+.m.none{background:var(--sunken);color:var(--ink-3)}
+/* 변경 표기 배지 — 이미 붙인 화면이 있을 때만 쓴다 */
+.nt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    padding:2px 7px;border-radius:5px;line-height:1.6;white-space:nowrap}
+.nt.new{background:var(--green-bg);color:var(--green)}
+.nt.upd{background:var(--accent-bg);color:var(--accent-ink)}
+.api-ep{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.api-ep code{font-size:12.5px;color:var(--ink);background:var(--sunken);padding:3px 8px;border-radius:6px}
+.api-desc{margin:8px 0 0;font-size:13px;color:var(--ink-2)}
+.api-desc b{color:var(--ink);font-weight:600}
+.io{margin:9px 0 0;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--ink-2);
+    background:var(--sunken);border-radius:7px;padding:9px 11px;white-space:pre-wrap;word-break:break-word;overflow-x:auto}
+.io .k{color:var(--accent-ink)}
+.io .c{color:var(--ink-3)}      /* 주석 */
+.io .n{color:var(--green);font-weight:600}  /* 새로 생긴 필드 표시 */
+/* 요청·응답을 좌우로 나눈다. 폭이 좁아지면(<=1180px) 세로로 쌓인다 */
+.io-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:9px;align-items:start}
+@media (max-width:1180px){.io-pair{grid-template-columns:1fr}}
+.io-block{min-width:0;margin-top:9px}
+.io-pair .io-block{margin-top:0}
+.io-block .io{margin:0}
+.io-l{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:10px;letter-spacing:.1em;
+      text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.io-l .ar{font-family:var(--mono);font-size:12.5px;letter-spacing:0;line-height:1}
+.io-l.req .ar{color:var(--accent)}
+.io-l.res .ar{color:var(--green)}
+/* Swagger 딥링크 */
+.swg{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+.swg-l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.swg .op{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);font-weight:600}
+.swg a{font-family:var(--mono);font-size:10.5px;text-decoration:none;color:var(--slate);
+       background:var(--slate-bg);border:1px solid transparent;border-radius:5px;padding:2px 7px;transition:.14s}
+.swg a:hover{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-bg)}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.tag{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);border:1px solid var(--rule);border-radius:5px;padding:2px 6px}
+.tag.err{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,transparent)}
+.note{margin-top:14px;background:var(--accent-bg);border-left:3px solid var(--accent);border-radius:0 9px 9px 0;
+      padding:11px 14px;font-size:13px;color:var(--ink-2)}
+.note b{color:var(--accent-ink)}
+
+/* ---------- 순서도 ---------- */
+.flow{padding:48px 0 72px}
+.flow h2{font-size:23px;margin:0 0 6px;font-weight:700;letter-spacing:-.015em}
+.flow .lede{margin:0 0 22px;color:var(--ink-2);font-size:14px}
+.steps{display:grid;gap:0}
+.step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px;padding-bottom:20px;position:relative}
+.step::before{content:"";position:absolute;left:16px;top:30px;bottom:-2px;width:1px;background:var(--rule)}
+.step:last-child::before{display:none}
+.step .n{width:34px;height:34px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);
+         display:grid;place-items:center;font-family:var(--mono);font-size:12px;color:var(--ink-2);z-index:1}
+.step h4{margin:6px 0 4px;font-size:14.5px;font-weight:600}
+.step p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.step .ep{font-family:var(--mono);font-size:12px;color:var(--accent-ink);background:var(--accent-bg);
+          padding:2px 7px;border-radius:5px;display:inline-block;margin-top:6px}
+footer{padding:26px 0 60px;color:var(--ink-3);font-size:12.5px;border-top:1px solid var(--rule)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="cover">
+  <p class="eyebrow">Seoul Moment · 심사용 임시</p>
+  <h1>게스트 장바구니</h1>
+  <p class="lede">왼쪽은 실제로 붙을 화면, 오른쪽은 그 화면의 각 요소가 부르는 API다.
+     번호가 좌우를 잇는다 — 어느 쪽이든 올려두면 짝이 같이 켜진다.</p>
+  <div class="meta">
+    <span>로그인 없이 담기 · 보기</span>
+    <span>결제 없음</span>
+    <span>심사 후 삭제</span>
+    <span>2026-09-21</span>
+  </div>
+
+  <div class="rules">
+    <div class="rule-card">
+      <h4>심사용 임시</h4>
+      <p><b>심사가 끝나면 이 API 6개는 통째로 지운다.</b> 회원 장바구니(<code>/user/cart</code>)를 대체하지 않는다.
+         DB 테이블을 쓰지 않아 지울 때 마이그레이션도 없다.</p>
+    </div>
+    <div class="rule-card">
+      <h4>인증</h4>
+      <p><b>토큰이 필요 없다.</b> 장바구니는 <code>x-guest-id</code> 헤더의 게스트 ID 로만 구분한다.</p>
+    </div>
+    <div class="rule-card">
+      <h4>응답 봉투</h4>
+      <p>성공은 <code>{ result, data }</code>. 이 문서의 <code>→</code> 는 <b>data 안쪽</b>만 적었다.
+         실패는 <code>{ message, code, traceId, data? }</code>.</p>
+    </div>
+    <div class="rule-card">
+      <h4>금액</h4>
+      <p>통화는 <b>NT$</b>, 전부 정수다. 배송지를 모르므로 배송비는 <b>본섬 기준 예상값</b>이다.</p>
+    </div>
+    <div class="rule-card">
+      <h4>필드 표기</h4>
+      <p><code>key</code> 필수 · <code>key?</code> 선택(응답에선 <code>null</code> 가능).
+         정의하지 않은 키를 보내면 <b>400</b> 이다.</p>
+    </div>
+    <div class="rule-card">
+      <h4>변경 표기</h4>
+      <p><span class="nt new">new</span> 이번 심사용으로 새로 만든 API. 라벨이 없는 카드(상품·배송비 정책)는 <b>기존 그대로</b>다.</p>
+    </div>
+  </div>
+
+  <nav class="toc">
+    <a href="#s0"><b>00</b>공통 셸 · 게스트 ID</a>
+    <a href="#s1"><b>01</b>상품상세</a>
+    <a href="#s2"><b>02</b>장바구니</a>
+    <a href="#s3"><b>03</b>주문 진입</a>
+    <a href="#flow"><b>—</b>호출 순서</a>
+  </nav>
+</header>
+
+<!-- ============================ 00 ============================ -->
+<section class="screen" id="s0">
+  <div class="screen-head">
+    <span class="no">00</span>
+    <h2>공통 셸 · 게스트 ID</h2>
+    <span class="route">모든 화면</span>
+    <p class="sub">이 문서에서 제일 중요한 규칙. <b>게스트 ID 는 담기 응답으로 처음 발급되고, 그 뒤로는 클라이언트가 들고 다닌다.</b></p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="hl pinleft" data-k="0-1">
+          <span class="pin">1</span>
+          <div class="nav">
+            <span class="icons">☰</span>
+            <span class="brandmark">SEOUL MOMENT</span>
+            <span class="icons">
+              <span>♡</span>
+              <span class="cartbtn">🛒<span class="badge">1</span></span>
+            </span>
+          </div>
+        </div>
+        <div class="hl" data-k="0-2">
+          <span class="pin">2</span>
+          <div class="notice" style="margin:0;border-radius:0;padding:11px 14px">
+            로그인하지 않아도 담을 수 있습니다.<br>
+            <b>주문은 로그인 후 진행</b>됩니다.
+          </div>
+        </div>
+        <div class="pad" style="color:var(--ink-3);font-size:12px;text-align:center;padding:34px 14px">
+          — 이하 각 화면 —
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="0-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">장바구니 뱃지 숫자</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/guest/cart/count</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_getGuestCartCount" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_getGuestCartCount" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">진입 시 1회. <b>게스트 ID 가 없거나 담은 적이 없으면 <code>0</code></b> 이고 404 를 내지 않는다.
+            담기 응답의 <code>totalCount</code> 로 갱신하면 재조회가 필요 없다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>Response 200</div>
+            <div class="io">{ <span class="k">count</span>: 1 }</div>
+          </div>
+          <div class="tags"><span class="tag">x-guest-id 선택</span><span class="tag">토큰 불필요</span></div>
+        </div>
+
+        <div class="api-row" data-k="0-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">게스트 ID 보관</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>x-guest-id</code></div>
+          <p class="api-desc">전용 발급 API 가 <b>없다.</b> 담기 전에는 장바구니가 존재하지 않으므로,
+            <b>첫 담기 응답의 <code>guestId</code></b> 를 받아 로컬에 저장하고 이후 모든 게스트 요청 헤더에 실어 보낸다.</p>
+          <div class="io-block">
+            <div class="io-l req"><span class="ar">←</span>Request Header</div>
+            <div class="io">x-guest-id: <span class="k">0f0c7a1e-6f2a-4a53-9b0b-2f1f2a8f0a11</span>
+
+<span class="c">// 첫 담기 때만 생략한다.</span>
+<span class="c">// 서버가 UUID 를 만들어 응답에 담아준다.</span></div>
+          </div>
+          <div class="tags"><span class="tag">서버 보관 7일 (Redis TTL)</span><span class="tag">회원 장바구니로 옮겨주지 않는다</span></div>
+        </div>
+      </div>
+
+      <div class="note"><b>ID 를 잃으면 장바구니도 잃는다</b> — 서버는 그 ID 말고는 주인을 알 방법이 없다. 앱을 지우거나 저장소를 비우면 담은 것이 사라진다. 심사용이라 이 정도로 둔다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 01 ============================ -->
+<section class="screen" id="s1">
+  <div class="screen-head">
+    <span class="no">01</span>
+    <h2>상품상세 — 담기</h2>
+    <span class="route">/product/:id</span>
+    <p class="sub">상품 조회는 <b>원래 비로그인으로도 되던 API</b> 그대로다. 담기만 게스트 전용으로 갈라진다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="nav"><span class="icons">←</span><span class="brandmark">상품</span><span class="icons">🛒</span></div>
+        <div class="hero">상품 이미지</div>
+
+        <div class="pad">
+          <div class="hl" data-k="1-1">
+            <span class="pin">1</span>
+            <div class="brandline"><span class="avatar"></span><span>서울모먼트</span></div>
+            <div class="pname">크롭 후드 집업</div>
+            <div class="price" style="margin-top:8px">
+              <span class="now">NT$1,100</span>
+              <span class="was">NT$1,300</span>
+              <span class="off">15%</span>
+            </div>
+          </div>
+
+          <div class="hl" data-k="1-2">
+            <span class="pin">2</span>
+            <div class="notice">
+              배송비 <b>NT$60</b> · 외섬 <b>NT$100</b><br>
+              <b>NT$1,150</b> 이상 구매 시 무료배송
+            </div>
+          </div>
+
+          <div class="hl" data-k="1-3">
+            <span class="pin">3</span>
+            <div class="optrow">
+              <div class="lbl">색상 · 사이즈</div>
+              <div class="chips"><span class="chip on">베이지</span><span class="chip">차콜</span><span class="chip on">FREE</span></div>
+            </div>
+            <div class="notice" style="margin-top:10px">선택: <b>베이지 / FREE</b> · 남은 재고 <b>5</b></div>
+          </div>
+        </div>
+
+        <div class="bottombar">
+          <span class="btn ghost">♡</span>
+          <span class="hl" data-k="1-4" style="flex:1">
+            <span class="pin" style="left:8px;right:auto;top:-9px">4</span>
+            <span class="btn primary" style="display:block">장바구니 담기</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="1-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">상품 정보 · 옵션 · 재고</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/product/v1/:id</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/V1Product/V1ProductController_getProductDetail" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/V1Product/V1ProductController_getProductDetail" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc"><b>기존 API 그대로다.</b> 토큰이 없어도 200 이고, 좋아요 여부(<code>isLiked</code>)만 <code>false</code> 로 내려온다.
+            <code>:id</code> 는 <code>product_item.id</code> 다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>Response 200</div>
+            <div class="io">{
+  <span class="k">id</span>:            32,
+  name:          "크롭 후드 집업",
+  price:         1300,
+  discountPrice: 1100,
+  <span class="k">variants</span>: [{
+    id:             101,
+    optionValueIds: [3, 9],
+    stockQuantity:  5,
+    isSoldOut:      false
+  }],
+  isLiked:       false
+}</div>
+          </div>
+          <div class="tags"><span class="tag">Bearer 선택</span><span class="tag">Accept-Language</span><span class="tag err">404 상품 없음</span></div>
+        </div>
+
+        <div class="api-row" data-k="1-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">배송비 안내 문구</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/shipping-policy</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/Shipping/ShippingController_getShippingPolicy" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/Shipping/ShippingController_getShippingPolicy" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc"><b>기존 API 그대로다.</b> 인증이 없고 값이 잘 안 바뀌니 앱 시작 시 한 번 받아 캐시해도 된다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>Response 200</div>
+            <div class="io">{
+  <span class="k">baseFee</span>:               60,
+  <span class="k">remoteIslandFee</span>:       100,
+  remoteIslandPromotion: false,
+  <span class="k">freeShippingThreshold</span>: 1150
+}</div>
+          </div>
+          <div class="tags"><span class="tag">인증 불필요</span></div>
+        </div>
+
+        <div class="api-row" data-k="1-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">옵션 선택 · 조합 판정</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>variants</code></div>
+          <p class="api-desc">옵션을 고를 때마다 서버를 부르지 않는다. 상세 응답의 <code>variants</code> 에서
+            고른 <code>optionValueIds</code> 조합과 같은 것을 찾고, 그 <code>id</code> 가 담기에 쓰는 <b><code>productVariantId</code></b> 다.</p>
+        </div>
+
+        <div class="api-row" data-k="1-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">장바구니 담기</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/guest/cart</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_postGuestCart" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_postGuestCart" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">단건도 <b>길이 1 배열</b>로 보낸다. 이미 담긴 SKU 면 라인을 늘리지 않고 <b>수량을 더한다</b>.
+            하나라도 담을 수 없으면 <b>전부 담기지 않는다</b>. <b>첫 호출은 헤더 없이</b> 보내고, 응답의 <code>guestId</code> 를 저장한다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io"><span class="c">// 헤더 (첫 담기면 생략)</span>
+x-guest-id: 0f0c7a1e-...
+
+{
+  <span class="k">items</span>: [{
+    productVariantId: 101,
+    quantity:         1
+  }]
+}</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 201</div>
+              <div class="io">{
+  <span class="k">guestId</span>: "0f0c7a1e-6f2a-...",
+  items: [{
+    productVariantId: 101,
+    quantity:         1   <span class="c">// 합산된 수량</span>
+  }],
+  <span class="k">totalCount</span>: 1     <span class="c">// 헤더 뱃지에 그대로</span>
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">토큰 불필요</span><span class="tag">items 1~50건 · 전부 필수</span><span class="tag">quantity 1~999</span><span class="tag err">404 SKU 없음</span><span class="tag err">409 재고 부족</span></div>
+        </div>
+      </div>
+
+      <div class="note"><b>409 는 어느 SKU 가 몇 개 남았는지 알려준다</b> — <code>data: { productVariantId, available, requested }</code>. 그 줄만 빨갛게 칠하고 수량을 조정하게 하면 된다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 02 ============================ -->
+<section class="screen" id="s2">
+  <div class="screen-head">
+    <span class="no">02</span>
+    <h2>게스트 장바구니</h2>
+    <span class="route">/cart</span>
+    <p class="sub">회원 장바구니와 <b>응답 모양이 같아</b> 화면 컴포넌트를 그대로 쓴다. 다만 <b>라인 ID 가 없어 수량 변경·삭제는 SKU 로</b> 한다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="nav"><span class="icons">←</span><span class="brandmark">장바구니</span><span class="icons" style="width:16px"></span></div>
+
+        <div class="hl" data-k="2-1">
+          <span class="pin">1</span>
+          <div class="sec-head"><b>담은 상품 1건</b><span style="color:var(--ink-3)">서울모먼트</span></div>
+          <div class="line">
+            <span class="thumb"></span>
+            <span class="body">
+              <span class="nm">크롭 후드 집업</span>
+              <div class="opt">베이지 / FREE</div>
+              <div class="pr">NT$1,100 <s>NT$1,300</s></div>
+              <span class="hl" data-k="2-2" style="display:inline-block">
+                <span class="pin" style="top:1px;right:-30px">2</span>
+                <span class="stepper"><i>−</i><b>1</b><i>+</i></span>
+              </span>
+            </span>
+            <span class="hl" data-k="2-3" style="align-self:flex-start;padding:2px 4px">
+              <span class="pin" style="top:-13px;right:-15px">3</span>
+              <span style="color:var(--ink-3);font-size:14px">✕</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="hl" data-k="2-4">
+          <span class="pin">4</span>
+          <div class="freebar">
+            <div class="t"><b>NT$50</b> 더 담으면 무료배송</div>
+            <div class="track"><i></i></div>
+          </div>
+          <div class="sum">
+            <div class="r"><span>상품 금액</span><span>NT$1,100</span></div>
+            <div class="r"><span>예상 배송비 <span class="muted">본섬 기준</span></span><span>NT$60</span></div>
+            <div class="r total"><span>예상 결제 금액</span><span>NT$1,160</span></div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="2-5">
+          <span class="pin">5</span>
+          <div class="sec-head" style="justify-content:flex-end;border-bottom:none">
+            <span style="color:var(--ink-3)">전체 비우기</span>
+          </div>
+        </div>
+
+        <div class="bottombar"><span class="btn primary">주문하기</span></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="2-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">담은 상품 목록 + 금액</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/guest/cart</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_getGuestCart" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_getGuestCart" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">진입 시 1회, 수량 변경·삭제 뒤 다시 부른다(변경 API 는 본문을 주지 않는다).
+            <b>게스트 ID 가 없으면 404 가 아니라 빈 장바구니</b>다. 금액은 서버가 계산한 값을 그대로 쓴다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>Response 200</div>
+            <div class="io">{
+  <span class="k">brandGroups</span>: [{
+    brandId:       7,
+    brandName:     "서울모먼트",
+    items: [{
+      <span class="k">cartItemId</span>:       null,  <span class="c">// 항상 null</span>
+      productItemId:    32,
+      <span class="k">productVariantId</span>: 101,   <span class="c">// 변경·삭제 키</span>
+      productName:      "크롭 후드 집업",
+      optionText:       "베이지 / FREE",
+      price:            1300,
+      discountPrice?:   1100,
+      quantity:         1,
+      totalPrice:       1100,
+      stockQuantity:    5,
+      isSoldOut:        false,
+      isAvailable:      true
+    }],
+    productAmount: 1100
+  }],
+  totalProductAmount:    1100,
+  <span class="k">estimatedShippingFee</span>:  60,
+  remoteIslandFee:       100,
+  freeShippingThreshold: 1150,
+  amountToFreeShipping:  50,
+  <span class="k">estimatedTotalAmount</span>:  1160,
+  totalCount:            1
+}</div>
+          </div>
+          <div class="tags"><span class="tag">x-guest-id 필수</span><span class="tag">Accept-Language</span><span class="tag">토큰 불필요</span></div>
+        </div>
+
+        <div class="api-row" data-k="2-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">수량 변경 (− / +)</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m patch">PATCH</span><code>/guest/cart/{productVariantId}</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_patchGuestCart" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_patchGuestCart" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">경로 파라미터가 <b>라인 ID 가 아니라 <code>productVariantId</code></b> 다. 회원 장바구니와 다른 유일한 지점이라 제일 헷갈린다.
+            <b>204 · 본문 없음</b>이니 금액을 새로 받으려면 조회를 다시 부른다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io">PATCH /guest/cart/<span class="k">101</span>
+
+{ <span class="k">quantity</span>: 4 }</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>204 No Content</div>
+              <div class="io"><span class="c">// 본문이 없다.</span>
+<span class="c">// 금액은 GET /guest/cart 로 다시 받는다.</span></div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">quantity 1~999</span><span class="tag err">404 담지 않은 SKU</span><span class="tag err">409 재고 부족</span></div>
+        </div>
+
+        <div class="api-row" data-k="2-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">라인 삭제 (✕)</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m del">DELETE</span><code>/guest/cart/{productVariantId}</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_deleteGuestCartItem" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_deleteGuestCartItem" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">여기도 키는 <code>productVariantId</code> 다. <b>204 · 본문 없음.</b> 담지 않은 SKU 를 지우려 하면 404 다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>204 No Content</div>
+            <div class="io"><span class="c">// 지운 뒤 목록·뱃지를 다시 받는다.</span></div>
+          </div>
+          <div class="tags"><span class="tag err">404 담지 않은 SKU</span></div>
+        </div>
+
+        <div class="api-row" data-k="2-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">금액 요약 · 무료배송 바</span></div>
+          <div class="api-ep"><span class="m none">조회 응답</span><code>estimated*</code></div>
+          <p class="api-desc">직접 더하지 않는다. 품절·판매중지 라인(<code>isAvailable: false</code>)은 <b>서버가 이미 합계에서 뺐다.</b>
+            배송지를 받지 않으므로 <b>전부 예상값</b>이고, 이름도 <code>estimated</code> 로 시작한다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>계산</div>
+            <div class="io">totalProductAmount 1100
+  + <span class="k">estimatedShippingFee</span> 60
+  = <span class="k">estimatedTotalAmount</span> 1160
+
+amountToFreeShipping 50 → "NT$50 더 담으면"</div>
+          </div>
+        </div>
+
+        <div class="api-row" data-k="2-5">
+          <div class="api-top"><span class="pin">5</span><span class="what">전체 비우기</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m del">DELETE</span><code>/guest/cart</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_deleteGuestCart" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_deleteGuestCart" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">경로 파라미터가 없는 쪽이 전체 비우기다. <b>담은 적이 없어도 204</b> 라 실패 처리를 따로 두지 않아도 된다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>204 No Content</div>
+            <div class="io"><span class="c">// 비운 뒤 뱃지는 0 이 된다.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note"><b>회원 장바구니와 섞이지 않는다</b> — 게스트가 담은 것은 Redis 에만 있고 <code>cart_item</code> 테이블을 만들지 않는다. 로그인해도 <b>옮겨주지 않는다</b>(심사 범위 밖).</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 03 ============================ -->
+<section class="screen" id="s3">
+  <div class="screen-head">
+    <span class="no">03</span>
+    <h2>주문 진입 — 여기서 멈춘다</h2>
+    <span class="route">/cart → /order</span>
+    <p class="sub">게스트 주문·결제는 <b>만들지 않았다.</b> 주문하기를 누르면 로그인으로 보낸다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="nav"><span class="icons">←</span><span class="brandmark">장바구니</span><span class="icons" style="width:16px"></span></div>
+        <div class="sum">
+          <div class="r"><span>상품 금액</span><span>NT$1,100</span></div>
+          <div class="r total"><span>예상 결제 금액</span><span>NT$1,160</span></div>
+        </div>
+        <div class="hl" data-k="3-1">
+          <span class="pin">1</span>
+          <div class="bottombar"><span class="btn primary">주문하기</span></div>
+        </div>
+        <div class="hl" data-k="3-2">
+          <span class="pin">2</span>
+          <div class="done" style="border-bottom:none">
+            <div class="mark" style="background:var(--accent-bg);color:var(--accent-ink)">!</div>
+            <h3>로그인이 필요합니다</h3>
+            <div class="ordno" style="font-family:var(--sans)">주문은 회원만 진행할 수 있습니다</div>
+            <div class="pill">LINE 로그인 / 이메일 로그인</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="3-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">주문하기</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>화면 이동만</code></div>
+          <p class="api-desc"><b>게스트 주문 API 는 없다.</b> <code>/user/order/preview</code>·<code>/user/order</code> 는 전부 회원 토큰을 요구한다.
+            누르면 로그인 화면으로 보내고, 로그인 뒤에는 <b>회원 장바구니에 다시 담아야</b> 한다.</p>
+          <div class="tags"><span class="tag">심사 범위 밖</span></div>
+        </div>
+
+        <div class="api-row" data-k="3-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">로그인 유도</span></div>
+          <div class="api-ep"><span class="m none">기존 로그인 화면</span><code>/user/auth/*</code></div>
+          <p class="api-desc">기존 로그인 흐름을 그대로 쓴다. 게스트 장바구니는 <b>로그인해도 남아 있고 옮겨지지 않는다</b> —
+            "담긴 것이 사라졌다" 는 문의가 나오지 않게 안내 문구를 넣어두는 편이 낫다.</p>
+        </div>
+      </div>
+
+      <div class="note"><b>심사가 끝나면</b> 이 문서의 <code>/guest/cart</code> 6개와 서버 모듈을 함께 지운다. 화면도 회원 장바구니 하나로 돌아간다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FLOW ============================ -->
+<section class="flow" id="flow">
+  <h2>호출 순서 한 장</h2>
+  <p class="lede">상품을 보고 담아서 장바구니를 확인하는 데까지. 실제로 나가는 요청만 순서대로.</p>
+  <div class="steps">
+    <div class="step"><div class="n">01</div><div>
+      <h4>상품상세 진입</h4>
+      <p>토큰 없이 그대로 된다. 정책은 캐시해 두면 다음 상품에서 생략할 수 있다.</p>
+      <span class="ep">GET /product/v1/:id</span> <span class="ep">GET /shipping-policy</span>
+    </div></div>
+
+    <div class="step"><div class="n">02</div><div>
+      <h4>옵션 선택</h4>
+      <p>호출 없음. 응답의 <code>variants</code> 에서 조합을 찾아 <code>productVariantId</code> 를 확정한다.</p>
+    </div></div>
+
+    <div class="step"><div class="n">03</div><div>
+      <h4>담기 — 첫 호출만 헤더 없이</h4>
+      <p>응답의 <code>guestId</code> 를 저장한다. 이후 모든 게스트 요청에 <code>x-guest-id</code> 로 실어 보낸다.</p>
+      <span class="ep">POST /guest/cart</span>
+    </div></div>
+
+    <div class="step"><div class="n">04</div><div>
+      <h4>장바구니 진입</h4>
+      <p>목록과 금액이 이 응답 하나에서 나온다. 뱃지는 담기 응답의 <code>totalCount</code> 로 이미 갱신돼 있다.</p>
+      <span class="ep">GET /guest/cart</span>
+    </div></div>
+
+    <div class="step"><div class="n">05</div><div>
+      <h4>수량 변경 · 삭제</h4>
+      <p>둘 다 204 라 금액을 다시 받으려면 조회를 한 번 더 부른다. 키는 <code>productVariantId</code> 다.</p>
+      <span class="ep">PATCH /guest/cart/:productVariantId</span> <span class="ep">DELETE /guest/cart/:productVariantId</span> <span class="ep">GET /guest/cart</span>
+    </div></div>
+
+    <div class="step"><div class="n">06</div><div>
+      <h4>주문하기</h4>
+      <p>호출 없음. 로그인 화면으로 보낸다. 게스트 주문·결제는 만들지 않았다.</p>
+    </div></div>
+  </div>
+</section>
+
+<footer>
+  전체 필드·에러는 Swagger <code>https://api-dev.seoulmoment.com.tw/docs</code> 의 <code>GuestCart</code> 태그에서 본다.
+  서버 모듈은 <code>apps/api/src/module/guest/cart/</code> 한 폴더에 모여 있고, 통합 테스트는 <code>test/guest.cart.spec.ts</code> 다.
+  심사가 끝나면 폴더와 <code>api.module.ts</code>·<code>main.ts</code> 의 참조 두 줄을 지우면 된다.
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var lock = null;
+  function paint(k, on) {
+    document.querySelectorAll('[data-k="' + k + '"]').forEach(function (el) {
+      el.classList.toggle('lit', on);
+    });
+  }
+  document.querySelectorAll('[data-k]').forEach(function (el) {
+    var k = el.dataset.k;
+    el.addEventListener('mouseenter', function () { if (!lock) paint(k, true); });
+    el.addEventListener('mouseleave', function () { if (!lock) paint(k, false); });
+    el.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (lock === k) { paint(k, false); lock = null; return; }
+      if (lock) paint(lock, false);
+      lock = k; paint(k, true);
+    });
+  });
+  document.addEventListener('click', function () {
+    if (lock) { paint(lock, false); lock = null; }
+  });
+})();
+</script>
+</body>
+</html>
