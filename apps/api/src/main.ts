@@ -47,6 +47,7 @@ import { BrandModule } from './module/brand/brand.module';
 import { BrandPromotionModule } from './module/brand/promotion/brand.promotion.module';
 import { CategoryModule } from './module/category/category.module';
 import { GoogleModule } from './module/google/google.module';
+import { GuestCartModule } from './module/guest/cart/guest.cart.module';
 import { HomeModule } from './module/home/home.module';
 import { LanguageModule } from './module/language/language.module';
 import { NewsModule } from './module/news/news.module';
@@ -124,6 +125,7 @@ async function bootstrap() {
       BrandPromotionModule,
       CategoryModule,
       GoogleModule,
+      GuestCartModule,
       HomeModule,
       LanguageModule,
       NewsModule,

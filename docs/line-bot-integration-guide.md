@@ -3,9 +3,14 @@
 LINE Bot 에서 회원을 인증하고, 그 회원으로 장바구니·주문까지 잇는 데 필요한 API를 정리했다.
 이 문서 하나로 붙일 수 있게 요청/응답/에러를 전부 적었다.
 
-- API Base (DEV): `https://api-dev.seoulmoment.com.tw`
-- Swagger: `https://api-dev.seoulmoment.com.tw/docs`
-- PROD 주소와 `LINE_BOT_API_KEY` 값은 별도 경로로 전달한다.
+| 환경 | API Base                             | Swagger                                   |
+| ---- | ------------------------------------ | ----------------------------------------- |
+| DEV  | `https://api-dev.seoulmoment.com.tw` | `https://api-dev.seoulmoment.com.tw/docs` |
+| PROD | `https://api.seoulmoment.com.tw`     | `https://api.seoulmoment.com.tw/docs`     |
+
+- 아래 예시는 DEV 기준이다. **PROD 는 도메인만 바꾸면 되고 경로·본문은 같다.**
+- 연동 확인은 DEV 에서 먼저 끝내고 PROD 로 옮긴다.
+- `LINE_BOT_API_KEY` 값은 **환경별로 다르다.** 별도 경로로 전달한다.
 
 ---
 
@@ -363,7 +368,7 @@ GET  /user/order/{orderId} → 주문 상세
 - [ ] `lineUserId ↔ userId` 매핑 저장, 이후 요청은 ①로 토큰 갱신
 - [ ] 401(토큰 만료) 시 `refreshToken` 으로 재발급하는 처리
 - [ ] 마케팅 수신 동의 안내 문구를 가입 단계 대화에 포함
-- [ ] PROD 주소·키 수령 후 전환
+- [ ] PROD 전환 — 도메인을 `https://api.seoulmoment.com.tw` 로 바꾸고 **PROD 용 키**로 교체
 
 ### `lineUserId` 관련 주의
 
@@ -379,5 +384,5 @@ LINE 의 `U...` 사용자 ID는 **프로바이더 단위로 발급**된다.
 
 ## 8. 문의
 
-- 서버 이슈: 실패 응답의 `traceId` 와 호출 시각을 함께 전달
-- 전체 스펙: `https://api-dev.seoulmoment.com.tw/docs`
+- 서버 이슈: 실패 응답의 `traceId` 와 호출 시각, 환경(DEV/PROD)을 함께 전달
+- 전체 스펙: DEV `https://api-dev.seoulmoment.com.tw/docs` · PROD `https://api.seoulmoment.com.tw/docs`
