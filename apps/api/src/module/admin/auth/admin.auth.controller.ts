@@ -1,4 +1,4 @@
-import { JwtType } from '@app/auth/auth.dto';
+import { JwtAudience, JwtType } from '@app/auth/auth.dto';
 import { CommonAuthService } from '@app/auth/auth.service';
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseException } from '@app/common/decorator/response-exception.decorator';
@@ -69,7 +69,7 @@ export class AdminAuthController {
     @Request() req: any,
   ): Promise<ResponseDataDto<GetOneTimeTokenReponse>> {
     const oneTimeToken = await this.commonAuthService.generateJwt(
-      { id: req.user.id },
+      { id: req.user.id, aud: JwtAudience.ADMIN },
       JwtType.ONE_TIME_TOKEN,
       Configuration.getConfig().JWT_EXPIRES_IN,
     );

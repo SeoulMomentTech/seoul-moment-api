@@ -54,6 +54,7 @@ Path aliases defined in `tsconfig.json`:
 ### Key Patterns
 
 - **Auth**: JWT-based with guards in `apps/api/src/guard/` — `AdminRoleGuard`, `RefreshTokenGuard`, `OneTimeTokenGuard`. Role-based access via `@AdminRole` decorator.
+  Admin and user tokens share `JWT_SECRET`, `jwtType` and the `{ id }` shape, so every `ONE_TIME_TOKEN` / `REFRESH_TOKEN` must carry `aud` (`JwtAudience.ADMIN` / `JwtAudience.USER`); admin guards require `aud: admin`, while customer guards also accept tokens with no `aud` on purpose (pre-`aud` customer sessions). Guards must read the subject via `getTokenSubjectId`/`isAdminToken`/`isUserToken` (`@app/auth/auth.token`) — never pass `payload.id` straight to a repository (TypeORM treats `undefined` in `where` as no condition and returns the first row).
 - **Transactions**: `typeorm-transactional` — initialize in `main.ts`, use in repository services.
 - **Multilingual**: `Accept-Language` header (ko/en/zh) drives response language selection.
 - **Product Search**: OpenSearch index `product-items` with full-text search, filtering, and sorting.

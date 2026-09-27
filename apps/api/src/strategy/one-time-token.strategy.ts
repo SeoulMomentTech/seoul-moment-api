@@ -1,4 +1,5 @@
 import { JwtType } from '@app/auth/auth.dto';
+import { getTokenSubjectId, isAdminToken } from '@app/auth/auth.token';
 import { Configuration } from '@app/config/configuration';
 import { AdminRepositoryService } from '@app/repository/service/admin.repository.service';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
@@ -25,9 +26,13 @@ export class OneTimeTokenStrategy extends PassportStrategy(
     if (payload.jwtType !== JwtType.ONE_TIME_TOKEN)
       throw new HttpException('Invalid token type', HttpStatus.UNAUTHORIZED);
 
-    const adminEntity = await this.adminRepositoryService.getAdminById(
-      payload.id,
-    );
+    // 회원 토큰도 같은 시크릿·jwtType 이라 aud 로 관리자 토큰만 가려낸다
+    const adminId = getTokenSubjectId(payload);
+
+    if (!isAdminToken(payload) || adminId === null)
+      throw new HttpException('Not an admin token', HttpStatus.UNAUTHORIZED);
+
+    const adminEntity = await this.adminRepositoryService.getAdminById(adminId);
 
     return adminEntity;
   }

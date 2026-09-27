@@ -1,4 +1,5 @@
 import { JwtType } from '@app/auth/auth.dto';
+import { getTokenSubjectId, isUserToken } from '@app/auth/auth.token';
 import { Configuration } from '@app/config/configuration';
 import { UserRepositoryService } from '@app/repository/service/user.repository.service';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
@@ -26,10 +27,14 @@ export class UserRefreshTokenStrategy extends PassportStrategy(
       throw new HttpException('Invalid token type', HttpStatus.FORBIDDEN);
 
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
+    const userId = getTokenSubjectId(payload);
+
+    if (!isUserToken(payload) || userId === null)
+      throw new HttpException('Not a user token', HttpStatus.UNAUTHORIZED);
 
     // 탈퇴한 회원은 소프트 삭제되어 조회되지 않으므로 리프레시도 막힌다.
     const userEntity =
-      await this.userRepositoryService.findUserByIdWithRefreshToken(payload.id);
+      await this.userRepositoryService.findUserByIdWithRefreshToken(userId);
 
     if (!userEntity)
       throw new HttpException(

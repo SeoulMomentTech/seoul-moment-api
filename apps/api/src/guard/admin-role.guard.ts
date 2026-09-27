@@ -1,4 +1,5 @@
 import { JwtType } from '@app/auth/auth.dto';
+import { getTokenSubjectId, isAdminToken } from '@app/auth/auth.token';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
@@ -51,15 +52,33 @@ export class AdminRoleGuard implements CanActivate {
     }
 
     // JWT payload 디코딩 (만료 시간 자동 검증)
-    const payload = jwt.verify(
-      token,
-      Configuration.getConfig().JWT_SECRET,
-    ) as Record<string, any>;
+    let payload: Record<string, any>;
+    try {
+      payload = jwt.verify(
+        token,
+        Configuration.getConfig().JWT_SECRET,
+      ) as Record<string, any>;
+    } catch (error) {
+      throw new ServiceError(
+        error instanceof jwt.TokenExpiredError
+          ? 'Token expired'
+          : 'Invalid token',
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
 
     // JWT 타입 검증 (ONE_TIME_TOKEN인지 확인)
     if (payload.jwtType !== JwtType.ONE_TIME_TOKEN) {
       throw new ServiceError(
         'Invalid token type',
+        ServiceErrorCode.UNAUTHORIZED,
+      );
+    }
+
+    // 회원 토큰도 같은 시크릿·jwtType 이라 aud 로 관리자 토큰만 가려낸다
+    if (!isAdminToken(payload) || getTokenSubjectId(payload) === null) {
+      throw new ServiceError(
+        'Not an admin token',
         ServiceErrorCode.UNAUTHORIZED,
       );
     }
@@ -72,7 +91,7 @@ export class AdminRoleGuard implements CanActivate {
     requiredRole: string,
   ) {
     const adminEntity = await this.adminRepositoryService.findAdminById(
-      payload.id,
+      getTokenSubjectId(payload),
       AdminStatus.NORMAL,
     );
 

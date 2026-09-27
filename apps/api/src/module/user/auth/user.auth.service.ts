@@ -1,4 +1,4 @@
-import { JwtType } from '@app/auth/auth.dto';
+import { JwtAudience, JwtType } from '@app/auth/auth.dto';
 import { CommonAuthService } from '@app/auth/auth.service';
 import { RedisKey } from '@app/cache/cache.dto';
 import { CacheService } from '@app/cache/cache.service';
@@ -792,7 +792,7 @@ export class UserAuthService {
     const user = await this.userRepositoryService.getUserByEmail(email);
 
     const token = await this.commonAuthService.generateJwt(
-      { id: user.id },
+      { id: user.id, aud: JwtAudience.USER },
       JwtType.ONE_TIME_TOKEN,
       Configuration.getConfig().JWT_EXPIRES_IN,
     );
@@ -875,7 +875,7 @@ export class UserAuthService {
     const user = await this.userRepositoryService.getUserByPhone(phone);
 
     const token = await this.commonAuthService.generateJwt(
-      { id: user.id },
+      { id: user.id, aud: JwtAudience.USER },
       JwtType.ONE_TIME_TOKEN,
       Configuration.getConfig().JWT_EXPIRES_IN,
     );
@@ -927,12 +927,12 @@ export class UserAuthService {
 
   private async issueTokens(userId: number): Promise<PostUserLoginResponse> {
     const accessToken = await this.commonAuthService.generateJwt(
-      { id: userId },
+      { id: userId, aud: JwtAudience.USER },
       JwtType.ONE_TIME_TOKEN,
       Configuration.getConfig().JWT_EXPIRES_IN,
     );
     const refreshToken = await this.commonAuthService.generateJwt(
-      { id: userId },
+      { id: userId, aud: JwtAudience.USER },
       JwtType.REFRESH_TOKEN,
       '14d',
     );

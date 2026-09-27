@@ -1,4 +1,5 @@
 import { JwtType } from '@app/auth/auth.dto';
+import { getTokenSubjectId, isUserToken } from '@app/auth/auth.token';
 import { Configuration } from '@app/config/configuration';
 import { UserRepositoryService } from '@app/repository/service/user.repository.service';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
@@ -25,11 +26,14 @@ export class UserOneTimeTokenStrategy extends PassportStrategy(
     if (payload.jwtType !== JwtType.ONE_TIME_TOKEN)
       throw new HttpException('Invalid token type', HttpStatus.UNAUTHORIZED);
 
+    const userId = getTokenSubjectId(payload);
+
+    if (!isUserToken(payload) || userId === null)
+      throw new HttpException('Not a user token', HttpStatus.UNAUTHORIZED);
+
     // 탈퇴한 회원은 소프트 삭제되어 조회되지 않는다. 남아 있던 액세스
     // 토큰도 이 시점에 무효가 된다.
-    const userEntity = await this.userRepositoryService.findUserById(
-      payload.id,
-    );
+    const userEntity = await this.userRepositoryService.findUserById(userId);
 
     if (!userEntity)
       throw new HttpException(

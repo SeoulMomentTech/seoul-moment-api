@@ -1,4 +1,5 @@
 import { JwtType } from '@app/auth/auth.dto';
+import { getTokenSubjectId, isAdminToken } from '@app/auth/auth.token';
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { Configuration } from '@app/config/configuration';
@@ -34,9 +35,13 @@ export class RefreshTokenStrategy extends PassportStrategy(
       throw new ServiceError('please login', ServiceErrorCode.FORBIDDEN); // 만료된 토큰을 401로 처리
     }
 
-    const adminEntity = await this.adminRepositoryService.getAdminById(
-      payload.id,
-    );
+    // aud 도입 전 관리자 refresh 토큰도 여기서 막혀 FORBIDDEN(재로그인)으로 간다
+    const adminId = getTokenSubjectId(payload);
+
+    if (!isAdminToken(payload) || adminId === null)
+      throw new HttpException('Not an admin token', HttpStatus.FORBIDDEN);
+
+    const adminEntity = await this.adminRepositoryService.getAdminById(adminId);
 
     if (!adminEntity.refreshToken || token !== adminEntity.refreshToken)
       throw new HttpException(
