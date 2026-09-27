@@ -38,12 +38,6 @@ export interface ConfigImpl {
   /** LINE Bot 전용 API 를 부를 때 요구하는 공유 시크릿 */
   LINE_BOT_API_KEY: string;
 
-  /**
-   * Firebase 서비스 계정 키(JSON 원문 또는 base64). FCM 발송 자격증명이다.
-   * 비어 있으면 푸시 발송만 비활성화되고 앱은 정상 기동한다.
-   */
-  FIREBASE_SERVICE_ACCOUNT: string;
-
   SERPER_URL: string;
   SERPER_API_KEY: string;
 

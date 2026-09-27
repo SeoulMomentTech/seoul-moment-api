@@ -5,7 +5,6 @@ import { LoggerModule } from '@app/common/log/logger.module';
 import { DatabaseModule } from '@app/database/database.module';
 import { DatabaseService } from '@app/database/database.service';
 import { RepositoryModule } from '@app/repository/repository.module';
-import { SocketModule } from '@app/socket/socket.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
@@ -29,9 +28,6 @@ import { HomeModule } from './home/home.module';
 import { LanguageModule } from './language/language.module';
 import { NewsModule } from './news/news.module';
 import { PartnerModule } from './partner/partner.module';
-import { ChatModule } from './plen/chat/chat.module';
-import { PlanNotificationModule } from './plen/notification/plan-notification.module';
-import { PlanModule } from './plen/plan.module';
 import { ProductModule } from './product/product.module';
 import { ShippingModule } from './shipping/shipping.module';
 import { UserModule } from './user/user.module';
@@ -65,12 +61,8 @@ import { UserModule } from './user/user.module';
     ProductModule,
     CategoryModule,
     PartnerModule,
-    PlanModule,
     LanguageModule,
     AuthModule,
-    SocketModule,
-    ChatModule,
-    PlanNotificationModule,
     BrandPromotionModule,
     UserModule,
     // 심사용 임시 모듈 — 심사 후 이 줄과 폴더를 함께 지운다

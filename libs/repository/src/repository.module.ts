@@ -24,9 +24,6 @@ import { BrandSectionEntity } from './entity/brand-section.entity';
 import { BrandEntity } from './entity/brand.entity';
 import { CartItemEntity } from './entity/cart-item.entity';
 import { CategoryEntity } from './entity/category.entity';
-import { ChatMessageEntity } from './entity/chat-message.entity';
-import { ChatRoomMemberEntity } from './entity/chat-room-member.entity';
-import { ChatRoomEntity } from './entity/chat-room.entity';
 import { ExternalLinkEntity } from './entity/external-link.entity';
 import { HomeBannerImageEntity } from './entity/home-banner-image.entity';
 import { HomeSectionImageEntity } from './entity/home-section-image.entity';
@@ -47,18 +44,6 @@ import { OrderShippingEntity } from './entity/order-shipping.entity';
 import { OrderEntity } from './entity/order.entity';
 import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
-import { PlanActivityEntity } from './entity/plan-activity.entity';
-import { PlanBragLikeEntity } from './entity/plan-brag-like.entity';
-import { PlanBragEntity } from './entity/plan-brag.entity';
-import { PlanCategoryEntity } from './entity/plan-category.entity';
-import { PlanFeedPostEntity } from './entity/plan-feed-post.entity';
-import { PlanFeedVoteEntity } from './entity/plan-feed-vote.entity';
-import { PlanScheduleEntity } from './entity/plan-schedule.entity';
-import { PlanUserCategoryEntity } from './entity/plan-user-category.entity';
-import { PlanUserDeviceTokenEntity } from './entity/plan-user-device-token.entity';
-import { PlanUserRoomMemberEntity } from './entity/plan-user-room-member.entity';
-import { PlanUserRoomEntity } from './entity/plan-user-room.entity';
-import { PlanUserEntity } from './entity/plan-user.entity';
 import { ProductBannerEntity } from './entity/product-banner.entity';
 import { ProductCategoryEntity } from './entity/product-category.entity';
 import { ProductExternalEntity } from './entity/product-external.entity';
@@ -91,24 +76,12 @@ import { BrandPromotionRepositoryService } from './service/brand-promotion.repos
 import { BrandRepositoryService } from './service/brand.repository.service';
 import { CartRepositoryService } from './service/cart.repository.service';
 import { CategoryRepositoryService } from './service/category.repository.service';
-import { ChatRepositoryService } from './service/chat.repository.service';
 import { HomeRepositoryService } from './service/home.repository.service';
 import { LanguageRepositoryService } from './service/language.repository.service';
 import { NewsRepositoryService } from './service/news.repository.service';
 import { OptionRepositoryService } from './service/option.repository.service';
 import { OrderRepositoryService } from './service/order.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
-import { PlanActivityRepositoryService } from './service/plan-activity.repository.service';
-import { PlanBragLikeRepositoryService } from './service/plan-brag-like.repository.service';
-import { PlanBragRepositoryService } from './service/plan-brag.repository.service';
-import { PlanCategoryRepositoryService } from './service/plan-category.repository.service';
-import { PlanFeedVoteRepositoryService } from './service/plan-feed-vote.repository.service';
-import { PlanFeedRepositoryService } from './service/plan-feed.repository.service';
-import { PlanScheduleRepositoryService } from './service/plan-schedule.repository.service';
-import { PlanUserRoomMemberRepositoryService } from './service/plan-user--room-member.repository.service';
-import { PlanUserDeviceTokenRepositoryService } from './service/plan-user-device-token.repository.service';
-import { PlanUserRoomRepositoryService } from './service/plan-user-room.repository.service';
-import { PlanUserRepositoryService } from './service/plan-user.repository.service';
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
 import { ShippingRepositoryService } from './service/shipping.repository.service';
@@ -157,21 +130,6 @@ import { UserRepositoryService } from './service/user.repository.service';
       ProductExternalEntity,
       ExternalLinkEntity,
       AdminRoleEntity,
-      PlanUserEntity,
-      PlanActivityEntity,
-      PlanFeedPostEntity,
-      PlanFeedVoteEntity,
-      PlanBragEntity,
-      PlanBragLikeEntity,
-      PlanScheduleEntity,
-      PlanCategoryEntity,
-      PlanUserCategoryEntity,
-      PlanUserDeviceTokenEntity,
-      PlanUserRoomEntity,
-      PlanUserRoomMemberEntity,
-      ChatMessageEntity,
-      ChatRoomEntity,
-      ChatRoomMemberEntity,
       BrandPromotionEntity,
       BrandPromotionBannerEntity,
       BrandPromotionBannerImageEntity,
@@ -218,18 +176,6 @@ import { UserRepositoryService } from './service/user.repository.service';
     AdminRepositoryService,
     AdminRoleRepositoryService,
     AdminRepositoryService,
-    PlanUserRepositoryService,
-    PlanActivityRepositoryService,
-    PlanFeedRepositoryService,
-    PlanFeedVoteRepositoryService,
-    PlanBragRepositoryService,
-    PlanBragLikeRepositoryService,
-    PlanScheduleRepositoryService,
-    PlanCategoryRepositoryService,
-    PlanUserRoomRepositoryService,
-    PlanUserRoomMemberRepositoryService,
-    PlanUserDeviceTokenRepositoryService,
-    ChatRepositoryService,
     BrandPromotionRepositoryService,
     UserRepositoryService,
     UserLikeRepositoryService,
@@ -256,18 +202,6 @@ import { UserRepositoryService } from './service/user.repository.service';
     ProductFilterRepositoryService,
     AdminRepositoryService,
     AdminRoleRepositoryService,
-    PlanUserRepositoryService,
-    PlanActivityRepositoryService,
-    PlanFeedRepositoryService,
-    PlanFeedVoteRepositoryService,
-    PlanBragRepositoryService,
-    PlanBragLikeRepositoryService,
-    PlanScheduleRepositoryService,
-    PlanCategoryRepositoryService,
-    PlanUserRoomRepositoryService,
-    PlanUserRoomMemberRepositoryService,
-    PlanUserDeviceTokenRepositoryService,
-    ChatRepositoryService,
     BrandPromotionRepositoryService,
     UserRepositoryService,
     UserLikeRepositoryService,

@@ -1,17 +1,13 @@
-/* eslint-disable max-lines-per-function */
 import { INestApplication, Type } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { SwaggerAuthName } from './swagger.dto';
 
 const SWAGGER_DOCS_PATH = 'docs';
-const SWAGGER_DOCS_PLEN_PATH = 'docs-plen';
 
 export interface SwaggerSettingOptions {
-  /** docs에 포함할 모듈. 지정 시 이 모듈들만 /docs, /docs-json에 노출 (Plen 제외용) */
+  /** docs에 포함할 모듈. 지정 시 이 모듈들만 /docs, /docs-json에 노출 */
   docsInclude?: Type[];
-  /** docs-plen에 노출할 모듈. 이 모듈에 속한 컨트롤러만 문서에 표시 */
-  plenInclude?: Type[];
 }
 
 export function swaggerSettring(
@@ -38,28 +34,4 @@ export function swaggerSettring(
   });
 
   SwaggerModule.setup(SWAGGER_DOCS_PATH, app, document);
-
-  // /docs-plen: plen 전용 문서 (설정·포함 모듈 등을 따로 관리 가능)
-  const plenConfig = new DocumentBuilder()
-    .setTitle('Plen Api Document')
-    .setDescription(
-      `Plen 전용 API 문서. 필요시 include 옵션으로 특정 모듈만 포함 가능.
-      JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybVR5cGUiOiJrYWthbyIsInBsYW5Vc2VySWQiOiJhMjk2MGFhNS04ZmZlLTQzMDItYWQwNy0xMWNmMTYwMmQ0ZDUiLCJrYWthb0lkIjo0NzE5MjAwOTkzLCJrYWthb1Rva2VuIjoiMUFobWp6UDJITEFoMjhORzE2THRJQ016ejBpVFhzTnBBQUFBQVFvTkc1b0FBQUdjR19HU1EtanFPUDZvMUNabyIsImp3dFR5cGUiOiJPTkVfVElNRV9USU1FIiwiaWF0IjoxNzY5OTk1MzQzLCJleHAiOjQ5MjM1OTUzNDN9.Mbuno5nYIPGJaNirKd68LnFKhBU6cWbZzHrC6dzXGwY`,
-    )
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-      },
-      SwaggerAuthName.ACCESS_TOKEN,
-    )
-    .build();
-
-  const plenDocument = SwaggerModule.createDocument(
-    app,
-    plenConfig,
-    options?.plenInclude?.length ? { include: options.plenInclude } : undefined,
-  );
-  SwaggerModule.setup(SWAGGER_DOCS_PLEN_PATH, app, plenDocument);
 }

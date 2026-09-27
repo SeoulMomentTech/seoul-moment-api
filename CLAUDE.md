@@ -33,28 +33,27 @@ NestJS monorepo with two applications and shared libraries.
 
 ### Applications (`apps/`)
 
-- **api** — Main REST API server (port 3000). Bootstrap in `main.ts` sets up Swagger (`/docs`, `/docs-plen`), global validation pipes, exception filters, Morgan logging, and Redis-backed Socket.IO adapter.
+- **api** — Main REST API server (port 3000). Bootstrap in `main.ts` sets up Swagger (`/docs`), global validation pipes, exception filters, and Morgan logging.
 - **batch** — Scheduled background jobs (Google Sheets crawler, OpenSearch indexing).
 
 ### Shared Libraries (`libs/`)
 
 Path aliases defined in `tsconfig.json`:
 
-| Alias             | Purpose                                                                                      |
-| ----------------- | -------------------------------------------------------------------------------------------- |
-| `@app/database`   | TypeORM + PostgreSQL (SnakeNamingStrategy, auto-sync)                                        |
-| `@app/config`     | Environment config loader (`env/local.ts`, `dev.ts`, `test.ts`, `prod.ts`)                   |
-| `@app/repository` | Entities (50+), repository services, DTOs, enums                                             |
-| `@app/common`     | Swagger docs helpers, exception filters, Winston logger, email templates, utilities          |
-| `@app/external`   | External API clients: AWS S3, Google (Sheets/Drive/Gmail), Kakao, OpenAI, OpenSearch, Serper |
-| `@app/cache`      | Redis caching service (`@liaoliaots/nestjs-redis`)                                           |
-| `@app/auth`       | JWT auth, Passport strategies, email verification                                            |
-| `@app/socket`     | Socket.IO gateway for real-time features (chat, plan rooms)                                  |
-| `@app/http`       | HTTP client utilities                                                                        |
+| Alias             | Purpose                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `@app/database`   | TypeORM + PostgreSQL (SnakeNamingStrategy, auto-sync)                                 |
+| `@app/config`     | Environment config loader (`env/local.ts`, `dev.ts`, `test.ts`, `prod.ts`)            |
+| `@app/repository` | Entities (50+), repository services, DTOs, enums                                      |
+| `@app/common`     | Swagger docs helpers, exception filters, Winston logger, email templates, utilities   |
+| `@app/external`   | External API clients: AWS S3, Google (Sheets/Drive/Gmail), OpenAI, OpenSearch, Serper |
+| `@app/cache`      | Redis caching service (`@liaoliaots/nestjs-redis`)                                    |
+| `@app/auth`       | JWT auth, Passport strategies, email verification                                     |
+| `@app/http`       | HTTP client utilities                                                                 |
 
 ### Key Patterns
 
-- **Auth**: JWT-based with guards in `apps/api/src/guard/` — `AdminRoleGuard`, `RefreshTokenGuard`, `KakaoGuard`, `OneTimeTokenGuard`. Role-based access via `@AdminRole` decorator.
+- **Auth**: JWT-based with guards in `apps/api/src/guard/` — `AdminRoleGuard`, `RefreshTokenGuard`, `OneTimeTokenGuard`. Role-based access via `@AdminRole` decorator.
 - **Transactions**: `typeorm-transactional` — initialize in `main.ts`, use in repository services.
 - **Multilingual**: `Accept-Language` header (ko/en/zh) drives response language selection.
 - **Product Search**: OpenSearch index `product-items` with full-text search, filtering, and sorting.

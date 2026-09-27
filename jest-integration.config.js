@@ -23,7 +23,6 @@ module.exports = {
     '^@app/http(|/.*)$': '<rootDir>/libs/http/src/$1',
     '^@app/cache(|/.*)$': '<rootDir>/libs/cache/src/$1',
     '^@app/auth(|/.*)$': '<rootDir>/libs/auth/src/$1',
-    '^@app/socket(|/.*)$': '<rootDir>/libs/socket/src/$1',
     '^apps/(.*)$': '<rootDir>/apps/$1',
     '^libs/(.*)$': '<rootDir>/libs/$1',
   },

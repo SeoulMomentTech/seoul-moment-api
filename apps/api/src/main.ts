@@ -3,8 +3,6 @@ import { swaggerSettring } from '@app/common/docs/swagger';
 import { LoggerService } from '@app/common/log/logger.service';
 import morganSetting from '@app/common/log/morgan';
 import { Configuration } from '@app/config/configuration';
-import { SupportEnv } from '@app/config/enum/config.enum';
-import { RedisIoAdapter } from '@app/socket/redis.adapter';
 import {
   BadRequestException,
   HttpStatus,
@@ -52,15 +50,6 @@ import { HomeModule } from './module/home/home.module';
 import { LanguageModule } from './module/language/language.module';
 import { NewsModule } from './module/news/news.module';
 import { PartnerModule } from './module/partner/partner.module';
-import { PlanAuthModule } from './module/plen/auth/plan.auth.module';
-import { PlanCategoryModule } from './module/plen/category/plan-category.module';
-import { ChatModule } from './module/plen/chat/chat.module';
-import { PlanModule } from './module/plen/plan.module';
-import { RENEWED_TOKEN_HEADER } from './module/plen/plan.session';
-import { PlanRoomModule } from './module/plen/room/plan-room.module';
-import { PlanScheduleModule } from './module/plen/schedule/plan-schedule.module';
-import { PlanSettingModule } from './module/plen/setting/plan-setting.module';
-import { PlanUserModule } from './module/plen/user/plan.user.module';
 import { ProductModule } from './module/product/product.module';
 import { ShippingModule } from './module/shipping/shipping.module';
 import { UserAuthModule } from './module/user/auth/user.auth.module';
@@ -77,10 +66,7 @@ async function bootstrap() {
   initializeTransactionalContext();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    // 브라우저는 다른 오리진의 응답에서 노출한 헤더만 읽는다. 세션 갱신
-    // 토큰이 이 헤더로 나가므로, 빼면 프론트에서 헤더가 없는 것처럼 보이고
-    // 갱신이 조용히 죽는다. 나머지 옵션은 cors 패키지 기본값 그대로다.
-    cors: { exposedHeaders: [RENEWED_TOKEN_HEADER] },
+    cors: true,
   });
 
   const logger = app.get(LoggerService);
@@ -140,17 +126,7 @@ async function bootstrap() {
       UserRecentModule,
       UserModule,
       AiConsultModule,
-    ], // /docs, /docs-json에만 노출 (Plen 제외)
-    plenInclude: [
-      PlanModule,
-      PlanAuthModule,
-      PlanSettingModule,
-      PlanUserModule,
-      PlanScheduleModule,
-      PlanCategoryModule,
-      PlanRoomModule,
-      ChatModule,
-    ], // 이 모듈에 속한 컨트롤러만 /docs-plen, /docs-plen-json에 표시
+    ], // /docs, /docs-json에만 노출
   });
 
   app.use(bodyParser.json({ limit: '100mb' }));
@@ -243,25 +219,6 @@ async function bootstrap() {
   logger.info(
     `🛡️  [reCAPTCHA]: ${config.RECAPTCHA_SECRET_KEY ? 'Configured' : 'Not configured'}`,
   );
-
-  // ── WebSocket Adapter ──
-  logger.info(`----------------------------------------`);
-  const useRedisAdapter =
-    config.REDIS_HOST && config.NODE_ENV === SupportEnv.DEV;
-
-  if (useRedisAdapter) {
-    logger.info(`🔌 [WebSocket] Redis adapter (multi-instance, DEV only)`);
-    const redisIoAdapter = new RedisIoAdapter(app);
-    await redisIoAdapter.connectToRedis();
-    app.useWebSocketAdapter(redisIoAdapter);
-  } else {
-    logger.info(`🔌 [WebSocket] In-memory adapter (single instance)`);
-    if (config.REDIS_HOST && config.NODE_ENV !== SupportEnv.DEV) {
-      logger.info(
-        `   ⚠️  Redis adapter disabled in ${config.NODE_ENV} (DEV only)`,
-      );
-    }
-  }
 
   // ── Server Start ──
   logger.info(`========================================`);

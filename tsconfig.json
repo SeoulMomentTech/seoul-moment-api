@@ -67,12 +67,6 @@
       ],
       "@app/auth/*": [
         "libs/auth/src/*"
-      ],
-      "@app/socket": [
-        "libs/socket/src"
-      ],
-      "@app/socket/*": [
-        "libs/socket/src/*"
       ]
     }
   }
