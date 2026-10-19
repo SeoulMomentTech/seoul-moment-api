@@ -11,6 +11,13 @@ import heicConvert from 'heic-convert';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 
+// WebP는 한 변이 16383px를 넘으면 인코딩할 수 없다
+const WEBP_MAX_DIMENSION = 16383;
+// libvips가 JPEG로 인코딩할 수 있는 한 변의 최대 크기
+const JPEG_MAX_DIMENSION = 65500;
+// WebP 한도를 넘는 긴 이미지(상품 상세 등)를 JPEG로 저장할 때의 품질
+const OVERSIZED_JPEG_QUALITY = 90;
+
 export interface UploadResult {
   url: string;
   key: string;
@@ -114,7 +121,7 @@ export class S3Service {
   }
 
   /**
-   * 이미지 파일을 S3에 업로드 (항상 webp로 변환)
+   * 이미지 파일을 S3에 업로드 (webp로 변환, WebP 한도를 넘는 긴 이미지는 jpeg)
    * @param imageBufferOrBase64 이미지 버퍼 또는 base64 문자열
    * @param options 업로드 옵션
    * @returns 업로드 결과
@@ -144,22 +151,24 @@ export class S3Service {
       // HEIC/AVIF 이미지인 경우 JPEG로 선변환
       const processableBuffer = await this.preProcessImage(imageBuffer);
 
-      // 이미지를 webp로 변환
-      const convertedBuffer = await sharp(processableBuffer)
-        .webp({ quality })
-        .toBuffer();
+      // 이미지를 webp로 변환 (WebP 한도를 넘으면 jpeg)
+      const { buffer: convertedBuffer, format } = await this.convertImage(
+        processableBuffer,
+        quality,
+      );
 
-      const fileName = restOptions.fileName || `${uuidv4()}.webp`;
+      const fileName =
+        restOptions.fileName || `${uuidv4()}.${this.getImageExtension(format)}`;
 
       return this.uploadFile(convertedBuffer, {
         ...restOptions,
         folder,
         fileName,
-        contentType: 'image/webp',
+        contentType: this.getImageContentType(format),
       });
     } catch (error) {
       this.logger.error(
-        `Failed to convert image to webp: ${error.message}`,
+        `Failed to convert image: ${error.message}`,
         error.stack,
       );
       throw new Error(`이미지 변환 실패: ${error.message}`);
@@ -212,6 +221,40 @@ export class S3Service {
       );
       throw new Error(`파일 존재 확인 실패: ${error.message}`);
     }
+  }
+
+  /**
+   * 이미지를 webp로 변환. 한 변이 WebP 한도(16383px)를 넘으면
+   * 흰 배경을 깐 jpeg로 변환한다 (jpeg 한도 65500px를 넘으면 비율 유지 축소)
+   * @param buffer 이미지 버퍼
+   * @param quality webp 품질
+   * @returns 변환된 버퍼와 포맷
+   */
+  private async convertImage(
+    buffer: Buffer,
+    quality: number,
+  ): Promise<{ buffer: Buffer; format: 'webp' | 'jpeg' }> {
+    const { width = 0, height = 0 } = await sharp(buffer).metadata();
+
+    if (Math.max(width, height) <= WEBP_MAX_DIMENSION) {
+      const webpBuffer = await sharp(buffer).webp({ quality }).toBuffer();
+      return { buffer: webpBuffer, format: 'webp' };
+    }
+
+    this.logger.info(
+      `Image ${width}x${height} exceeds WebP limit, converting to JPEG`,
+    );
+    const jpegBuffer = await sharp(buffer)
+      .resize({
+        width: JPEG_MAX_DIMENSION,
+        height: JPEG_MAX_DIMENSION,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .flatten({ background: '#ffffff' })
+      .jpeg({ quality: OVERSIZED_JPEG_QUALITY, mozjpeg: true })
+      .toBuffer();
+    return { buffer: jpegBuffer, format: 'jpeg' };
   }
 
   /**
