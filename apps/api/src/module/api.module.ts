@@ -28,6 +28,7 @@ import { HomeModule } from './home/home.module';
 import { LanguageModule } from './language/language.module';
 import { NewsModule } from './news/news.module';
 import { PartnerModule } from './partner/partner.module';
+import { PaymentModule } from './payment/payment.module';
 import { ProductModule } from './product/product.module';
 import { ShippingModule } from './shipping/shipping.module';
 import { UserModule } from './user/user.module';
@@ -69,6 +70,7 @@ import { UserModule } from './user/user.module';
     GuestCartModule,
     AiConsultModule,
     ShippingModule,
+    PaymentModule,
   ],
   controllers: [
     HealthController,

@@ -48,15 +48,19 @@ import { GoogleModule } from './module/google/google.module';
 import { GuestCartModule } from './module/guest/cart/guest.cart.module';
 import { HomeModule } from './module/home/home.module';
 import { LanguageModule } from './module/language/language.module';
+import { LogisticsModule } from './module/logistics/logistics.module';
 import { NewsModule } from './module/news/news.module';
 import { PartnerModule } from './module/partner/partner.module';
+import { PaymentModule } from './module/payment/payment.module';
 import { ProductModule } from './module/product/product.module';
 import { ShippingModule } from './module/shipping/shipping.module';
 import { UserAuthModule } from './module/user/auth/user.auth.module';
 import { UserCartModule } from './module/user/cart/user.cart.module';
 import { UserImageModule } from './module/user/image/user.image.module';
+import { UserInvoiceModule } from './module/user/invoice/user.invoice.module';
 import { UserLikeModule } from './module/user/like/user.like.module';
 import { UserOrderModule } from './module/user/order/user.order.module';
+import { UserPaymentModule } from './module/user/payment/user.payment.module';
 import { UserRecentModule } from './module/user/recent/user.recent.module';
 import { UserModule } from './module/user/user.module';
 
@@ -123,6 +127,10 @@ async function bootstrap() {
       UserImageModule,
       UserLikeModule,
       UserOrderModule,
+      UserPaymentModule,
+      UserInvoiceModule,
+      PaymentModule,
+      LogisticsModule,
       UserRecentModule,
       UserModule,
       AiConsultModule,

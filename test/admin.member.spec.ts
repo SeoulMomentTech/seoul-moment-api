@@ -58,6 +58,9 @@ describe('AdminMemberController (E2E)', () => {
   afterEach(async () => {
     await truncateTables(dataSource, [
       'cart_item',
+      'payment_event',
+      'payment',
+      'order_invoice',
       'order_item',
       '"order"',
       'user_brand_like',

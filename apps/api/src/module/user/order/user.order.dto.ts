@@ -1,6 +1,7 @@
 import { OrderItemEntity } from '@app/repository/entity/order-item.entity';
 import { OrderEntity } from '@app/repository/entity/order.entity';
-import { PaymentMethod } from '@app/repository/enum/order.enum';
+import { PaymentEntity } from '@app/repository/entity/payment.entity';
+import { PaymentMethod, ShippingType } from '@app/repository/enum/order.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, plainToInstance } from 'class-transformer';
 import {
@@ -15,11 +16,18 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Matches,
   Max,
   MaxLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
+import {
+  GetOrderInvoiceResponse,
+  UserOrderInvoiceRequest,
+} from '../../invoice/invoice.dto';
+import { GetOrderPaymentResponse } from '../../payment/payment.dto';
 import { CartAmountDto } from '../cart/cart.calculator';
 import {
   GetUserCartBrandGroupResponse,
@@ -74,6 +82,44 @@ export class UserOrderShippingRequest {
   @IsOptional()
   @MaxLength(255)
   requestMessage?: string;
+}
+
+/**
+ * 편의점 수령인. 편의점은 이름을 신분증과 대조하고 문자로 도착을 알린다.
+ * ECPay 규칙: 중문 2–5자 또는 영문 4–10자(숫자·특수문자·공백 불가), 휴대폰 09 로 시작하는 10자리.
+ */
+export const CVS_RECIPIENT_NAME_PATTERN = /^([一-鿿]{2,5}|[A-Za-z]{4,10})$/;
+export const CVS_PHONE_PATTERN = /^09\d{8}$/;
+
+export class UserOrderCvsPickupRequest {
+  @ApiProperty({
+    description:
+      '전자지도에서 매장을 고른 뒤 받은 cvsStoreToken (GET /logistics/cvs/map). 1시간 유효',
+    example: '3f9c1a7b2e4d6f8a0b1c',
+  })
+  @IsString()
+  @IsNotEmpty()
+  storeToken: string;
+
+  @ApiProperty({
+    description:
+      '받는 분 실명 — 수령 시 신분증과 대조한다. 중문 2–5자 또는 영문 4–10자(공백·숫자 불가)',
+    example: '李佳蓉',
+  })
+  @IsString()
+  @Matches(CVS_RECIPIENT_NAME_PATTERN, {
+    message:
+      'recipientName must be 2–5 Chinese characters or 4–10 English letters',
+  })
+  recipientName: string;
+
+  @ApiProperty({
+    description: '받는 분 휴대폰 (09 로 시작하는 10자리). 도착 문자가 간다',
+    example: '0912345678',
+  })
+  @IsString()
+  @Matches(CVS_PHONE_PATTERN, { message: 'phone must be 09 + 8 digits' })
+  phone: string;
 }
 
 export class UserOrderDirectItemRequest {
@@ -151,6 +197,25 @@ export class PostUserOrderPreviewRequest extends UserOrderLineSourceRequest {
   @MaxLength(255)
   @IsOptional()
   district?: string;
+
+  @ApiPropertyOptional({
+    description:
+      '배송 방법. CVS(편의점 픽업)면 city·district 대신 cvsStoreToken 으로 배송비를 정한다 (離島 매장이면 외섬 요금)',
+    enum: ShippingType,
+    example: ShippingType.HOME,
+  })
+  @IsEnum(ShippingType)
+  @IsOptional()
+  shippingType?: ShippingType;
+
+  @ApiPropertyOptional({
+    description:
+      'CVS 일 때 고른 매장의 cvsStoreToken. 생략하면 본섬 기준 예상 배송비다',
+    example: '3f9c1a7b2e4d6f8a0b1c',
+  })
+  @IsString()
+  @IsOptional()
+  cvsStoreToken?: string;
 }
 
 export class PostUserOrderRequest extends UserOrderLineSourceRequest {
@@ -163,22 +228,54 @@ export class PostUserOrderRequest extends UserOrderLineSourceRequest {
   @IsDefined()
   paymentMethod: PaymentMethod;
 
-  @ApiProperty({
-    description: 'true 면 user_profile 과 user.phone 을 배송지로 쓴다',
-    example: true,
+  @ApiPropertyOptional({
+    description:
+      '배송 방법. 생략하면 HOME(택배). CVS 면 cvsPickup 이 필수이고 useDefaultShipping·shipping 은 보지 않는다',
+    enum: ShippingType,
+    example: ShippingType.HOME,
   })
-  @IsBoolean()
-  @IsDefined()
-  useDefaultShipping: boolean;
+  @IsEnum(ShippingType)
+  @IsOptional()
+  shippingType?: ShippingType;
 
   @ApiPropertyOptional({
-    description: 'useDefaultShipping 이 false 일 때 필수',
+    description:
+      'HOME 일 때 필수. true 면 user_profile 과 user.phone 을 배송지로 쓴다',
+    example: true,
+  })
+  @ValidateIf((o: PostUserOrderRequest) => o.shippingType !== ShippingType.CVS)
+  @IsBoolean()
+  @IsDefined()
+  useDefaultShipping?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'HOME 이고 useDefaultShipping 이 false 일 때 필수',
     type: UserOrderShippingRequest,
   })
   @ValidateNested()
   @Type(() => UserOrderShippingRequest)
   @IsOptional()
   shipping?: UserOrderShippingRequest;
+
+  @ApiPropertyOptional({
+    description: 'CVS(편의점 픽업)일 때 필수',
+    type: UserOrderCvsPickupRequest,
+  })
+  @ValidateIf((o: PostUserOrderRequest) => o.shippingType === ShippingType.CVS)
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => UserOrderCvsPickupRequest)
+  cvsPickup?: UserOrderCvsPickupRequest;
+
+  @ApiPropertyOptional({
+    description:
+      '전자발표(電子發票) 받는 방법. 생략하면 ECPay 회원 載具(MEMBER_CARRIER, 회원 이메일로 받음). 결제가 확정되면 서버가 발행한다',
+    type: UserOrderInvoiceRequest,
+  })
+  @ValidateNested()
+  @Type(() => UserOrderInvoiceRequest)
+  @IsOptional()
+  invoice?: UserOrderInvoiceRequest;
 }
 
 export class PostUserOrderPreviewResponse {
@@ -308,6 +405,13 @@ export class GetUserOrderItemResponse {
 }
 
 export class GetUserOrderShippingResponse {
+  @ApiProperty({
+    description: '배송 방법',
+    enum: ShippingType,
+    example: ShippingType.HOME,
+  })
+  shippingType: ShippingType;
+
   @ApiProperty({ description: '받는 분', example: '李佳蓉' })
   recipientName: string;
 
@@ -328,6 +432,27 @@ export class GetUserOrderShippingResponse {
 
   @ApiPropertyOptional({ description: '배송 요청사항', example: null })
   requestMessage?: string;
+
+  @ApiPropertyOptional({
+    description: '편의점 픽업 매장 (CVS 일 때만). 주소 필드는 null 이다',
+    nullable: true,
+    example: {
+      logisticsSubType: 'UNIMARTC2C',
+      storeId: '131386',
+      storeName: '建盛門市',
+      storeAddress: '台北市中正區重慶南路一段122號',
+      storeTelephone: null,
+      isOutsideIsland: false,
+    },
+  })
+  cvsStore?: {
+    logisticsSubType: string;
+    storeId: string;
+    storeName: string;
+    storeAddress: string;
+    storeTelephone: string | null;
+    isOutsideIsland: boolean;
+  } | null;
 }
 
 export class GetUserOrderResponse {
@@ -337,7 +462,11 @@ export class GetUserOrderResponse {
   @ApiProperty({ description: '주문번호', example: 'SM-20260903-000481' })
   orderNumber: string;
 
-  @ApiProperty({ description: '주문 상태', example: 'PENDING' })
+  @ApiProperty({
+    description:
+      '주문 상태. PENDING 결제 전(결제창 이탈 포함, 다시 결제 가능) / PAYMENT_WAITING ATM·편의점 입금 대기 / PAID 결제 완료 / CANCELED 취소(입금 기한 경과·장기 미결제) / FAILED 결제 후 재고 부족 등으로 환불 대상',
+    example: 'PENDING',
+  })
   status: string;
 
   @ApiPropertyOptional({
@@ -368,13 +497,32 @@ export class GetUserOrderResponse {
   @ApiProperty({ description: '주문 일시' })
   orderedAt: Date;
 
+  @ApiPropertyOptional({ description: '결제 완료 시각', nullable: true })
+  paidAt: Date | null;
+
+  @ApiPropertyOptional({
+    description:
+      '가장 최근 결제 시도. 결제를 시작하기 전이면 null. 입금 대기면 depositInfo 에 ATM 계좌·편의점 코드가 있다',
+    type: GetOrderPaymentResponse,
+    nullable: true,
+  })
+  payment: GetOrderPaymentResponse | null;
+
+  @ApiPropertyOptional({
+    description:
+      '전자발표. 결제가 확정되면 서버가 발행해 invoiceNo 가 채워진다',
+    type: GetOrderInvoiceResponse,
+    nullable: true,
+  })
+  invoice: GetOrderInvoiceResponse | null;
+
   @ApiProperty({ description: '주문 라인', type: [GetUserOrderItemResponse] })
   items: GetUserOrderItemResponse[];
 
   @ApiProperty({ description: '배송지', type: GetUserOrderShippingResponse })
   shipping: GetUserOrderShippingResponse;
 
-  static from(entity: OrderEntity) {
+  static from(entity: OrderEntity, payment?: PaymentEntity | null) {
     return plainToInstance(this, {
       orderId: entity.id,
       orderNumber: entity.orderNumber,
@@ -386,11 +534,17 @@ export class GetUserOrderResponse {
       freeShippingThreshold: entity.freeShippingThresholdSnapshot,
       totalAmount: entity.totalAmount,
       orderedAt: entity.createDate,
+      paidAt: entity.paidAt ?? null,
+      payment: payment ? GetOrderPaymentResponse.from(payment) : null,
+      invoice: entity.invoice
+        ? GetOrderInvoiceResponse.from(entity.invoice)
+        : null,
       items: (entity.items ?? []).map((item) =>
         GetUserOrderItemResponse.from(item),
       ),
       shipping: entity.shipping
         ? {
+            shippingType: entity.shipping.shippingType,
             recipientName: entity.shipping.recipientName,
             phone: entity.shipping.phone,
             postalCode: entity.shipping.postalCode,
@@ -398,6 +552,16 @@ export class GetUserOrderResponse {
             district: entity.shipping.district,
             detailAddress: entity.shipping.detailAddress,
             requestMessage: entity.shipping.requestMessage,
+            cvsStore: entity.shipping.cvsStoreId
+              ? {
+                  logisticsSubType: entity.shipping.cvsLogisticsSubType,
+                  storeId: entity.shipping.cvsStoreId,
+                  storeName: entity.shipping.cvsStoreName,
+                  storeAddress: entity.shipping.cvsStoreAddress,
+                  storeTelephone: entity.shipping.cvsStoreTelephone,
+                  isOutsideIsland: !!entity.shipping.cvsOutside,
+                }
+              : null,
           }
         : null,
     });

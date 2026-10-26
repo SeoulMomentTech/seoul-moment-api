@@ -919,6 +919,34 @@ export class ProductRepositoryService implements OnModuleInit {
       .getMany();
   }
 
+  /**
+   * 결제 시작 때 재고를 잡는다. 조건부 UPDATE 라 동시에 마지막 1개를 두 명이
+   * 잡으려 해도 한 명만 성공한다. 판매 중(ACTIVE)이 아닌 SKU 는 잡히지 않는다.
+   */
+  async decreaseStock(variantId: number, quantity: number): Promise<boolean> {
+    const result = await this.productVariantRepository
+      .createQueryBuilder()
+      .update(ProductVariantEntity)
+      .set({ stockQuantity: () => 'stock_quantity - :quantity' })
+      .where('id = :variantId', { variantId })
+      .andWhere('stock_quantity >= :quantity', { quantity })
+      .andWhere('status = :status', { status: ProductVariantStatus.ACTIVE })
+      .execute();
+
+    return (result.affected ?? 0) === 1;
+  }
+
+  /** 잡았던 재고를 돌려준다. 판매 상태와 상관없이 수량만 되돌린다 */
+  async increaseStock(variantId: number, quantity: number): Promise<void> {
+    await this.productVariantRepository
+      .createQueryBuilder()
+      .update(ProductVariantEntity)
+      .set({ stockQuantity: () => 'stock_quantity + :quantity' })
+      .where('id = :variantId', { variantId })
+      .setParameter('quantity', quantity)
+      .execute();
+  }
+
   /** 옵션 조합까지 붙여서 여러 SKU 를 한 번에 가져온다 */
   async getProductVariantsByIds(
     ids: number[],

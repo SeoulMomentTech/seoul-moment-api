@@ -31,6 +31,9 @@ describe('UserCartController (E2E)', () => {
 
   afterEach(async () => {
     await truncateTables(dataSource, [
+      'payment_event',
+      'payment',
+      'order_invoice',
       'order_item',
       'order_shipping',
       '"order"',

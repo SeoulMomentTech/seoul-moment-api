@@ -42,6 +42,14 @@ export class OrderItemEntity extends CommonEntity {
   productVariantId: number | null;
 
   @Column('int', {
+    name: 'cart_item_id',
+    nullable: true,
+    comment:
+      '이 라인을 만든 장바구니 라인 ID (FK 없음). 결제 성공 시 이 라인만 장바구니에서 지운다. "구매하기" 주문은 NULL',
+  })
+  cartItemId: number | null;
+
+  @Column('int', {
     name: 'product_item_id',
     nullable: false,
     comment: '상품 아이템 ID (조회 편의용, FK 제약 없음)',

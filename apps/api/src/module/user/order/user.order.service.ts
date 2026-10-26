@@ -1,13 +1,16 @@
 import { ServiceErrorCode } from '@app/common/exception/dto/exception.dto';
 import { ServiceError } from '@app/common/exception/service.error';
 import { CartItemEntity } from '@app/repository/entity/cart-item.entity';
+import { OrderInvoiceEntity } from '@app/repository/entity/order-invoice.entity';
 import { OrderItemEntity } from '@app/repository/entity/order-item.entity';
 import { OrderShippingEntity } from '@app/repository/entity/order-shipping.entity';
 import { OrderEntity } from '@app/repository/entity/order.entity';
+import { InvoiceStatus, InvoiceType } from '@app/repository/enum/invoice.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { OrderStatus } from '@app/repository/enum/order.enum';
+import { OrderStatus, ShippingType } from '@app/repository/enum/order.enum';
 import { CartRepositoryService } from '@app/repository/service/cart.repository.service';
 import { OrderRepositoryService } from '@app/repository/service/order.repository.service';
+import { PaymentRepositoryService } from '@app/repository/service/payment.repository.service';
 import { ProductRepositoryService } from '@app/repository/service/product.repository.service';
 import { ShippingRepositoryService } from '@app/repository/service/shipping.repository.service';
 import { UserRepositoryService } from '@app/repository/service/user.repository.service';
@@ -21,10 +24,14 @@ import {
   PostUserOrderPreviewResponse,
   PostUserOrderRequest,
   PostUserOrderResponse,
+  UserOrderCvsPickupRequest,
   UserOrderDirectItemRequest,
   UserOrderLineSourceRequest,
-  UserOrderShippingRequest,
 } from './user.order.dto';
+import { InvoiceValidationService } from '../../invoice/invoice-validation.service';
+import { UserOrderInvoiceRequest } from '../../invoice/invoice.dto';
+import { normalizeTaiwanPhone } from '../../invoice/invoice.util';
+import { CvsStoreService } from '../../logistics/cvs-store.service';
 import {
   CartAmountCalculator,
   CartAmountDto,
@@ -34,23 +41,56 @@ import {
 import { CartTextBundleDto } from '../cart/user.cart.dto';
 import { UserCartService } from '../cart/user.cart.service';
 
+/** 배송비를 정하는 지역. 택배는 縣市·區, 편의점은 매장이 離島인지로 정한다 */
+interface ShippingArea {
+  city?: string;
+  district?: string;
+  /** 편의점이면 둘 다 채운다. 매장이 離島이거나 주소가 외섬 지역이면 외섬 요금 */
+  cvsOutside?: boolean;
+  cvsAddress?: string;
+}
+
+/**
+ * 매장 주소 앞부분의 縣市 · 鄉鎮市區. '澎湖縣馬公市…' → ['澎湖縣', '馬公市'].
+ * 전자지도 응답은 서명이 없어 CVSOutSide 만 믿지 않고 주소로도 한 번 더 판정한다.
+ */
+function splitTaiwanAddress(address: string): {
+  city: string;
+  district: string;
+} {
+  const match = /^(.{2,3}?[縣市])(.{1,4}?[鄉鎮市區])/.exec(address.trim());
+
+  return { city: match?.[1] ?? '', district: match?.[2] ?? '' };
+}
+
+/** order_shipping 에 박을 값 */
+type ShippingDraft = Partial<OrderShippingEntity> & {
+  shippingType: ShippingType;
+  recipientName: string;
+  phone: string;
+};
+
 @Injectable()
 export class UserOrderService {
   constructor(
     private readonly cartRepositoryService: CartRepositoryService,
     private readonly orderRepositoryService: OrderRepositoryService,
+    private readonly paymentRepositoryService: PaymentRepositoryService,
     private readonly productRepositoryService: ProductRepositoryService,
     private readonly shippingRepositoryService: ShippingRepositoryService,
     private readonly userRepositoryService: UserRepositoryService,
     private readonly userCartService: UserCartService,
     private readonly cartAmountCalculator: CartAmountCalculator,
     private readonly shippingFeeCalculator: ShippingFeeCalculator,
+    private readonly cvsStoreService: CvsStoreService,
+    private readonly invoiceValidationService: InvoiceValidationService,
   ) {}
 
   /**
    * 주문서 진입 · 배송지 변경 시마다 호출된다. DB 를 건드리지 않는다.
    * 배송비가 주소로 정해지므로 city/district 가 없으면 본섬 기준 예상값을 준다.
    * 배송지를 아직 등록하지 않은 회원도 주문서를 그릴 수 있어야 해서다.
+   * 편의점 픽업이면 고른 매장(cvsStoreToken)이 離島인지로 정하고, 아직 안 골랐으면 예상값이다.
    */
   async preview(
     userId: number,
@@ -58,12 +98,8 @@ export class UserOrderService {
     language: LanguageCode,
   ): Promise<PostUserOrderPreviewResponse> {
     const lines = await this.loadLines(userId, dto);
-    const isShippingEstimated = !dto.city || !dto.district;
-    const amount = await this.calculateAmount(
-      lines,
-      isShippingEstimated ? '' : dto.city,
-      isShippingEstimated ? '' : dto.district,
-    );
+    const { area, isShippingEstimated } = await this.previewArea(dto);
+    const amount = await this.calculateAmount(lines, area);
 
     const texts = await this.userCartService.loadTexts(lines, language);
     const groups = this.userCartService.buildBrandGroups(lines, texts);
@@ -75,9 +111,38 @@ export class UserOrderService {
     );
   }
 
+  private async previewArea(
+    dto: PostUserOrderPreviewRequest,
+  ): Promise<{ area: ShippingArea; isShippingEstimated: boolean }> {
+    if (dto.shippingType === ShippingType.CVS) {
+      const store = dto.cvsStoreToken
+        ? await this.cvsStoreService.findStore(dto.cvsStoreToken)
+        : null;
+
+      return {
+        area: {
+          cvsOutside: store?.isOutsideIsland ?? false,
+          cvsAddress: store?.storeAddress,
+        },
+        isShippingEstimated: !store,
+      };
+    }
+
+    const isShippingEstimated = !dto.city || !dto.district;
+
+    return {
+      area: isShippingEstimated
+        ? {}
+        : { city: dto.city, district: dto.district },
+      isShippingEstimated,
+    };
+  }
+
   /**
-   * 결제하기 직전. 주문은 PENDING 으로 생성되고 재고는 차감하지 않는다.
+   * 결제하기 직전. 주문은 PENDING 으로 생성되고 재고는 차감하지 않는다 — 재고는
+   * 결제 시작(POST /user/order/:id/payment) 때 잡는다.
    * 장바구니도 비우지 않는다 — 결제창에서 이탈했을 때 담아둔 것이 사라지면 안 된다.
+   * 결제가 확정되면 이 주문에 쓴 장바구니 라인만 지운다(order_item.cart_item_id).
    * items 로 들어온 "구매하기" 주문은 장바구니를 아예 건드리지 않는다.
    */
   @Transactional()
@@ -91,13 +156,18 @@ export class UserOrderService {
 
     this.assertPurchasable(lines);
 
-    const amount = await this.calculateAmount(
-      lines,
-      shipping.city,
-      shipping.district,
-    );
+    const invoice = dto.invoice ?? { type: InvoiceType.MEMBER_CARRIER };
+    await this.invoiceValidationService.assertValid(invoice);
+
+    const amount = await this.calculateAmount(lines, {
+      city: shipping.city,
+      district: shipping.district,
+      cvsOutside: shipping.cvsOutside ?? undefined,
+      cvsAddress: shipping.cvsStoreAddress ?? undefined,
+    });
 
     const order = await this.persistOrder(userId, dto, amount, shipping);
+    await this.persistInvoice(userId, order.id, invoice, shipping.phone);
 
     const texts = await this.userCartService.loadTexts(lines, language);
     await this.orderRepositoryService.saveItems(
@@ -119,7 +189,7 @@ export class UserOrderService {
     userId: number,
     dto: PostUserOrderRequest,
     amount: CartAmountDto,
-    shipping: UserOrderShippingRequest,
+    shipping: ShippingDraft,
   ): Promise<OrderEntity> {
     const order = await this.orderRepositoryService.saveOrder(
       plainToInstance(OrderEntity, {
@@ -152,6 +222,38 @@ export class UserOrderService {
     return order;
   }
 
+  /**
+   * 고른 방법에 필요한 값만 남긴다 (MEMBER_CARRIER 인데 carrierNum 을 같이 보내도 버린다).
+   * 발표 통지는 회원 이메일로, 이메일이 없으면 받는 분 휴대폰으로 간다.
+   */
+  private async persistInvoice(
+    userId: number,
+    orderId: number,
+    invoice: UserOrderInvoiceRequest,
+    phone: string,
+  ) {
+    const user = await this.userRepositoryService.findUserById(userId);
+    const { type } = invoice;
+    const usesCarrierNum =
+      type === InvoiceType.MOBILE_BARCODE || type === InvoiceType.CITIZEN_CERT;
+    const isCompany = type === InvoiceType.COMPANY;
+
+    await this.orderRepositoryService.saveInvoice(
+      plainToInstance(OrderInvoiceEntity, {
+        orderId,
+        type,
+        carrierNum: usesCarrierNum ? invoice.carrierNum : null,
+        loveCode: type === InvoiceType.DONATION ? invoice.loveCode : null,
+        companyTaxId: isCompany ? invoice.companyTaxId : null,
+        companyName: isCompany ? invoice.companyName : null,
+        customerEmail: user?.email || null,
+        customerPhone: normalizeTaiwanPhone(phone) || null,
+        status: InvoiceStatus.PENDING,
+        attemptCount: 0,
+      }),
+    );
+  }
+
   async getOrder(userId: number, id: number): Promise<GetUserOrderResponse> {
     const order = await this.orderRepositoryService.findDetailByIdAndUserId(
       id,
@@ -165,7 +267,11 @@ export class UserOrderService {
       );
     }
 
-    return GetUserOrderResponse.from(order);
+    const payment = await this.paymentRepositoryService.findLatestByOrderId(
+      order.id,
+    );
+
+    return GetUserOrderResponse.from(order, payment);
   }
 
   /**
@@ -262,19 +368,21 @@ export class UserOrderService {
 
   private async calculateAmount(
     lines: CartLineAmountDto[],
-    city: string,
-    district: string,
+    area: ShippingArea,
   ): Promise<CartAmountDto> {
     const [policy, remoteAreas] = await Promise.all([
       this.shippingRepositoryService.getPolicy(),
       this.shippingRepositoryService.findActiveRemoteAreas(),
     ]);
 
-    const isRemoteIsland = this.shippingFeeCalculator.isRemoteIsland(
-      remoteAreas,
-      city,
-      district,
-    );
+    const isRemoteIsland =
+      area.cvsOutside !== undefined
+        ? this.isRemoteCvs(remoteAreas, area)
+        : this.shippingFeeCalculator.isRemoteIsland(
+            remoteAreas,
+            area.city ?? '',
+            area.district ?? '',
+          );
 
     return this.cartAmountCalculator.calculateAmount(
       lines,
@@ -283,7 +391,27 @@ export class UserOrderService {
     );
   }
 
-  /** 담긴 수량만큼 재고가 남아 있어야 한다. 차감은 결제 확정 단계에서 한다 */
+  /** 편의점: ECPay 가 離島 매장이라고 했거나, 매장 주소가 외섬 규칙에 걸리면 외섬 요금 */
+  private isRemoteCvs(
+    remoteAreas: Parameters<ShippingFeeCalculator['isRemoteIsland']>[0],
+    area: ShippingArea,
+  ): boolean {
+    if (area.cvsOutside) {
+      return true;
+    }
+
+    const { city, district } = splitTaiwanAddress(area.cvsAddress ?? '');
+
+    return (
+      !!city &&
+      this.shippingFeeCalculator.isRemoteIsland(remoteAreas, city, district)
+    );
+  }
+
+  /**
+   * 담긴 수량만큼 재고가 남아 있어야 한다. 여기서는 확인만 하고, 실제로 잡는 건
+   * 결제 시작 단계다 (StockReservationService)
+   */
   private assertPurchasable(lines: CartLineAmountDto[]) {
     const unavailable = lines.filter((line) => !line.hasEnoughStock());
 
@@ -311,7 +439,50 @@ export class UserOrderService {
   private async resolveShipping(
     userId: number,
     dto: PostUserOrderRequest,
-  ): Promise<UserOrderShippingRequest> {
+  ): Promise<ShippingDraft> {
+    if (dto.shippingType === ShippingType.CVS) {
+      return this.resolveCvsShipping(dto.cvsPickup);
+    }
+
+    return {
+      ...(await this.resolveHomeShipping(userId, dto)),
+      shippingType: ShippingType.HOME,
+    };
+  }
+
+  /** 전자지도에서 고른 매장은 서버가 보관한 것만 믿는다 (1시간) */
+  private async resolveCvsShipping(
+    pickup: UserOrderCvsPickupRequest | undefined,
+  ): Promise<ShippingDraft> {
+    const store = pickup
+      ? await this.cvsStoreService.findStore(pickup.storeToken)
+      : null;
+
+    if (!pickup || !store) {
+      throw new ServiceError(
+        'CVS store selection expired — select the store again',
+        ServiceErrorCode.BAD_REQUEST,
+        { field: 'cvsPickup.storeToken' },
+      );
+    }
+
+    return {
+      shippingType: ShippingType.CVS,
+      recipientName: pickup.recipientName,
+      phone: pickup.phone,
+      cvsLogisticsSubType: store.logisticsSubType,
+      cvsStoreId: store.storeId,
+      cvsStoreName: store.storeName,
+      cvsStoreAddress: store.storeAddress,
+      cvsStoreTelephone: store.storeTelephone,
+      cvsOutside: store.isOutsideIsland,
+    };
+  }
+
+  private async resolveHomeShipping(
+    userId: number,
+    dto: PostUserOrderRequest,
+  ): Promise<Omit<ShippingDraft, 'shippingType'>> {
     if (!dto.useDefaultShipping) {
       if (!dto.shipping) {
         throw new ServiceError(
@@ -349,7 +520,7 @@ export class UserOrderService {
       );
     }
 
-    return shipping as UserOrderShippingRequest;
+    return shipping as Omit<ShippingDraft, 'shippingType'>;
   }
 
   /**
@@ -368,6 +539,8 @@ export class UserOrderService {
     return plainToInstance(OrderItemEntity, {
       orderId,
       productVariantId: line.cartItem.productVariantId,
+      // "구매하기" 라인은 장바구니에 저장되지 않아 id 가 없다
+      cartItemId: line.cartItem.id ?? null,
       productItemId: productItem?.id,
       brandId: product?.brand?.id,
       brandNameSnapshot:

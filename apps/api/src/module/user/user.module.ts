@@ -7,8 +7,10 @@ import { UserRefreshTokenStrategy } from 'apps/api/src/strategy/user-refresh-tok
 import { UserAuthModule } from './auth/user.auth.module';
 import { UserCartModule } from './cart/user.cart.module';
 import { UserImageModule } from './image/user.image.module';
+import { UserInvoiceModule } from './invoice/user.invoice.module';
 import { UserLikeModule } from './like/user.like.module';
 import { UserOrderModule } from './order/user.order.module';
+import { UserPaymentModule } from './payment/user.payment.module';
 import { UserRecentModule } from './recent/user.recent.module';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
@@ -22,6 +24,8 @@ import { UserWithdrawModule } from './withdraw/user.withdraw.module';
     UserImageModule,
     UserCartModule,
     UserOrderModule,
+    UserPaymentModule,
+    UserInvoiceModule,
     UserLikeModule,
     UserRecentModule,
     UserWithdrawModule,

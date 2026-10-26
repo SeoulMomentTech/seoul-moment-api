@@ -53,6 +53,40 @@ const getConfig = (): ConfigImpl => ({
   TWSMS_API_URL: process.env.TWSMS_API_URL || '',
   TWSMS_USER: process.env.TWSMS_USER || '',
   TWSMS_PASS: process.env.TWSMS_PASS || '',
+
+  // ECPay 공개 테스트 상점 (developers.ecpay.com.tw/2856). 공개 값이라 기본값으로 둔다
+  ECPAY_MERCHANT_ID: process.env.ECPAY_MERCHANT_ID || '3002607',
+  ECPAY_HASH_KEY: process.env.ECPAY_HASH_KEY || 'pwFHCqoQZGmho4w6',
+  ECPAY_HASH_IV: process.env.ECPAY_HASH_IV || 'EkRm7iFT261dpevs',
+  ECPAY_PAYMENT_URL:
+    process.env.ECPAY_PAYMENT_URL || 'https://payment-stage.ecpay.com.tw',
+  LINE_PAY_CHANNEL_ID: process.env.LINE_PAY_CHANNEL_ID || '',
+  LINE_PAY_CHANNEL_SECRET: process.env.LINE_PAY_CHANNEL_SECRET || '',
+  LINE_PAY_API_URL:
+    process.env.LINE_PAY_API_URL || 'https://sandbox-api-pay.line.me',
+  PAYMENT_CALLBACK_BASE_URL:
+    process.env.PAYMENT_CALLBACK_BASE_URL || 'http://localhost:3111',
+  STOREFRONT_BASE_URL: process.env.STOREFRONT_BASE_URL || '',
+  PAYMENT_TRADE_NO_PREFIX: process.env.PAYMENT_TRADE_NO_PREFIX || 'SL',
+
+  // ECPay 전자발표 공개 테스트 상점 (developers.ecpay.com.tw/7849)
+  ECPAY_INVOICE_MERCHANT_ID: process.env.ECPAY_INVOICE_MERCHANT_ID || '2000132',
+  ECPAY_INVOICE_HASH_KEY:
+    process.env.ECPAY_INVOICE_HASH_KEY || 'ejCk326UnaZWKisg',
+  ECPAY_INVOICE_HASH_IV:
+    process.env.ECPAY_INVOICE_HASH_IV || 'q9jcZX8Ib9LM8wYk',
+  ECPAY_INVOICE_URL:
+    process.env.ECPAY_INVOICE_URL || 'https://einvoice-stage.ecpay.com.tw',
+  // ECPay 물류 C2C 공개 테스트 상점 (developers.ecpay.com.tw/7398)
+  ECPAY_LOGISTICS_MERCHANT_ID:
+    process.env.ECPAY_LOGISTICS_MERCHANT_ID || '2000933',
+  ECPAY_LOGISTICS_HASH_KEY:
+    process.env.ECPAY_LOGISTICS_HASH_KEY || 'XBERn1YOvpM9nfZc',
+  ECPAY_LOGISTICS_HASH_IV:
+    process.env.ECPAY_LOGISTICS_HASH_IV || 'h1ONHk4P4yqbl5LK',
+  ECPAY_LOGISTICS_URL:
+    process.env.ECPAY_LOGISTICS_URL || 'https://logistics-stage.ecpay.com.tw',
+  ECPAY_LOGISTICS_TYPE: process.env.ECPAY_LOGISTICS_TYPE || 'C2C',
 });
 
 export default getConfig;

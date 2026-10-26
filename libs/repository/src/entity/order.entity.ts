@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 
 import { CommonEntity } from './common.entity';
+import { OrderInvoiceEntity } from './order-invoice.entity';
 import { OrderItemEntity } from './order-item.entity';
 import { OrderShippingEntity } from './order-shipping.entity';
 import { UserEntity } from './user.entity';
@@ -105,6 +106,22 @@ export class OrderEntity extends CommonEntity {
   })
   paymentMethod: PaymentMethod;
 
+  @Column('boolean', {
+    name: 'stock_reserved',
+    nullable: false,
+    default: false,
+    comment:
+      '이 주문이 재고를 잡고 있는지. 결제 시작 때 잡고 실패·만료 때 돌려준다. 두 번 차감·복구를 막는 표시',
+  })
+  stockReserved: boolean;
+
+  @Column('timestamptz', {
+    name: 'paid_at',
+    nullable: true,
+    comment: '결제 확정 시각',
+  })
+  paidAt: Date | null;
+
   @ManyToOne(() => UserEntity, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
@@ -123,6 +140,12 @@ export class OrderEntity extends CommonEntity {
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
   })
   shipping: OrderShippingEntity;
+
+  @OneToOne(() => OrderInvoiceEntity, (invoice) => invoice.order, {
+    cascade: true,
+    createForeignKeyConstraints: process.env.NODE_ENV !== 'test',
+  })
+  invoice: OrderInvoiceEntity;
 
   /** SM-{yyyyMMdd}-{id 6자리 0패딩}. id 기반이라 충돌이 구조적으로 불가능하다 */
   static buildOrderNumber(id: number, baseDate: Date): string {

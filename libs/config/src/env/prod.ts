@@ -53,6 +53,41 @@ const getConfig = (): ConfigImpl => ({
   TWSMS_API_URL: process.env.TWSMS_API_URL || '',
   TWSMS_USER: process.env.TWSMS_USER || '',
   TWSMS_PASS: process.env.TWSMS_PASS || '',
+
+  ECPAY_MERCHANT_ID: process.env.ECPAY_MERCHANT_ID || '',
+  ECPAY_HASH_KEY: process.env.ECPAY_HASH_KEY || '',
+  ECPAY_HASH_IV: process.env.ECPAY_HASH_IV || '',
+  ECPAY_PAYMENT_URL:
+    process.env.ECPAY_PAYMENT_URL || 'https://payment.ecpay.com.tw',
+  LINE_PAY_CHANNEL_ID: process.env.LINE_PAY_CHANNEL_ID || '',
+  LINE_PAY_CHANNEL_SECRET: process.env.LINE_PAY_CHANNEL_SECRET || '',
+  LINE_PAY_API_URL: process.env.LINE_PAY_API_URL || 'https://api-pay.line.me',
+  PAYMENT_CALLBACK_BASE_URL:
+    process.env.PAYMENT_CALLBACK_BASE_URL || 'https://api.seoulmoment.com.tw',
+  STOREFRONT_BASE_URL: process.env.STOREFRONT_BASE_URL || '',
+  PAYMENT_TRADE_NO_PREFIX: process.env.PAYMENT_TRADE_NO_PREFIX || 'SM',
+
+  ECPAY_INVOICE_MERCHANT_ID:
+    process.env.ECPAY_INVOICE_MERCHANT_ID ||
+    process.env.ECPAY_MERCHANT_ID ||
+    '',
+  ECPAY_INVOICE_HASH_KEY:
+    process.env.ECPAY_INVOICE_HASH_KEY || process.env.ECPAY_HASH_KEY || '',
+  ECPAY_INVOICE_HASH_IV:
+    process.env.ECPAY_INVOICE_HASH_IV || process.env.ECPAY_HASH_IV || '',
+  ECPAY_INVOICE_URL:
+    process.env.ECPAY_INVOICE_URL || 'https://einvoice.ecpay.com.tw',
+  ECPAY_LOGISTICS_MERCHANT_ID:
+    process.env.ECPAY_LOGISTICS_MERCHANT_ID ||
+    process.env.ECPAY_MERCHANT_ID ||
+    '',
+  ECPAY_LOGISTICS_HASH_KEY:
+    process.env.ECPAY_LOGISTICS_HASH_KEY || process.env.ECPAY_HASH_KEY || '',
+  ECPAY_LOGISTICS_HASH_IV:
+    process.env.ECPAY_LOGISTICS_HASH_IV || process.env.ECPAY_HASH_IV || '',
+  ECPAY_LOGISTICS_URL:
+    process.env.ECPAY_LOGISTICS_URL || 'https://logistics.ecpay.com.tw',
+  ECPAY_LOGISTICS_TYPE: process.env.ECPAY_LOGISTICS_TYPE || 'C2C',
 });
 
 export default getConfig;

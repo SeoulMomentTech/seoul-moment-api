@@ -15,4 +15,8 @@ export enum RedisKey {
   AI_CONSULT_BUDGET = 'ai_consult_budget',
   /** 상위어("옷")를 실제 소분류 id 로 옮긴 결과. 키에 카탈로그 지문이 섞인다. */
   AI_CONSULT_CATEGORY_RESOLVE = 'ai_consult_category_resolve',
+  /** 결제 배치 락. 여러 태스크가 동시에 돌리지 않게 한다 */
+  PAYMENT_BATCH_LOCK = 'payment_batch_lock',
+  /** LINE Pay Confirm 락. confirmUrl 새로고침으로 두 번 확정하지 않게 한다 */
+  LINEPAY_CONFIRM_LOCK = 'linepay_confirm_lock',
 }

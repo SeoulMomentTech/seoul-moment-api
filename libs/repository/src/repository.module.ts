@@ -39,11 +39,14 @@ import { NewsSectionEntity } from './entity/news-section.entity';
 import { NewsEntity } from './entity/news.entity';
 import { OptionValueEntity } from './entity/option-value.entity';
 import { OptionEntity } from './entity/option.entity';
+import { OrderInvoiceEntity } from './entity/order-invoice.entity';
 import { OrderItemEntity } from './entity/order-item.entity';
 import { OrderShippingEntity } from './entity/order-shipping.entity';
 import { OrderEntity } from './entity/order.entity';
 import { PartnerCategoryEntity } from './entity/partner-category.entity';
 import { PartnerEntity } from './entity/partner.entity';
+import { PaymentEventEntity } from './entity/payment-event.entity';
+import { PaymentEntity } from './entity/payment.entity';
 import { ProductBannerEntity } from './entity/product-banner.entity';
 import { ProductCategoryEntity } from './entity/product-category.entity';
 import { ProductExternalEntity } from './entity/product-external.entity';
@@ -82,6 +85,7 @@ import { NewsRepositoryService } from './service/news.repository.service';
 import { OptionRepositoryService } from './service/option.repository.service';
 import { OrderRepositoryService } from './service/order.repository.service';
 import { PartnerRepositoryService } from './service/partner.repository.service';
+import { PaymentRepositoryService } from './service/payment.repository.service';
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
 import { ShippingRepositoryService } from './service/shipping.repository.service';
@@ -157,6 +161,9 @@ import { UserRepositoryService } from './service/user.repository.service';
       OrderEntity,
       OrderItemEntity,
       OrderShippingEntity,
+      OrderInvoiceEntity,
+      PaymentEntity,
+      PaymentEventEntity,
       ShippingPolicyEntity,
       ShippingRemoteAreaEntity,
     ]),
@@ -185,6 +192,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     AiConsultLogRepositoryService,
     CartRepositoryService,
     OrderRepositoryService,
+    PaymentRepositoryService,
     ShippingRepositoryService,
     AdminMemberRepositoryService,
   ],
@@ -211,6 +219,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     AiConsultLogRepositoryService,
     CartRepositoryService,
     OrderRepositoryService,
+    PaymentRepositoryService,
     ShippingRepositoryService,
     AdminMemberRepositoryService,
   ],
