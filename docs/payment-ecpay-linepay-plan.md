@@ -42,6 +42,27 @@
 - 배치: 5분마다 입금 기한 만료 · LINE Pay 미확정 회수 · ECPay 이탈 정리 · 24시간 지난 PENDING 주문 취소 · 발표 재발행 (Redis 락, 테스트 환경 제외)
 - 테이블: `payment`, `payment_event`, `order_invoice` 신규 / `order.stock_reserved`·`paid_at`, `order_item.cart_item_id`, `order_shipping.shipping_type`·`cvs_*` 추가, `order_shipping` 주소 컬럼 nullable 로 완화 (synchronize 로 자동 반영)
 - 테스트: `test/payment.pure.spec.ts`, `test/invoice.pure.spec.ts`, `test/user.payment.spec.ts`, `test/user.order.invoice-cvs.spec.ts`
+- 화면별 API 지도: `docs/payment-ui-api-map.html`
+
+### DEV 실측 (2026-11-04)
+
+dev 서버 + ECPay stage(공용 테스트 상점) + LINE Pay sandbox 로 실제 요청을 보내 확인했다.
+
+| 흐름 | 결과 |
+|---|---|
+| 편의점 전자지도 (7-ELEVEN · 全家) | ✅ 지도 → 매장 선택 → `map/reply` → 토큰 조회. stage 는 지도 대신 "確定門市" 버튼 하나 |
+| ECPay 카드 (테스트 카드 + 3D OTP) | ✅ ReturnURL 수신 → `PAID` → 재고 차감 · 장바구니 비움 → 휴대폰 바코드 발표 자동 발행 |
+| 결제창 이탈 후 재시작 | ✅ 이전 시도는 `CANCELED`, 재고는 한 번만 차감 |
+| ECPay ATM · 편의점 코드 | ✅ PaymentInfoURL 실제 수신 → `PAYMENT_WAITING` · 계좌/코드/기한 저장 |
+| ATM 입금 완료 | ✅ (서명한 SimulatePaid ReturnURL 을 직접 전송) → `PAID` → 기부 발표 발행. 위조 MAC 은 `0|Verification Failed` |
+| LINE Pay | ✅ sandbox 승인 → confirm → `PAID` → 회원 載具 발표 발행 |
+| 전자발표 발행 3종 직접 호출 | ✅ 회원 載具 · 기부 · 회사 |
+
+알게 된 것:
+- ECPay stage 는 愛心碼 를 실제로 대조하지 않는다(없는 번호도 존재로 답함). "없는 코드 차단"은 운영 키로만 확인된다.
+- ECPay stage 결제창은 결제 버튼을 누르면 "테스트 환경" 안내 → 다시 누르면 확인 창이 뜬다. 자동화할 때 두 번 눌러야 한다.
+- LINE Pay `paymentUrl` 을 Slack 등 인앱 브라우저로 열면 "LINE 앱을 최신 버전으로 업데이트" 화면에 막힌다. PC 는 일반 브라우저, 휴대폰은 LINE 안에서 `appUrl`.
+- 남은 확인: 실기기 LINE 에서 `?openExternalBrowser=1` 외부 브라우저 전환, 입금 기한 경과 자동 취소(주문 2·3, 기한 2026-11-06), ECPay 가 직접 보내는 ATM 입금 통지(stage 관리자 "模擬付款", CAPTCHA 라 수동).
 
 ---
 

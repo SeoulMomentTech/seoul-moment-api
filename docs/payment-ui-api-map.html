@@ -1,0 +1,1287 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>대만 결제 API 지도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* ============================================================
+   Seoul Moment — 화면별 API 지도
+   왼쪽: 실제 붙을 UI. 오른쪽: 그 요소가 부르는 API.
+   번호(핀)가 좌우를 잇는다. 호버하면 짝이 같이 켜진다.
+   ============================================================ */
+:root{
+  --paper:#f6f7f8; --surface:#fff; --sunken:#eff1f3; --field:#f4f6f7;
+  --ink:#14171b; --ink-2:#4a525c; --ink-3:#7d8894;
+  --rule:#dfe3e8; --rule-soft:#eaedf0;
+  --accent:#d4600c; --accent-ink:#a84c09; --accent-bg:#fdf1e7;
+  --slate:#4d6b79; --slate-bg:#e9f0f2;
+  --green:#2f7d5d; --green-bg:#e6f2ec;
+  --red:#b0413a; --red-bg:#fbecea;
+  --shadow:0 1px 2px rgba(20,23,27,.05);
+  --lift:0 6px 24px rgba(20,23,27,.08);
+  --sans:"IBM Plex Sans KR","IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --wrap:1180px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#111417; --surface:#181c20; --sunken:#14181b; --field:#1e2429;
+  --ink:#e7eaee; --ink-2:#a2acb7; --ink-3:#78838e;
+  --rule:#2b3138; --rule-soft:#23282e;
+  --accent:#f5883c; --accent-ink:#f7a163; --accent-bg:#2d1d11;
+  --slate:#8bb0bf; --slate-bg:#17242a;
+  --green:#63b891; --green-bg:#14251d;
+  --red:#e0837c; --red-bg:#2a1614;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --lift:0 6px 24px rgba(0,0,0,.5);
+}}
+:root[data-theme="dark"]{
+  --paper:#111417; --surface:#181c20; --sunken:#14181b; --field:#1e2429;
+  --ink:#e7eaee; --ink-2:#a2acb7; --ink-3:#78838e;
+  --rule:#2b3138; --rule-soft:#23282e;
+  --accent:#f5883c; --accent-ink:#f7a163; --accent-bg:#2d1d11;
+  --slate:#8bb0bf; --slate-bg:#17242a;
+  --green:#63b891; --green-bg:#14251d;
+  --red:#e0837c; --red-bg:#2a1614;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --lift:0 6px 24px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+     font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 28px}
+code,kbd{font-family:var(--mono);font-size:.86em}
+
+/* ---------- 표지 ---------- */
+.cover{padding:64px 0 40px}
+.eyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 12px}
+.cover h1{font-size:36px;line-height:1.24;margin:0 0 14px;letter-spacing:-.02em;font-weight:700}
+.cover .lede{font-size:16px;color:var(--ink-2);margin:0;max-width:60ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.meta span{font-size:12px;font-family:var(--mono);background:var(--surface);border:1px solid var(--rule);
+           border-radius:999px;padding:4px 11px;color:var(--ink-2)}
+
+/* ---------- 공통 규칙 카드 ---------- */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:34px 0 8px}
+.rule-card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.rule-card h4{margin:0 0 5px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.rule-card p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.rule-card p code{color:var(--ink);background:var(--sunken);padding:1px 5px;border-radius:4px}
+
+/* ---------- 목차 ---------- */
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 10px;padding-bottom:34px;border-bottom:1px solid var(--rule)}
+.toc a{font-size:13px;text-decoration:none;color:var(--ink-2);border:1px solid var(--rule);background:var(--surface);
+       border-radius:8px;padding:6px 12px;transition:.14s}
+.toc a:hover{border-color:var(--accent);color:var(--accent-ink)}
+.toc a b{font-family:var(--mono);color:var(--ink-3);margin-right:7px;font-weight:500}
+
+/* ---------- 화면 섹션 ---------- */
+.screen{padding:48px 0;border-bottom:1px solid var(--rule)}
+.screen-head{display:flex;align-items:baseline;gap:14px;margin-bottom:26px;flex-wrap:wrap}
+.screen-head .no{font-family:var(--mono);font-size:12px;font-weight:500;color:#fff;background:var(--accent);
+                 border-radius:6px;padding:3px 8px;letter-spacing:.04em}
+.screen-head h2{margin:0;font-size:23px;letter-spacing:-.015em;font-weight:700}
+.screen-head .route{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);background:var(--sunken);
+                    padding:2px 9px;border-radius:6px}
+.screen-head .sub{flex-basis:100%;margin:2px 0 0;font-size:14px;color:var(--ink-2)}
+
+.split{display:grid;grid-template-columns:372px minmax(0,1fr);gap:44px;align-items:start}
+@media (max-width:980px){.split{grid-template-columns:1fr;gap:28px}.ui-col{position:static !important}}
+.ui-col{position:sticky;top:22px}
+.col-tag{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:0 0 10px}
+
+/* ---------- 목업 프레임 ---------- */
+/* overflow:hidden 을 쓰면 프레임 밖으로 나가는 핀이 잘린다 —
+   대신 첫/마지막 자식에 라운드를 직접 물린다. */
+.phone{--r:20px;width:100%;max-width:372px;background:var(--surface);border:1px solid var(--rule);
+       border-radius:var(--r);box-shadow:var(--lift)}
+.desktop{--r:12px}
+.phone > :first-child, .phone > :first-child > :first-child{
+  border-top-left-radius:calc(var(--r) - 1px);border-top-right-radius:calc(var(--r) - 1px)}
+.phone > :last-child, .phone > :last-child > :last-child{
+  border-bottom-left-radius:calc(var(--r) - 1px);border-bottom-right-radius:calc(var(--r) - 1px)}
+.mk{font-size:13px;line-height:1.5}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--rule-soft)}
+.brandmark{font-size:12px;letter-spacing:.16em;font-weight:700}
+.icons{display:flex;align-items:center;gap:14px;color:var(--ink-2);font-size:15px}
+.cartbtn{position:relative;display:inline-block}
+.badge{position:absolute;top:-6px;right:-9px;min-width:16px;height:16px;border-radius:999px;background:var(--accent);
+       color:#fff;font-size:10px;font-weight:600;display:grid;place-items:center;padding:0 4px;font-family:var(--mono)}
+.langs{display:flex;gap:0;border-bottom:1px solid var(--rule-soft)}
+.langs span{flex:1;text-align:center;padding:8px 0;font-size:11.5px;color:var(--ink-3);font-family:var(--mono)}
+.langs span.on{color:var(--ink);border-bottom:2px solid var(--ink);font-weight:600}
+
+.hero{aspect-ratio:1/1;background:
+      repeating-linear-gradient(45deg,var(--sunken) 0 10px,transparent 10px 20px),var(--field);
+      display:grid;place-items:center;color:var(--ink-3);font-size:12px;font-family:var(--mono)}
+.pad{padding:14px}
+.brandline{display:flex;align-items:center;gap:7px;color:var(--ink-2);font-size:12px}
+.avatar{width:18px;height:18px;border-radius:999px;background:var(--slate-bg);border:1px solid var(--rule)}
+.pname{font-size:15px;font-weight:600;margin:6px 0 8px;letter-spacing:-.01em}
+.price{display:flex;align-items:baseline;gap:8px}
+.price .now{font-size:18px;font-weight:700}
+.price .was{font-size:12.5px;color:var(--ink-3);text-decoration:line-through}
+.price .off{font-size:12.5px;color:var(--accent);font-weight:600}
+.stars{font-size:11.5px;color:var(--ink-3);margin-top:4px}
+
+.optrow{margin-top:12px}
+.optrow .lbl{font-size:11px;color:var(--ink-3);margin-bottom:6px;letter-spacing:.04em}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:5px 11px;border:1px solid var(--rule);border-radius:7px;color:var(--ink-2);background:var(--surface)}
+.chip.on{border-color:var(--ink);color:var(--ink);font-weight:600}
+.chip.off{color:var(--ink-3);opacity:.5;text-decoration:line-through;background:var(--sunken)}
+
+.notice{margin-top:12px;background:var(--sunken);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--ink-2)}
+.notice b{color:var(--ink);font-weight:600}
+.bottombar{display:flex;gap:8px;padding:11px 14px;border-top:1px solid var(--rule-soft);background:var(--surface)}
+.btn{flex:1;text-align:center;padding:11px 0;border-radius:9px;font-size:13.5px;font-weight:600}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{border:1px solid var(--rule);color:var(--ink-2);flex:0 0 46px}
+.btn.mute{background:var(--sunken);color:var(--ink-3)}
+
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--rule-soft);
+          font-size:12px;color:var(--ink-2)}
+.sec-head b{font-size:13px;color:var(--ink);font-weight:600}
+.grouphead{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--rule-soft);background:var(--sunken)}
+.grouphead b{font-size:12.5px}
+.line{display:flex;gap:10px;padding:13px 14px;border-bottom:1px solid var(--rule-soft);position:relative}
+.thumb{width:56px;height:70px;border-radius:6px;flex:none;background:
+       repeating-linear-gradient(45deg,var(--sunken) 0 8px,transparent 8px 16px),var(--field);border:1px solid var(--rule-soft)}
+.line .body{flex:1;min-width:0}
+.line .nm{font-size:12.5px;font-weight:600;line-height:1.35}
+.line .opt{font-size:11.5px;color:var(--ink-3);margin-top:2px;font-family:var(--mono)}
+.line .pr{font-size:13px;font-weight:600;margin-top:6px}
+.line .pr s{font-weight:400;color:var(--ink-3);font-size:11.5px;margin-left:5px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:7px;margin-top:8px;overflow:hidden}
+.stepper i{font-style:normal;width:26px;height:26px;display:grid;place-items:center;font-size:13px;color:var(--ink-2)}
+.stepper b{width:30px;text-align:center;font-size:12.5px;font-family:var(--mono);border-left:1px solid var(--rule);
+           border-right:1px solid var(--rule);height:26px;line-height:26px;font-weight:500}
+.ckbox{width:16px;height:16px;border:1.5px solid var(--rule);border-radius:4px;flex:none;margin-top:2px}
+.ckbox.on{background:var(--accent);border-color:var(--accent);position:relative}
+.ckbox.on::after{content:"✓";position:absolute;inset:0;color:#fff;font-size:11px;display:grid;place-items:center}
+.soldout{position:absolute;inset:0;background:color-mix(in srgb,var(--surface) 88%,transparent);display:grid;place-items:center;
+         font-size:11.5px;color:var(--red);font-weight:600;letter-spacing:-.01em}
+
+.freebar{padding:12px 14px;border-bottom:1px solid var(--rule-soft)}
+.freebar .t{font-size:12px;color:var(--ink-2);margin-bottom:7px}
+.freebar .t b{color:var(--accent);font-weight:600}
+.track{height:5px;border-radius:999px;background:var(--sunken);overflow:hidden}
+.track i{display:block;height:100%;width:78%;background:var(--accent);border-radius:999px}
+.sum{padding:12px 14px;border-bottom:1px solid var(--rule-soft)}
+.sum .r{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);padding:3px 0}
+.sum .r.total{border-top:1px solid var(--rule-soft);margin-top:7px;padding-top:9px;color:var(--ink);font-weight:700;font-size:14.5px}
+.sum .r .muted{font-size:11px;color:var(--ink-3);font-weight:400}
+
+.fieldrow{padding:11px 14px;border-bottom:1px solid var(--rule-soft)}
+.fieldrow .lbl{font-size:11px;color:var(--ink-3);letter-spacing:.04em;margin-bottom:5px}
+.input{background:var(--field);border:1px solid var(--rule);border-radius:7px;padding:8px 10px;font-size:12.5px;color:var(--ink)}
+.input.ph{color:var(--ink-3)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--rule-soft);font-size:12.5px}
+.sw{width:34px;height:19px;border-radius:999px;background:var(--accent);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:999px;background:#fff}
+.sw.off{background:var(--rule)}
+.sw.off::after{right:auto;left:2px}
+.radio{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--rule-soft);font-size:12.5px}
+.dot{width:15px;height:15px;border-radius:999px;border:1.5px solid var(--rule);flex:none}
+.dot.on{border-color:var(--accent);border-width:5px}
+
+.done{padding:26px 14px 18px;text-align:center;border-bottom:1px solid var(--rule-soft)}
+.done .mark{width:42px;height:42px;border-radius:999px;background:var(--green-bg);color:var(--green);display:grid;
+            place-items:center;margin:0 auto 11px;font-size:19px}
+.done h3{margin:0 0 5px;font-size:15px;font-weight:700}
+.done .ordno{font-family:var(--mono);font-size:12.5px;color:var(--ink-2)}
+.pill{display:inline-block;font-size:11px;font-family:var(--mono);padding:2px 8px;border-radius:999px;
+      background:var(--accent-bg);color:var(--accent-ink);margin-top:7px;font-weight:600}
+.addr{padding:12px 14px;border-bottom:1px solid var(--rule-soft);font-size:12.5px;color:var(--ink-2);line-height:1.65}
+.addr b{color:var(--ink);font-weight:600}
+
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:.04em;
+        padding:8px 14px;border-bottom:1px solid var(--rule-soft);background:var(--sunken)}
+.tbl td{padding:9px 14px;border-bottom:1px solid var(--rule-soft);color:var(--ink-2)}
+.tbl td b{color:var(--ink);font-weight:600}
+.tbl .del{color:var(--red);font-size:11.5px}
+
+/* ---------- 핀 ---------- */
+.hl{position:relative}
+.pin{display:inline-grid;place-items:center;width:19px;height:19px;border-radius:999px;background:var(--accent);
+     color:#fff;font-size:11px;font-weight:700;font-family:var(--mono);flex:none;line-height:1}
+.hl > .pin{position:absolute;top:-8px;right:-8px;z-index:3;box-shadow:0 0 0 3px var(--surface)}
+.hl.pinleft > .pin{right:auto;left:-24px;top:-2px}
+.hl.lit{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px;background:var(--accent-bg)}
+
+/* ---------- API 컬럼 ---------- */
+.api-list{display:flex;flex-direction:column;gap:10px}
+.api-row{background:var(--surface);border:1px solid var(--rule);border-radius:11px;padding:13px 15px;box-shadow:var(--shadow);
+         transition:.14s;cursor:default}
+.api-row.lit{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-bg),var(--shadow)}
+.api-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.api-top .what{font-size:13.5px;font-weight:600}
+.m{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;padding:2px 7px;border-radius:5px}
+.m.get{background:var(--slate-bg);color:var(--slate)}
+.m.post{background:var(--accent-bg);color:var(--accent-ink)}
+.m.patch{background:var(--green-bg);color:var(--green)}
+.m.del{background:var(--red-bg);color:var(--red)}
+.m.none{background:var(--sunken);color:var(--ink-3)}
+/* 변경 표기 배지 — 이미 붙인 화면이 있을 때만 쓴다 */
+.nt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    padding:2px 7px;border-radius:5px;line-height:1.6;white-space:nowrap}
+.nt.new{background:var(--green-bg);color:var(--green)}
+.nt.upd{background:var(--accent-bg);color:var(--accent-ink)}
+.api-ep{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.api-ep code{font-size:12.5px;color:var(--ink);background:var(--sunken);padding:3px 8px;border-radius:6px}
+.api-desc{margin:8px 0 0;font-size:13px;color:var(--ink-2)}
+.api-desc b{color:var(--ink);font-weight:600}
+.io{margin:9px 0 0;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--ink-2);
+    background:var(--sunken);border-radius:7px;padding:9px 11px;white-space:pre-wrap;word-break:break-word;overflow-x:auto}
+.io .k{color:var(--accent-ink)}
+.io .c{color:var(--ink-3)}      /* 주석 */
+.io .n{color:var(--green);font-weight:600}  /* 새로 생긴 필드 표시 */
+/* 요청·응답을 좌우로 나눈다. 폭이 좁아지면(<=1180px) 세로로 쌓인다 */
+.io-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:9px;align-items:start}
+@media (max-width:1180px){.io-pair{grid-template-columns:1fr}}
+.io-block{min-width:0;margin-top:9px}
+.io-pair .io-block{margin-top:0}
+.io-block .io{margin:0}
+.io-l{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:10px;letter-spacing:.1em;
+      text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.io-l .ar{font-family:var(--mono);font-size:12.5px;letter-spacing:0;line-height:1}
+.io-l.req .ar{color:var(--accent)}
+.io-l.res .ar{color:var(--green)}
+/* Swagger 딥링크 */
+.swg{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+.swg-l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.swg .op{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);font-weight:600}
+.swg a{font-family:var(--mono);font-size:10.5px;text-decoration:none;color:var(--slate);
+       background:var(--slate-bg);border:1px solid transparent;border-radius:5px;padding:2px 7px;transition:.14s}
+.swg a:hover{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-bg)}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.tag{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);border:1px solid var(--rule);border-radius:5px;padding:2px 6px}
+.tag.err{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,transparent)}
+.note{margin-top:14px;background:var(--accent-bg);border-left:3px solid var(--accent);border-radius:0 9px 9px 0;
+      padding:11px 14px;font-size:13px;color:var(--ink-2)}
+.note b{color:var(--accent-ink)}
+
+/* ---------- 순서도 ---------- */
+.flow{padding:48px 0 72px}
+.flow h2{font-size:23px;margin:0 0 6px;font-weight:700;letter-spacing:-.015em}
+.flow .lede{margin:0 0 22px;color:var(--ink-2);font-size:14px}
+.steps{display:grid;gap:0}
+.step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px;padding-bottom:20px;position:relative}
+.step::before{content:"";position:absolute;left:16px;top:30px;bottom:-2px;width:1px;background:var(--rule)}
+.step:last-child::before{display:none}
+.step .n{width:34px;height:34px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);
+         display:grid;place-items:center;font-family:var(--mono);font-size:12px;color:var(--ink-2);z-index:1}
+.step h4{margin:6px 0 4px;font-size:14.5px;font-weight:600}
+.step p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.step .ep{font-family:var(--mono);font-size:12px;color:var(--accent-ink);background:var(--accent-bg);
+          padding:2px 7px;border-radius:5px;display:inline-block;margin-top:6px}
+footer{padding:26px 0 60px;color:var(--ink-3);font-size:12.5px;border-top:1px solid var(--rule)}
+/* ---------- 이 문서 전용 ---------- */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:11px 14px;border-bottom:1px solid var(--rule-soft)}
+.seg span{text-align:center;padding:8px 0;border:1px solid var(--rule);border-radius:8px;font-size:12.5px;color:var(--ink-2)}
+.seg span.on{border-color:var(--ink);color:var(--ink);font-weight:600}
+.store{margin:0 14px 11px;border:1px solid var(--rule);border-radius:9px;padding:10px 12px;font-size:12px;color:var(--ink-2);line-height:1.55}
+.store b{color:var(--ink)}
+.ok{color:var(--green);font-size:11.5px;margin-top:5px}
+.bad{color:var(--red);font-size:11.5px;margin-top:5px}
+.deposit{margin:0 14px 14px;background:var(--sunken);border-radius:9px;padding:12px;font-size:12.5px}
+.deposit .r{display:flex;justify-content:space-between;padding:3px 0;color:var(--ink-2)}
+.deposit .r b{font-family:var(--mono);color:var(--ink);font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="cover">
+  <p class="eyebrow">Seoul Moment · 대만 결제</p>
+  <h1>주문서 · 결제 · 결과</h1>
+  <p class="lede">왼쪽은 실제로 붙을 화면, 오른쪽은 그 화면의 각 요소가 부르는 API다.
+     번호가 좌우를 잇는다 — 어느 쪽이든 올려두면 짝이 같이 켜진다.</p>
+  <div class="meta">
+    <span>ECPay · LINE Pay</span>
+    <span>전자발표 5종</span>
+    <span>편의점 픽업 (7-ELEVEN · 全家 · 萊爾富)</span>
+    <span>DEV 배포 2026-11-04</span>
+  </div>
+
+  <div class="rules">
+    <div class="rule-card">
+      <h4>인증</h4>
+      <p>주문·결제·발표 확인은 회원 <code>Authorization: Bearer</code>. <b>편의점 지도·매장 조회·결제 결과는 토큰 없이</b> 된다 —
+         LINE 밖 외부 브라우저에는 로그인이 없기 때문이다.</p>
+    </div>
+    <div class="rule-card">
+      <h4>응답 봉투</h4>
+      <p>성공은 <code>{ result, data }</code>. 이 문서의 <code>→</code> 는 <b>data 안쪽</b>만 적었다.
+         실패는 <code>{ message, code, traceId, data? }</code>.</p>
+    </div>
+    <div class="rule-card">
+      <h4>금액</h4>
+      <p>통화는 <b>NT$</b>, 전부 정수다. 배송비·합계는 <b>서버 값을 그대로</b> 쓴다. 기본 60 · 외섬 100 · 1,150 이상 무료.</p>
+    </div>
+    <div class="rule-card">
+      <h4>필드 표기</h4>
+      <p><code>key</code> 필수 · <code>key?</code> 선택(응답에선 <code>null</code> 가능) · <code>key*</code> 조건부 필수(조건은 카드 본문) ·
+         <code>// ①</code> <code>// ②</code> 택1. 정의하지 않은 키를 보내면 <b>400</b> 이다.</p>
+    </div>
+    <div class="rule-card">
+      <h4>변경 표기</h4>
+      <p>기준은 <code>cart-order-frontend-guide.html</code>(주문 1차). <span class="nt new">new</span> 새 API ·
+         <span class="nt upd">updated</span> 필드가 늘어난 API. <b>라벨이 없으면 예전 그대로</b>다.</p>
+    </div>
+    <div class="rule-card">
+      <h4>Swagger</h4>
+      <p>DEV <code>api-dev.seoulmoment.com.tw/docs</code> · PROD <code>api.seoulmoment.com.tw/docs</code>.
+         <b>PROD 링크는 main 배포 뒤에 열린다.</b> PG 콜백 경로는 일부러 문서에서 뺐다.</p>
+    </div>
+  </div>
+
+  <nav class="toc">
+    <a href="#s1"><b>01</b>배송 방법 · 편의점</a>
+    <a href="#s2"><b>02</b>전자발표</a>
+    <a href="#s3"><b>03</b>결제수단 · 결제하기</a>
+    <a href="#s4"><b>04</b>결제 결과</a>
+    <a href="#s5"><b>05</b>입금 대기</a>
+    <a href="#s6"><b>06</b>주문 상세</a>
+    <a href="#flow"><b>—</b>호출 순서</a>
+  </nav>
+</header>
+
+<!-- ============================ 01 ============================ -->
+<section class="screen" id="s1">
+  <div class="screen-head">
+    <span class="no">01</span>
+    <h2>주문서 — 배송 방법 · 편의점 선택</h2>
+    <span class="route">/order</span>
+    <p class="sub">편의점 지도는 <b>API 호출이 아니라 페이지 이동</b>이다. 주문서를 떠났다 돌아오므로 <b>입력값은 프론트가 보관</b>해 둔다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="nav"><span class="icons">←</span><span class="brandmark">주문서</span><span class="icons" style="width:16px"></span></div>
+
+        <div class="hl" data-k="1-1">
+          <span class="pin">1</span>
+          <div class="seg"><span>택배</span><span class="on">편의점 픽업</span></div>
+        </div>
+
+        <div class="hl" data-k="1-2">
+          <span class="pin">2</span>
+          <div class="fieldrow" style="border-bottom:none">
+            <div class="lbl">편의점</div>
+            <div class="chips"><span class="chip on">7-ELEVEN</span><span class="chip">全家</span><span class="chip">萊爾富</span></div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="1-3">
+          <span class="pin">3</span>
+          <div class="store">
+            <b>7-ELEVEN 建盛門市</b> · 131386<br>
+            台北市中正區重慶南路一段122號
+            <div style="margin-top:6px;color:var(--accent-ink);font-size:11.5px">매장 다시 고르기 ›</div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="1-4">
+          <span class="pin">4</span>
+          <div class="fieldrow">
+            <div class="lbl">받는 분 (신분증과 같은 이름)</div>
+            <div class="two"><div class="input">李佳蓉</div><div class="input">0912345678</div></div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="1-5">
+          <span class="pin">5</span>
+          <div class="sum">
+            <div class="r"><span>상품 금액</span><span>NT$1,100</span></div>
+            <div class="r"><span>배송비 <span class="muted">편의점 · 본섬</span></span><span>NT$60</span></div>
+            <div class="r total"><span>결제 금액</span><span>NT$1,160</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="1-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">택배 / 편의점 픽업 토글</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>shippingType</code></div>
+          <p class="api-desc">고르기만 한다. 값은 <code>HOME</code> · <code>CVS</code> 이고, 바꾸면 <b>미리보기(5)를 다시 부른다</b> —
+            택배는 주소(縣市·區)로, 편의점은 매장으로 배송비가 정해진다.</p>
+        </div>
+
+        <div class="api-row" data-k="1-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">편의점 고르기 → 전자지도</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/logistics/cvs/map?chain=&amp;returnUrl=</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/Logistics/LogisticsController_openMap" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/Logistics/LogisticsController_openMap" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc"><b>fetch 하지 말고 브라우저를 이 URL 로 보낸다</b>(같은 탭). 서버가 ECPay 지도로 자동 제출하는 HTML 을 준다.
+            매장을 고르면 <code>{returnUrl}?cvsStoreToken=…</code> 으로 돌아온다. <code>returnUrl</code> 이 프론트 주소로 시작하지 않으면 무시된다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request (페이지 이동)</div>
+              <div class="io">GET /logistics/cvs/map
+  ?<span class="k">chain</span>=UNIMART
+  &amp;returnUrl?=https://{프론트}/order
+
+<span class="c">// chain: UNIMART · FAMI · HILIFE</span></div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>돌아오는 주소</div>
+              <div class="io">https://{프론트}/order
+  ?<span class="k">cvsStoreToken</span>=3f9c1a7b2e4d...
+
+<span class="c">// returnUrl 이 없으면 서버 페이지가</span>
+<span class="c">// 고른 매장을 보여준다</span></div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">토큰 불필요</span><span class="tag">HTML 응답</span><span class="tag err">400 없는 chain</span></div>
+        </div>
+
+        <div class="api-row" data-k="1-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">고른 매장 보여주기</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/logistics/cvs/store/:token</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/Logistics/LogisticsController_getStore" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/Logistics/LogisticsController_getStore" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">돌아온 주소의 <code>cvsStoreToken</code> 으로 부른다. 매장 정보는 <b>서버가 보관한 값만 믿는다</b> —
+            주문 생성에는 매장명·주소가 아니라 <b>이 토큰만</b> 넘긴다. <b>1시간</b> 지나면 404 이니 다시 고르게 한다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>Response 200</div>
+            <div class="io">{
+  <span class="k">storeToken</span>:       "3f9c1a7b2e4d6f8a0b1c",
+  chain:            "UNIMART",
+  logisticsSubType: "UNIMARTC2C",
+  storeId:          "131386",
+  <span class="k">storeName</span>:        "建盛門市",
+  <span class="k">storeAddress</span>:     "台北市中正區重慶南路一段122號",
+  storeTelephone?:  null,   <span class="c">// 7-ELEVEN 은 없음</span>
+  <span class="k">isOutsideIsland</span>:  false   <span class="c">// true 면 외섬 요금</span>
+}</div>
+          </div>
+          <div class="tags"><span class="tag">토큰 불필요</span><span class="tag">1시간 유효</span><span class="tag err">404 만료 → 다시 고르기</span></div>
+        </div>
+
+        <div class="api-row" data-k="1-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">받는 분 이름 · 휴대폰</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>cvsPickup.*</code></div>
+          <p class="api-desc">따로 부르지 않고 주문 생성(03)에 실린다. <b>매장에서 신분증과 대조</b>하므로 형식이 엄격하다 —
+            프론트에서 먼저 막아 두면 400 을 안 본다.</p>
+          <div class="io-block">
+            <div class="io-l req"><span class="ar">←</span>형식</div>
+            <div class="io"><span class="k">recipientName</span>  중문 2–5자 또는 영문 4–10자
+               <span class="c">// 공백·숫자 불가</span>
+<span class="k">phone</span>          09 + 숫자 8자리
+               <span class="c">// 도착 문자가 간다</span></div>
+          </div>
+        </div>
+
+        <div class="api-row" data-k="1-5">
+          <div class="api-top"><span class="pin">5</span><span class="what">금액 미리보기</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/user/order/preview</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_postUserOrderPreview" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_postUserOrderPreview" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">이번에 <code>shippingType</code>·<code>cvsStoreToken</code> 이 더해졌다. <b>기존 호출(택배 + 縣市·區)은 그대로 동작한다.</b>
+            토글·매장·주소가 바뀔 때마다 다시 부른다. 매장 토큰이 만료돼도 에러가 아니라 <b>본섬 기준 예상값</b>(<code>isShippingEstimated: true</code>)이다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io">{
+  cartItemIds:    [12],       <span class="c">// ①</span>
+  items:          [{ ... }],  <span class="c">// ②</span>
+  shippingType?:  "CVS",      <span class="n">// NEW</span>
+  cvsStoreToken?: "3f9c...",  <span class="n">// NEW</span>
+  city?:          "臺北市",
+  district?:      "中正區"
+}
+<span class="c">// ①·② 중 하나만</span></div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 200</div>
+              <div class="io">{
+  brandGroups:           [ ... ],
+  totalProductAmount:    1100,
+  <span class="k">shippingFee</span>:           60,
+  isRemoteIsland:        false,
+  <span class="k">isShippingEstimated</span>:   false,
+  freeShippingThreshold: 1150,
+  amountToFreeShipping:  50,
+  <span class="k">totalAmount</span>:           1160
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">Bearer</span><span class="tag">Accept-Language 필수</span><span class="tag">CVS 면 city·district 무시</span><span class="tag err">400 ①·② 둘 다 / 없음</span><span class="tag err">404 라인·SKU 없음</span></div>
+        </div>
+      </div>
+
+      <div class="note"><b>지도에 다녀오면 주문서가 새로 뜬다</b> — 장바구니 선택·받는 분·발표 입력은 <code>sessionStorage</code> 등에 넣어 두고 복원한다.
+        ECPay <b>테스트 환경(DEV)은 지도가 뜨지 않고 고정 매장</b>을 돌려준다. 실제 지도는 PROD 에서만 보인다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 02 ============================ -->
+<section class="screen" id="s2">
+  <div class="screen-head">
+    <span class="no">02</span>
+    <h2>주문서 — 전자발표(電子發票)</h2>
+    <span class="route">/order</span>
+    <p class="sub">확인 API 는 <b>입력을 마쳤을 때(blur · 제출 직전)</b> 부른다. 키 입력마다 부르지 않는다. 고르지 않으면 회원 載具로 받는다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="sec-head"><b>電子發票</b><span style="color:var(--ink-3)">결제 후 자동 발행</span></div>
+
+        <div class="hl" data-k="2-1">
+          <span class="pin">1</span>
+          <div class="radio"><span class="dot"></span>會員載具 <span style="color:var(--ink-3);font-size:11px">(이메일로 받기 · 기본)</span></div>
+          <div class="radio"><span class="dot on"></span>手機條碼</div>
+          <div class="radio"><span class="dot"></span>自然人憑證</div>
+          <div class="radio"><span class="dot"></span>捐贈發票</div>
+          <div class="radio"><span class="dot"></span>公司 (統一編號)</div>
+        </div>
+
+        <div class="hl" data-k="2-2">
+          <span class="pin">2</span>
+          <div class="fieldrow">
+            <div class="lbl">手機條碼</div>
+            <div class="input">/ABC1234</div>
+            <div class="ok">✓ 확인된 바코드</div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="2-3">
+          <span class="pin">3</span>
+          <div class="fieldrow">
+            <div class="lbl">捐贈 · 愛心碼</div>
+            <div class="input">168001</div>
+            <div class="ok">✓ 財團法人台灣兒童暨家庭扶助基金會</div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="2-4">
+          <span class="pin">4</span>
+          <div class="fieldrow">
+            <div class="lbl">統一編號 · 公司名稱</div>
+            <div class="two"><div class="input">97025978</div><div class="input">首爾映像有限公司</div></div>
+            <div class="bad">✕ 12345678 은 統一編號 형식이 아닙니다</div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="2-5">
+          <span class="pin">5</span>
+          <div class="fieldrow" style="border-bottom:none">
+            <div class="lbl">自然人憑證</div>
+            <div class="input ph">AB12345678901234</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="2-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">받는 방법 선택</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>invoice.type</code></div>
+          <p class="api-desc">주문 생성(03)의 <code>invoice</code> 로 실린다. <b>기본값을 그대로 두면 <code>invoice</code> 를 빼고 보내도 된다</b> —
+            서버가 <code>MEMBER_CARRIER</code>(회원 이메일로 받음)로 만든다. 고른 값에 따라 필요한 칸이 다르다.</p>
+          <div class="io-block">
+            <div class="io-l req"><span class="ar">←</span>invoice — type 별로 하나</div>
+            <div class="io"><span class="c">// ① 會員載具</span>
+{ <span class="k">type</span>: "MEMBER_CARRIER" }
+
+<span class="c">// ② 手機條碼 · 自然人憑證</span>
+{ type:        "MOBILE_BARCODE",   <span class="c">// 또는 CITIZEN_CERT</span>
+  <span class="k">carrierNum*</span>: "/ABC1234" }
+
+<span class="c">// ③ 捐贈</span>
+{ type:      "DONATION",
+  <span class="k">loveCode*</span>: "168001" }
+
+<span class="c">// ④ 公司</span>
+{ type:          "COMPANY",
+  <span class="k">companyTaxId*</span>: "97025978",
+  <span class="k">companyName*</span>:  "首爾映像有限公司" }
+
+<span class="c">// ①~④ 중 하나만</span></div>
+          </div>
+          <div class="tags"><span class="tag">carrierNum 소문자 → 대문자</span><span class="tag">companyName 60자</span></div>
+        </div>
+
+        <div class="api-row" data-k="2-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">手機條碼 확인</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/user/invoice/mobile-barcode/check?code=</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserInvoice/UserInvoiceController_checkMobileBarcode" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserInvoice/UserInvoiceController_checkMobileBarcode" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc"><code>"/"</code> + 7자(영문 대문자·숫자·<code>+-.</code>). <b><code>valid: false</code> 일 때만 막는다.</b>
+            재정부 장애면 형식만 맞을 때 <code>valid: true, verified: false</code> 다 — 그대로 주문해도 된다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io">?<span class="k">code</span>=%2FABC1234
+<span class="c">// "/" 는 URL 인코딩</span></div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 200</div>
+              <div class="io">{
+  <span class="k">valid</span>:    true,
+  verified: true,
+  name?:    null
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">Bearer</span><span class="tag">같은 값은 하루 캐시</span></div>
+        </div>
+
+        <div class="api-row" data-k="2-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">愛心碼 확인 · 기부처 이름</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/user/invoice/love-code/check?code=</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserInvoice/UserInvoiceController_checkLoveCode" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserInvoice/UserInvoiceController_checkLoveCode" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">숫자 3–7자리. <code>valid: true</code> 면 <code>name</code> 에 기부처가 온다 — 칸 아래 보여주면 된다.
+            <b>없는 코드로 주문하면 주문 생성이 400</b> 이다(ECPay 발행은 코드를 안 보므로 서버가 막는다).</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>Response 200</div>
+            <div class="io">{
+  <span class="k">valid</span>:    true,
+  verified: true,
+  <span class="k">name</span>:     "財團法人台灣兒童暨家庭扶助基金會"
+}</div>
+          </div>
+          <div class="tags"><span class="tag">Bearer</span><span class="tag">숫자 3~7자리</span></div>
+        </div>
+
+        <div class="api-row" data-k="2-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">統一編號 확인 · 회사명 채우기</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/user/invoice/company/check?taxId=</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserInvoice/UserInvoiceController_checkCompany" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserInvoice/UserInvoiceController_checkCompany" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">8자리 검사코드를 본다. <code>name</code> 은 공개 데이터에 있을 때만 온다 — <b>회사명 칸을 미리 채우는 용도</b>이고,
+            없어도 <code>valid: true</code> 면 주문할 수 있다. 회사명은 사용자가 고칠 수 있게 둔다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>Response 200</div>
+            <div class="io">{
+  <span class="k">valid</span>:    true,
+  verified: true,
+  <span class="k">name?</span>:    "首爾映像有限公司"  <span class="c">// 없으면 null</span>
+}</div>
+          </div>
+          <div class="tags"><span class="tag">Bearer</span><span class="tag">8자리 숫자</span></div>
+        </div>
+
+        <div class="api-row" data-k="2-5">
+          <div class="api-top"><span class="pin">5</span><span class="what">自然人憑證</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>형식만</code></div>
+          <p class="api-desc">확인 API 가 <b>없다.</b> 영문 대문자 2 + 숫자 14 형식만 맞으면 된다. <code>type: "CITIZEN_CERT"</code>, 값은 <code>carrierNum</code> 에 넣는다.</p>
+        </div>
+      </div>
+
+      <div class="note"><b>주문 생성이 같은 검사를 다시 한다</b> — 확인을 건너뛰어도 막히고, 그때는 400 의 <code>data.field</code>(<code>carrierNum</code> · <code>loveCode</code> · <code>companyTaxId</code>)가
+        어느 칸인지 알려준다. 그 칸을 빨갛게 칠하면 된다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 03 ============================ -->
+<section class="screen" id="s3">
+  <div class="screen-head">
+    <span class="no">03</span>
+    <h2>주문서 — 결제수단 · 결제하기</h2>
+    <span class="route">/order</span>
+    <p class="sub">버튼 하나가 <b>요청 두 개</b>다 — 주문 생성 → 결제 시작. <b>재고는 결제 시작에서</b> 잡히고, 받은 URL 로 브라우저를 보낸다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="sec-head"><b>결제 수단</b></div>
+        <div class="hl" data-k="3-1">
+          <span class="pin">1</span>
+          <div class="radio"><span class="dot on"></span>LINE Pay</div>
+          <div class="radio"><span class="dot"></span>信用卡 · ATM 轉帳 · 超商代碼 <span style="color:var(--ink-3);font-size:11px">(ECPay)</span></div>
+        </div>
+        <div class="sum">
+          <div class="r"><span>상품 금액</span><span>NT$1,100</span></div>
+          <div class="r"><span>배송비</span><span>NT$60</span></div>
+          <div class="r total"><span>결제 금액</span><span>NT$1,160</span></div>
+        </div>
+        <div class="hl" data-k="3-2">
+          <span class="pin">2</span>
+          <div class="bottombar"><span class="btn primary">NT$1,160 결제하기</span></div>
+        </div>
+        <div class="hl" data-k="3-3">
+          <span class="pin">3</span>
+          <div class="notice" style="margin:0;border-radius:0;padding:11px 14px">
+            <b>재고가 부족한 상품이 있어요</b> — 크롭 후드 집업 (베이지 / FREE)<br>수량을 바꾸거나 빼고 다시 결제해 주세요.
+          </div>
+        </div>
+        <div class="hl" data-k="3-4">
+          <span class="pin">4</span>
+          <div class="done" style="border-bottom:none">
+            <div class="mark" style="background:var(--accent-bg);color:var(--accent-ink)">↗</div>
+            <h3>외부 브라우저에서 결제 중</h3>
+            <div class="ordno" style="font-family:var(--sans)">결제를 마치면 이 화면이 자동으로 바뀝니다</div>
+            <div class="pill">SM-20261104-000481</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="3-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">결제수단 선택</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>paymentMethod</code></div>
+          <p class="api-desc"><code>LINE_PAY</code> · <code>ECPAY</code> 둘 중 하나. ECPay 안에서 카드 · ATM · 편의점 코드 중 무엇을 쓸지는
+            <b>ECPay 결제창에서 사용자가 고른다</b> — 프론트가 따로 받지 않는다.</p>
+        </div>
+
+        <div class="api-row" data-k="3-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">결제하기 ① 주문 생성</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/user/order</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_postUserOrder" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_postUserOrder" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">이번에 <code>shippingType</code>·<code>cvsPickup</code>·<code>invoice</code> 가 더해졌다. <b>기존 택배 호출은 그대로 동작한다</b>(생략 = <code>HOME</code>).
+            <code>PENDING</code> 주문이 생기고 재고·장바구니는 아직 그대로다. <code>useDefaultShipping*</code> 은 HOME 일 때, <code>cvsPickup*</code> 은 CVS 일 때 필수다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io">{
+  cartItemIds:   [12],  <span class="c">// 또는 items</span>
+  <span class="k">paymentMethod</span>: "LINE_PAY",
+  shippingType?: "CVS",       <span class="n">// NEW</span>
+
+  <span class="c">// ① HOME</span>
+  useDefaultShipping*: true,
+  shipping*:           { ... },
+
+  <span class="c">// ② CVS</span>
+  <span class="k">cvsPickup*</span>: {           <span class="n">// NEW</span>
+    storeToken:    "3f9c...",
+    recipientName: "李佳蓉",
+    phone:         "0912345678"
+  },
+
+  invoice?: {               <span class="n">// NEW</span>
+    type:       "MOBILE_BARCODE",
+    carrierNum: "/ABC1234"
+  }
+}
+<span class="c">// ①·② 는 shippingType 으로 갈린다</span></div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 201</div>
+              <div class="io">{
+  <span class="k">orderId</span>:     481,
+  orderNumber: "SM-20261104-000481",
+  totalAmount: 1160
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">Bearer</span><span class="tag">Accept-Language 필수</span><span class="tag err">400 매장 만료 · 발표 값 (data.field)</span><span class="tag err">409 구매 불가 라인</span></div>
+        </div>
+
+        <div class="api-row" data-k="3-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">결제하기 ② 결제 시작</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/user/order/:id/payment</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserPayment/UserPaymentController_postUserOrderPayment" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserPayment/UserPaymentController_postUserOrderPayment" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">본문이 없다. <b>여기서 재고를 잡는다</b> — 모자라면 409 이고 PG 로 넘어가지 않는다. 결제창에서 이탈한 뒤
+            <b>같은 주문으로 다시 불러도 된다</b>(이전 시도는 서버가 닫는다). <code>resultToken</code> 은 결과 페이지의 <code>?h=</code> 와 같은 값이다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 201 · ECPAY</div>
+              <div class="io">{
+  paymentId:   12,
+  method:      "ECPAY",
+  <span class="k">handoffUrl</span>:  "https://api-dev.../
+    payment/ecpay/handoff/Xy9...",
+  paymentUrl?: null,
+  appUrl?:     null,
+  resultToken: "Xy9..."
+}</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 201 · LINE_PAY</div>
+              <div class="io">{
+  paymentId:   13,
+  method:      "LINE_PAY",
+  handoffUrl?: null,
+  <span class="k">paymentUrl</span>:  "https://sandbox-web-
+    pay.line.me/web/payment/...",
+  <span class="k">appUrl</span>:      "line://pay/payment/...",
+  resultToken: "Ab3..."
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">Bearer</span><span class="tag">Accept-Language → ECPay 창 언어</span><span class="tag err">404 주문 없음</span><span class="tag err">409 결제 불가 상태 · 재고 부족</span><span class="tag err">500 LINE Pay 요청 실패</span></div>
+        </div>
+
+        <div class="api-row" data-k="3-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">재고 부족 안내</span></div>
+          <div class="api-ep"><span class="m none">결제 시작 409</span><code>data.productVariantIds</code></div>
+          <p class="api-desc">결제 시작 409 의 <code>data.productVariantIds</code> 에 모자란 SKU 가 온다. 그 줄을 표시하고 장바구니로 돌려보낸다.
+            주문은 <code>PENDING</code> 으로 남지만 <b>결제 없이 24시간이 지나면 서버가 취소</b>한다 — 프론트가 지울 필요 없다.
+            500(LINE Pay) 은 잡았던 재고를 이미 돌려놨으니 <b>같은 주문으로 다시 시작</b>하면 된다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>409</div>
+            <div class="io">{
+  message: "Some items are out of stock: ...",
+  code:    "CONFLICT",
+  data:    { <span class="k">productVariantIds</span>: [101] }
+}</div>
+          </div>
+        </div>
+
+        <div class="api-row" data-k="3-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">결제창으로 보내기</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>location · liff.openWindow</code></div>
+          <p class="api-desc"><b>ECPay 는 LINE 안이면 외부 브라우저로 연다</b>(LINE 인앱 브라우저에서 결제가 깨질 수 있다). <code>handoffUrl</code> 은 <b>30분 안에 한 번만</b> 열린다.
+            외부로 넘겼으면 원래 화면에 "외부 브라우저에서 결제 중" 을 띄우고 <code>GET /user/order/:id</code> 를 폴링한다(06).</p>
+          <div class="io-block">
+            <div class="io-l req"><span class="ar">←</span>분기</div>
+            <div class="io"><span class="c">// ECPAY</span>
+if (liff.isInClient())
+  liff.openWindow({ url: <span class="k">handoffUrl</span>, external: true })
+else if (LINE 인앱 브라우저)
+  location = handoffUrl + "?openExternalBrowser=1"
+else
+  location = handoffUrl
+
+<span class="c">// LINE_PAY — 외부로 넘기지 않는다</span>
+location = LINE 앱 안 ? <span class="k">appUrl</span> : <span class="k">paymentUrl</span></div>
+          </div>
+          <div class="tags"><span class="tag">handoff 30분 · 1회</span><span class="tag">openExternalBrowser 는 LIFF 에서 안 됨</span><span class="tag">LINE Pay 링크 약 20분</span></div>
+          <p class="api-desc"><b>LINE Pay <code>paymentUrl</code> 을 Slack·메신저 같은 인앱 브라우저로 열면</b> "LINE 앱을 최신 버전으로 업데이트해 주세요" 화면에 막힌다(DEV 확인).
+            PC 는 일반 브라우저, 휴대폰은 LINE 안에서 <code>appUrl</code> 로 연다. 막혀 이탈해도 주문은 <code>PENDING</code> 이라 결제 시작만 다시 부르면 된다.</p>
+        </div>
+      </div>
+
+      <div class="note"><b>버튼 연타를 막는다</b> — 주문 생성이 두 번 나가면 PENDING 주문이 두 개 생긴다. 결제 시작은 다시 불러도 이전 시도를 닫으니 안전하다.
+        성공한 <code>orderId</code> 를 기억해 두고 <b>재시도 때는 결제 시작만</b> 다시 부른다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 04 ============================ -->
+<section class="screen" id="s4">
+  <div class="screen-head">
+    <span class="no">04</span>
+    <h2>결제 결과</h2>
+    <span class="route">/payment/result?h={resultToken}</span>
+    <p class="sub">PG 에서 돌아온 브라우저가 처음 보는 화면. <b>로그인이 없을 수 있어서 토큰(<code>h</code>)으로만</b> 연다. 결과가 늦게 올 수 있으니 짧게 폴링한다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="nav"><span class="icons" style="width:16px"></span><span class="brandmark">결제 결과</span><span class="icons" style="width:16px"></span></div>
+        <div class="hl" data-k="4-1">
+          <span class="pin">1</span>
+          <div class="done">
+            <div class="mark">✓</div>
+            <h3>결제가 완료되었습니다</h3>
+            <div class="ordno">SM-20261104-000481</div>
+            <div class="pill">LINE_PAY · NT$1,160</div>
+          </div>
+        </div>
+        <div class="hl" data-k="4-2">
+          <span class="pin">2</span>
+          <div class="notice" style="margin:0;border-radius:0;padding:11px 14px;border-bottom:1px solid var(--rule-soft)">
+            <b>결제 확인 중…</b> 잠시만 기다려 주세요 <span style="color:var(--ink-3)">(REQUESTED)</span>
+          </div>
+        </div>
+        <div class="hl" data-k="4-3">
+          <span class="pin">3</span>
+          <div class="notice" style="margin:0;border-radius:0;padding:11px 14px;background:var(--red-bg)">
+            <b style="color:var(--red)">결제되지 않았습니다</b> — 결제창에서 취소했어요<br>
+            <span style="color:var(--ink-3)">주문은 남아 있어요. LINE 으로 돌아가 다시 결제해 주세요.</span>
+          </div>
+        </div>
+        <div class="hl" data-k="4-4">
+          <span class="pin">4</span>
+          <div class="bottombar"><span class="btn ghost" style="flex:1">LINE 으로 돌아가기</span><span class="btn primary">주문 상세</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="4-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">결과 조회</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/payment/result/:token</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/Payment/PaymentController_getResult" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/Payment/PaymentController_getResult" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">URL 의 <code>h</code> 를 그대로 넣는다. <b>토큰이 필요 없다.</b> 주문번호·상태·입금 정보만 오고 이름·주소·전화번호는 없다.
+            화면은 <b><code>payment.status</code> 로 고른다</b> — <code>orderStatus</code> 는 보조다. <b>7일</b> 지나면 404.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>Response 200</div>
+            <div class="io">{
+  orderId:     481,
+  <span class="k">orderNumber</span>: "SM-20261104-000481",
+  orderStatus: "PAID",
+  payment: {
+    paymentId:     13,
+    method:        "LINE_PAY",
+    <span class="k">status</span>:        "PAID",
+    <span class="k">amount</span>:        1160,
+    pgPaymentType?: null,
+    depositInfo?:  null,   <span class="c">// 05 참고</span>
+    expireAt?:     null,
+    paidAt?:       "2026-11-04T03:12:09Z",
+    failureCode?:  null
+  }
+}</div>
+          </div>
+          <div class="tags"><span class="tag">토큰 불필요</span><span class="tag">7일 유효</span><span class="tag err">404 없는·만료 토큰</span></div>
+        </div>
+
+        <div class="api-row" data-k="4-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">결제 확인 중 → 폴링</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/payment/result/:token</code> <span class="tag">2~3초 간격</span></div>
+          <p class="api-desc">PG 의 서버 통지와 브라우저 복귀는 <b>도착 순서가 보장되지 않는다.</b> <code>status</code> 가 <code>REQUESTED</code>(또는 <code>READY</code>)면
+            같은 API 를 몇 초 간격으로 다시 부른다. 1분쯤 지나도 그대로면 "확인 중" 문구를 두고 주문 상세로 안내한다 — 서버 배치가 PG 에 다시 물어 정리한다.</p>
+          <div class="io-block">
+            <div class="io-l req"><span class="ar">←</span>status 별 화면</div>
+            <div class="io"><span class="k">REQUESTED</span> · READY     → 확인 중 (폴링)
+<span class="k">PAID</span>                  → 완료 (1)
+<span class="k">WAITING_DEPOSIT</span>       → 입금 안내 (05)
+<span class="k">FAILED</span> · CANCELED     → 결제 안 됨 (3)
+<span class="k">EXPIRED</span>               → 결제 안 됨 (3)</div>
+          </div>
+        </div>
+
+        <div class="api-row" data-k="4-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">결제 안 됨</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>FAILED · CANCELED · EXPIRED</code></div>
+          <p class="api-desc">주문은 <code>PENDING</code> 으로 남고 <b>같은 주문으로 다시 결제할 수 있다</b> — 결제 시작(<code>POST /user/order/:id/payment</code>)만 다시 부른다.
+            다만 그건 로그인이 필요하므로, <b>외부 브라우저(로그인 없음)라면 LINE 으로 돌려보내</b> 거기서 다시 누르게 한다.</p>
+          <div class="tags"><span class="tag">failureCode = PG 응답 코드</span></div>
+        </div>
+
+        <div class="api-row" data-k="4-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">돌아가기 버튼</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>화면 이동만</code></div>
+          <p class="api-desc">LINE 안에서 외부로 넘어온 경우 <b>LINE 쪽 원래 화면이 이미 폴링으로 완료로 바뀌어 있다</b>(06).
+            "LINE 으로 돌아가기" 는 LIFF URL 을 열기만 하면 된다. 주문 상세는 로그인한 브라우저에서만 열린다.</p>
+        </div>
+      </div>
+
+      <div class="note"><b>프론트 결과 페이지가 아직 없으면</b> 서버가 그린 간단한 결과 화면(번체 중문)이 대신 뜬다 — 지금 DEV 가 그렇다.
+        프론트 주소(<code>STOREFRONT_BASE_URL</code>)를 알려주면 서버 설정에 넣고, 그때부터 <code>{프론트}/payment/result?h=</code> 로 303 리다이렉트된다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 05 ============================ -->
+<section class="screen" id="s5">
+  <div class="screen-head">
+    <span class="no">05</span>
+    <h2>입금 대기 — ATM · 편의점 코드</h2>
+    <span class="route">/payment/result · /mypage/order/:id</span>
+    <p class="sub">ECPay 에서 ATM 이체나 편의점 코드 납부를 고르면 <b>결제가 아니라 "번호 발급"</b>으로 끝난다. 계좌·코드·기한을 크게 보여준다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="nav"><span class="icons" style="width:16px"></span><span class="brandmark">입금 안내</span><span class="icons" style="width:16px"></span></div>
+        <div class="done" style="border-bottom:none;padding-bottom:12px">
+          <div class="mark" style="background:var(--accent-bg);color:var(--accent-ink)">⏱</div>
+          <h3>입금을 기다리고 있어요</h3>
+          <div class="ordno">SM-20261104-000481</div>
+        </div>
+        <div class="hl" data-k="5-1">
+          <span class="pin">1</span>
+          <div class="deposit">
+            <div class="r"><span>ATM 轉帳</span><b>土地銀行 (005)</b></div>
+            <div class="r"><span>가상계좌</span><b>5219111913127434</b></div>
+            <div class="r"><span>금액</span><b>NT$1,160</b></div>
+          </div>
+        </div>
+        <div class="hl" data-k="5-2">
+          <span class="pin">2</span>
+          <div class="deposit" style="margin-top:-4px">
+            <div class="r"><span>超商代碼 (CVS_CVS)</span><b>LLL22251222</b></div>
+          </div>
+        </div>
+        <div class="hl" data-k="5-3">
+          <span class="pin">3</span>
+          <div class="notice" style="margin:0 14px 14px">입금 기한 <b>2026/11/06 23:59</b> · 지나면 주문이 자동 취소됩니다</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="5-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">ATM 계좌 정보</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/payment/result/:token</code> · <code>/user/order/:id</code></div>
+          <p class="api-desc">둘 다 같은 <code>payment</code> 객체를 준다. <code>status: "WAITING_DEPOSIT"</code> 이고 <code>depositInfo.paymentType</code> 이
+            <b><code>ATM_</code> 으로 시작하면 계좌</b>를 보여준다. 은행 이름은 응답에 없으니 <code>bankCode</code> 로 프론트가 붙인다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>payment (입금 대기 · ATM)</div>
+            <div class="io">{
+  <span class="k">status</span>:        "WAITING_DEPOSIT",
+  amount:        1160,
+  pgPaymentType: "ATM_LAND",
+  <span class="k">depositInfo</span>: {
+    paymentType: "ATM_LAND",
+    <span class="k">bankCode</span>:    "005",
+    <span class="k">account</span>:     "5219111913127434"
+  },
+  <span class="k">expireAt</span>:      "2026-11-06T15:59:59Z"
+}
+<span class="c">// orderStatus = "PAYMENT_WAITING"</span></div>
+          </div>
+        </div>
+
+        <div class="api-row" data-k="5-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">편의점 납부 코드</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>depositInfo.paymentNo</code></div>
+          <p class="api-desc"><code>paymentType</code> 이 <b><code>CVS_</code> 로 시작하면</b> <code>paymentNo</code> 를 보여준다. 이 번호로 편의점 단말(ibon 등)에서 납부한다.
+            바코드 납부는 쓰지 않으므로 바코드 이미지는 없다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>depositInfo (편의점)</div>
+            <div class="io">{
+  paymentType: "CVS_CVS",
+  <span class="k">paymentNo</span>:   "LLL22251222",
+  bankCode?:   null,
+  account?:    null
+}</div>
+          </div>
+        </div>
+
+        <div class="api-row" data-k="5-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">입금 기한</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>payment.expireAt</code></div>
+          <p class="api-desc">UTC ISO 문자열이다. <b>대만 시각(+8)으로 바꿔</b> 보여준다. 기본은 ATM 2일 뒤 그날 끝 · 편의점 48시간.
+            기한이 지나면 서버가 주문을 <code>CANCELED</code> 로 바꾸고 재고를 돌려준다. <b>입금 대기 중에는 결제를 다시 시작할 수 없다</b>(409).</p>
+          <div class="tags"><span class="tag">ATM 2일</span><span class="tag">편의점 48시간</span><span class="tag err">입금 대기 중 결제 시작 → 409</span></div>
+        </div>
+      </div>
+
+      <div class="note"><b>입금이 들어와도 브라우저는 알 수 없다</b> — PG 가 서버로만 알려준다. 이 화면에서 오래 폴링하지 말고,
+        사용자가 다시 들어오면 주문 상세(06)에서 <code>PAID</code> 로 바뀐 걸 보게 한다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 06 ============================ -->
+<section class="screen" id="s6">
+  <div class="screen-head">
+    <span class="no">06</span>
+    <h2>주문 상세 · LINE 쪽 대기 화면</h2>
+    <span class="route">/mypage/order/:id</span>
+    <p class="sub">로그인한 화면. <b>결제 상태·전자발표·편의점 매장이 이 응답 하나에서</b> 나온다. LINE 쪽 "외부 브라우저에서 결제 중" 화면도 이걸 폴링한다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="nav"><span class="icons">←</span><span class="brandmark">주문 상세</span><span class="icons" style="width:16px"></span></div>
+        <div class="hl" data-k="6-1">
+          <span class="pin">1</span>
+          <div class="sec-head"><b>SM-20261104-000481</b><span class="pill" style="margin:0;background:var(--green-bg);color:var(--green)">PAID</span></div>
+          <div class="line">
+            <span class="thumb"></span>
+            <span class="body">
+              <span class="nm">크롭 후드 집업</span>
+              <div class="opt">베이지 / FREE · 1개</div>
+              <div class="pr">NT$1,100</div>
+            </span>
+          </div>
+        </div>
+        <div class="hl" data-k="6-2">
+          <span class="pin">2</span>
+          <div class="addr"><b>편의점 픽업</b> · 7-ELEVEN 建盛門市<br>台北市中正區重慶南路一段122號<br>李佳蓉 · 0912345678</div>
+        </div>
+        <div class="hl" data-k="6-3">
+          <span class="pin">3</span>
+          <div class="addr"><b>電子發票</b> LY74004967 · 隨機碼 3204<br>手機條碼 /ABC1234</div>
+        </div>
+        <div class="sum">
+          <div class="r"><span>LINE Pay</span><span>2026/11/04 11:12</span></div>
+          <div class="r total"><span>결제 금액</span><span>NT$1,160</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="6-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">주문 · 결제 상태</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/user/order/:id</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_getUserOrder" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_getUserOrder" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">이번에 <code>paidAt</code>·<code>payment</code>·<code>invoice</code>·<code>shipping.cvsStore</code> 가 더해졌다. <b>기존 필드는 그대로다.</b>
+            LINE 쪽 대기 화면은 이걸 <b>3~5초 간격으로</b> 부르다가 <code>status</code> 가 <code>PAID</code> · <code>PAYMENT_WAITING</code> 이 되면 완료·입금 안내로 바꾼다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>Response 200</div>
+            <div class="io">{
+  orderId:     481,
+  orderNumber: "SM-20261104-000481",
+  <span class="k">status</span>:      "PAID",
+  totalAmount: 1160,
+  paidAt?:     "2026-11-04T03:12:09Z", <span class="n">// NEW</span>
+  <span class="k">payment?</span>:    { status: "PAID", ... },  <span class="n">// NEW</span>
+  invoice?:    { ... },  <span class="n">// NEW · 3</span>
+  items:       [ ... ],
+  shipping:    { ... }   <span class="c">// 2</span>
+}</div>
+          </div>
+          <div class="tags"><span class="tag">Bearer</span><span class="tag err">404 주문 없음</span></div>
+        </div>
+
+        <div class="api-row" data-k="6-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">편의점 매장 표시</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>shipping.cvsStore</code></div>
+          <p class="api-desc"><code>shipping.shippingType</code> 이 <code>CVS</code> 면 <code>cvsStore</code> 를 보여준다. 이때 <b>주소 필드(<code>postalCode</code>·<code>city</code> 등)는 <code>null</code></b> 이다 —
+            택배 주소 칸을 그대로 그리면 빈칸이 나온다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>shipping (CVS)</div>
+            <div class="io">{
+  <span class="k">shippingType</span>:  "CVS",        <span class="n">// NEW</span>
+  recipientName: "李佳蓉",
+  phone:         "0912345678",
+  postalCode?:   null,
+  city?:         null,
+  <span class="k">cvsStore?</span>: {                 <span class="n">// NEW</span>
+    storeName:       "建盛門市",
+    storeAddress:    "台北市中正區...",
+    isOutsideIsland: false
+  }
+}</div>
+          </div>
+        </div>
+
+        <div class="api-row" data-k="6-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">전자발표 번호</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>invoice</code></div>
+          <p class="api-desc">결제가 확정되면 서버가 발행해 <code>invoiceNo</code> 가 채워진다. <b>결제 직후엔 잠깐 <code>PENDING</code></b> 일 수 있고,
+            <code>FAILED</code> 여도 서버가 다시 시도하니 "발행 중" 으로 보여주면 된다.</p>
+          <div class="io-block">
+            <div class="io-l res"><span class="ar">→</span>invoice</div>
+            <div class="io">{
+  type:          "MOBILE_BARCODE",
+  <span class="k">status</span>:        "ISSUED",  <span class="c">// PENDING · FAILED</span>
+  carrierNum?:   "/ABC1234",
+  <span class="k">invoiceNo?</span>:    "LY74004967",
+  invoiceDate?:  "2026-11-04T03:12:15Z",
+  randomNumber?: "3204"
+}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note"><b>주문 <code>status</code> 다섯 가지</b> — <code>PENDING</code> 결제 전(다시 결제 가능) · <code>PAYMENT_WAITING</code> 입금 대기 · <code>PAID</code> 완료 ·
+        <code>CANCELED</code> 입금 기한 경과·24시간 미결제 · <code>FAILED</code> 결제 후 재고 부족 등으로 <b>환불 대상</b>(운영이 처리).</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FLOW ============================ -->
+<section class="flow" id="flow">
+  <h2>호출 순서 한 장</h2>
+  <p class="lede">주문서 진입부터 결과 확인까지. 실제로 나가는 요청만 순서대로.</p>
+  <div class="steps">
+    <div class="step"><div class="n">01</div><div>
+      <h4>주문서 진입 · 금액</h4>
+      <p>배송 방법·주소·매장이 바뀔 때마다 다시 부른다.</p>
+      <span class="ep">POST /user/order/preview</span>
+    </div></div>
+
+    <div class="step"><div class="n">02</div><div>
+      <h4>편의점 고르기 (CVS 일 때)</h4>
+      <p>입력값을 저장해 두고 브라우저를 지도로 보낸다. 돌아오면 <code>cvsStoreToken</code> 으로 매장을 받고 미리보기를 다시 부른다.</p>
+      <span class="ep">GET /logistics/cvs/map (페이지 이동)</span> <span class="ep">GET /logistics/cvs/store/:token</span> <span class="ep">POST /user/order/preview</span>
+    </div></div>
+
+    <div class="step"><div class="n">03</div><div>
+      <h4>전자발표 입력 확인 (고른 것만)</h4>
+      <p>blur 때 한 번. 自然人憑證·會員載具는 호출 없음.</p>
+      <span class="ep">GET /user/invoice/mobile-barcode/check</span> <span class="ep">GET /user/invoice/love-code/check</span> <span class="ep">GET /user/invoice/company/check</span>
+    </div></div>
+
+    <div class="step"><div class="n">04</div><div>
+      <h4>결제하기 — 주문 생성 → 결제 시작</h4>
+      <p>주문 생성은 한 번만. 결제 시작이 409 면 재고 부족 안내, 성공하면 받은 URL 로 보낸다(ECPay 는 LINE 안이면 외부 브라우저).</p>
+      <span class="ep">POST /user/order</span> <span class="ep">POST /user/order/:id/payment</span>
+    </div></div>
+
+    <div class="step"><div class="n">05</div><div>
+      <h4>PG 결제창 → 결과 페이지</h4>
+      <p>브라우저가 <code>/payment/result?h=</code> 로 돌아온다. <code>REQUESTED</code> 면 몇 초 간격으로 폴링한다.</p>
+      <span class="ep">GET /payment/result/:token</span>
+    </div></div>
+
+    <div class="step"><div class="n">06</div><div>
+      <h4>LINE 쪽 원래 화면 (외부로 넘긴 경우)</h4>
+      <p>로그인돼 있으니 주문 상세를 폴링하다가 <code>PAID</code> · <code>PAYMENT_WAITING</code> 이 되면 화면을 바꾼다.</p>
+      <span class="ep">GET /user/order/:id</span>
+    </div></div>
+
+    <div class="step"><div class="n">07</div><div>
+      <h4>결제 안 됨 → 다시 결제</h4>
+      <p>같은 주문으로 결제 시작만 다시 부른다(로그인한 화면에서). 주문을 새로 만들지 않는다.</p>
+      <span class="ep">POST /user/order/:id/payment</span>
+    </div></div>
+  </div>
+</section>
+
+<footer>
+  전체 필드·에러는 Swagger <code>https://api-dev.seoulmoment.com.tw/docs</code> 의 <code>UserOrder</code> · <code>UserPayment</code> · <code>UserInvoice</code> · <code>Logistics</code> · <code>Payment</code> 태그에서 본다.
+  설계·PG 규칙·남은 일은 <code>docs/payment-ecpay-linepay-plan.md</code>. 서버 모듈은 <code>apps/api/src/module/payment/</code> · <code>invoice/</code> · <code>logistics/</code> · <code>user/payment/</code> · <code>user/invoice/</code>.
+  DEV 는 ECPay 공용 테스트 상점이고, LINE Pay 는 샌드박스 키를 넣기 전까지 결제 시작이 500 이다.
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var lock = null;
+  function paint(k, on) {
+    document.querySelectorAll('[data-k="' + k + '"]').forEach(function (el) {
+      el.classList.toggle('lit', on);
+    });
+  }
+  document.querySelectorAll('[data-k]').forEach(function (el) {
+    var k = el.dataset.k;
+    el.addEventListener('mouseenter', function () { if (!lock) paint(k, true); });
+    el.addEventListener('mouseleave', function () { if (!lock) paint(k, false); });
+    el.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (lock === k) { paint(k, false); lock = null; return; }
+      if (lock) paint(lock, false);
+      lock = k; paint(k, true);
+    });
+  });
+  document.addEventListener('click', function () {
+    if (lock) { paint(lock, false); lock = null; }
+  });
+})();
+</script>
+</body>
+</html>
