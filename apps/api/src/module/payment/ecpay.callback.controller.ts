@@ -13,7 +13,7 @@ import {
 import { ApiExcludeController } from '@nestjs/swagger';
 import { Response } from 'express';
 
-import { EcpayPaymentService } from './ecpay-payment.service';
+import { EcpayPaymentService, HtmlPage } from './ecpay-payment.service';
 import { PaymentResultService } from './payment-result.service';
 
 /**
@@ -77,14 +77,32 @@ export class EcpayCallbackController {
     await this.paymentResultService.respond(res, payment);
   }
 
-  /** 결제창 진입 페이지. LINE 안에서 외부 브라우저로 넘길 때도 이 URL 하나로 연다 */
+  /**
+   * 결제창 진입 페이지. LINE 안에서 외부 브라우저로 넘길 때도 이 URL 하나로 연다.
+   * GET 은 링크를 소모하지 않고 같은 주소로 POST 하는 페이지만 준다 — 메신저 미리보기 봇 대비.
+   */
   @Get('handoff/:token')
+  async handoffLanding(
+    @Param('token') token: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const page = await this.ecpayPaymentService.renderHandoffLanding(token);
+
+    this.sendPage(res, page);
+  }
+
+  /** 중간 페이지가 보내는 POST. 여기서 한 번만 열리게 표시하고 ECPay 로 넘긴다 */
+  @Post('handoff/:token')
   async handoff(
     @Param('token') token: string,
     @Res() res: Response,
   ): Promise<void> {
     const page = await this.ecpayPaymentService.renderHandoff(token);
 
+    this.sendPage(res, page);
+  }
+
+  private sendPage(res: Response, page: HtmlPage): void {
     res
       .status(page.status)
       .type('html')

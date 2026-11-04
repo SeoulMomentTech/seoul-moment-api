@@ -28,6 +28,34 @@ ${inputs}
   );
 }
 
+/**
+ * handoff GET 이 주는 중간 페이지. 같은 주소로 POST 해야 결제창이 열린다.
+ * - action 이 없으면 지금 주소(쿼리 포함)로 보낸다.
+ * - 버튼은 noscript 에만 둔다. 자동 제출 중에 한 번 더 누르면 두 번째 POST 가 409 를 받아 결제창을 놓친다.
+ * - LINE 인앱 브라우저인데 openExternalBrowser=1 이 붙어 있으면 보내지 않는다 —
+ *   LINE 이 외부 브라우저로 다시 열어 주므로, 여기서 보내면 인앱에서 링크를 써 버린다.
+ */
+export function renderHandoffLandingPage(): string {
+  return layout(
+    '前往付款',
+    `<p id="msg">正在前往綠界付款頁面…</p>
+<form id="handoff" method="post">
+<noscript><button type="submit">前往付款</button></noscript>
+</form>
+<script>
+(function () {
+  var inLine = / Line\\//.test(navigator.userAgent);
+  var external = /[?&]openExternalBrowser=1/.test(location.search);
+  if (inLine && external) {
+    document.getElementById('msg').textContent = '正在以外部瀏覽器開啟…';
+    return;
+  }
+  document.getElementById('handoff').submit();
+})();
+</script>`,
+  );
+}
+
 export function renderMessagePage(title: string, message: string): string {
   return layout(
     title,

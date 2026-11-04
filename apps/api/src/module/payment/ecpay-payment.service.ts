@@ -32,7 +32,11 @@ import {
   ECPAY_IGNORE_PAYMENTS,
   HANDOFF_TTL_MINUTES,
 } from './payment.constant';
-import { renderAutoSubmitPage, renderMessagePage } from './payment.html';
+import {
+  renderAutoSubmitPage,
+  renderHandoffLandingPage,
+  renderMessagePage,
+} from './payment.html';
 import { minutesAgo } from './payment.util';
 
 export const ECPAY_OK = '1|OK';
@@ -83,28 +87,30 @@ export class EcpayPaymentService {
    * 같은 MerchantTradeNo 를 두 번 보내면 ECPay 가 거절하므로 한 번만 그린다.
    * 다시 결제하려면 결제 시작 API 로 새 시도를 만들어야 한다.
    */
+  /**
+   * handoff GET. 링크가 쓸 수 있는지만 보고 같은 주소로 POST 하는 페이지를 준다 — 1회 사용 처리는 하지 않는다.
+   * Slack·카카오톡·LINE 의 링크 미리보기 봇이 GET 으로 먼저 열어도 링크가 소모되지 않게 하려는 것이다
+   * (봇은 자바스크립트를 실행하지 않고 POST 하지 않는다).
+   */
+  async renderHandoffLanding(token: string): Promise<HtmlPage> {
+    const found = await this.findOpenableHandoff(token);
+
+    if ('html' in found) {
+      return found;
+    }
+
+    return { status: 200, html: renderHandoffLandingPage() };
+  }
+
+  /** handoff POST. 여기서 한 번만 열리게 표시하고 ECPay 결제창으로 auto-submit 한다 */
   async renderHandoff(token: string): Promise<HtmlPage> {
-    const payment =
-      await this.paymentRepositoryService.findByAccessToken(token);
+    const found = await this.findOpenableHandoff(token);
 
-    if (!payment || payment.method !== PaymentMethod.ECPAY) {
-      return this.page(404, '付款連結無效', '請回到 LINE 或網站重新付款。');
+    if ('html' in found) {
+      return found;
     }
 
-    const expired =
-      !payment.requestedAt ||
-      payment.requestedAt < minutesAgo(HANDOFF_TTL_MINUTES);
-    const order = await this.orderRepositoryService.findById(payment.orderId);
-
-    // 다른 시도로 이미 결제됐거나 취소된 주문이면 결제창을 열지 않는다 (이중 결제 방지)
-    if (
-      payment.status !== PaymentStatus.REQUESTED ||
-      expired ||
-      order?.status !== OrderStatus.PENDING
-    ) {
-      return this.page(410, '付款連結已失效', '請回到 LINE 或網站確認訂單。');
-    }
-
+    const { payment } = found;
     const opened = await this.paymentRepositoryService.markHandoffOpened(
       payment.id,
     );
@@ -440,6 +446,34 @@ export class EcpayPaymentService {
       params,
       note,
     );
+  }
+
+  /** 결제창을 열 수 있는 시도인지. 아니면 보여줄 안내 페이지를 돌려준다 */
+  private async findOpenableHandoff(
+    token: string,
+  ): Promise<{ payment: PaymentEntity } | HtmlPage> {
+    const payment =
+      await this.paymentRepositoryService.findByAccessToken(token);
+
+    if (!payment || payment.method !== PaymentMethod.ECPAY) {
+      return this.page(404, '付款連結無效', '請回到 LINE 或網站重新付款。');
+    }
+
+    const expired =
+      !payment.requestedAt ||
+      payment.requestedAt < minutesAgo(HANDOFF_TTL_MINUTES);
+    const order = await this.orderRepositoryService.findById(payment.orderId);
+
+    // 다른 시도로 이미 결제됐거나 취소된 주문이면 결제창을 열지 않는다 (이중 결제 방지)
+    if (
+      payment.status !== PaymentStatus.REQUESTED ||
+      expired ||
+      order?.status !== OrderStatus.PENDING
+    ) {
+      return this.page(410, '付款連結已失效', '請回到 LINE 或網站確認訂單。');
+    }
+
+    return { payment };
   }
 
   private page(status: number, title: string, message: string): HtmlPage {

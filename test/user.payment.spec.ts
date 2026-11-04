@@ -475,15 +475,40 @@ describe('결제 (E2E) — ECPay · LINE Pay', () => {
     });
   });
 
-  describe('GET /payment/ecpay/handoff/:token — 결제창 진입', () => {
-    it('처음 열면 ECPay 로 auto-submit 하는 HTML 을 주고, 두 번째는 주지 않는다', async () => {
+  describe('GET · POST /payment/ecpay/handoff/:token — 결제창 진입', () => {
+    it('GET 은 같은 주소로 POST 하는 페이지만 주고 링크를 소모하지 않는다 (메신저 미리보기 봇)', async () => {
+      // Given
+      const started = await ecpayStarted();
+      const path = `/payment/ecpay/handoff/${tokenOf(started.handoffUrl)}`;
+
+      // When — 미리보기 봇이 여러 번 연 뒤 사람이 연다
+      const bot1 = await request(app.getHttpServer())
+        .get(path)
+        .set('User-Agent', 'Slackbot-LinkExpanding 1.0');
+      const bot2 = await request(app.getHttpServer())
+        .get(path)
+        .set('User-Agent', 'facebookexternalhit/1.1;line-poker/1.0');
+      const human = await request(app.getHttpServer()).post(path);
+
+      // Then
+      for (const res of [bot1, bot2]) {
+        expect(res.status).toBe(200);
+        expect(res.text).toContain('<form id="handoff" method="post">');
+        expect(res.text).not.toContain('CheckMacValue');
+      }
+
+      expect(human.status).toBe(200);
+      expect(human.text).toContain('name="CheckMacValue"');
+    });
+
+    it('POST 는 처음에만 ECPay 로 auto-submit 하는 HTML 을 주고, 두 번째는 주지 않는다', async () => {
       // Given
       const started = await ecpayStarted();
       const path = `/payment/ecpay/handoff/${tokenOf(started.handoffUrl)}`;
 
       // When
-      const first = await request(app.getHttpServer()).get(path);
-      const second = await request(app.getHttpServer()).get(path);
+      const first = await request(app.getHttpServer()).post(path);
+      const second = await request(app.getHttpServer()).post(path);
 
       // Then
       expect(first.status).toBe(200);
@@ -503,7 +528,7 @@ describe('결제 (E2E) — ECPay · LINE Pay', () => {
     it('form 의 CheckMacValue 가 필드들로 다시 계산한 값과 같다', async () => {
       // Given
       const started = await ecpayStarted();
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(app.getHttpServer()).post(
         `/payment/ecpay/handoff/${tokenOf(started.handoffUrl)}`,
       );
 
@@ -527,12 +552,16 @@ describe('결제 (E2E) — ECPay · LINE Pay', () => {
       );
     });
 
-    it('없는 토큰은 404', async () => {
-      const res = await request(app.getHttpServer()).get(
+    it('없는 토큰은 GET · POST 모두 404', async () => {
+      const get = await request(app.getHttpServer()).get(
+        '/payment/ecpay/handoff/nope',
+      );
+      const post = await request(app.getHttpServer()).post(
         '/payment/ecpay/handoff/nope',
       );
 
-      expect(res.status).toBe(404);
+      expect(get.status).toBe(404);
+      expect(post.status).toBe(404);
     });
   });
 
@@ -1200,13 +1229,15 @@ describe('결제 (E2E) — ECPay · LINE Pay', () => {
       );
 
       // When
-      const res = await request(app.getHttpServer()).get(
-        `/payment/ecpay/handoff/${tokenOf(second.body.data.handoffUrl)}`,
-      );
+      const path = `/payment/ecpay/handoff/${tokenOf(second.body.data.handoffUrl)}`;
+      const get = await request(app.getHttpServer()).get(path);
+      const post = await request(app.getHttpServer()).post(path);
 
       // Then
-      expect(res.status).toBe(410);
-      expect(res.text).not.toContain('CheckMacValue');
+      for (const res of [get, post]) {
+        expect(res.status).toBe(410);
+        expect(res.text).not.toContain('CheckMacValue');
+      }
     });
 
     it('LINE Pay 요청 중 다른 탭이 새 시도를 시작하면 이전 시도를 되살리지 않는다', async () => {
