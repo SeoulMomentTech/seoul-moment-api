@@ -157,16 +157,27 @@ export class CvsStoreService {
     return raw ? GetCvsStoreResponse.of(JSON.parse(raw)) : null;
   }
 
-  /** 열린 리다이렉트를 막는다. 프론트 주소로 시작하는 URL 만 받는다 */
+  /**
+   * 열린 리다이렉트를 막는다. 프론트 주소로 시작하는 URL 만 받는다.
+   * ALLOW_LOCALHOST_RETURN_URL 이면 로컬 프론트(localhost·127.0.0.1, 포트 무관)도 받는다.
+   */
   private safeReturnUrl(returnUrl: unknown): string | null {
-    const storefront = Configuration.getConfig().STOREFRONT_BASE_URL;
+    const config = Configuration.getConfig();
 
     // 쿼리가 두 번 오면 배열이 된다 — 문자열 하나일 때만 받는다
-    if (typeof returnUrl !== 'string' || !returnUrl || !storefront) {
+    if (typeof returnUrl !== 'string' || !returnUrl) {
       return null;
     }
 
-    const base = storefront.replace(/\/+$/, '');
+    if (config.ALLOW_LOCALHOST_RETURN_URL && isLocalhostUrl(returnUrl)) {
+      return returnUrl;
+    }
+
+    if (!config.STOREFRONT_BASE_URL) {
+      return null;
+    }
+
+    const base = config.STOREFRONT_BASE_URL.replace(/\/+$/, '');
 
     return returnUrl === base || returnUrl.startsWith(`${base}/`)
       ? returnUrl
@@ -222,6 +233,23 @@ export function toSubType(chain: CvsChain): string {
   const type = Configuration.getConfig().ECPAY_LOGISTICS_TYPE;
 
   return type === 'B2C' ? chain : `${chain}C2C`;
+}
+
+/**
+ * hostname 을 URL 로 파싱해 정확히 비교한다 — 문자열 접두사로 보면
+ * `http://localhost.evil.com` · `http://localhost@evil.com` 이 빠져나간다.
+ */
+function isLocalhostUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+
+    return (
+      ['http:', 'https:'].includes(url.protocol) &&
+      ['localhost', '127.0.0.1'].includes(url.hostname)
+    );
+  } catch {
+    return false;
+  }
 }
 
 function isMobile(userAgent: string | undefined): boolean {

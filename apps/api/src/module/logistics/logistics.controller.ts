@@ -33,7 +33,7 @@ export class LogisticsController {
     summary: '편의점 매장 선택 — ECPay 전자지도 열기',
     description:
       '이 URL 로 브라우저를 보낸다(같은 탭). 서버가 ECPay 전자지도로 auto-submit 하는 페이지를 준다. ' +
-      '매장을 고르면 {returnUrl}?cvsStoreToken={token} 으로 돌아온다 — returnUrl 은 프론트 주소(STOREFRONT_BASE_URL)로 시작해야 하고, ' +
+      '매장을 고르면 {returnUrl}?cvsStoreToken={token} 으로 돌아온다 — returnUrl 은 프론트 주소(STOREFRONT_BASE_URL)로 시작해야 하고(dev·local 은 http://localhost:{포트} 도 받는다), ' +
       '아니면 무시하고 서버가 고른 매장을 보여준다. 페이지를 떠나므로 주문서 입력값은 프론트가 보관해 둔다. ' +
       'ECPay 테스트 환경(logistics-stage)에서는 지도가 뜨지 않고 ECPay 가 고정 매장을 돌려준다.',
   })

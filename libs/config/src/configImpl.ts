@@ -74,6 +74,8 @@ export interface ConfigImpl {
   PAYMENT_CALLBACK_BASE_URL: string;
   /** 결제 결과 페이지가 있는 프론트 주소. 비우면 서버가 간단한 결과 페이지를 그린다 */
   STOREFRONT_BASE_URL: string;
+  /** 편의점 전자지도 returnUrl 로 localhost·127.0.0.1(포트 무관)도 받는다. 프론트 로컬 개발용 — 운영은 false */
+  ALLOW_LOCALHOST_RETURN_URL: boolean;
   /** 거래번호 접두사 (영문 대문자 2자). 공용 테스트 상점에서 남의 번호와 겹치지 않게 환경마다 다르게 둔다 */
   PAYMENT_TRADE_NO_PREFIX: string;
   // ECPay 전자발표 (B2C). 운영은 결제와 같은 상점·키, 테스트 상점은 결제와 다르다

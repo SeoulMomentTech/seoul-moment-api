@@ -68,6 +68,7 @@ const getConfig = (): ConfigImpl => ({
     process.env.PAYMENT_CALLBACK_BASE_URL ||
     'https://api-dev.seoulmoment.com.tw',
   STOREFRONT_BASE_URL: process.env.STOREFRONT_BASE_URL || '',
+  ALLOW_LOCALHOST_RETURN_URL: true,
   PAYMENT_TRADE_NO_PREFIX: process.env.PAYMENT_TRADE_NO_PREFIX || 'SD',
 
   // ECPay 전자발표 공개 테스트 상점 (developers.ecpay.com.tw/7849)

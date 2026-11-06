@@ -663,6 +663,59 @@ describe('주문서 — 전자발표 · 편의점 픽업 (E2E)', () => {
       expect(res.headers.location).toBeUndefined();
     });
 
+    /** returnUrl 로 지도를 열고 매장을 돌려받아 응답을 준다 */
+    async function replyWithReturnUrl(returnUrl: string) {
+      const map = await request(app.getHttpServer())
+        .get('/logistics/cvs/map')
+        .query({ chain: 'UNIMART', returnUrl })
+        .expect(200);
+      const nonce = /name="ExtraData" value="([0-9a-f]{20})"/.exec(
+        map.text,
+      )?.[1];
+
+      return request(app.getHttpServer())
+        .post('/logistics/cvs/map/reply')
+        .type('form')
+        .send({
+          CVSStoreID: '131386',
+          CVSStoreName: '建盛門市',
+          CVSAddress: '台北市中正區重慶南路一段122號',
+          ExtraData: nonce,
+        });
+    }
+
+    it('로컬 프론트(localhost) returnUrl 로도 돌려보내고, 기존 쿼리는 유지한다', async () => {
+      // Given - 프론트 로컬 개발 주소 (포트 무관)
+      const returnUrl = 'http://localhost:5173/order?query=dawdwad';
+
+      // When
+      const res = await replyWithReturnUrl(returnUrl);
+
+      // Then
+      expect(res.status).toBe(303);
+      const location = new URL(res.headers.location);
+      expect(location.origin).toBe('http://localhost:5173');
+      expect(location.pathname).toBe('/order');
+      expect(location.searchParams.get('query')).toBe('dawdwad');
+      expect(location.searchParams.get('cvsStoreToken')).toMatch(
+        /^[0-9a-f]{20}$/,
+      );
+    });
+
+    it.each([
+      'http://localhost.evil.example/steal',
+      'http://localhost@evil.example/steal',
+      'javascript://localhost/%0aalert(1)',
+    ])(
+      'localhost 처럼 보이는 남의 주소로는 돌려보내지 않는다: %s',
+      async (url) => {
+        const res = await replyWithReturnUrl(url);
+
+        expect(res.status).toBe(200);
+        expect(res.headers.location).toBeUndefined();
+      },
+    );
+
     it('모르는 nonce 로 온 매장은 받지 않는다', async () => {
       const res = await request(app.getHttpServer())
         .post('/logistics/cvs/map/reply')

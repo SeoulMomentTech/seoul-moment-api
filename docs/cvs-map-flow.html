@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>편의점 고르기 흐름</title>
+<style>
+  body{margin:0;padding:24px;font-family:var(--font-sans,system-ui,-apple-system,'Malgun Gothic',sans-serif);background:var(--background,#fff);color:var(--foreground,#171717);line-height:1.5}
+  h2{font-size:18px;margin:0 0 4px}
+  .sub{color:var(--muted-foreground,#666);font-size:13px;margin:0 0 18px}
+  .lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:860px}
+  .lane-h{text-align:center;font-weight:700;font-size:14px;padding:8px;border-radius:10px}
+  .l1{background:#e0edff;color:#0b3d91}.l2{background:#e3f7e8;color:#145c2a}.l3{background:#fff1dc;color:#7a4a00}
+  .step{border:1px solid var(--border,#ddd);background:var(--card,#fafafa);color:var(--card-foreground,#171717);border-radius:10px;padding:10px 12px;font-size:13px}
+  .step b.n{display:inline-block;width:22px;height:22px;border-radius:50%;background:#2563eb;color:#fff;text-align:center;line-height:22px;font-size:12px;margin-right:6px}
+  .arrow{grid-column:1/-1;text-align:center;color:var(--muted-foreground,#888);font-size:12px;margin:-2px 0}
+  code{font-family:var(--font-mono,Consolas,monospace);font-size:12px;background:var(--muted,#f1f1f1);padding:1px 5px;border-radius:4px}
+  .empty{visibility:hidden}
+  .key{max-width:860px;margin-top:14px;padding:10px 14px;border-left:4px solid #2563eb;background:var(--muted,#f4f7ff);font-size:13px;border-radius:6px}
+  hr{border:0;border-top:1px dashed var(--border,#ccc);margin:28px 0;max-width:860px}
+  .gate{display:grid;grid-template-columns:1fr 150px 1fr;gap:10px;align-items:center;max-width:860px}
+  .in{font-size:13px}
+  .door{text-align:center;border:2px solid #2563eb;border-radius:12px;padding:12px 6px;font-size:13px;font-weight:700}
+  .ok{border-left:4px solid #16a34a}.no{border-left:4px solid #dc2626}
+  .row{display:contents}
+  .box{border:1px solid var(--border,#ddd);background:var(--card,#fafafa);color:var(--card-foreground,#171717);border-radius:10px;padding:10px 12px;font-size:13px}
+</style>
+</head>
+<body>
+
+<h2>① 편의점 고르기는 이렇게 돌아요</h2>
+<p class="sub">fetch로 부르는 API가 아니에요. 브라우저가 <b>다른 사이트에 다녀오는</b> 거예요. 결제창이랑 같은 방식이에요.</p>
+
+<div class="lanes">
+  <div class="lane-h l1">🖥️ 우리 프론트 (주문서)</div>
+  <div class="lane-h l2">⚙️ 우리 서버</div>
+  <div class="lane-h l3">🗺️ ECPay 편의점 지도</div>
+
+  <div class="step"><b class="n">1</b>"편의점 고르기" 버튼 클릭<br>→ 입력값 저장해 두고<br><code>location.href = /logistics/cvs/map?chain=UNIMART&amp;returnUrl=주문서주소</code></div>
+  <div class="step empty"></div><div class="step empty"></div>
+  <div class="arrow">↓ 브라우저가 우리 서버로 이동</div>
+
+  <div class="step empty"></div>
+  <div class="step"><b class="n">2</b>returnUrl을 기억해 두고<br>ECPay 지도로 브라우저를 넘겨요</div>
+  <div class="step empty"></div>
+  <div class="arrow">↓ 브라우저가 ECPay로 이동</div>
+
+  <div class="step empty"></div><div class="step empty"></div>
+  <div class="step"><b class="n">3</b>사용자가 지도에서 매장을 골라요<br><small>(테스트 환경은 지도 없이 고정 매장이 바로 골라져요)</small></div>
+  <div class="arrow">↓ 고른 매장을 들고 우리 서버로</div>
+
+  <div class="step empty"></div>
+  <div class="step"><b class="n">4</b>매장을 1시간 보관하고 <b>토큰</b>을 만들어요<br>→ <code>returnUrl?cvsStoreToken=abc123</code> 으로 돌려보내요</div>
+  <div class="step empty"></div>
+  <div class="arrow">↓ 브라우저가 주문서로 돌아옴</div>
+
+  <div class="step"><b class="n">5</b>주소창의 토큰으로<br><code>GET /logistics/cvs/store/abc123</code><br>→ 매장명·주소를 화면에 보여줘요</div>
+  <div class="step empty"></div><div class="step empty"></div>
+  <div class="arrow">↓</div>
+
+  <div class="step"><b class="n">6</b>주문 만들 때<br><code>cvsPickup.storeToken: "abc123"</code></div>
+  <div class="step empty"></div><div class="step empty"></div>
+</div>
+
+<div class="key">💡 한 줄 요약: <b>보내고 → 고르고 → 토큰 들고 돌아온다.</b> 페이지를 떠났다 오니까 주문서 입력값은 미리 저장해 두세요.</div>
+
+<hr>
+
+<h2>② returnUrl은 왜 안 먹혀요? (localhost)</h2>
+<p class="sub">4번에서 서버가 아무 주소로나 돌려보내면 피싱에 쓰일 수 있어서, <b>등록된 프론트 주소</b>만 통과시켜요.</p>
+
+<div class="gate">
+  <div class="box in"><code>https://등록된프론트/checkout</code></div>
+  <div class="door" style="grid-row:span 2">🚧 서버 검문소<br><small style="font-weight:400">STOREFRONT_BASE_URL로<br>시작하나?</small></div>
+  <div class="box ok">✅ 통과 → 주문서로 돌아감<br><code>?cvsStoreToken=abc123</code></div>
+
+  <div class="box in"><code>http://localhost:3000/checkout</code><br><small>(아직 등록 안 됨)</small></div>
+  <div class="box no">❌ 무시 → 서버 화면에<br>"已選擇門市 … token=abc123" 이 떠요</div>
+</div>
+
+<div class="key">💡 localhost 자체는 문제없어요. 돌아가는 건 <b>내 브라우저</b>라서 서버가 localhost에 접속할 일이 없거든요. <b>등록만 안 돼 있는 것</b>뿐이에요.<br>
+지금 당장 테스트하려면: returnUrl 없이 열기 → 마지막 화면의 <code>token=</code> 값 복사 → <code>localhost:3000/checkout?cvsStoreToken=복사한값</code> 으로 직접 들어가기</div>
+
+</body>
+</html>

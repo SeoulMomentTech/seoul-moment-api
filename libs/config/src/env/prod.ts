@@ -65,6 +65,7 @@ const getConfig = (): ConfigImpl => ({
   PAYMENT_CALLBACK_BASE_URL:
     process.env.PAYMENT_CALLBACK_BASE_URL || 'https://api.seoulmoment.com.tw',
   STOREFRONT_BASE_URL: process.env.STOREFRONT_BASE_URL || '',
+  ALLOW_LOCALHOST_RETURN_URL: false,
   PAYMENT_TRADE_NO_PREFIX: process.env.PAYMENT_TRADE_NO_PREFIX || 'SM',
 
   ECPAY_INVOICE_MERCHANT_ID:

@@ -70,6 +70,7 @@ const getConfig = (): ConfigImpl => ({
     process.env.PAYMENT_CALLBACK_BASE_URL || 'http://localhost',
   STOREFRONT_BASE_URL:
     process.env.STOREFRONT_BASE_URL || 'http://storefront.test',
+  ALLOW_LOCALHOST_RETURN_URL: true,
   PAYMENT_TRADE_NO_PREFIX: process.env.PAYMENT_TRADE_NO_PREFIX || 'ST',
 
   // ECPay 전자발표 공개 테스트 상점 (developers.ecpay.com.tw/7849)
