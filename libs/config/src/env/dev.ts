@@ -67,7 +67,8 @@ const getConfig = (): ConfigImpl => ({
   PAYMENT_CALLBACK_BASE_URL:
     process.env.PAYMENT_CALLBACK_BASE_URL ||
     'https://api-dev.seoulmoment.com.tw',
-  STOREFRONT_BASE_URL: process.env.STOREFRONT_BASE_URL || '',
+  STOREFRONT_BASE_URL:
+    process.env.STOREFRONT_BASE_URL || 'https://dev-seoulmoment.netlify.app',
   ALLOW_LOCALHOST_RETURN_URL: true,
   PAYMENT_TRADE_NO_PREFIX: process.env.PAYMENT_TRADE_NO_PREFIX || 'SD',
 
