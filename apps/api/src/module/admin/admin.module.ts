@@ -12,6 +12,7 @@ import { AdminHomeModule } from './home/admin.home.module';
 import { AdminImageModule } from './image/admin.image.module';
 import { AdminMemberModule } from './member/admin.member.module';
 import { AdminNewsModule } from './news/admin.news.module';
+import { AdminOrderModule } from './order/admin.order.module';
 import { AdminProductModule } from './product/admin.product.module';
 import { AdminPromotionModule } from './promotion/admin.promotion.module';
 import { AdminShippingModule } from './shipping/admin.shipping.module';
@@ -33,6 +34,7 @@ import { AdminUserModule } from './user/admin.user.module';
     AdminBrandPromotionModule,
     AdminPromotionModule,
     AdminShippingModule,
+    AdminOrderModule,
   ],
   providers: [OneTimeTokenStrategy, RefreshTokenStrategy],
 })

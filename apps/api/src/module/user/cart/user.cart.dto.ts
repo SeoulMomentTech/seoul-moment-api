@@ -390,6 +390,34 @@ export class GetUserCartResponse {
   })
   amountToFreeShipping: number;
 
+  @ApiProperty({
+    description:
+      '국제배송비 지원 할인액(NT$). 상품 합계에서 1회 차감된다. 기능이 꺼져 있으면 0',
+    example: 120,
+  })
+  internationalDiscount: number;
+
+  @ApiPropertyOptional({
+    description:
+      '다음 할인 구간의 상품 합계 기준 NT$. 기능이 꺼져 있거나 마지막 구간이면 null',
+    nullable: true,
+    example: 5000,
+  })
+  nextDiscountThreshold: number | null;
+
+  @ApiPropertyOptional({
+    description: '다음 구간에서 받는 할인액 NT$. 없으면 null',
+    nullable: true,
+    example: 250,
+  })
+  nextDiscountAmount: number | null;
+
+  @ApiProperty({
+    description: '다음 할인 구간까지 남은 금액 NT$. 다음 구간이 없으면 0',
+    example: 1360,
+  })
+  amountToNextDiscount: number;
+
   @ApiProperty({ description: '예상 결제 금액', example: 960 })
   estimatedTotalAmount: number;
 
@@ -409,6 +437,10 @@ export class GetUserCartResponse {
       remoteIslandFee,
       freeShippingThreshold: amount.freeShippingThreshold,
       amountToFreeShipping: amount.amountToFreeShipping,
+      internationalDiscount: amount.internationalDiscount,
+      nextDiscountThreshold: amount.nextDiscountThreshold,
+      nextDiscountAmount: amount.nextDiscountAmount,
+      amountToNextDiscount: amount.amountToNextDiscount,
       estimatedTotalAmount: amount.totalAmount,
       totalCount,
     });

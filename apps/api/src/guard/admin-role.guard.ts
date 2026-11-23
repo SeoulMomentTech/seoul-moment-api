@@ -33,6 +33,9 @@ export class AdminRoleGuard implements CanActivate {
 
     const payload = this.verifyJwtToken(context);
 
+    // 감사 기록(누가 처리했는지)에 쓰도록 검증된 관리자 토큰을 요청에 싣는다
+    context.switchToHttp().getRequest().user = payload;
+
     // 역할이 지정되지 않았으면 통과
     if (!requiredRole) {
       return true;

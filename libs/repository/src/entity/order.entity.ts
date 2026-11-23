@@ -14,7 +14,12 @@ import { OrderInvoiceEntity } from './order-invoice.entity';
 import { OrderItemEntity } from './order-item.entity';
 import { OrderShippingEntity } from './order-shipping.entity';
 import { UserEntity } from './user.entity';
-import { OrderStatus, PaymentMethod } from '../enum/order.enum';
+import {
+  DeliveryStage,
+  OrderStatus,
+  PaymentMethod,
+  PurchaseStatus,
+} from '../enum/order.enum';
 
 /**
  * 주문 헤더.
@@ -29,6 +34,7 @@ import { OrderStatus, PaymentMethod } from '../enum/order.enum';
 @Entity('order')
 @Index(['userId', 'createDate'])
 @Index(['status'])
+@Index(['status', 'paidAt'])
 export class OrderEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -91,10 +97,19 @@ export class OrderEntity extends CommonEntity {
   freeShippingThresholdSnapshot: number;
 
   @Column('int', {
+    name: 'international_discount',
+    nullable: false,
+    default: 0,
+    comment:
+      '국제배송비 지원 할인액 스냅샷. 판매할인으로 상품 금액에서 1회 차감된다',
+  })
+  internationalDiscount: number;
+
+  @Column('int', {
     name: 'total_amount',
     nullable: false,
     default: 0,
-    comment: '최종 결제 금액 (상품 금액 합 + 배송비)',
+    comment: '최종 결제 금액 (상품 금액 합 - 국제배송비 지원 할인 + 배송비)',
   })
   totalAmount: number;
 
@@ -121,6 +136,61 @@ export class OrderEntity extends CommonEntity {
     comment: '결제 확정 시각',
   })
   paidAt: Date | null;
+
+  @Column('enum', {
+    name: 'delivery_stage',
+    enum: DeliveryStage,
+    default: DeliveryStage.ORDER_CONFIRMED,
+    nullable: false,
+    comment: '고객 배송 6단계. 결제·취소·환불 상태와 독립',
+  })
+  deliveryStage: DeliveryStage;
+
+  @Column('enum', {
+    name: 'purchase_status',
+    enum: PurchaseStatus,
+    default: PurchaseStatus.NOT_ORDERED,
+    nullable: false,
+    comment: '한국 공급처 발주 여부',
+  })
+  purchaseStatus: PurchaseStatus;
+
+  @Column('timestamptz', {
+    name: 'supplier_ordered_at',
+    nullable: true,
+    comment: '한국 공급처 발주 시각',
+  })
+  supplierOrderedAt: Date | null;
+
+  @Column('varchar', {
+    name: 'supplier_order_no',
+    length: 100,
+    nullable: true,
+    comment: '공급처 발주번호 (관리자 입력)',
+  })
+  supplierOrderNo: string | null;
+
+  @Column('varchar', {
+    name: 'purchase_override_reason',
+    length: 500,
+    nullable: true,
+    comment: '24시간 전에 조기 발주한 사유. 정상 발주면 null',
+  })
+  purchaseOverrideReason: string | null;
+
+  @Column('int', {
+    name: 'purchased_by_admin_id',
+    nullable: true,
+    comment: '발주 처리한 관리자 ID',
+  })
+  purchasedByAdminId: number | null;
+
+  @Column('timestamptz', {
+    name: 'cancellation_requested_at',
+    nullable: true,
+    comment: '취소·계약해제 통지 접수 시각. 있으면 발주를 막는다',
+  })
+  cancellationRequestedAt: Date | null;
 
   @ManyToOne(() => UserEntity, {
     onDelete: 'CASCADE',

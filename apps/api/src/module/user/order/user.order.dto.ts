@@ -1,7 +1,18 @@
 import { OrderItemEntity } from '@app/repository/entity/order-item.entity';
 import { OrderEntity } from '@app/repository/entity/order.entity';
 import { PaymentEntity } from '@app/repository/entity/payment.entity';
-import { PaymentMethod, ShippingType } from '@app/repository/enum/order.enum';
+import { LanguageCode } from '@app/repository/enum/language.enum';
+import {
+  DeliveryStage,
+  PaymentMethod,
+  ShippingType,
+  UserOrderListFilter,
+} from '@app/repository/enum/order.enum';
+import {
+  getDeliveryStageLabel,
+  getDeliveryStep,
+  getOrderStatusLabel,
+} from '@app/repository/helper/order-status.helper';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, plainToInstance } from 'class-transformer';
 import {
@@ -19,6 +30,7 @@ import {
   Matches,
   Max,
   MaxLength,
+  Min,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
@@ -311,6 +323,34 @@ export class PostUserOrderPreviewResponse {
   @ApiProperty({ description: '무료배송까지 남은 금액', example: 250 })
   amountToFreeShipping: number;
 
+  @ApiProperty({
+    description:
+      '국제배송비 지원 할인액(NT$). 상품 합계에서 1회 차감된다. 기능이 꺼져 있으면 0',
+    example: 120,
+  })
+  internationalDiscount: number;
+
+  @ApiPropertyOptional({
+    description:
+      '다음 할인 구간의 상품 합계 기준 NT$. 기능이 꺼져 있거나 마지막 구간이면 null',
+    nullable: true,
+    example: 5000,
+  })
+  nextDiscountThreshold: number | null;
+
+  @ApiPropertyOptional({
+    description: '다음 구간에서 받는 할인액 NT$. 없으면 null',
+    nullable: true,
+    example: 250,
+  })
+  nextDiscountAmount: number | null;
+
+  @ApiProperty({
+    description: '다음 할인 구간까지 남은 금액 NT$. 다음 구간이 없으면 0',
+    example: 1360,
+  })
+  amountToNextDiscount: number;
+
   @ApiProperty({ description: '최종 결제 금액', example: 960 })
   totalAmount: number;
 
@@ -327,6 +367,10 @@ export class PostUserOrderPreviewResponse {
       isShippingEstimated,
       freeShippingThreshold: amount.freeShippingThreshold,
       amountToFreeShipping: amount.amountToFreeShipping,
+      internationalDiscount: amount.internationalDiscount,
+      nextDiscountThreshold: amount.nextDiscountThreshold,
+      nextDiscountAmount: amount.nextDiscountAmount,
+      amountToNextDiscount: amount.amountToNextDiscount,
       totalAmount: amount.totalAmount,
     });
   }
@@ -491,8 +535,34 @@ export class GetUserOrderResponse {
   })
   freeShippingThreshold: number;
 
+  @ApiProperty({
+    description: '국제배송비 지원 할인액 스냅샷(NT$). 없으면 0',
+    example: 120,
+  })
+  internationalDiscount: number;
+
   @ApiProperty({ description: '최종 결제 금액', example: 960 })
   totalAmount: number;
+
+  @ApiProperty({
+    description: '주문 상태 문구 (Accept-Language 로 번역)',
+    example: '已付款',
+  })
+  statusLabel: string;
+
+  @ApiProperty({
+    description:
+      '배송 6단계 코드. 결제·취소·환불 상태와 독립이다. 해외배송 중은 실제 국제운송이 시작된 때만, 대만 도착은 통관 완료와 다르다',
+    enum: DeliveryStage,
+    example: DeliveryStage.ORDER_CONFIRMED,
+  })
+  deliveryStage: DeliveryStage;
+
+  @ApiProperty({ description: '배송 단계 문구', example: '訂單確認' })
+  deliveryStageLabel: string;
+
+  @ApiProperty({ description: '진행바 위치 (1~6)', example: 1 })
+  deliveryStep: number;
 
   @ApiProperty({ description: '주문 일시' })
   orderedAt: Date;
@@ -522,16 +592,25 @@ export class GetUserOrderResponse {
   @ApiProperty({ description: '배송지', type: GetUserOrderShippingResponse })
   shipping: GetUserOrderShippingResponse;
 
-  static from(entity: OrderEntity, payment?: PaymentEntity | null) {
+  static from(
+    entity: OrderEntity,
+    payment?: PaymentEntity | null,
+    language?: LanguageCode,
+  ) {
     return plainToInstance(this, {
       orderId: entity.id,
       orderNumber: entity.orderNumber,
       status: entity.status,
+      statusLabel: getOrderStatusLabel(entity.status, language),
+      deliveryStage: entity.deliveryStage,
+      deliveryStageLabel: getDeliveryStageLabel(entity.deliveryStage, language),
+      deliveryStep: getDeliveryStep(entity.deliveryStage),
       paymentMethod: entity.paymentMethod,
       totalProductAmount: entity.totalProductAmount,
       shippingFee: entity.shippingFeeApplied,
       isRemoteIsland: entity.isRemoteIsland,
       freeShippingThreshold: entity.freeShippingThresholdSnapshot,
+      internationalDiscount: entity.internationalDiscount,
       totalAmount: entity.totalAmount,
       orderedAt: entity.createDate,
       paidAt: entity.paidAt ?? null,
@@ -542,28 +621,153 @@ export class GetUserOrderResponse {
       items: (entity.items ?? []).map((item) =>
         GetUserOrderItemResponse.from(item),
       ),
-      shipping: entity.shipping
+      shipping: this.toShipping(entity),
+    });
+  }
+
+  private static toShipping(entity: OrderEntity) {
+    const shipping = entity.shipping;
+
+    if (!shipping) {
+      return null;
+    }
+
+    return {
+      shippingType: shipping.shippingType,
+      recipientName: shipping.recipientName,
+      phone: shipping.phone,
+      postalCode: shipping.postalCode,
+      city: shipping.city,
+      district: shipping.district,
+      detailAddress: shipping.detailAddress,
+      requestMessage: shipping.requestMessage,
+      cvsStore: shipping.cvsStoreId
         ? {
-            shippingType: entity.shipping.shippingType,
-            recipientName: entity.shipping.recipientName,
-            phone: entity.shipping.phone,
-            postalCode: entity.shipping.postalCode,
-            city: entity.shipping.city,
-            district: entity.shipping.district,
-            detailAddress: entity.shipping.detailAddress,
-            requestMessage: entity.shipping.requestMessage,
-            cvsStore: entity.shipping.cvsStoreId
-              ? {
-                  logisticsSubType: entity.shipping.cvsLogisticsSubType,
-                  storeId: entity.shipping.cvsStoreId,
-                  storeName: entity.shipping.cvsStoreName,
-                  storeAddress: entity.shipping.cvsStoreAddress,
-                  storeTelephone: entity.shipping.cvsStoreTelephone,
-                  isOutsideIsland: !!entity.shipping.cvsOutside,
-                }
-              : null,
+            logisticsSubType: shipping.cvsLogisticsSubType,
+            storeId: shipping.cvsStoreId,
+            storeName: shipping.cvsStoreName,
+            storeAddress: shipping.cvsStoreAddress,
+            storeTelephone: shipping.cvsStoreTelephone,
+            isOutsideIsland: !!shipping.cvsOutside,
           }
         : null,
+    };
+  }
+}
+
+export class GetUserOrderListRequest {
+  @ApiPropertyOptional({
+    description:
+      'ALL 전체 / IN_PROGRESS 입금 대기·배송 전~배송 중 / COMPLETED 배송 완료 / CANCELED 취소·환불 대상. 결제 전(PENDING) 주문은 어느 필터에도 안 나온다',
+    enum: UserOrderListFilter,
+    default: UserOrderListFilter.ALL,
+  })
+  @IsOptional()
+  @IsEnum(UserOrderListFilter)
+  status: UserOrderListFilter = UserOrderListFilter.ALL;
+
+  @ApiPropertyOptional({
+    description: '최근 N개월만. 생략하면 전체 기간',
+    example: 3,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(36)
+  months?: number;
+
+  @ApiPropertyOptional({ description: '페이지 번호', default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page: number = 1;
+
+  @ApiPropertyOptional({ description: '페이지 크기 (최대 50)', default: 10 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  count: number = 10;
+}
+
+export class GetUserOrderListItemResponse {
+  @ApiProperty({ description: '주문 ID', example: 481 })
+  orderId: number;
+
+  @ApiProperty({ description: '주문번호', example: 'SM-20260903-000481' })
+  orderNumber: string;
+
+  @ApiProperty({ description: '주문 일시' })
+  orderedAt: Date;
+
+  @ApiPropertyOptional({ description: '결제 완료 시각', nullable: true })
+  paidAt: Date | null;
+
+  @ApiProperty({
+    description: '주문 상태 코드 (PAID, PAYMENT_WAITING, CANCELED, FAILED)',
+    example: 'PAID',
+  })
+  status: string;
+
+  @ApiProperty({ description: '주문 상태 문구', example: '已付款' })
+  statusLabel: string;
+
+  @ApiProperty({
+    description:
+      '배송 6단계 코드. 취소·환불은 이 값에 섞지 않고 status 로 본다',
+    enum: DeliveryStage,
+  })
+  deliveryStage: DeliveryStage;
+
+  @ApiProperty({ description: '배송 단계 문구', example: '訂單確認' })
+  deliveryStageLabel: string;
+
+  @ApiProperty({ description: '진행바 위치 (1~6)', example: 1 })
+  deliveryStep: number;
+
+  @ApiProperty({ description: '최종 결제 금액 NT$', example: 3880 })
+  totalAmount: number;
+
+  @ApiProperty({ description: '국제배송비 지원 할인액 NT$', example: 120 })
+  internationalDiscount: number;
+
+  @ApiPropertyOptional({ description: '대표 상품명', nullable: true })
+  representativeProductName: string | null;
+
+  @ApiPropertyOptional({ description: '대표 상품 이미지', nullable: true })
+  representativeImageUrl: string | null;
+
+  @ApiPropertyOptional({ description: '대표 상품 옵션', nullable: true })
+  representativeOptionText: string | null;
+
+  @ApiProperty({
+    description: '주문 상품 라인 수 ("외 N건" 계산용)',
+    example: 3,
+  })
+  itemCount: number;
+
+  static from(entity: OrderEntity, language?: LanguageCode) {
+    const first = entity.items?.[0];
+
+    return plainToInstance(this, {
+      orderId: entity.id,
+      orderNumber: entity.orderNumber,
+      orderedAt: entity.createDate,
+      paidAt: entity.paidAt ?? null,
+      status: entity.status,
+      statusLabel: getOrderStatusLabel(entity.status, language),
+      deliveryStage: entity.deliveryStage,
+      deliveryStageLabel: getDeliveryStageLabel(entity.deliveryStage, language),
+      deliveryStep: getDeliveryStep(entity.deliveryStage),
+      totalAmount: entity.totalAmount,
+      internationalDiscount: entity.internationalDiscount,
+      representativeProductName: first?.productNameSnapshot ?? null,
+      representativeImageUrl: first?.imageUrlSnapshot ?? null,
+      representativeOptionText: first?.optionTextSnapshot ?? null,
+      itemCount: entity.items?.length ?? 0,
     });
   }
 }

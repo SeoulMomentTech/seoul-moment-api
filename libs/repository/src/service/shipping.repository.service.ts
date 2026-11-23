@@ -51,6 +51,7 @@ export class ShippingRepositoryService {
         | 'remoteIslandFee'
         | 'remoteIslandPromotion'
         | 'freeShippingThreshold'
+        | 'internationalDiscountEnabled'
       >
     >,
   ): Promise<ShippingPolicyEntity> {

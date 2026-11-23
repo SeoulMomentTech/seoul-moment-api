@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { In, Not, Repository, SelectQueryBuilder } from 'typeorm';
 
 import { OrderInvoiceEntity } from '../entity/order-invoice.entity';
 import { OrderItemEntity } from '../entity/order-item.entity';
@@ -8,8 +8,28 @@ import { OrderShippingEntity } from '../entity/order-shipping.entity';
 import { OrderEntity } from '../entity/order.entity';
 import { PaymentEntity } from '../entity/payment.entity';
 import { InvoiceStatus } from '../enum/invoice.enum';
-import { OrderStatus } from '../enum/order.enum';
+import {
+  AdminOrderChip,
+  DeliveryStage,
+  OrderStatus,
+  PurchaseStatus,
+  UserOrderListFilter,
+} from '../enum/order.enum';
 import { ACTIVE_PAYMENT_STATUSES } from '../enum/payment.enum';
+
+export interface AdminOrderListQuery {
+  chip: AdminOrderChip;
+  keyword?: string;
+  paidFrom?: Date;
+  paidTo?: Date;
+  deliveryStage?: DeliveryStage;
+  skip: number;
+  take: number;
+  ascending: boolean;
+}
+
+/** 결제 완료 + 미발주 + 취소 미접수 — 24시간 타이머가 도는 주문 */
+const OPEN_FOR_PURCHASE = `o.status = :paid AND o.purchase_status = :notOrdered AND o.cancellation_requested_at IS NULL`;
 
 /** 배치가 한 번에 집는 건수 */
 const BATCH_LIMIT = 100;
@@ -199,5 +219,214 @@ export class OrderRepositoryService {
       .getRawMany();
 
     return rows.map((row) => Number(row.id));
+  }
+
+  /**
+   * 고객 주문 목록. 대표 상품 1건만 쓰지만 items 를 같이 읽는다 (페이지 크기가 작다).
+   * create_date 가 timezone 없는 UTC 벽시계라 기간은 DB 시각으로 자른다.
+   */
+  async findPageByUserId(
+    userId: number,
+    filter: UserOrderListFilter,
+    months: number | null,
+    skip: number,
+    take: number,
+  ): Promise<[OrderEntity[], number]> {
+    const qb = this.orderRepository
+      .createQueryBuilder('o')
+      .leftJoinAndSelect('o.items', 'i')
+      .where('o.user_id = :userId', { userId });
+
+    this.applyUserFilter(qb, filter);
+
+    if (months) {
+      qb.andWhere(
+        `o.create_date >= (NOW() AT TIME ZONE 'UTC') - make_interval(months => :months)`,
+        { months },
+      );
+    }
+
+    return qb
+      .orderBy('o.id', 'DESC')
+      .addOrderBy('i.id', 'ASC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+  }
+
+  private applyUserFilter(
+    qb: SelectQueryBuilder<OrderEntity>,
+    filter: UserOrderListFilter,
+  ) {
+    const shown = [
+      OrderStatus.PAID,
+      OrderStatus.PAYMENT_WAITING,
+      OrderStatus.CANCELED,
+      OrderStatus.FAILED,
+    ];
+    const params = {
+      shown,
+      paid: OrderStatus.PAID,
+      waiting: OrderStatus.PAYMENT_WAITING,
+      closed: [OrderStatus.CANCELED, OrderStatus.FAILED],
+      delivered: DeliveryStage.DELIVERED,
+    };
+
+    const conditions: Record<UserOrderListFilter, string> = {
+      [UserOrderListFilter.ALL]: 'o.status IN (:...shown)',
+      [UserOrderListFilter.IN_PROGRESS]:
+        '(o.status = :waiting OR (o.status = :paid AND o.delivery_stage <> :delivered))',
+      [UserOrderListFilter.COMPLETED]:
+        'o.status = :paid AND o.delivery_stage = :delivered',
+      [UserOrderListFilter.CANCELED]: 'o.status IN (:...closed)',
+    };
+
+    qb.andWhere(conditions[filter], params);
+  }
+
+  /** 필터·검색이 걸린 ADMIN 주문 목록. 고객명은 받는 분 이름이다 */
+  async findAdminPage(
+    query: AdminOrderListQuery,
+    now: Date,
+  ): Promise<[OrderEntity[], number]> {
+    const qb = this.orderRepository
+      .createQueryBuilder('o')
+      .leftJoinAndSelect('o.shipping', 's')
+      .where('o.status IN (:...shown)', {
+        shown: [OrderStatus.PAID, OrderStatus.PAYMENT_WAITING],
+      });
+
+    this.applyAdminChip(qb, query.chip, now);
+
+    if (query.keyword) {
+      qb.andWhere(
+        `(o.order_number ILIKE :kw OR s.recipient_name ILIKE :kw OR EXISTS (
+           SELECT 1 FROM order_item oi
+           WHERE oi.order_id = o.id AND oi.product_name_snapshot ILIKE :kw))`,
+        { kw: `%${query.keyword.replace(/[%_\\]/g, '\\$&')}%` },
+      );
+    }
+
+    if (query.paidFrom) {
+      qb.andWhere('o.paid_at >= :paidFrom', { paidFrom: query.paidFrom });
+    }
+
+    if (query.paidTo) {
+      qb.andWhere('o.paid_at < :paidTo', { paidTo: query.paidTo });
+    }
+
+    if (query.deliveryStage) {
+      qb.andWhere('o.delivery_stage = :stage', { stage: query.deliveryStage });
+    }
+
+    return qb
+      .orderBy('o.id', query.ascending ? 'ASC' : 'DESC')
+      .skip(query.skip)
+      .take(query.take)
+      .getManyAndCount();
+  }
+
+  private applyAdminChip(
+    qb: SelectQueryBuilder<OrderEntity>,
+    chip: AdminOrderChip,
+    now: Date,
+  ) {
+    const params = {
+      paid: OrderStatus.PAID,
+      notOrdered: PurchaseStatus.NOT_ORDERED,
+      ordered: PurchaseStatus.ORDERED,
+      now,
+    };
+    const waitUntil = `o.paid_at + interval '24 hours'`;
+
+    const conditions: Partial<Record<AdminOrderChip, string>> = {
+      [AdminOrderChip.WAITING]: `${OPEN_FOR_PURCHASE} AND ${waitUntil} > :now`,
+      [AdminOrderChip.READY]: `${OPEN_FOR_PURCHASE} AND ${waitUntil} <= :now`,
+      [AdminOrderChip.CANCEL_REQUESTED]:
+        'o.cancellation_requested_at IS NOT NULL',
+      [AdminOrderChip.ORDERED]: 'o.purchase_status = :ordered',
+    };
+
+    if (conditions[chip]) {
+      qb.andWhere(conditions[chip], params);
+    }
+  }
+
+  /** KPI 4개. 서로 겹칠 수 있어 합산하지 않는다. todayStart 는 Asia/Taipei 자정 */
+  async countAdminSummary(
+    todayStart: Date,
+    now: Date,
+  ): Promise<{
+    todayNew: number;
+    waiting: number;
+    ready: number;
+    cancelRequested: number;
+  }> {
+    const count = (chip: AdminOrderChip) => {
+      const qb = this.orderRepository
+        .createQueryBuilder('o')
+        .where('o.status = :statusPaid', { statusPaid: OrderStatus.PAID });
+
+      this.applyAdminChip(qb, chip, now);
+
+      return qb.getCount();
+    };
+
+    const [todayNew, waiting, ready, cancelRequested] = await Promise.all([
+      this.orderRepository
+        .createQueryBuilder('o')
+        .where('o.status = :paid', { paid: OrderStatus.PAID })
+        .andWhere('o.paid_at >= :todayStart', { todayStart })
+        .getCount(),
+      count(AdminOrderChip.WAITING),
+      count(AdminOrderChip.READY),
+      count(AdminOrderChip.CANCEL_REQUESTED),
+    ]);
+
+    return { todayNew, waiting, ready, cancelRequested };
+  }
+
+  async findAdminDetail(id: number): Promise<OrderEntity | null> {
+    return this.orderRepository.findOne({
+      where: {
+        id,
+        status: In([OrderStatus.PAID, OrderStatus.PAYMENT_WAITING]),
+      },
+      relations: { items: true, shipping: true },
+      order: { items: { id: 'ASC' } },
+    });
+  }
+
+  /**
+   * 발주 처리. 결제 완료·미발주·취소 미접수일 때만 고쳐서 버튼 중복 클릭과
+   * 취소 접수 경쟁을 DB 한 문장이 막는다. 고쳤으면 true.
+   */
+  async markPurchased(
+    id: number,
+    fields: Pick<
+      OrderEntity,
+      | 'supplierOrderedAt'
+      | 'supplierOrderNo'
+      | 'purchaseOverrideReason'
+      | 'purchasedByAdminId'
+    >,
+  ): Promise<boolean> {
+    const result = await this.orderRepository
+      .createQueryBuilder()
+      .update(OrderEntity)
+      .set({
+        ...fields,
+        purchaseStatus: PurchaseStatus.ORDERED,
+        deliveryStage: DeliveryStage.PREPARING_ORDER,
+      })
+      .where('id = :id', { id })
+      .andWhere('status = :paid', { paid: OrderStatus.PAID })
+      .andWhere('purchase_status = :notOrdered', {
+        notOrdered: PurchaseStatus.NOT_ORDERED,
+      })
+      .andWhere('cancellation_requested_at IS NULL')
+      .execute();
+
+    return (result.affected ?? 0) === 1;
   }
 }

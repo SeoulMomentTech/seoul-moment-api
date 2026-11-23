@@ -1,0 +1,288 @@
+import { OrderEntity } from '@app/repository/entity/order.entity';
+import { PaymentEntity } from '@app/repository/entity/payment.entity';
+import { LanguageCode } from '@app/repository/enum/language.enum';
+import {
+  AdminOrderChip,
+  DeliveryStage,
+  FulfillmentTimerState,
+  PaymentMethod,
+  PurchaseStatus,
+} from '@app/repository/enum/order.enum';
+import {
+  getDeliveryStageLabel,
+  getReadyAt,
+  getRemainingSeconds,
+  getTimerState,
+  getTimerStateLabel,
+} from '@app/repository/helper/order-status.helper';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type, plainToInstance } from 'class-transformer';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
+
+import { GetUserOrderResponse } from '../../user/order/user.order.dto';
+import { ListFilterDto } from '../admin.dto';
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export class GetAdminOrderListRequest extends ListFilterDto {
+  @ApiPropertyOptional({ description: '페이지 번호', default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  declare page?: number;
+
+  @ApiPropertyOptional({ description: '페이지 크기 (최대 100)', default: 10 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  declare count?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'ALL 전체 / WAITING 24시간 대기 중 / READY 발주 가능 / CANCEL_REQUESTED 취소 요청 / ORDERED 발주 완료. search 는 주문번호·받는 분·상품명',
+    enum: AdminOrderChip,
+    default: AdminOrderChip.ALL,
+  })
+  @IsOptional()
+  @IsEnum(AdminOrderChip)
+  chip: AdminOrderChip = AdminOrderChip.ALL;
+
+  @ApiPropertyOptional({
+    description: '결제일 시작 (Asia/Taipei 날짜, 포함)',
+    example: '2026-11-01',
+  })
+  @IsOptional()
+  @Matches(DATE_PATTERN)
+  paidFrom?: string;
+
+  @ApiPropertyOptional({
+    description: '결제일 끝 (Asia/Taipei 날짜, 포함)',
+    example: '2026-11-30',
+  })
+  @IsOptional()
+  @Matches(DATE_PATTERN)
+  paidTo?: string;
+
+  @ApiPropertyOptional({ description: '배송 단계', enum: DeliveryStage })
+  @IsOptional()
+  @IsEnum(DeliveryStage)
+  deliveryStage?: DeliveryStage;
+}
+
+export class GetAdminOrderSummaryResponse {
+  @ApiProperty({
+    description:
+      '오늘 신규 주문: paid_at 이 오늘(Asia/Taipei) 인 결제 완료 건수',
+    example: 12,
+  })
+  todayNew: number;
+
+  @ApiProperty({
+    description: '24시간 대기 중: 결제 완료·미발주·취소 미접수·24시간 미경과',
+    example: 7,
+  })
+  waiting: number;
+
+  @ApiProperty({
+    description: '발주 가능: 결제 완료·미발주·취소 미접수·24시간 경과',
+    example: 4,
+  })
+  ready: number;
+
+  @ApiProperty({
+    description: '취소 요청: 취소·계약해제 통지가 접수된 결제 완료 건수',
+    example: 1,
+  })
+  cancelRequested: number;
+
+  @ApiProperty({
+    description: '집계 기준 시각(서버). KPI 는 겹칠 수 있어 합산하지 않는다',
+  })
+  asOf: Date;
+
+  static from(
+    counts: Pick<
+      GetAdminOrderSummaryResponse,
+      'todayNew' | 'waiting' | 'ready' | 'cancelRequested'
+    >,
+    asOf: Date,
+  ) {
+    return plainToInstance(this, { ...counts, asOf });
+  }
+}
+
+export class GetAdminOrderListItemResponse {
+  @ApiProperty({ example: 481 })
+  orderId: number;
+
+  @ApiProperty({ example: 'SM-20260903-000481' })
+  orderNumber: string;
+
+  @ApiPropertyOptional({ description: '결제 완료 시각', nullable: true })
+  paidAt: Date | null;
+
+  @ApiPropertyOptional({ description: '받는 분 (고객명)', nullable: true })
+  recipientName: string | null;
+
+  @ApiProperty({ description: '실제 결제 금액 NT$', example: 3880 })
+  totalAmount: number;
+
+  @ApiProperty({ enum: PaymentMethod, nullable: true })
+  paymentMethod: PaymentMethod | null;
+
+  @ApiProperty({
+    description:
+      '24시간 타이머 상태. 행 색은 이 값으로 정한다 (WAITING 흰색/연한 파랑, SOON 연한 주황, READY 연한 초록, CANCEL_REQUESTED 연한 분홍)',
+    enum: FulfillmentTimerState,
+  })
+  timerState: FulfillmentTimerState;
+
+  @ApiProperty({ example: '24시간 대기 중' })
+  timerStateLabel: string;
+
+  @ApiProperty({
+    description: '발주 가능까지 남은 초 (서버 기준, 0이면 경과)',
+    example: 3600,
+  })
+  remainingSeconds: number;
+
+  @ApiPropertyOptional({ description: '발주 가능 시각', nullable: true })
+  readyAt: Date | null;
+
+  @ApiProperty({ enum: PurchaseStatus })
+  purchaseStatus: PurchaseStatus;
+
+  @ApiPropertyOptional({ nullable: true })
+  supplierOrderedAt: Date | null;
+
+  @ApiProperty({ description: '취소·계약해제 통지 접수 여부' })
+  cancellationRequested: boolean;
+
+  @ApiProperty({ enum: DeliveryStage })
+  deliveryStage: DeliveryStage;
+
+  @ApiProperty({ example: '상품 준비 중' })
+  deliveryStageLabel: string;
+
+  @ApiProperty({
+    description:
+      '`한국 발주 시작` 버튼 활성 여부. 정상 발주(24시간 경과) 기준이다',
+  })
+  canStartPurchase: boolean;
+
+  static from(order: OrderEntity, now: Date, language?: LanguageCode) {
+    const timerState = getTimerState(order, now);
+
+    return plainToInstance(this, {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      paidAt: order.paidAt ?? null,
+      recipientName: order.shipping?.recipientName ?? null,
+      totalAmount: order.totalAmount,
+      paymentMethod: order.paymentMethod ?? null,
+      timerState,
+      timerStateLabel: getTimerStateLabel(timerState, language),
+      remainingSeconds: getRemainingSeconds(order, now),
+      readyAt: getReadyAt(order.paidAt ?? null),
+      purchaseStatus: order.purchaseStatus,
+      supplierOrderedAt: order.supplierOrderedAt ?? null,
+      cancellationRequested: !!order.cancellationRequestedAt,
+      deliveryStage: order.deliveryStage,
+      deliveryStageLabel: getDeliveryStageLabel(order.deliveryStage, language),
+      canStartPurchase: timerState === FulfillmentTimerState.READY,
+    });
+  }
+}
+
+export class GetAdminOrderPurchaseResponse {
+  @ApiProperty({ enum: PurchaseStatus })
+  purchaseStatus: PurchaseStatus;
+
+  @ApiPropertyOptional({ nullable: true })
+  supplierOrderedAt: Date | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  supplierOrderNo: string | null;
+
+  @ApiPropertyOptional({
+    description: '24시간 전에 조기 발주한 사유. 정상 발주면 null',
+    nullable: true,
+  })
+  purchaseOverrideReason: string | null;
+
+  @ApiPropertyOptional({ description: '발주 처리한 관리자 ID', nullable: true })
+  purchasedByAdminId: number | null;
+}
+
+export class GetAdminOrderDetailResponse {
+  @ApiProperty({
+    description:
+      '고객 주문조회 상세와 같은 내용 (상품·가격내역·배송지·결제·발표). 가격내역에 internationalDiscount 포함',
+    type: GetUserOrderResponse,
+  })
+  order: GetUserOrderResponse;
+
+  @ApiProperty({
+    description: '발주·매입',
+    type: GetAdminOrderPurchaseResponse,
+  })
+  purchase: GetAdminOrderPurchaseResponse;
+
+  @ApiProperty({
+    description: '24시간 타이머',
+    type: GetAdminOrderListItemResponse,
+  })
+  timer: GetAdminOrderListItemResponse;
+
+  static from(
+    order: OrderEntity,
+    payment: PaymentEntity | null,
+    now: Date,
+    language?: LanguageCode,
+  ) {
+    return plainToInstance(this, {
+      order: GetUserOrderResponse.from(order, payment, language),
+      purchase: {
+        purchaseStatus: order.purchaseStatus,
+        supplierOrderedAt: order.supplierOrderedAt ?? null,
+        supplierOrderNo: order.supplierOrderNo ?? null,
+        purchaseOverrideReason: order.purchaseOverrideReason ?? null,
+        purchasedByAdminId: order.purchasedByAdminId ?? null,
+      },
+      timer: GetAdminOrderListItemResponse.from(order, now, language),
+    });
+  }
+}
+
+export class PostAdminOrderPurchaseRequest {
+  @ApiPropertyOptional({
+    description: '공급처 발주번호. 공급처 API 가 없으면 관리자가 입력한다',
+    example: 'KR-20261123-0042',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  supplierOrderNo?: string;
+
+  @ApiPropertyOptional({
+    description:
+      '24시간이 지나기 전(조기 발주)이면 필수. 사유가 주문에 기록된다',
+    example: '재고 소진 임박으로 선발주',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  earlyReason?: string;
+}

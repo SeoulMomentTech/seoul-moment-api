@@ -426,6 +426,16 @@ export class LinePayPaymentService {
       });
     }
 
+    // 결제 금액이 할인을 뺀 값이라 음수 라인으로 합을 맞춘다.
+    // shortcut: LINE Pay 가 음수 price 를 받는지 문서로 확인 못 했다 — 할인 스위치를 켜기 전 sandbox 로 확인한다.
+    if (order && order.internationalDiscount > 0) {
+      products.push({
+        name: '國際運費補貼',
+        quantity: 1,
+        price: -order.internationalDiscount,
+      });
+    }
+
     return products;
   }
 }

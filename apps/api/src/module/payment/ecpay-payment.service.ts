@@ -371,6 +371,10 @@ export class EcpayPaymentService {
       itemNames.push('運費 x 1');
     }
 
+    if (order && order.internationalDiscount > 0) {
+      itemNames.push('國際運費補貼 x 1');
+    }
+
     const browserReturnUrl = this.paymentResultService.callbackUrl(
       '/payment/ecpay/browser-return',
     );

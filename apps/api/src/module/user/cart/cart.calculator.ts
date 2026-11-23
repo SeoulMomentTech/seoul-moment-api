@@ -81,6 +81,12 @@ export class CartAmountDto {
   freeShippingThreshold: number;
   amountToFreeShipping: number;
   isRemoteIsland: boolean;
+  /** 국제배송비 지원 할인(상품 합계에서 1회 차감). 꺼져 있으면 0 */
+  internationalDiscount: number;
+  /** 다음 할인 구간. 없으면 null */
+  nextDiscountThreshold: number | null;
+  nextDiscountAmount: number | null;
+  amountToNextDiscount: number;
   totalAmount: number;
 
   static from(
@@ -88,6 +94,8 @@ export class CartAmountDto {
     shippingFee: number,
     freeShippingThreshold: number,
     isRemoteIsland: boolean,
+    internationalDiscount = 0,
+    nextTier: { threshold: number; discount: number } | null = null,
   ): CartAmountDto {
     const dto = new CartAmountDto();
     dto.totalProductAmount = totalProductAmount;
@@ -98,7 +106,13 @@ export class CartAmountDto {
       0,
     );
     dto.isRemoteIsland = isRemoteIsland;
-    dto.totalAmount = totalProductAmount + shippingFee;
+    dto.internationalDiscount = internationalDiscount;
+    dto.nextDiscountThreshold = nextTier?.threshold ?? null;
+    dto.nextDiscountAmount = nextTier?.discount ?? null;
+    dto.amountToNextDiscount = nextTier
+      ? nextTier.threshold - totalProductAmount
+      : 0;
+    dto.totalAmount = totalProductAmount - internationalDiscount + shippingFee;
 
     return dto;
   }
@@ -210,6 +224,8 @@ export class CartAmountCalculator {
       shippingFee,
       policy.freeShippingThreshold,
       isRemoteIsland,
+      policy.calculateInternationalDiscount(totalProductAmount),
+      policy.findNextDiscountTier(totalProductAmount),
     );
   }
 }

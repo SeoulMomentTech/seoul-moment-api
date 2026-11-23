@@ -148,6 +148,18 @@ function buildItems(
     });
   }
 
+  // SalesAmount 가 할인을 뺀 값이라 음수 라인으로 합을 맞춘다.
+  // shortcut: ECPay 발표가 음수 ItemAmount 를 받는지 문서로 확인 못 했다 — 할인 스위치를 켜기 전 sandbox 로 확인한다.
+  if (order.internationalDiscount > 0) {
+    lines.push({
+      ItemName: '國際運費補貼',
+      ItemCount: 1,
+      ItemWord: '式',
+      ItemPrice: -order.internationalDiscount,
+      ItemAmount: -order.internationalDiscount,
+    });
+  }
+
   return lines.map((line, i) => ({ ItemSeq: i + 1, ...line }));
 }
 

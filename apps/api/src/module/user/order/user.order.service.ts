@@ -19,6 +19,8 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 
 import {
+  GetUserOrderListItemResponse,
+  GetUserOrderListRequest,
   GetUserOrderResponse,
   PostUserOrderPreviewRequest,
   PostUserOrderPreviewResponse,
@@ -199,6 +201,7 @@ export class UserOrderService {
         shippingFeeApplied: amount.shippingFee,
         isRemoteIsland: amount.isRemoteIsland,
         freeShippingThresholdSnapshot: amount.freeShippingThreshold,
+        internationalDiscount: amount.internationalDiscount,
         totalAmount: amount.totalAmount,
         paymentMethod: dto.paymentMethod,
       }),
@@ -254,7 +257,30 @@ export class UserOrderService {
     );
   }
 
-  async getOrder(userId: number, id: number): Promise<GetUserOrderResponse> {
+  async getOrderList(
+    userId: number,
+    query: GetUserOrderListRequest,
+    language: LanguageCode,
+  ): Promise<[GetUserOrderListItemResponse[], number]> {
+    const [orders, total] = await this.orderRepositoryService.findPageByUserId(
+      userId,
+      query.status,
+      query.months ?? null,
+      (query.page - 1) * query.count,
+      query.count,
+    );
+
+    return [
+      orders.map((order) => GetUserOrderListItemResponse.from(order, language)),
+      total,
+    ];
+  }
+
+  async getOrder(
+    userId: number,
+    id: number,
+    language?: LanguageCode,
+  ): Promise<GetUserOrderResponse> {
     const order = await this.orderRepositoryService.findDetailByIdAndUserId(
       id,
       userId,
@@ -271,7 +297,7 @@ export class UserOrderService {
       order.id,
     );
 
-    return GetUserOrderResponse.from(order, payment);
+    return GetUserOrderResponse.from(order, payment, language);
   }
 
   /**

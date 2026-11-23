@@ -1,7 +1,9 @@
 import { ResponseData } from '@app/common/decorator/response-data.decorator';
 import { ResponseException } from '@app/common/decorator/response-exception.decorator';
+import { ResponseList } from '@app/common/decorator/response-list.decorator';
 import { SwaggerAuthName } from '@app/common/docs/swagger.dto';
 import { ResponseDataDto } from '@app/common/type/response-data';
+import { ResponseListDto } from '@app/common/type/response-list';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   Body,
@@ -12,6 +14,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -19,6 +22,8 @@ import { ApiBearerAuth, ApiHeader, ApiOperation } from '@nestjs/swagger';
 import { UserOneTimeTokenGuard } from 'apps/api/src/guard/user-one-time-token.guard';
 
 import {
+  GetUserOrderListItemResponse,
+  GetUserOrderListRequest,
   GetUserOrderResponse,
   PostUserOrderPreviewRequest,
   PostUserOrderPreviewResponse,
@@ -110,8 +115,45 @@ export class UserOrderController {
     return new ResponseDataDto(data);
   }
 
+  @Get()
+  @ApiOperation({
+    summary: '내 주문 목록 (주문조회)',
+    description:
+      '최신 주문부터. status 필터와 최근 N개월로 거른다. 결제 전(PENDING) 주문은 나오지 않는다. ' +
+      'deliveryStage(코드)로 분기하고 deliveryStageLabel/statusLabel 은 Accept-Language 로 번역된 문구다.',
+  })
+  @ApiHeader({
+    name: 'Accept-language',
+    required: true,
+    description:
+      'Alternative way to specify language preference (ko, en, zh-TW)',
+    enum: LanguageCode,
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseList(GetUserOrderListItemResponse)
+  async getUserOrderList(
+    @Request() req: any,
+    @Query() query: GetUserOrderListRequest,
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
+  ): Promise<ResponseListDto<GetUserOrderListItemResponse>> {
+    const [list, total] = await this.userOrderService.getOrderList(
+      req.user.id,
+      query,
+      acceptLanguage,
+    );
+
+    return new ResponseListDto(list, total);
+  }
+
   @Get(':id(\\d+)')
   @ApiOperation({ summary: '주문 상세 조회' })
+  @ApiHeader({
+    name: 'Accept-language',
+    required: false,
+    description: 'Language for status labels (ko, en, zh-TW). Default ko',
+    enum: LanguageCode,
+  })
   @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
   @UseGuards(UserOneTimeTokenGuard)
   @ResponseData(GetUserOrderResponse)
@@ -119,8 +161,13 @@ export class UserOrderController {
   async getUserOrder(
     @Request() req: any,
     @Param('id', ParseIntPipe) id: number,
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
   ): Promise<ResponseDataDto<GetUserOrderResponse>> {
-    const data = await this.userOrderService.getOrder(req.user.id, id);
+    const data = await this.userOrderService.getOrder(
+      req.user.id,
+      id,
+      acceptLanguage,
+    );
 
     return new ResponseDataDto(data);
   }

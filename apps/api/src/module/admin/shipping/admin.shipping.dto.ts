@@ -28,12 +28,20 @@ export class GetAdminShippingPolicyResponse {
   @ApiProperty({ description: '무료배송 임계금액', example: 1150 })
   freeShippingThreshold: number;
 
+  @ApiProperty({
+    description:
+      '국제배송비 지원 할인 ON/OFF. NT$4,000 이상 120/250/450/700 (구간별 하나)',
+    example: false,
+  })
+  internationalDiscountEnabled: boolean;
+
   static from(entity: ShippingPolicyEntity) {
     return plainToInstance(this, {
       baseFee: entity.baseFee,
       remoteIslandFee: entity.remoteIslandFee,
       remoteIslandPromotion: entity.remoteIslandPromotion,
       freeShippingThreshold: entity.freeShippingThreshold,
+      internationalDiscountEnabled: entity.internationalDiscountEnabled,
     });
   }
 }
@@ -70,6 +78,15 @@ export class PatchAdminShippingPolicyRequest {
   @Min(0)
   @IsOptional()
   freeShippingThreshold?: number;
+
+  @ApiPropertyOptional({
+    description:
+      '국제배송비 지원 할인 켜기/끄기. 무료배송 임계금액(4000)은 freeShippingThreshold 로 따로 맞춘다. 기존 주문에는 영향 없다',
+    example: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  internationalDiscountEnabled?: boolean;
 }
 
 export class GetAdminShippingRemoteAreaResponse {

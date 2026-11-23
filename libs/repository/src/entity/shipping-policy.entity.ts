@@ -3,6 +3,20 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { CommonEntity } from './common.entity';
 
 /**
+ * 국제배송비 지원 할인 구간 (명세 v6 §2). 금액이 클수록 큰 구간 하나만 적용한다.
+ * shortcut: 구간 값은 코드 상수, ADMIN 편집 UI 없음 — 손익 검증으로 값이 바뀌면 설정 테이블로 옮긴다.
+ */
+export const INTERNATIONAL_DISCOUNT_TIERS: ReadonlyArray<{
+  threshold: number;
+  discount: number;
+}> = [
+  { threshold: 4000, discount: 120 },
+  { threshold: 5000, discount: 250 },
+  { threshold: 8000, discount: 450 },
+  { threshold: 12000, discount: 700 },
+];
+
+/**
  * 배송비 정책 (단일 행 테이블, id = 1)
  *
  * 배송비는 상품이나 브랜드가 아니라 **배송지 지역**으로 정해진다.
@@ -49,6 +63,42 @@ export class ShippingPolicyEntity extends CommonEntity {
     comment: '상품 금액 합이 이 값 이상이면 배송비 0 (본섬·외섬 공통)',
   })
   freeShippingThreshold: number;
+
+  @Column('boolean', {
+    name: 'international_discount_enabled',
+    nullable: false,
+    default: false,
+    comment:
+      '국제배송비 지원 할인 ON/OFF. 손익 검증 전에는 꺼 둔다 (구간은 INTERNATIONAL_DISCOUNT_TIERS)',
+  })
+  internationalDiscountEnabled: boolean;
+
+  /** 상품 금액에 해당하는 국제배송비 지원 할인액. 꺼져 있거나 첫 구간 미만이면 0 */
+  calculateInternationalDiscount(productAmount: number): number {
+    if (!this.internationalDiscountEnabled) {
+      return 0;
+    }
+
+    const tier = [...INTERNATIONAL_DISCOUNT_TIERS]
+      .reverse()
+      .find((t) => productAmount >= t.threshold);
+
+    return tier?.discount ?? 0;
+  }
+
+  /** 아직 못 받은 가장 가까운 다음 구간. 꺼져 있거나 마지막 구간이면 null */
+  findNextDiscountTier(
+    productAmount: number,
+  ): { threshold: number; discount: number } | null {
+    if (!this.internationalDiscountEnabled) {
+      return null;
+    }
+
+    return (
+      INTERNATIONAL_DISCOUNT_TIERS.find((t) => productAmount < t.threshold) ??
+      null
+    );
+  }
 
   isFreeShipping(productAmount: number): boolean {
     return productAmount >= this.freeShippingThreshold;

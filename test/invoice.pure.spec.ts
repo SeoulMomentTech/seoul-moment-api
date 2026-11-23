@@ -120,6 +120,40 @@ describe('전자발표 순수 함수', () => {
       });
     });
 
+    it('국제배송비 지원 할인은 음수 라인으로 들어가 ItemAmount 합이 SalesAmount 와 같다', () => {
+      // Given - 상품 4000 - 할인 120 = 3880
+      const discounted = plainToInstance(OrderEntity, {
+        id: 2,
+        orderNumber: 'SM-20261026-000002',
+        totalAmount: 3880,
+        shippingFeeApplied: 0,
+        internationalDiscount: 120,
+      });
+      const lines = [
+        plainToInstance(OrderItemEntity, {
+          productNameSnapshot: '셔츠',
+          quantity: 1,
+          unitDiscountPrice: 4000,
+          totalPrice: 4000,
+        }),
+      ];
+
+      // When
+      const data = buildIssueData(
+        discounted,
+        lines,
+        invoiceOf({ type: InvoiceType.MEMBER_CARRIER }),
+        'R1',
+      );
+
+      // Then
+      expect(data.SalesAmount).toBe(3880);
+      expect(data.Items.reduce((sum, item) => sum + item.ItemAmount, 0)).toBe(
+        3880,
+      );
+      expect(data.Items[1]).toMatchObject({ ItemAmount: -120 });
+    });
+
     it.each([
       [
         InvoiceType.MEMBER_CARRIER,
