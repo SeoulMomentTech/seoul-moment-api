@@ -1,0 +1,1119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주문 현황 · 발주 API 지도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* ============================================================
+   Seoul Moment — 화면별 API 지도
+   왼쪽: 실제 붙을 UI. 오른쪽: 그 요소가 부르는 API.
+   번호(핀)가 좌우를 잇는다. 호버하면 짝이 같이 켜진다.
+   ============================================================ */
+:root{
+  --paper:#f6f7f8; --surface:#fff; --sunken:#eff1f3; --field:#f4f6f7;
+  --ink:#14171b; --ink-2:#4a525c; --ink-3:#7d8894;
+  --rule:#dfe3e8; --rule-soft:#eaedf0;
+  --accent:#d4600c; --accent-ink:#a84c09; --accent-bg:#fdf1e7;
+  --slate:#4d6b79; --slate-bg:#e9f0f2;
+  --green:#2f7d5d; --green-bg:#e6f2ec;
+  --red:#b0413a; --red-bg:#fbecea;
+  --shadow:0 1px 2px rgba(20,23,27,.05);
+  --lift:0 6px 24px rgba(20,23,27,.08);
+  --sans:"IBM Plex Sans KR","IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --wrap:1180px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#111417; --surface:#181c20; --sunken:#14181b; --field:#1e2429;
+  --ink:#e7eaee; --ink-2:#a2acb7; --ink-3:#78838e;
+  --rule:#2b3138; --rule-soft:#23282e;
+  --accent:#f5883c; --accent-ink:#f7a163; --accent-bg:#2d1d11;
+  --slate:#8bb0bf; --slate-bg:#17242a;
+  --green:#63b891; --green-bg:#14251d;
+  --red:#e0837c; --red-bg:#2a1614;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --lift:0 6px 24px rgba(0,0,0,.5);
+}}
+:root[data-theme="dark"]{
+  --paper:#111417; --surface:#181c20; --sunken:#14181b; --field:#1e2429;
+  --ink:#e7eaee; --ink-2:#a2acb7; --ink-3:#78838e;
+  --rule:#2b3138; --rule-soft:#23282e;
+  --accent:#f5883c; --accent-ink:#f7a163; --accent-bg:#2d1d11;
+  --slate:#8bb0bf; --slate-bg:#17242a;
+  --green:#63b891; --green-bg:#14251d;
+  --red:#e0837c; --red-bg:#2a1614;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --lift:0 6px 24px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+     font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 28px}
+code,kbd{font-family:var(--mono);font-size:.86em}
+
+/* ---------- 표지 ---------- */
+.cover{padding:64px 0 40px}
+.eyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 12px}
+.cover h1{font-size:36px;line-height:1.24;margin:0 0 14px;letter-spacing:-.02em;font-weight:700}
+.cover .lede{font-size:16px;color:var(--ink-2);margin:0;max-width:60ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.meta span{font-size:12px;font-family:var(--mono);background:var(--surface);border:1px solid var(--rule);
+           border-radius:999px;padding:4px 11px;color:var(--ink-2)}
+
+/* ---------- 공통 규칙 카드 ---------- */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:34px 0 8px}
+.rule-card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.rule-card h4{margin:0 0 5px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.rule-card p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.rule-card p code{color:var(--ink);background:var(--sunken);padding:1px 5px;border-radius:4px}
+
+/* ---------- 목차 ---------- */
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 10px;padding-bottom:34px;border-bottom:1px solid var(--rule)}
+.toc a{font-size:13px;text-decoration:none;color:var(--ink-2);border:1px solid var(--rule);background:var(--surface);
+       border-radius:8px;padding:6px 12px;transition:.14s}
+.toc a:hover{border-color:var(--accent);color:var(--accent-ink)}
+.toc a b{font-family:var(--mono);color:var(--ink-3);margin-right:7px;font-weight:500}
+
+/* ---------- 화면 섹션 ---------- */
+.screen{padding:48px 0;border-bottom:1px solid var(--rule)}
+.screen-head{display:flex;align-items:baseline;gap:14px;margin-bottom:26px;flex-wrap:wrap}
+.screen-head .no{font-family:var(--mono);font-size:12px;font-weight:500;color:#fff;background:var(--accent);
+                 border-radius:6px;padding:3px 8px;letter-spacing:.04em}
+.screen-head h2{margin:0;font-size:23px;letter-spacing:-.015em;font-weight:700}
+.screen-head .route{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);background:var(--sunken);
+                    padding:2px 9px;border-radius:6px}
+.screen-head .sub{flex-basis:100%;margin:2px 0 0;font-size:14px;color:var(--ink-2)}
+
+.split{display:grid;grid-template-columns:372px minmax(0,1fr);gap:44px;align-items:start}
+@media (max-width:980px){.split{grid-template-columns:1fr;gap:28px}.ui-col{position:static !important}}
+.ui-col{position:sticky;top:22px}
+.col-tag{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:0 0 10px}
+
+/* ---------- 목업 프레임 ---------- */
+/* overflow:hidden 을 쓰면 프레임 밖으로 나가는 핀이 잘린다 —
+   대신 첫/마지막 자식에 라운드를 직접 물린다. */
+.phone{--r:20px;width:100%;max-width:372px;background:var(--surface);border:1px solid var(--rule);
+       border-radius:var(--r);box-shadow:var(--lift)}
+.desktop{--r:12px}
+.phone > :first-child, .phone > :first-child > :first-child{
+  border-top-left-radius:calc(var(--r) - 1px);border-top-right-radius:calc(var(--r) - 1px)}
+.phone > :last-child, .phone > :last-child > :last-child{
+  border-bottom-left-radius:calc(var(--r) - 1px);border-bottom-right-radius:calc(var(--r) - 1px)}
+.mk{font-size:13px;line-height:1.5}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--rule-soft)}
+.brandmark{font-size:12px;letter-spacing:.16em;font-weight:700}
+.icons{display:flex;align-items:center;gap:14px;color:var(--ink-2);font-size:15px}
+.cartbtn{position:relative;display:inline-block}
+.badge{position:absolute;top:-6px;right:-9px;min-width:16px;height:16px;border-radius:999px;background:var(--accent);
+       color:#fff;font-size:10px;font-weight:600;display:grid;place-items:center;padding:0 4px;font-family:var(--mono)}
+.langs{display:flex;gap:0;border-bottom:1px solid var(--rule-soft)}
+.langs span{flex:1;text-align:center;padding:8px 0;font-size:11.5px;color:var(--ink-3);font-family:var(--mono)}
+.langs span.on{color:var(--ink);border-bottom:2px solid var(--ink);font-weight:600}
+
+.hero{aspect-ratio:1/1;background:
+      repeating-linear-gradient(45deg,var(--sunken) 0 10px,transparent 10px 20px),var(--field);
+      display:grid;place-items:center;color:var(--ink-3);font-size:12px;font-family:var(--mono)}
+.pad{padding:14px}
+.brandline{display:flex;align-items:center;gap:7px;color:var(--ink-2);font-size:12px}
+.avatar{width:18px;height:18px;border-radius:999px;background:var(--slate-bg);border:1px solid var(--rule)}
+.pname{font-size:15px;font-weight:600;margin:6px 0 8px;letter-spacing:-.01em}
+.price{display:flex;align-items:baseline;gap:8px}
+.price .now{font-size:18px;font-weight:700}
+.price .was{font-size:12.5px;color:var(--ink-3);text-decoration:line-through}
+.price .off{font-size:12.5px;color:var(--accent);font-weight:600}
+.stars{font-size:11.5px;color:var(--ink-3);margin-top:4px}
+
+.optrow{margin-top:12px}
+.optrow .lbl{font-size:11px;color:var(--ink-3);margin-bottom:6px;letter-spacing:.04em}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:5px 11px;border:1px solid var(--rule);border-radius:7px;color:var(--ink-2);background:var(--surface)}
+.chip.on{border-color:var(--ink);color:var(--ink);font-weight:600}
+.chip.off{color:var(--ink-3);opacity:.5;text-decoration:line-through;background:var(--sunken)}
+
+.notice{margin-top:12px;background:var(--sunken);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--ink-2)}
+.notice b{color:var(--ink);font-weight:600}
+.bottombar{display:flex;gap:8px;padding:11px 14px;border-top:1px solid var(--rule-soft);background:var(--surface)}
+.btn{flex:1;text-align:center;padding:11px 0;border-radius:9px;font-size:13.5px;font-weight:600}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{border:1px solid var(--rule);color:var(--ink-2);flex:0 0 46px}
+.btn.mute{background:var(--sunken);color:var(--ink-3)}
+
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--rule-soft);
+          font-size:12px;color:var(--ink-2)}
+.sec-head b{font-size:13px;color:var(--ink);font-weight:600}
+.grouphead{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--rule-soft);background:var(--sunken)}
+.grouphead b{font-size:12.5px}
+.line{display:flex;gap:10px;padding:13px 14px;border-bottom:1px solid var(--rule-soft);position:relative}
+.thumb{width:56px;height:70px;border-radius:6px;flex:none;background:
+       repeating-linear-gradient(45deg,var(--sunken) 0 8px,transparent 8px 16px),var(--field);border:1px solid var(--rule-soft)}
+.line .body{flex:1;min-width:0}
+.line .nm{font-size:12.5px;font-weight:600;line-height:1.35}
+.line .opt{font-size:11.5px;color:var(--ink-3);margin-top:2px;font-family:var(--mono)}
+.line .pr{font-size:13px;font-weight:600;margin-top:6px}
+.line .pr s{font-weight:400;color:var(--ink-3);font-size:11.5px;margin-left:5px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:7px;margin-top:8px;overflow:hidden}
+.stepper i{font-style:normal;width:26px;height:26px;display:grid;place-items:center;font-size:13px;color:var(--ink-2)}
+.stepper b{width:30px;text-align:center;font-size:12.5px;font-family:var(--mono);border-left:1px solid var(--rule);
+           border-right:1px solid var(--rule);height:26px;line-height:26px;font-weight:500}
+.ckbox{width:16px;height:16px;border:1.5px solid var(--rule);border-radius:4px;flex:none;margin-top:2px}
+.ckbox.on{background:var(--accent);border-color:var(--accent);position:relative}
+.ckbox.on::after{content:"✓";position:absolute;inset:0;color:#fff;font-size:11px;display:grid;place-items:center}
+.soldout{position:absolute;inset:0;background:color-mix(in srgb,var(--surface) 88%,transparent);display:grid;place-items:center;
+         font-size:11.5px;color:var(--red);font-weight:600;letter-spacing:-.01em}
+
+.freebar{padding:12px 14px;border-bottom:1px solid var(--rule-soft)}
+.freebar .t{font-size:12px;color:var(--ink-2);margin-bottom:7px}
+.freebar .t b{color:var(--accent);font-weight:600}
+.track{height:5px;border-radius:999px;background:var(--sunken);overflow:hidden}
+.track i{display:block;height:100%;width:78%;background:var(--accent);border-radius:999px}
+.sum{padding:12px 14px;border-bottom:1px solid var(--rule-soft)}
+.sum .r{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);padding:3px 0}
+.sum .r.total{border-top:1px solid var(--rule-soft);margin-top:7px;padding-top:9px;color:var(--ink);font-weight:700;font-size:14.5px}
+.sum .r .muted{font-size:11px;color:var(--ink-3);font-weight:400}
+
+.fieldrow{padding:11px 14px;border-bottom:1px solid var(--rule-soft)}
+.fieldrow .lbl{font-size:11px;color:var(--ink-3);letter-spacing:.04em;margin-bottom:5px}
+.input{background:var(--field);border:1px solid var(--rule);border-radius:7px;padding:8px 10px;font-size:12.5px;color:var(--ink)}
+.input.ph{color:var(--ink-3)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--rule-soft);font-size:12.5px}
+.sw{width:34px;height:19px;border-radius:999px;background:var(--accent);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:999px;background:#fff}
+.sw.off{background:var(--rule)}
+.sw.off::after{right:auto;left:2px}
+.radio{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--rule-soft);font-size:12.5px}
+.dot{width:15px;height:15px;border-radius:999px;border:1.5px solid var(--rule);flex:none}
+.dot.on{border-color:var(--accent);border-width:5px}
+
+.done{padding:26px 14px 18px;text-align:center;border-bottom:1px solid var(--rule-soft)}
+.done .mark{width:42px;height:42px;border-radius:999px;background:var(--green-bg);color:var(--green);display:grid;
+            place-items:center;margin:0 auto 11px;font-size:19px}
+.done h3{margin:0 0 5px;font-size:15px;font-weight:700}
+.done .ordno{font-family:var(--mono);font-size:12.5px;color:var(--ink-2)}
+.pill{display:inline-block;font-size:11px;font-family:var(--mono);padding:2px 8px;border-radius:999px;
+      background:var(--accent-bg);color:var(--accent-ink);margin-top:7px;font-weight:600}
+.addr{padding:12px 14px;border-bottom:1px solid var(--rule-soft);font-size:12.5px;color:var(--ink-2);line-height:1.65}
+.addr b{color:var(--ink);font-weight:600}
+
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:.04em;
+        padding:8px 14px;border-bottom:1px solid var(--rule-soft);background:var(--sunken)}
+.tbl td{padding:9px 14px;border-bottom:1px solid var(--rule-soft);color:var(--ink-2)}
+.tbl td b{color:var(--ink);font-weight:600}
+.tbl .del{color:var(--red);font-size:11.5px}
+
+/* ---------- 핀 ---------- */
+.hl{position:relative}
+.pin{display:inline-grid;place-items:center;width:19px;height:19px;border-radius:999px;background:var(--accent);
+     color:#fff;font-size:11px;font-weight:700;font-family:var(--mono);flex:none;line-height:1}
+.hl > .pin{position:absolute;top:-8px;right:-8px;z-index:3;box-shadow:0 0 0 3px var(--surface)}
+.hl.pinleft > .pin{right:auto;left:-24px;top:-2px}
+.hl.lit{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px;background:var(--accent-bg)}
+
+/* ---------- API 컬럼 ---------- */
+.api-list{display:flex;flex-direction:column;gap:10px}
+.api-row{background:var(--surface);border:1px solid var(--rule);border-radius:11px;padding:13px 15px;box-shadow:var(--shadow);
+         transition:.14s;cursor:default}
+.api-row.lit{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-bg),var(--shadow)}
+.api-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.api-top .what{font-size:13.5px;font-weight:600}
+.m{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;padding:2px 7px;border-radius:5px}
+.m.get{background:var(--slate-bg);color:var(--slate)}
+.m.post{background:var(--accent-bg);color:var(--accent-ink)}
+.m.patch{background:var(--green-bg);color:var(--green)}
+.m.del{background:var(--red-bg);color:var(--red)}
+.m.none{background:var(--sunken);color:var(--ink-3)}
+/* 변경 표기 배지 — 이미 붙인 화면이 있을 때만 쓴다 */
+.nt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    padding:2px 7px;border-radius:5px;line-height:1.6;white-space:nowrap}
+.nt.new{background:var(--green-bg);color:var(--green)}
+.nt.upd{background:var(--accent-bg);color:var(--accent-ink)}
+.api-ep{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.api-ep code{font-size:12.5px;color:var(--ink);background:var(--sunken);padding:3px 8px;border-radius:6px}
+.api-desc{margin:8px 0 0;font-size:13px;color:var(--ink-2)}
+.api-desc b{color:var(--ink);font-weight:600}
+.io{margin:9px 0 0;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--ink-2);
+    background:var(--sunken);border-radius:7px;padding:9px 11px;white-space:pre-wrap;word-break:break-word;overflow-x:auto}
+.io .k{color:var(--accent-ink)}
+.io .c{color:var(--ink-3)}      /* 주석 */
+.io .n{color:var(--green);font-weight:600}  /* 새로 생긴 필드 표시 */
+/* 요청·응답을 좌우로 나눈다. 폭이 좁아지면(<=1180px) 세로로 쌓인다 */
+.io-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:9px;align-items:start}
+@media (max-width:1180px){.io-pair{grid-template-columns:1fr}}
+.io-block{min-width:0;margin-top:9px}
+.io-pair .io-block{margin-top:0}
+.io-block .io{margin:0}
+.io-l{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:10px;letter-spacing:.1em;
+      text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.io-l .ar{font-family:var(--mono);font-size:12.5px;letter-spacing:0;line-height:1}
+.io-l.req .ar{color:var(--accent)}
+.io-l.res .ar{color:var(--green)}
+/* Swagger 딥링크 */
+.swg{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+.swg-l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.swg .op{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);font-weight:600}
+.swg a{font-family:var(--mono);font-size:10.5px;text-decoration:none;color:var(--slate);
+       background:var(--slate-bg);border:1px solid transparent;border-radius:5px;padding:2px 7px;transition:.14s}
+.swg a:hover{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-bg)}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.tag{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);border:1px solid var(--rule);border-radius:5px;padding:2px 6px}
+.tag.err{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,transparent)}
+.note{margin-top:14px;background:var(--accent-bg);border-left:3px solid var(--accent);border-radius:0 9px 9px 0;
+      padding:11px 14px;font-size:13px;color:var(--ink-2)}
+.note b{color:var(--accent-ink)}
+
+/* ---------- 순서도 ---------- */
+.flow{padding:48px 0 72px}
+.flow h2{font-size:23px;margin:0 0 6px;font-weight:700;letter-spacing:-.015em}
+.flow .lede{margin:0 0 22px;color:var(--ink-2);font-size:14px}
+.steps{display:grid;gap:0}
+.step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px;padding-bottom:20px;position:relative}
+.step::before{content:"";position:absolute;left:16px;top:30px;bottom:-2px;width:1px;background:var(--rule)}
+.step:last-child::before{display:none}
+.step .n{width:34px;height:34px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);
+         display:grid;place-items:center;font-family:var(--mono);font-size:12px;color:var(--ink-2);z-index:1}
+.step h4{margin:6px 0 4px;font-size:14.5px;font-weight:600}
+.step p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.step .ep{font-family:var(--mono);font-size:12px;color:var(--accent-ink);background:var(--accent-bg);
+          padding:2px 7px;border-radius:5px;display:inline-block;margin-top:6px}
+footer{padding:26px 0 60px;color:var(--ink-3);font-size:12.5px;border-top:1px solid var(--rule)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="cover">
+  <p class="eyebrow">Seoul Moment · 주문 현황 · 발주</p>
+  <h1>주문 목록 · 할인 진행바 · 관리자 발주</h1>
+  <p class="lede">왼쪽은 실제로 붙을 화면, 오른쪽은 그 화면의 각 요소가 부르는 API다.
+     번호가 좌우를 잇는다 — 어느 쪽이든 올려두면 짝이 같이 켜진다.</p>
+  <div class="meta">
+    <span>커밋 6e6ac66</span>
+    <span>국제배송비 지원 할인</span>
+    <span>배송 6단계 · 24시간 발주 타이머</span>
+    <span>DEV 배포 전 — 실측은 배포 후</span>
+  </div>
+
+  <div class="rules">
+    <div class="rule-card">
+      <h4>인증</h4>
+      <p>고객 API는 회원 <code>Authorization: Bearer</code>. 관리자 API(<code>/admin/*</code>)는 <b>관리자 토큰</b>이다 —
+         회원 토큰으로 부르면 <b>401</b>.</p>
+    </div>
+    <div class="rule-card">
+      <h4>응답 봉투</h4>
+      <p>단건은 <code>{ result, data }</code>, 목록은 <code>{ result, data: { total, list } }</code>.
+         이 문서의 <code>→</code> 는 <b>data 안쪽</b>만 적었다. <code>204</code> 는 본문이 없다.</p>
+    </div>
+    <div class="rule-card">
+      <h4>상태 문구 · 언어</h4>
+      <p>상태는 <b>코드(<code>deliveryStage</code>)로 분기</b>하고 화면에는 <b>서버가 준 <code>…Label</code></b> 을 그대로 쓴다.
+         헤더 <code>Accept-Language: ko | en | zh-TW</code>. 비우거나 모르는 값이면 한국어.</p>
+    </div>
+    <div class="rule-card">
+      <h4>금액</h4>
+      <p>통화는 <b>NT$</b>, 전부 정수. 합계(<code>totalAmount</code>)는 <b>이미 할인이 빠진 값</b>이라 프론트가 다시 빼지 않는다.</p>
+    </div>
+    <div class="rule-card">
+      <h4>필드 표기</h4>
+      <p><code>key</code> 필수 · <code>key?</code> 선택(응답에선 <code>null</code> 가능) · <code>key*</code> 조건부 필수(조건은 카드 본문) ·
+         <code>// ①</code> <code>// ②</code> 택1. 정의하지 않은 키를 보내면 <b>400</b> 이다(전역 <code>forbidNonWhitelisted</code>).</p>
+    </div>
+    <div class="rule-card">
+      <h4>변경 표기</h4>
+      <p>기준은 <code>payment-ui-api-map.html</code>(결제 1차, 2026-11-04). <span class="nt new">new</span> 새 API ·
+         <span class="nt upd">updated</span> 필드가 늘어난 API. <b>라벨이 없으면 예전 그대로</b>다.</p>
+    </div>
+    <div class="rule-card">
+      <h4>Swagger</h4>
+      <p>DEV <code>api-dev.seoulmoment.com.tw/docs</code> · PROD <code>api.seoulmoment.com.tw/docs</code>.
+         <b>배포 전이라 링크는 DEV 배포 뒤에 열린다</b> (PROD 는 main 뒤).</p>
+    </div>
+    <div class="rule-card">
+      <h4>실측</h4>
+      <p>예시 값은 코드와 테스트(42건)에서 가져왔다. <b>DEV 배포 후 실측 예정</b> — 실측하면 이 카드를 갱신한다.</p>
+    </div>
+  </div>
+
+  <nav class="toc">
+    <a href="#s1"><b>01</b>주문서 · 할인 진행바</a>
+    <a href="#s2"><b>02</b>내 주문 목록</a>
+    <a href="#s3"><b>03</b>주문 상세</a>
+    <a href="#s4"><b>04</b>관리자 · 주문 및 발주 관리</a>
+    <a href="#s5"><b>05</b>관리자 · 주문 드로어 · 발주</a>
+    <a href="#s6"><b>06</b>관리자 · 할인 스위치</a>
+    <a href="#flow"><b>—</b>호출 순서</a>
+  </nav>
+</header>
+
+<!-- ============================ 01 ============================ -->
+<section class="screen" id="s1">
+  <div class="screen-head">
+    <span class="no">01</span>
+    <h2>주문서 · 장바구니 — 할인 진행바</h2>
+    <span class="route">/checkout · /cart</span>
+    <p class="sub">NT$4,000 부터 국제배송비 지원 할인 120/250/450/700 이 붙는다. 서버가 <b>다음 구간과 남은 금액</b>까지 계산해 주므로 프론트는 계산하지 않는다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="nav"><span class="icons">←</span><span class="brandmark">주문서</span><span class="icons" style="width:16px"></span></div>
+
+        <div class="line">
+          <span class="thumb"></span>
+          <span class="body">
+            <span class="nm">코튼 트윌 오버셔츠</span>
+            <div class="opt">온도 ONDO · IVORY / M · 2개</div>
+            <div class="pr">NT$2,640</div>
+          </span>
+        </div>
+
+        <div class="hl" data-k="1-1">
+          <span class="pin">1</span>
+          <div class="freebar">
+            <div class="t">再買 <b>NT$1,360</b>，即享 NT$120 折扣及超商取貨免運</div>
+            <div class="track"><i style="width:66%"></i></div>
+            <div class="t" style="margin:7px 0 0;color:var(--ink-3)">2,640 / 4,000 · 다음 혜택 NT$120</div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="1-2">
+          <span class="pin">2</span>
+          <div class="sum">
+            <div class="r"><span>상품 금액</span><span>NT$2,640</span></div>
+            <div class="r"><span>국제배송비 지원 할인</span><span class="muted">NT$0 → 줄 숨김</span></div>
+            <div class="r"><span>배송비</span><span>NT$60</span></div>
+            <div class="r total"><span>결제 금액</span><span>NT$2,700</span></div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="1-3">
+          <span class="pin">3</span>
+          <div class="sec-head"><b>장바구니 합계</b><span style="color:var(--ink-3)">같은 필드</span></div>
+          <div class="sum" style="border-bottom:none">
+            <div class="r"><span>예상 결제 금액</span><span>NT$2,700</span></div>
+          </div>
+        </div>
+        <div class="bottombar"><span class="btn primary">NT$2,700 결제하기</span></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="1-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">할인 진행바 · 남은 금액 문구</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/user/order/preview</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_postUserOrderPreview" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_postUserOrderPreview" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">금액·주소가 바뀔 때마다 다시 부른다. <b>이번에 더해진 것</b>은 응답의 할인 4필드뿐이고, <b>기존 호출은 그대로 동작한다.</b>
+            <code>nextDiscountThreshold</code> 가 <code>null</code> 이면 두 경우다 — 스위치가 꺼졌거나(<code>internationalDiscount</code> 도 0), 마지막 구간(12,000 이상)이라 받을 다음 혜택이 없다. 둘 다 <b>진행바를 숨긴다</b>.
+            <code>amountToFreeShipping</code> 은 무료배송 임계금액 기준이라 할인과 <b>따로</b> 움직인다 (운영이 둘을 4,000 으로 맞춘다).</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io"><span class="c">// ① 장바구니</span>
+{
+  <span class="k">cartItemIds</span>: [12, 13],
+  city?:        "臺北市",
+  district?:    "信義區"
+}
+
+<span class="c">// ② 구매하기: items[{productVariantId,</span>
+<span class="c">//    quantity}] — ①·② 중 하나만</span></div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 200</div>
+              <div class="io">{
+  totalProductAmount:    2640,
+  shippingFee:           60,
+  totalAmount:           2700,
+  <span class="k">internationalDiscount</span>:   0,     <span class="n">// NEW</span>
+  <span class="k">nextDiscountThreshold</span>?:  4000,  <span class="n">// NEW</span>
+  <span class="k">nextDiscountAmount</span>?:     120,   <span class="n">// NEW</span>
+  <span class="k">amountToNextDiscount</span>:    1360   <span class="n">// NEW</span>
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">Bearer 필수</span><span class="tag">Accept-language 필수</span><span class="tag">items | cartItemIds 택1 — 1~100건</span><span class="tag err">400 택1 위반</span><span class="tag err">404 장바구니·상품 없음</span></div>
+        </div>
+
+        <div class="api-row" data-k="1-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">금액 요약 · 할인 줄</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>internationalDiscount · totalAmount</code></div>
+          <p class="api-desc"><code>internationalDiscount &gt; 0</code> 일 때만 <b>“−NT$120”</b> 줄을 그린다. <code>totalAmount = 상품 금액 − 할인 + 배송비</code> 라
+            서버 값을 그대로 쓰고 <b>프론트가 다시 계산하지 않는다</b>. 구간 경계 예: 3,999 → 할인 0 · 결제 4,059 / 4,000 → 할인 120 · 결제 3,880.</p>
+          <div class="io">{ totalProductAmount: <span class="k">4000</span>, internationalDiscount: <span class="k">120</span>,
+  shippingFee: 0, totalAmount: <span class="k">3880</span> }   <span class="c">// 4,000 이상: 외곽 섬도 배송비 0</span></div>
+        </div>
+
+        <div class="api-row" data-k="1-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">장바구니 합계 · 진행바</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/user/cart</code> <span class="m get">GET</span><code>/guest/cart</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <span class="op">user</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserCart/UserCartController_getUserCart" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserCart/UserCartController_getUserCart" target="_blank" rel="noopener">PROD</a>
+            <span class="op">guest</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_getGuestCart" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/GuestCart/GuestCartController_getGuestCart" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">장바구니에도 <b>같은 4필드</b>가 붙는다. 기존 호출은 그대로 동작한다. 스위치가 켜지면 <code>estimatedTotalAmount</code> 가
+            <b>할인이 빠진 값</b>으로 바뀐다 — 배송지가 없어 본섬 기준 예상값인 점은 그대로.</p>
+          <div class="io">→ { estimatedTotalAmount: 2700,
+    <span class="k">internationalDiscount</span>: 0, <span class="n">// NEW</span>
+    <span class="k">nextDiscountThreshold</span>?: 4000, <span class="n">// NEW</span>
+    <span class="k">nextDiscountAmount</span>?: 120, <span class="k">amountToNextDiscount</span>: 1360 }</div>
+        </div>
+      </div>
+      <div class="note"><b>주의</b> — 할인 스위치는 <b>기본 꺼짐</b>이다(06). 꺼져 있으면 네 필드는 0 / <code>null</code> / 0 이고 금액은 예전 그대로다.
+        켜지면 LINE Pay·전자발표에 <b>“國際運費補貼” 음수 줄</b>이 같이 나간다 — 결제 화면 문구는 바꿀 필요 없다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 02 ============================ -->
+<section class="screen" id="s2">
+  <div class="screen-head">
+    <span class="no">02</span>
+    <h2>내 주문 목록 (주문조회)</h2>
+    <span class="route">/mypage/orders</span>
+    <p class="sub">배송 6단계 진행바는 <b>결제·취소·환불 상태와 따로</b> 그린다. 결제 전(PENDING) 주문은 목록에 아예 나오지 않는다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="nav"><span class="icons">←</span><span class="brandmark">我的訂單</span><span class="icons" style="width:16px"></span></div>
+
+        <div class="hl" data-k="2-1">
+          <span class="pin">1</span>
+          <div class="fieldrow" style="padding-bottom:9px">
+            <div class="chips">
+              <span class="chip on">全部</span><span class="chip">進行中</span><span class="chip">已完成</span><span class="chip">取消</span>
+            </div>
+            <div style="margin-top:8px;font-size:11.5px;color:var(--ink-3)">最近 3 個月 ▾</div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="2-2">
+          <span class="pin">2</span>
+          <div class="line">
+            <span class="thumb"></span>
+            <span class="body">
+              <span class="nm">코튼 트윌 오버셔츠 외 1건</span>
+              <div class="opt">SM-20261123-000481 · 11/23</div>
+              <div class="pr">NT$3,880</div>
+              <div class="pill" style="margin-top:6px">已付款</div>
+            </span>
+          </div>
+        </div>
+
+        <div class="hl" data-k="2-3">
+          <span class="pin">3</span>
+          <div style="padding:11px 14px;border-bottom:1px solid var(--rule-soft)">
+            <div class="track"><i style="width:33%;background:var(--green)"></i></div>
+            <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);margin-top:6px;font-family:var(--mono)">
+              <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+            </div>
+            <div style="font-size:12px;margin-top:4px"><b>商品準備中</b> <span style="color:var(--ink-3)">· 2/6</span></div>
+          </div>
+        </div>
+
+        <div class="line">
+          <span class="thumb"></span>
+          <span class="body">
+            <span class="nm">린넨 와이드 팬츠</span>
+            <div class="opt">SM-20261120-000472 · 11/20</div>
+            <div class="pr">NT$1,860</div>
+            <div class="pill" style="margin-top:6px;background:var(--red-bg);color:var(--red)">訂單已取消</div>
+          </span>
+        </div>
+
+        <div class="hl" data-k="2-4">
+          <span class="pin">4</span>
+          <div class="sec-head" style="border-bottom:none;justify-content:center"><b>1 / 3</b> <span style="margin-left:8px">더 보기 ▾</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="2-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">상태 탭 · 기간 필터</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/user/order</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_getUserOrderList" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_getUserOrderList" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">탭이나 기간을 바꿀 때마다 <b>같은 API를 쿼리만 바꿔</b> 다시 부른다. 목록 응답에서 탭을 직접 거르지 않는다.
+            <code>status</code> 를 비우면 <code>ALL</code>. <b>IN_PROGRESS</b> 는 입금 대기 + 결제 완료·배송 완료 전, <b>CANCELED</b> 는 취소 + 결제 후 처리 실패(환불 예정)다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Query</div>
+              <div class="io">?<span class="k">status</span>?=IN_PROGRESS
+&amp;<span class="k">months</span>?=3
+&amp;<span class="k">page</span>?=1
+&amp;<span class="k">count</span>?=10
+
+status: ALL | IN_PROGRESS
+        COMPLETED | CANCELED
+months: 1~36 (없으면 전체 기간)</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 200</div>
+              <div class="io">{
+  <span class="k">total</span>: 3,
+  <span class="k">list</span>: [ … ]
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">Bearer 필수</span><span class="tag">Accept-language ko|en|zh-TW</span><span class="tag">count 1~50</span><span class="tag">page ≥ 1</span><span class="tag">months 1~36</span><span class="tag err">400 범위 밖 값</span><span class="tag err">401</span></div>
+        </div>
+
+        <div class="api-row" data-k="2-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">주문 카드 · 대표 상품 · 상태 배지</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>list[]</code></div>
+          <p class="api-desc">상품은 <b>대표 1건 + <code>itemCount</code></b> 만 준다 — “외 N건”은 <code>itemCount − 1</code>. 이름·이미지는 <b>주문 시점 스냅샷</b>이라 상품 API로 다시 조회하지 않는다.
+            배지 문구는 <code>statusLabel</code>, 결제 전·입금 대기는 <code>status</code> 코드로 구분한다.</p>
+          <div class="io">{
+  <span class="k">orderId</span>:                    481,
+  <span class="k">orderNumber</span>:                "SM-20261123-000481",
+  <span class="k">orderedAt</span>:                  "2026-11-23T05:12:00Z",
+  paidAt?:                    "2026-11-23T05:14:10Z",
+  <span class="k">status</span>:                     "PAID",
+  <span class="k">statusLabel</span>:                "已付款",
+  <span class="k">totalAmount</span>:                3880,
+  <span class="k">internationalDiscount</span>:      120,
+  representativeProductName?: "코튼 트윌 오버셔츠",
+  representativeImageUrl?:    "https://…/a.webp",
+  representativeOptionText?:  "IVORY / M",
+  <span class="k">itemCount</span>:                  2
+}</div>
+          <div class="tags"><span class="tag">status: PAID · PAYMENT_WAITING · CANCELED · FAILED</span></div>
+        </div>
+
+        <div class="api-row" data-k="2-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">배송 6단계 진행바</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>deliveryStage · deliveryStep</code></div>
+          <p class="api-desc">진행바 위치는 <code>deliveryStep</code>(1~6)을 그대로 쓰고, 문구는 <code>deliveryStageLabel</code>. <b>취소·환불은 이 바에 섞지 않는다</b> —
+            <code>status</code> 가 <code>CANCELED</code> 면 바를 숨기고 배지로만 보여준다. <b>해외배송 중</b>은 실제 국제운송이 시작된 때만, <b>대만 도착 ≠ 통관 완료</b>다.</p>
+          <div class="io">  <span class="k">deliveryStage</span>:      "PREPARING_ORDER",
+  <span class="k">deliveryStageLabel</span>: "商品準備中",
+  <span class="k">deliveryStep</span>:       2
+
+1 ORDER_CONFIRMED         訂單確認
+2 PREPARING_ORDER         商品準備中
+3 INTERNATIONAL_SHIPPING  海外運送中
+4 ARRIVED_TAIWAN          商品已抵台
+5 LOCAL_DELIVERY          台灣配送中
+6 DELIVERED               配送完成</div>
+        </div>
+
+        <div class="api-row" data-k="2-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">더 보기 · 페이지</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/user/order?page=2</code></div>
+          <p class="api-desc"><code>total</code> 은 필터가 걸린 <b>전체 건수</b>다. 누적 로딩이면 <code>list.length &lt; total</code> 일 때만 버튼을 보인다. 주문 합계가 아니라 <b>주문 건수</b>다.</p>
+        </div>
+      </div>
+      <div class="note"><b>주의</b> — 남의 주문은 목록에도 상세에도 나오지 않는다(상세는 404). <code>COMPLETED</code> 탭은 <b>통관·배송 API가 붙기 전까지 비어 있다</b> — 배송 완료로 바꾸는 경로가 아직 없다(다음 스코프).</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 03 ============================ -->
+<section class="screen" id="s3">
+  <div class="screen-head">
+    <span class="no">03</span>
+    <h2>주문 상세</h2>
+    <span class="route">/mypage/orders/:id</span>
+    <p class="sub">목록에서 누른 <code>orderId</code> 로 부른다. 기존 응답에 상태 문구·배송 단계·할인 스냅샷이 더해졌다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone mk">
+        <div class="nav"><span class="icons">←</span><span class="brandmark">訂單詳情</span><span class="icons" style="width:16px"></span></div>
+
+        <div class="hl" data-k="3-1">
+          <span class="pin">1</span>
+          <div class="done" style="padding-top:18px">
+            <h3>SM-20261123-000481</h3>
+            <div class="pill">已付款</div>
+            <div class="track" style="margin-top:14px"><i style="width:33%;background:var(--green)"></i></div>
+            <div style="font-size:12px;margin-top:7px"><b>商品準備中</b> <span style="color:var(--ink-3)">· 2/6</span></div>
+          </div>
+        </div>
+
+        <div class="line" style="padding:11px 14px">
+          <span class="thumb" style="width:44px;height:54px"></span>
+          <span class="body">
+            <span class="nm">코튼 트윌 오버셔츠</span>
+            <div class="opt">IVORY / M · 1개</div>
+            <div class="pr">NT$4,000</div>
+          </span>
+        </div>
+
+        <div class="hl" data-k="3-2">
+          <span class="pin">2</span>
+          <div class="sum">
+            <div class="r"><span>상품 금액</span><span>NT$4,000</span></div>
+            <div class="r"><span>국제배송비 지원 할인</span><span>−NT$120</span></div>
+            <div class="r"><span>배송비</span><span>NT$0</span></div>
+            <div class="r total"><span>결제 금액</span><span>NT$3,880</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="3-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">주문번호 · 상태 배지 · 배송 진행바</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/user/order/{id}</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_getUserOrder" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_getUserOrder" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc"><b>이번에 더해진 것</b>은 아래 NEW 필드뿐이고 <b>기존 호출은 그대로 동작한다.</b> 이 API는 <code>Accept-language</code> 가 <b>선택</b>이다(비우면 한국어 문구).
+            결제 대기·입금 대기 주문도 이 API로 열 수 있다 — 목록과 달리 <b>PENDING 도 조회된다</b>.</p>
+          <div class="io">→ { orderId, <span class="k">orderNumber</span>, <span class="k">status</span>: "PAID",
+    <span class="k">statusLabel</span>: "已付款",            <span class="n">// NEW</span>
+    <span class="k">deliveryStage</span>: "PREPARING_ORDER", <span class="n">// NEW</span>
+    <span class="k">deliveryStageLabel</span>: "商品準備中",   <span class="n">// NEW</span>
+    <span class="k">deliveryStep</span>: 2,                   <span class="n">// NEW</span>
+    orderedAt, paidAt?, payment?, invoice?, items[], shipping }</div>
+          <div class="tags"><span class="tag">Bearer 필수</span><span class="tag">Accept-language 선택</span><span class="tag err">404 주문 없음 · 남의 주문</span></div>
+        </div>
+
+        <div class="api-row" data-k="3-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">가격 내역 · 할인 줄</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>internationalDiscount</code></div>
+          <p class="api-desc"><b>주문 시점의 스냅샷</b>이다. 나중에 운영이 스위치를 꺼도 이 주문의 할인은 그대로 남는다. 0이면 줄을 숨긴다.
+            <code>totalAmount</code> 는 이미 할인이 빠진 값 — 상품 합계 − 할인 + 배송비.</p>
+          <div class="io">{ totalProductAmount: 4000,
+  <span class="k">internationalDiscount</span>: 120,  <span class="n">// NEW</span>
+  shippingFee: 0, totalAmount: 3880 }</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 04 ============================ -->
+<section class="screen" id="s4">
+  <div class="screen-head">
+    <span class="no">04</span>
+    <h2>관리자 — 주문 및 발주 관리</h2>
+    <span class="route">/admin/orders</span>
+    <p class="sub">KPI 카드 4개 → 상태 칩 → 표. 기본은 표가 전체 폭이고 <b>드로어는 상세보기를 눌러야</b> 열린다(05).</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone desktop mk">
+        <div class="nav"><span class="brandmark">SEOUL MOMENT · Admin</span><span class="icons">🔔 ⚙</span></div>
+
+        <div class="hl" data-k="4-1">
+          <span class="pin">1</span>
+          <div class="fieldrow" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div style="background:var(--slate-bg);border-radius:8px;padding:8px 10px"><div style="font-size:10.5px;color:var(--ink-3)">오늘 신규</div><b style="font-size:17px">12</b></div>
+            <div style="background:var(--slate-bg);border-radius:8px;padding:8px 10px"><div style="font-size:10.5px;color:var(--ink-3)">24시간 대기 중</div><b style="font-size:17px">7</b></div>
+            <div style="background:var(--green-bg);border-radius:8px;padding:8px 10px"><div style="font-size:10.5px;color:var(--ink-3)">발주 가능</div><b style="font-size:17px">4</b></div>
+            <div style="background:var(--accent-bg);border-radius:8px;padding:8px 10px"><div style="font-size:10.5px;color:var(--ink-3)">취소 요청</div><b style="font-size:17px">0</b></div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="4-2">
+          <span class="pin">2</span>
+          <div class="fieldrow" style="padding-bottom:9px">
+            <div class="chips"><span class="chip on">전체</span><span class="chip">24시간 대기 중</span><span class="chip">발주 가능</span><span class="chip">취소 요청</span><span class="chip">발주 완료</span></div>
+            <div class="input ph" style="margin-top:8px">주문번호 · 받는 분 · 상품명 검색</div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="4-3">
+          <span class="pin">3</span>
+          <table class="tbl">
+            <tr><th>주문번호</th><th>고객</th><th>결제액</th><th>24시간</th></tr>
+            <tr style="background:var(--green-bg)"><td><b>…000481</b></td><td>李佳蓉</td><td>NT$3,880</td><td>✓ 발주 가능</td></tr>
+            <tr style="background:var(--accent-bg)"><td><b>…000482</b></td><td>陳怡君</td><td>NT$2,700</td><td>⏱ 곧 발주 가능</td></tr>
+            <tr><td><b>…000483</b></td><td>王小明</td><td>NT$5,650</td><td>5시간 12분 남음</td></tr>
+            <tr style="background:var(--red-bg)"><td><b>…000470</b></td><td>林美玲</td><td>NT$1,860</td><td>⚠ 취소/철회 접수</td></tr>
+          </table>
+        </div>
+
+        <div class="hl" data-k="4-4">
+          <span class="pin">4</span>
+          <div class="bottombar" style="justify-content:space-between;align-items:center">
+            <span style="font-size:12px;color:var(--ink-3)">1–10 / 124</span><span class="btn mute" style="flex:0 0 auto;padding:6px 14px">10 ▾</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="4-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">KPI 카드 4개</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/admin/order/summary</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_getAdminOrderSummary" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_getAdminOrderSummary" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">목록과 <b>별개 호출</b>이다. 1분 간격으로 다시 부르면 된다. 네 숫자는 <b>서로 겹칠 수 있어 합산하지 않는다</b>.
+            “오늘”은 <b>대만 시간(Asia/Taipei) 자정</b> 기준. 카드를 누르면 아래 목록 호출에 대응하는 <code>chip</code> 을 건다(<code>todayNew</code> 는 칩이 없다 — 결제일 필터로 대신한다).</p>
+          <div class="io">→ {
+  <span class="k">todayNew</span>:        12,
+  <span class="k">waiting</span>:         7,
+  <span class="k">ready</span>:           4,
+  <span class="k">cancelRequested</span>: 0,
+  asOf:            "2026-11-23T06:40:00Z"
+}</div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag err">401 회원 토큰</span></div>
+        </div>
+
+        <div class="api-row" data-k="4-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">상태 칩 · 검색 · 기간</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/admin/order</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_getAdminOrderList" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_getAdminOrderList" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">KPI 와 <b>같은 기준</b>으로 센다(카드 숫자 = 해당 칩의 <code>total</code>). 결제 완료·입금 대기 주문만 나온다.
+            <code>search</code> 는 주문번호·받는 분·상품명을 한 번에 본다. 날짜는 <b>대만 날짜</b>이고 <code>paidTo</code> 는 <b>그날 포함</b>이다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Query</div>
+              <div class="io">?<span class="k">chip</span>?=READY
+&amp;<span class="k">search</span>?=李佳
+&amp;<span class="k">paidFrom</span>?=2026-11-01
+&amp;<span class="k">paidTo</span>?=2026-11-23
+&amp;deliveryStage?=PREPARING_ORDER
+&amp;page?=1&amp;count?=10&amp;sort?=DESC
+
+chip: ALL | WAITING | READY
+      CANCEL_REQUESTED | ORDERED</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 200</div>
+              <div class="io">{ <span class="k">total</span>: 4, <span class="k">list</span>: [ … ] }
+
+<span class="c">// 날짜는 YYYY-MM-DD 만.</span>
+<span class="c">// 없는 날짜(2026-13-45)는 400.</span></div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag">count 1~100</span><span class="tag">page ≥ 1</span><span class="tag">날짜 YYYY-MM-DD</span><span class="tag err">400 잘못된 날짜·범위</span></div>
+        </div>
+
+        <div class="api-row" data-k="4-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">표 행 · 남은 시간 · 행 색</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>list[]</code></div>
+          <p class="api-desc">행 색은 <code>timerState</code> 로 정한다 — WAITING 흰색/연한 파랑 · SOON 연한 주황 · READY 연한 초록 · CANCEL_REQUESTED 연한 분홍. 색에만 기대지 말고 <code>timerStateLabel</code> 을 같이 쓴다.
+            <b>남은 시간은 서버 값(<code>remainingSeconds</code>)</b>이라 PC 시계를 바꿔도 달라지지 않는다 — 카운트다운은 그 값에서 깎는다. 버튼 활성은 <code>canStartPurchase</code> 만 본다.</p>
+          <div class="io">{
+  <span class="k">orderId</span>:               481,
+  <span class="k">orderNumber</span>:           "SM-20261123-000481",
+  paidAt?:               "2026-11-22T05:14:10Z",
+  recipientName?:        "李佳蓉",
+  <span class="k">totalAmount</span>:           3880,
+  paymentMethod?:        "LINE_PAY",
+  <span class="k">timerState</span>:            "READY",
+  <span class="k">timerStateLabel</span>:       "24시간 경과 · 발주 가능",
+  <span class="k">remainingSeconds</span>:      0,
+  readyAt?:              "2026-11-23T05:14:10Z",
+  <span class="k">purchaseStatus</span>:        "NOT_ORDERED",
+  cancellationRequested: false,
+  deliveryStage:         "ORDER_CONFIRMED",
+  <span class="k">canStartPurchase</span>:      true
+}
+
+timerState: NOT_PAID · WAITING · SOON
+            READY · ORDERED · CANCEL_REQUESTED</div>
+          <div class="tags"><span class="tag">SOON = 마지막 3시간</span><span class="tag">Accept-language 선택</span></div>
+        </div>
+
+        <div class="api-row" data-k="4-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">페이지 크기 · 페이지</span></div>
+          <div class="api-ep"><span class="m none">같은 호출</span><code>page · count</code></div>
+          <p class="api-desc"><code>total</code> 은 필터가 걸린 전체 건수. <code>count</code> 는 <b>100 까지</b> — 크게 주면 400이다.</p>
+        </div>
+      </div>
+      <div class="note"><b>주의</b> — <code>cancelRequested</code> 는 <b>아직 항상 0</b>이다. 고객의 취소·계약해제 접수 API가 다음 스코프라 이 값을 채우는 곳이 없다.
+        그 접수가 생기기 전까지 “취소 요청이 들어오면 발주가 막힌다”는 보호도 실제 운영에서는 동작하지 않는다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 05 ============================ -->
+<section class="screen" id="s5">
+  <div class="screen-head">
+    <span class="no">05</span>
+    <h2>관리자 — 주문 드로어 · 한국 발주 시작</h2>
+    <span class="route">/admin/orders (우측 드로어)</span>
+    <p class="sub">상세보기를 눌러야 열린다. <b>발주는 자동이 아니라 관리자 클릭</b>이고, 공급처에 주문이 실제로 나가지도 않는다 — 발주번호는 사람이 적는다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone desktop mk">
+        <div class="nav"><span class="brandmark">SM-20261123-000481 ⧉</span><span class="icons">✕</span></div>
+
+        <div class="hl" data-k="5-1">
+          <span class="pin">1</span>
+          <div class="fieldrow">
+            <div style="font-size:12px;color:var(--green);font-weight:600">24시간 경과 · 발주 가능</div>
+            <div class="track" style="margin-top:7px"><i style="width:100%;background:var(--green)"></i></div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:5px">기준 2026-11-23 13:14 (Asia/Taipei)</div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="5-2">
+          <span class="pin">2</span>
+          <div class="bottombar" style="border-top:none">
+            <span class="btn primary">한국 발주 시작</span><span class="btn ghost" style="flex:1">취소/환불 관리</span>
+          </div>
+        </div>
+
+        <div class="chips" style="padding:0 14px 10px">
+          <span class="chip on">주문 정보</span><span class="chip">발주·매입</span><span class="chip">통관·배송</span><span class="chip">취소·환불</span><span class="chip">작업 이력</span>
+        </div>
+
+        <div class="hl" data-k="5-3">
+          <span class="pin">3</span>
+          <div class="sum">
+            <div class="r"><span>상품 합계</span><span>NT$4,000</span></div>
+            <div class="r"><span>국제배송비 지원 할인</span><span>−NT$120</span></div>
+            <div class="r"><span>국내배송비</span><span>NT$0</span></div>
+            <div class="r total"><span>최종 결제액</span><span>NT$3,880</span></div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="5-4">
+          <span class="pin">4</span>
+          <div class="sec-head" style="border-top:1px solid var(--rule-soft)"><b>발주 확인</b></div>
+          <div class="fieldrow">
+            <div class="lbl">공급처 발주번호</div><div class="input ph">KR-20261123-0042</div>
+            <div class="lbl" style="margin-top:8px">조기 발주 사유 (24시간 전에만)</div><div class="input ph">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="5-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">드로어 열기 · 24시간 카드</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/admin/order/{id}</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_getAdminOrder" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_getAdminOrder" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">행을 누를 때 1회 부르고, 탭을 바꿀 때는 <b>다시 부르지 않는다</b> — 한 응답에 주문·발주·타이머가 같이 온다.
+            <code>order</code> 는 <b>고객 주문 상세(03)와 같은 모양</b>(상품·가격·배송지·결제·발표)이고, 결제 완료·입금 대기 주문만 열린다(그 외 404).
+            <b>통관·배송 / 취소·환불 / 작업 이력</b> 탭의 데이터는 아직 이 응답에 없다(다음 스코프).</p>
+          <div class="io">→ {
+    <span class="k">order</span>:    { …고객 상세와 동일 },
+    <span class="k">purchase</span>: {
+      purchaseStatus:         "NOT_ORDERED",
+      supplierOrderedAt?:     null,
+      supplierOrderNo?:       null,
+      purchaseOverrideReason?: null,
+      purchasedByAdminId?:    null
+    },
+    <span class="k">timer</span>:    { …04 의 list[] 한 건 }
+  }</div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag">Accept-language 선택</span><span class="tag err">404 없음 · 결제 전 주문</span></div>
+        </div>
+
+        <div class="api-row" data-k="5-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">한국 발주 시작 버튼</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/admin/order/{id}/purchase</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_postAdminOrderPurchase" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_postAdminOrderPurchase" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc"><code>canStartPurchase</code> 가 <b>true 일 때만</b> 버튼을 켠다. 눌렀을 때 확인 모달을 한 번 거친다(오발주 방지).
+            <b>응답이 204 라 본문이 없다</b> — 성공하면 <code>GET /admin/order/{id}</code> 를 다시 불러 <code>purchaseStatus: ORDERED</code>,
+            <code>deliveryStage: PREPARING_ORDER</code> 를 반영한다. 두 관리자가 동시에 눌러도 <b>한 명만 성공</b>하고 나머지는 409다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io">{
+  supplierOrderNo?: "KR-20261123-0042",
+  earlyReason*:     "재고 소진 임박"
+}
+
+<span class="c">// earlyReason 은 24시간이 지나기</span>
+<span class="c">// 전에만 필수. 지났으면 비운다.</span></div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>204 No Content</div>
+              <div class="io"><span class="c">(본문 없음)</span>
+
+처리자 ID · 시각 · 조기 발주 사유가
+주문에 기록된다.</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag">supplierOrderNo ≤ 100자</span><span class="tag">earlyReason ≤ 500자</span><span class="tag err">400 조기 발주인데 사유 없음</span><span class="tag err">409 이미 발주 · 취소 접수 · 결제 미완료</span><span class="tag err">404 주문 없음</span></div>
+        </div>
+
+        <div class="api-row" data-k="5-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">가격 내역 탭</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>order.internationalDiscount …</code></div>
+          <p class="api-desc">03 과 같은 필드다. 관리자 화면의 “국제배송비 지원 할인” 줄도 <b>주문 스냅샷</b>이라 정책이 바뀌어도 그대로다.</p>
+        </div>
+
+        <div class="api-row" data-k="5-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">발주 확인 입력</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>POST body</code></div>
+          <p class="api-desc">입력칸일 뿐 별도 조회가 없다. <b>24시간이 안 지난 주문</b>(<code>WAITING</code> · <code>SOON</code>)에서만 “조기 발주 사유”칸을 열고, 이때 버튼은 일반 활성이 아니라 <b>사유 입력 후 별도 동작</b>으로 둔다.
+            <b>취소 접수(<code>CANCEL_REQUESTED</code>)·이미 발주(<code>ORDERED</code>)</b>는 사유를 적어도 409다.</p>
+        </div>
+      </div>
+      <div class="note"><b>주의</b> — “24시간 경과 = 발주 가능”은 <b>회사 내부 발주 기준</b>이지 고객의 취소·계약해제 권리가 끝났다는 뜻이 아니다. 이 화면에서 취소 신청 경로를 막지 않는다.
+        또 <b>기존 결제 완료 주문은 전부 “발주 가능”으로 보인다</b>(과거 주문 백필 전) — DEV 는 테스트 데이터라 괜찮지만 PROD 전에 정리가 필요하다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 06 ============================ -->
+<section class="screen" id="s6">
+  <div class="screen-head">
+    <span class="no">06</span>
+    <h2>관리자 — 국제배송비 지원 할인 스위치</h2>
+    <span class="route">/admin/settings/shipping</span>
+    <p class="sub">할인은 <b>기본 꺼짐</b>이다. 손익 검증이 끝나고, 결제·발표 sandbox 확인이 끝난 뒤에 켠다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone desktop mk">
+        <div class="nav"><span class="brandmark">배송비 정책</span><span class="icons"></span></div>
+        <div class="fieldrow">
+          <div class="lbl">무료배송 임계금액 (NT$)</div><div class="input">4000</div>
+        </div>
+        <div class="hl" data-k="6-1">
+          <span class="pin">1</span>
+          <div class="toggle"><span>국제배송비 지원 할인 (NT$4,000 이상 120/250/450/700)</span><span class="sw off"></span></div>
+        </div>
+        <div class="bottombar"><span class="btn primary">저장</span></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="6-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">할인 ON/OFF 토글</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/admin/shipping/policy</code> <span class="m patch">PATCH</span><code>/admin/shipping/policy</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <span class="op">GET</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminShipping/AdminShippingController_getAdminShippingPolicy" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminShipping/AdminShippingController_getAdminShippingPolicy" target="_blank" rel="noopener">PROD</a>
+            <span class="op">PATCH</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminShipping/AdminShippingController_patchAdminShippingPolicy" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminShipping/AdminShippingController_patchAdminShippingPolicy" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">GET 응답에 필드가 하나 더해졌고 <b>기존 호출은 그대로 동작한다</b>. PATCH 는 <b>보낸 키만 바뀐다</b>.
+            무료배송 임계금액(<code>freeShippingThreshold</code>)은 이 스위치와 <b>별개 설정</b>이라 4,000 으로 따로 맞춘다.
+            이미 만든 주문은 스냅샷이라 영향이 없다. 켠 직후부터 <b>preview·장바구니 응답이 바뀐다</b>(01).</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>PATCH Request</div>
+              <div class="io">{
+  <span class="k">internationalDiscountEnabled</span>?: true,
+  freeShippingThreshold?:        4000
+}</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>GET Response 200</div>
+              <div class="io">{
+  baseFee: 60, remoteIslandFee: 100,
+  remoteIslandPromotion: false,
+  freeShippingThreshold: 4000,
+  <span class="k">internationalDiscountEnabled</span>: false  <span class="n">// NEW</span>
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag">PATCH → 204</span><span class="tag err">400 타입 오류·모르는 키</span></div>
+        </div>
+      </div>
+      <div class="note"><b>켜기 전에</b> — LINE Pay 결제와 전자발표에는 할인이 <b>음수 줄</b>로 들어간다. 두 서비스가 음수 줄을 받는지 문서로 확인하지 못했다.
+        <b>DEV sandbox 로 결제 1건·발표 1건을 확인한 뒤에만</b> 켠다. 실패하면 결제는 됐는데 발표만 실패하는 상태가 남을 수 있다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FLOW ============================ -->
+<section class="flow" id="flow">
+  <h2>호출 순서 한 장</h2>
+  <p class="lede">고객이 주문서를 보고 → 주문이 쌓인 뒤 → 관리자가 24시간 뒤에 발주하기까지, 실제로 나가는 요청만.</p>
+  <div class="steps">
+    <div class="step"><div class="n">01</div><div>
+      <h4>주문서 · 장바구니 금액</h4>
+      <p>금액·주소가 바뀔 때마다 다시 부른다. 할인 진행바는 응답의 다음 구간 필드로 그린다.</p>
+      <span class="ep">GET /user/cart</span> <span class="ep">POST /user/order/preview</span>
+    </div></div>
+    <div class="step"><div class="n">02</div><div>
+      <h4>주문 생성 · 결제</h4>
+      <p>기존 흐름 그대로다(<code>payment-ui-api-map.html</code> 참고). 할인액은 이때 주문에 스냅샷으로 저장된다.</p>
+      <span class="ep">POST /user/order</span>
+    </div></div>
+    <div class="step"><div class="n">03</div><div>
+      <h4>내 주문 목록 → 상세</h4>
+      <p>탭·기간을 바꿀 때마다 같은 목록 API. 한 건을 열면 상세(배송 단계·할인 스냅샷).</p>
+      <span class="ep">GET /user/order</span> <span class="ep">GET /user/order/{id}</span>
+    </div></div>
+    <div class="step"><div class="n">04</div><div>
+      <h4>관리자 — KPI · 목록</h4>
+      <p>KPI 는 1분 간격, 목록은 칩·검색·페이지가 바뀔 때. 남은 시간은 서버 값을 쓴다.</p>
+      <span class="ep">GET /admin/order/summary</span> <span class="ep">GET /admin/order</span>
+    </div></div>
+    <div class="step"><div class="n">05</div><div>
+      <h4>관리자 — 드로어 · 발주</h4>
+      <p>행 클릭 때 상세 1회. <code>canStartPurchase</code> 가 true 면 발주(204) → 상세를 다시 불러 상태를 갱신.</p>
+      <span class="ep">GET /admin/order/{id}</span> <span class="ep">POST /admin/order/{id}/purchase</span> <span class="ep">GET /admin/order/{id}</span>
+    </div></div>
+    <div class="step"><div class="n">06</div><div>
+      <h4>운영 — 할인 스위치</h4>
+      <p>sandbox 확인 뒤 켠다. 켠 직후부터 01 의 응답이 바뀐다.</p>
+      <span class="ep">GET /admin/shipping/policy</span> <span class="ep">PATCH /admin/shipping/policy</span>
+    </div></div>
+  </div>
+</section>
+
+<footer>
+  전체 스펙은 Swagger(<code>/docs</code>)에서 본다. 이 문서의 값은 커밋 6e6ac66 의 코드와 테스트(<code>test/order.fulfillment.spec.ts</code> 등)에서 가져왔고,
+  <b>DEV 배포 후 실측 예정</b>이다. 다음 스코프: 취소·계약해제 접수, 통관·물류(배송 단계 변경), 환불, 전자발표 정정.
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var lock = null;
+  function paint(k, on) {
+    document.querySelectorAll('[data-k="' + k + '"]').forEach(function (el) {
+      el.classList.toggle('lit', on);
+    });
+  }
+  document.querySelectorAll('[data-k]').forEach(function (el) {
+    var k = el.dataset.k;
+    el.addEventListener('mouseenter', function () { if (!lock) paint(k, true); });
+    el.addEventListener('mouseleave', function () { if (!lock) paint(k, false); });
+    el.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (lock === k) { paint(k, false); lock = null; return; }
+      if (lock) paint(lock, false);
+      lock = k; paint(k, true);
+    });
+  });
+  document.addEventListener('click', function () {
+    if (lock) { paint(lock, false); lock = null; }
+  });
+})();
+</script>
+</body>
+</html>
