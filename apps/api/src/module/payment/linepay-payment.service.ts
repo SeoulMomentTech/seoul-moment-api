@@ -106,7 +106,7 @@ export class LinePayPaymentService {
         orderId: payment.merchantTradeNo,
         amount: payment.amount,
         packageId: String(payment.orderId),
-        products: await this.buildProducts(payment.orderId),
+        products: await this.buildProducts(payment.orderId, payment.amount),
         confirmUrl: this.paymentResultService.callbackUrl(
           '/payment/linepay/confirm',
         ),
@@ -401,7 +401,10 @@ export class LinePayPaymentService {
   }
 
   /** products 합이 결제 금액과 같아야 한다. 배송비는 별도 라인으로 넣는다 */
-  private async buildProducts(orderId: number): Promise<LinePayProduct[]> {
+  private async buildProducts(
+    orderId: number,
+    amount: number,
+  ): Promise<LinePayProduct[]> {
     const order = await this.orderRepositoryService.findById(orderId);
     const items = await this.orderRepositoryService.findItemsByOrderId(orderId);
 
@@ -426,16 +429,24 @@ export class LinePayPaymentService {
       });
     }
 
-    // 결제 금액이 할인을 뺀 값이라 음수 라인으로 합을 맞춘다.
-    // shortcut: LINE Pay 가 음수 price 를 받는지 문서로 확인 못 했다 — 할인 스위치를 켜기 전 sandbox 로 확인한다.
+    // 할인이 있으면 라인 합이 결제 금액보다 크다. 음수 라인을 넣지 않고 결제 금액 한 줄로 보낸다
     if (order && order.internationalDiscount > 0) {
-      products.push({
-        name: '國際運費補貼',
-        quantity: 1,
-        price: -order.internationalDiscount,
-      });
+      return [this.toSingleProduct(products[0]?.name, items.length, amount)];
     }
 
     return products;
+  }
+
+  private toSingleProduct(
+    firstName: string | undefined,
+    itemCount: number,
+    amount: number,
+  ): LinePayProduct {
+    const suffix = itemCount > 1 ? ` 等 ${itemCount} 件` : '';
+    const head = Array.from(firstName || 'Item')
+      .slice(0, PRODUCT_NAME_MAX - suffix.length)
+      .join('');
+
+    return { name: head + suffix, quantity: 1, price: amount };
   }
 }

@@ -935,6 +935,37 @@ describe('결제 (E2E) — ECPay · LINE Pay', () => {
       expect(input.confirmUrl).toBe('http://localhost/payment/linepay/confirm');
     });
 
+    it('국제배송비 지원 할인이 있으면 음수 라인 없이 결제 금액 한 줄만 보낸다', async () => {
+      // Given: 상품 6,000 → 할인 250, 배송비 60 → 결제 5,810
+      await dataSource.query(
+        `UPDATE shipping_policy SET international_discount_enabled = true`,
+      );
+      const { token } = await signUpAndLogin();
+      const cartItemIds = [
+        await addToCart(token, await createVariant(10, 3000), 1),
+        await addToCart(token, await createVariant(10, 3000), 1),
+      ];
+      const { orderId, totalAmount } = await createOrder(
+        token,
+        { cartItemIds },
+        'LINE_PAY',
+      );
+      const requestSpy = mockLinePayRequest();
+
+      // When
+      const res = await startPayment(token, orderId);
+
+      // Then
+      expect(res.status).toBe(201);
+      expect(totalAmount).toBe(5810);
+
+      const [input] = requestSpy.mock.calls[0];
+      expect(input.amount).toBe(5810);
+      expect(input.products).toHaveLength(1);
+      expect(input.products[0]).toMatchObject({ quantity: 1, price: 5810 });
+      expect(input.products[0].name).toContain('等 2 件');
+    });
+
     it('LINE Pay 요청이 거절되면 500, 시도는 FAILED, 재고는 돌아온다', async () => {
       // Given
       const { token } = await signUpAndLogin();
