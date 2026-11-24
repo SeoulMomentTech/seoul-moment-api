@@ -177,6 +177,21 @@ export class PatchUserCartRequest {
   quantity: number;
 }
 
+export class PostUserCartPreviewRequest {
+  @ApiProperty({
+    description:
+      '체크한 장바구니 라인 ID 목록 (1~100개). 이 라인들만으로 금액·할인을 계산한다',
+    example: [1, 2],
+    type: [Number],
+  })
+  @IsArray()
+  @IsInt({ each: true })
+  @IsPositive({ each: true })
+  @ArrayNotEmpty()
+  @ArrayMaxSize(100)
+  cartItemIds: number[];
+}
+
 export class DeleteUserCartRequest {
   @ApiPropertyOptional({
     description: '삭제할 장바구니 라인 ID 목록. 생략하면 전체를 비운다',

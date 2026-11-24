@@ -550,6 +550,93 @@ describe('UserCartController (E2E)', () => {
   });
 
   // -------------------------------------------------------------------------
+  describe('POST /user/cart/preview — 체크한 상품만 계산', () => {
+    function previewCart(token: string, cartItemIds: unknown) {
+      return request(app.getHttpServer())
+        .post(`${CART_BASE}/preview`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('Accept-language', 'ko')
+        .send({ cartItemIds });
+    }
+
+    async function addAndGetId(token: string, price: number): Promise<number> {
+      const { productVariantId } = await createVariant({ price });
+      const res = await addToCart(token, productVariantId, 1);
+
+      return res.body.data.items[0].cartItemId;
+    }
+
+    it('체크한 라인만으로 금액·할인·다음 구간을 계산하고 DB 는 그대로다', async () => {
+      // Given: 3,000 + 2,500 담김, 할인 스위치 ON
+      await dataSource.query(
+        `UPDATE shipping_policy SET international_discount_enabled = true`,
+      );
+      const { oneTimeToken } = await signUpAndLogin();
+      const first = await addAndGetId(oneTimeToken, 3000);
+      const second = await addAndGetId(oneTimeToken, 2500);
+
+      // When
+      const all = await getCart(oneTimeToken);
+      const one = await previewCart(oneTimeToken, [first]);
+      const both = await previewCart(oneTimeToken, [first, second, first]);
+
+      // Then: 전체는 5,500 → 할인 250
+      expect(all.body.data).toMatchObject({
+        totalProductAmount: 5500,
+        internationalDiscount: 250,
+      });
+      // 하나만 체크하면 3,000 → 할인 없음, 다음 구간 4,000 까지 1,000
+      expect(one.status).toBe(200);
+      expect(one.body.data).toMatchObject({
+        totalProductAmount: 3000,
+        internationalDiscount: 0,
+        nextDiscountThreshold: 4000,
+        nextDiscountAmount: 120,
+        amountToNextDiscount: 1000,
+        estimatedShippingFee: 0,
+        estimatedTotalAmount: 3000,
+        totalCount: 1,
+      });
+      expect(one.body.data.brandGroups).toHaveLength(1);
+      // 전부 체크하면 장바구니 조회와 같다 (중복 ID 는 한 번만 센다)
+      expect(both.body.data.estimatedTotalAmount).toBe(
+        all.body.data.estimatedTotalAmount,
+      );
+      expect((await getCart(oneTimeToken)).body.data.totalCount).toBe(2);
+    });
+
+    it('남의 라인이나 없는 라인이 섞이면 404 다', async () => {
+      // Given
+      const mine = await signUpAndLogin();
+      const other = await signUpAndLogin();
+      const myId = await addAndGetId(mine.oneTimeToken, 1000);
+      const otherId = await addAndGetId(other.oneTimeToken, 1000);
+
+      // When
+      const res = await previewCart(mine.oneTimeToken, [myId, otherId]);
+
+      // Then
+      expect(res.status).toBe(404);
+    });
+
+    it('빈 배열·숫자가 아닌 값은 400, 토큰이 없으면 401 이다', async () => {
+      // Given
+      const { oneTimeToken } = await signUpAndLogin();
+
+      // When / Then
+      expect((await previewCart(oneTimeToken, [])).status).toBe(400);
+      expect((await previewCart(oneTimeToken, ['a'])).status).toBe(400);
+      expect((await previewCart(oneTimeToken, undefined)).status).toBe(400);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .post(`${CART_BASE}/preview`)
+            .send({ cartItemIds: [1] })
+        ).status,
+      ).toBe(401);
+    });
+  });
+
   describe('PATCH /user/cart/:id', () => {
     it('수량을 변경하면 204를 반환하고 DB에 반영된다', async () => {
       // Given

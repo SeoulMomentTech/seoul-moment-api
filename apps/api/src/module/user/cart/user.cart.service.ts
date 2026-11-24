@@ -134,6 +134,38 @@ export class UserCartService {
     const cartItems =
       await this.cartRepositoryService.findDetailListByUserId(userId);
 
+    return this.toCartResponse(cartItems, language);
+  }
+
+  /**
+   * 장바구니에서 체크한 라인만으로 금액·할인을 다시 계산한다. DB 를 건드리지 않는다.
+   * 응답 모양은 장바구니 조회와 같고, 고른 라인만 담긴다.
+   */
+  async previewCart(
+    userId: number,
+    cartItemIds: number[],
+    language: LanguageCode,
+  ): Promise<GetUserCartResponse> {
+    const ids = [...new Set(cartItemIds)];
+    const cartItems = await this.cartRepositoryService.findDetailListByIds(
+      userId,
+      ids,
+    );
+
+    if (cartItems.length !== ids.length) {
+      throw new ServiceError(
+        'Some cart items do not exist or belong to another user',
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    return this.toCartResponse(cartItems, language);
+  }
+
+  private async toCartResponse(
+    cartItems: CartItemEntity[],
+    language: LanguageCode,
+  ): Promise<GetUserCartResponse> {
     const lines = this.cartAmountCalculator.toLines(cartItems);
     const policy = await this.shippingRepositoryService.getPolicy();
 

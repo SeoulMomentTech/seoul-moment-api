@@ -27,6 +27,7 @@ import {
   GetUserCartCountResponse,
   GetUserCartResponse,
   PatchUserCartRequest,
+  PostUserCartPreviewRequest,
   PostUserCartRequest,
   PostUserCartResponse,
 } from './user.cart.dto';
@@ -82,6 +83,43 @@ export class UserCartController {
   ): Promise<ResponseDataDto<GetUserCartResponse>> {
     const data = await this.userCartService.getCart(
       req.user.id,
+      acceptLanguage,
+    );
+
+    return new ResponseDataDto(data);
+  }
+
+  @Post('preview')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '장바구니 금액 미리보기 (체크한 상품만)',
+    description:
+      '장바구니 조회는 담긴 전체를 기준으로 계산한다. 체크한 상품만의 금액·국제배송비 지원 할인·다음 할인 구간이 필요하면 체크가 바뀔 때마다 이 API 를 부른다. ' +
+      '응답 모양은 장바구니 조회와 같고 고른 라인만 담긴다. 배송비는 본섬 기준 예상값이다. DB 를 변경하지 않는다. ' +
+      '하나도 체크하지 않았으면 부르지 말고 0 으로 표시한다 (빈 배열은 400).',
+  })
+  @ApiHeader({
+    name: 'Accept-language',
+    required: true,
+    description: 'Alternative way to specify language preference (ko, en, zh)',
+    enum: LanguageCode,
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseData(GetUserCartResponse)
+  @ResponseException(
+    HttpStatus.NOT_FOUND,
+    'Some cart items do not exist or belong to another user',
+  )
+  @ResponseException(HttpStatus.BAD_REQUEST, 'Bad request')
+  async postUserCartPreview(
+    @Request() req: any,
+    @Body() body: PostUserCartPreviewRequest,
+    @Headers('Accept-language') acceptLanguage: LanguageCode,
+  ): Promise<ResponseDataDto<GetUserCartResponse>> {
+    const data = await this.userCartService.previewCart(
+      req.user.id,
+      body.cartItemIds,
       acceptLanguage,
     );
 
