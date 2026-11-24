@@ -155,19 +155,25 @@ describe('주문 현황·발주 (E2E)', () => {
       .send({ cartItemIds: [cartItemId], ...area });
   }
 
-  /** 상품 1개짜리 주문을 만들고 DB 에서 결제 완료 상태로 만든다 */
+  /** 주문을 만들고(기본 상품 1개) DB 에서 결제 완료 상태로 만든다 */
   async function placeOrder(
     token: string,
-    options?: { price?: number; paidHoursAgo?: number | null },
+    options?: { price?: number; paidHoursAgo?: number | null; lines?: number },
   ): Promise<number> {
-    const variantId = await createVariant(options?.price ?? 1000);
-    const cartItemId = await addToCart(token, variantId);
+    const cartItemIds: number[] = [];
+
+    for (let i = 0; i < (options?.lines ?? 1); i++) {
+      const variantId = await createVariant(options?.price ?? 1000);
+
+      cartItemIds.push(await addToCart(token, variantId));
+    }
+
     const res = await request(app.getHttpServer())
       .post(ORDER_BASE)
       .set('Authorization', `Bearer ${token}`)
       .set('Accept-language', 'ko')
       .send({
-        cartItemIds: [cartItemId],
+        cartItemIds,
         paymentMethod: 'LINE_PAY',
         useDefaultShipping: true,
       })
@@ -459,6 +465,35 @@ describe('주문 현황·발주 (E2E)', () => {
       expect(res.body.data.list).toHaveLength(1);
     });
 
+    it('상품이 여러 개인 주문도 페이지 크기는 주문 수로 센다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const ids = [
+        await placeOrder(token, { paidHoursAgo: 0, lines: 2 }),
+        await placeOrder(token, { paidHoursAgo: 0, lines: 2 }),
+        await placeOrder(token, { paidHoursAgo: 0, lines: 2 }),
+      ];
+      const getPage = (page: number) =>
+        request(app.getHttpServer())
+          .get(`${ORDER_BASE}?count=2&page=${page}`)
+          .set('Authorization', `Bearer ${token}`);
+
+      // When
+      const first = await getPage(1);
+      const second = await getPage(2);
+
+      // Then
+      expect(first.body.data.total).toBe(3);
+      expect(first.body.data.list.map((o: any) => o.orderId)).toEqual([
+        ids[2],
+        ids[1],
+      ]);
+      expect(second.body.data.list.map((o: any) => o.orderId)).toEqual([
+        ids[0],
+      ]);
+      expect(first.body.data.list[0].itemCount).toBe(2);
+    });
+
     it('로그인하지 않으면 401 이다', async () => {
       const res = await request(app.getHttpServer()).get(ORDER_BASE);
 
@@ -598,6 +633,22 @@ describe('주문 현황·발주 (E2E)', () => {
       expect(res.body.data.order.orderId).toBe(orderId);
       expect(res.body.data.purchase.purchaseStatus).toBe('NOT_ORDERED');
       expect(res.body.data.timer.timerState).toBe('READY');
+    });
+
+    it('상세의 발표 정보는 고객 주문 상세와 같다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const orderId = await placeOrder(token, { paidHoursAgo: 30 });
+      const mine = await request(app.getHttpServer())
+        .get(`${ORDER_BASE}/${orderId}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      // When
+      const res = await adminGet(`/${orderId}`);
+
+      // Then
+      expect(mine.body.data.invoice).not.toBeNull();
+      expect(res.body.data.order.invoice).toEqual(mine.body.data.invoice);
     });
   });
 

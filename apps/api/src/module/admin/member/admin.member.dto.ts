@@ -574,6 +574,12 @@ export class GetAdminMemberOrderListResponse {
   @ApiProperty({ description: '실제 청구한 배송비', example: 60 })
   shippingFeeApplied: number;
 
+  @ApiProperty({
+    description: '국제배송비 지원 할인 (상품 금액 − 할인 + 배송비 = 결제 금액)',
+    example: 0,
+  })
+  internationalDiscount: number;
+
   @ApiProperty({ description: '최종 결제 금액', example: 2310 })
   totalAmount: number;
 
@@ -601,6 +607,7 @@ export class GetAdminMemberOrderListResponse {
       status: order.status,
       totalProductAmount: order.totalProductAmount,
       shippingFeeApplied: order.shippingFeeApplied,
+      internationalDiscount: order.internationalDiscount,
       totalAmount: order.totalAmount,
       paymentMethod: order.paymentMethod ?? null,
       itemCount: order.items?.length ?? 0,

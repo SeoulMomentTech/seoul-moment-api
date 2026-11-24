@@ -246,12 +246,16 @@ export class OrderRepositoryService {
       );
     }
 
-    return qb
+    // 조인 컬럼(i.id)으로 정렬하면 skip/take 가 주문이 아니라 라인 수로 잘린다
+    const [orders, total] = await qb
       .orderBy('o.id', 'DESC')
-      .addOrderBy('i.id', 'ASC')
       .skip(skip)
       .take(take)
       .getManyAndCount();
+
+    orders.forEach((order) => order.items?.sort((x, y) => x.id - y.id));
+
+    return [orders, total];
   }
 
   private applyUserFilter(
@@ -392,7 +396,7 @@ export class OrderRepositoryService {
         id,
         status: In([OrderStatus.PAID, OrderStatus.PAYMENT_WAITING]),
       },
-      relations: { items: true, shipping: true },
+      relations: { items: true, shipping: true, invoice: true },
       order: { items: { id: 'ASC' } },
     });
   }
