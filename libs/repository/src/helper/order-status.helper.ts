@@ -176,6 +176,28 @@ export function getTimerState(
     : FulfillmentTimerState.WAITING;
 }
 
+/**
+ * 결제 완료 주문이면 발주·해외배송·수령 여부와 무관하게 취소·계약해제를 접수한다
+ * (명세 v6 §7.2 — 24시간 경과나 발주만으로 법정 권리를 막지 않는다).
+ */
+export function canRequestCancel(
+  order: Pick<OrderEntity, 'status' | 'cancellationRequestedAt'>,
+): boolean {
+  return order.status === OrderStatus.PAID && !order.cancellationRequestedAt;
+}
+
+/** 24시간 간편취소 구간인지. 안내 문구만 바꾸는 값이고 신청 가능 여부와는 별개다 */
+export function isQuickCancelPeriod(
+  order: Pick<OrderEntity, 'status' | 'paidAt'>,
+  now: Date,
+): boolean {
+  return (
+    order.status === OrderStatus.PAID &&
+    !!order.paidAt &&
+    now.getTime() < getReadyAt(order.paidAt).getTime()
+  );
+}
+
 export function getRemainingSeconds(
   order: Pick<OrderEntity, 'paidAt'>,
   now: Date,

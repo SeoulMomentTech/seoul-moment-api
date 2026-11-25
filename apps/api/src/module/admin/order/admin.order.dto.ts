@@ -1,15 +1,19 @@
+import { OrderEventEntity } from '@app/repository/entity/order-event.entity';
 import { OrderEntity } from '@app/repository/entity/order.entity';
 import { PaymentEntity } from '@app/repository/entity/payment.entity';
+import { ShipmentEntity } from '@app/repository/entity/shipment.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   AdminOrderChip,
   DeliveryStage,
   FulfillmentTimerState,
+  OrderEventType,
   PaymentMethod,
   PurchaseStatus,
 } from '@app/repository/enum/order.enum';
 import {
   getDeliveryStageLabel,
+  getDeliveryStep,
   getReadyAt,
   getRemainingSeconds,
   getTimerState,
@@ -18,9 +22,14 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, plainToInstance } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayNotEmpty,
+  IsArray,
   IsEnum,
+  IsISO8601,
   IsInt,
   IsOptional,
+  IsPositive,
   IsString,
   Matches,
   Max,
@@ -30,6 +39,7 @@ import {
 
 import { GetUserOrderResponse } from '../../user/order/user.order.dto';
 import { ListFilterDto } from '../admin.dto';
+import { GetAdminShipmentInfoResponse } from './admin.shipment.dto';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -226,6 +236,78 @@ export class GetAdminOrderPurchaseResponse {
   purchasedByAdminId: number | null;
 }
 
+export class GetAdminOrderDeliveryResponse {
+  @ApiProperty({ enum: DeliveryStage })
+  deliveryStage: DeliveryStage;
+
+  @ApiProperty({ example: '해외배송 중' })
+  deliveryStageLabel: string;
+
+  @ApiProperty({ description: '진행바 위치 (1~6)', example: 3 })
+  deliveryStep: number;
+
+  @ApiPropertyOptional({
+    description: '실제 수령·배송 완료 시각. 법정 기간 계산의 기준이다',
+    nullable: true,
+  })
+  deliveredAt: Date | null;
+
+  @ApiPropertyOptional({ description: '대만 국내운송사', nullable: true })
+  localCarrier: string | null;
+
+  @ApiPropertyOptional({ description: '대만 국내운송장', nullable: true })
+  localTrackingNo: string | null;
+
+  @ApiProperty({
+    description:
+      '이 주문이 실린 국제배송 묶음 (국제운송장·수입신고번호·통관 상태). 없으면 빈 배열',
+    type: [GetAdminShipmentInfoResponse],
+  })
+  shipments: GetAdminShipmentInfoResponse[];
+}
+
+export class GetAdminOrderCancellationResponse {
+  @ApiPropertyOptional({
+    description: '취소·계약해제 통지를 접수한 시각. 접수 전이면 null',
+    nullable: true,
+  })
+  requestedAt: Date | null;
+
+  @ApiPropertyOptional({ description: '고객이 적은 사유', nullable: true })
+  reason: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      '결제 후 24시간 안에 접수됐는지(간편취소 구간). 접수 전이면 null. false 여도 법정 계약해제 통지로 처리해야 한다',
+    nullable: true,
+  })
+  withinQuickCancelPeriod: boolean | null;
+}
+
+export class GetAdminOrderEventResponse {
+  @ApiProperty({ example: 31 })
+  eventId: number;
+
+  @ApiProperty({ enum: OrderEventType })
+  type: OrderEventType;
+
+  @ApiPropertyOptional({ description: '처리한 관리자 ID', nullable: true })
+  adminId: number | null;
+
+  @ApiPropertyOptional({ description: '요청한 고객 ID', nullable: true })
+  userId: number | null;
+
+  @ApiPropertyOptional({
+    description: '무엇이 어떻게 바뀌었는지',
+    example: 'PREPARING_ORDER → INTERNATIONAL_SHIPPING',
+    nullable: true,
+  })
+  message: string | null;
+
+  @ApiProperty()
+  createdAt: Date;
+}
+
 export class GetAdminOrderDetailResponse {
   @ApiProperty({
     description:
@@ -246,13 +328,43 @@ export class GetAdminOrderDetailResponse {
   })
   timer: GetAdminOrderListItemResponse;
 
+  @ApiProperty({
+    description: '통관·배송 탭',
+    type: GetAdminOrderDeliveryResponse,
+  })
+  delivery: GetAdminOrderDeliveryResponse;
+
+  @ApiProperty({
+    description: '취소·환불 탭 중 취소 접수',
+    type: GetAdminOrderCancellationResponse,
+  })
+  cancellation: GetAdminOrderCancellationResponse;
+
+  @ApiProperty({
+    description: '작업 이력 탭 (최신순)',
+    type: [GetAdminOrderEventResponse],
+  })
+  events: GetAdminOrderEventResponse[];
+
   static from(
     order: OrderEntity,
     payment: PaymentEntity | null,
     now: Date,
     language?: LanguageCode,
+    shipments: ShipmentEntity[] = [],
+    events: OrderEventEntity[] = [],
   ) {
     return plainToInstance(this, {
+      delivery: this.toDelivery(order, shipments, language),
+      cancellation: this.toCancellation(order),
+      events: events.map((event) => ({
+        eventId: event.id,
+        type: event.type,
+        adminId: event.adminId ?? null,
+        userId: event.userId ?? null,
+        message: event.message ?? null,
+        createdAt: event.createDate,
+      })),
       order: GetUserOrderResponse.from(order, payment, language),
       purchase: {
         purchaseStatus: order.purchaseStatus,
@@ -263,6 +375,37 @@ export class GetAdminOrderDetailResponse {
       },
       timer: GetAdminOrderListItemResponse.from(order, now, language),
     });
+  }
+
+  private static toDelivery(
+    order: OrderEntity,
+    shipments: ShipmentEntity[],
+    language?: LanguageCode,
+  ) {
+    return {
+      deliveryStage: order.deliveryStage,
+      deliveryStageLabel: getDeliveryStageLabel(order.deliveryStage, language),
+      deliveryStep: getDeliveryStep(order.deliveryStage),
+      deliveredAt: order.deliveredAt ?? null,
+      localCarrier: order.localCarrier ?? null,
+      localTrackingNo: order.localTrackingNo ?? null,
+      shipments: shipments.map((shipment) =>
+        GetAdminShipmentInfoResponse.toInfo(shipment),
+      ),
+    };
+  }
+
+  private static toCancellation(order: OrderEntity) {
+    const requestedAt = order.cancellationRequestedAt ?? null;
+
+    return {
+      requestedAt,
+      reason: order.cancellationReason ?? null,
+      withinQuickCancelPeriod:
+        requestedAt && order.paidAt
+          ? requestedAt.getTime() < getReadyAt(order.paidAt).getTime()
+          : null,
+    };
   }
 }
 
@@ -285,4 +428,56 @@ export class PostAdminOrderPurchaseRequest {
   @IsString()
   @MaxLength(500)
   earlyReason?: string;
+}
+
+export class PostAdminOrderDeliveryStageRequest {
+  @ApiProperty({
+    description:
+      '단계를 바꿀 주문 ID (1~100개). 한 건만 바꿀 때도 배열로 보낸다. 하나라도 없거나 결제 완료가 아니면 전부 바뀌지 않는다',
+    example: [481, 482],
+    type: [Number],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(100)
+  @IsInt({ each: true })
+  @IsPositive({ each: true })
+  orderIds: number[];
+
+  @ApiProperty({
+    description:
+      '바꿀 배송 단계. 앞·뒤 어느 쪽으로든 바꿀 수 있고 이력에 남는다. 통관 상태와는 따로다',
+    enum: DeliveryStage,
+  })
+  @IsEnum(DeliveryStage)
+  deliveryStage: DeliveryStage;
+
+  @ApiPropertyOptional({
+    description:
+      'DELIVERED 일 때 실제 수령·배송 완료 시각 (ISO 8601). 생략하면 지금. 미래 시각·다른 단계와 함께 보내면 400',
+    example: '2026-11-25T06:30:00Z',
+  })
+  @IsOptional()
+  @IsISO8601()
+  deliveredAt?: string;
+}
+
+export class PatchAdminOrderLocalDeliveryRequest {
+  @ApiPropertyOptional({
+    description: '대만 국내운송사. 빈 문자열·null 이면 지운다',
+    example: '7-ELEVEN',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  localCarrier?: string | null;
+
+  @ApiPropertyOptional({
+    description: '대만 국내운송장 번호. 빈 문자열·null 이면 지운다',
+    example: 'D1234567890',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  localTrackingNo?: string | null;
 }

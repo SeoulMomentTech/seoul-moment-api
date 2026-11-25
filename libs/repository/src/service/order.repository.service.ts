@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Not, Repository, SelectQueryBuilder } from 'typeorm';
+import { In, IsNull, Not, Repository, SelectQueryBuilder } from 'typeorm';
 
+import { OrderEventEntity } from '../entity/order-event.entity';
 import { OrderInvoiceEntity } from '../entity/order-invoice.entity';
 import { OrderItemEntity } from '../entity/order-item.entity';
 import { OrderShippingEntity } from '../entity/order-shipping.entity';
@@ -31,6 +32,9 @@ export interface AdminOrderListQuery {
 /** 결제 완료 + 미발주 + 취소 미접수 — 24시간 타이머가 도는 주문 */
 const OPEN_FOR_PURCHASE = `o.status = :paid AND o.purchase_status = :notOrdered AND o.cancellation_requested_at IS NULL`;
 
+/** order_event.message 칸 길이 */
+const EVENT_MESSAGE_MAX = 500;
+
 /** 배치가 한 번에 집는 건수 */
 const BATCH_LIMIT = 100;
 
@@ -45,6 +49,8 @@ export class OrderRepositoryService {
     private readonly orderShippingRepository: Repository<OrderShippingEntity>,
     @InjectRepository(OrderInvoiceEntity)
     private readonly orderInvoiceRepository: Repository<OrderInvoiceEntity>,
+    @InjectRepository(OrderEventEntity)
+    private readonly orderEventRepository: Repository<OrderEventEntity>,
   ) {}
 
   async saveOrder(entity: OrderEntity): Promise<OrderEntity> {
@@ -403,7 +409,7 @@ export class OrderRepositoryService {
 
   /**
    * 발주 처리. 결제 완료·미발주·취소 미접수일 때만 고쳐서 버튼 중복 클릭과
-   * 취소 접수 경쟁을 DB 한 문장이 막는다. 고쳤으면 true.
+   * 취소 접수 경쟁을 DB 한 문장이 막는다. 고쳤으면 true. 트랜잭션 안에서 부른다.
    */
   async markPurchased(
     id: number,
@@ -418,11 +424,7 @@ export class OrderRepositoryService {
     const result = await this.orderRepository
       .createQueryBuilder()
       .update(OrderEntity)
-      .set({
-        ...fields,
-        purchaseStatus: PurchaseStatus.ORDERED,
-        deliveryStage: DeliveryStage.PREPARING_ORDER,
-      })
+      .set({ ...fields, purchaseStatus: PurchaseStatus.ORDERED })
       .where('id = :id', { id })
       .andWhere('status = :paid', { paid: OrderStatus.PAID })
       .andWhere('purchase_status = :notOrdered', {
@@ -431,6 +433,102 @@ export class OrderRepositoryService {
       .andWhere('cancellation_requested_at IS NULL')
       .execute();
 
+    if ((result.affected ?? 0) !== 1) {
+      return false;
+    }
+
+    // 관리자가 이미 단계를 앞으로 옮긴 주문은 되돌리지 않는다
+    await this.orderRepository.update(
+      { id, deliveryStage: DeliveryStage.ORDER_CONFIRMED },
+      { deliveryStage: DeliveryStage.PREPARING_ORDER },
+    );
+
+    return true;
+  }
+
+  /**
+   * 취소·계약해제 통지 접수. 처음 접수한 시각이 통지 시각이라 이미 접수된 건은 덮지 않는다.
+   * 발주 여부·배송 단계는 보지 않는다 — 결제 완료 주문이면 받는다. 새로 접수했으면 true.
+   */
+  async requestCancellation(
+    id: number,
+    userId: number,
+    reason: string | null,
+    now: Date,
+  ): Promise<boolean> {
+    const result = await this.orderRepository.update(
+      {
+        id,
+        userId,
+        status: OrderStatus.PAID,
+        cancellationRequestedAt: IsNull(),
+      },
+      { cancellationRequestedAt: now, cancellationReason: reason },
+    );
+
     return (result.affected ?? 0) === 1;
+  }
+
+  /** 접수된 취소를 되돌린다 (고객이 철회했을 때). 되돌렸으면 true */
+  async withdrawCancellation(id: number): Promise<boolean> {
+    const result = await this.orderRepository.update(
+      {
+        id,
+        status: OrderStatus.PAID,
+        cancellationRequestedAt: Not(IsNull()),
+      },
+      { cancellationRequestedAt: null, cancellationReason: null },
+    );
+
+    return (result.affected ?? 0) === 1;
+  }
+
+  async findByIds(ids: number[]): Promise<OrderEntity[]> {
+    return this.orderRepository.find({
+      where: { id: In(ids) },
+      relations: { shipping: true },
+      order: { id: 'ASC' },
+    });
+  }
+
+  /** 배송 완료가 아니면 수령 시각을 비운다 (단계를 되돌린 경우) */
+  async updateDeliveryStage(
+    ids: number[],
+    deliveryStage: DeliveryStage,
+    deliveredAt: Date | null,
+  ) {
+    return this.orderRepository.update(
+      { id: In(ids), status: OrderStatus.PAID },
+      { deliveryStage, deliveredAt },
+    );
+  }
+
+  async updateLocalDelivery(
+    id: number,
+    fields: Partial<Pick<OrderEntity, 'localCarrier' | 'localTrackingNo'>>,
+  ) {
+    return this.orderRepository.update({ id }, fields);
+  }
+
+  async saveEvents(
+    events: Pick<
+      OrderEventEntity,
+      'orderId' | 'type' | 'adminId' | 'userId' | 'message'
+    >[],
+  ) {
+    // 사유 같은 자유 입력이 붙어 칸 길이를 넘으면 이력 저장이 통째로 실패한다
+    return this.orderEventRepository.insert(
+      events.map((event) => ({
+        ...event,
+        message: event.message?.slice(0, EVENT_MESSAGE_MAX) ?? null,
+      })),
+    );
+  }
+
+  async findEventsByOrderId(orderId: number): Promise<OrderEventEntity[]> {
+    return this.orderEventRepository.find({
+      where: { orderId },
+      order: { id: 'DESC' },
+    });
   }
 }

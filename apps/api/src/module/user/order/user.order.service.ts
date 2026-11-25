@@ -7,7 +7,11 @@ import { OrderShippingEntity } from '@app/repository/entity/order-shipping.entit
 import { OrderEntity } from '@app/repository/entity/order.entity';
 import { InvoiceStatus, InvoiceType } from '@app/repository/enum/invoice.enum';
 import { LanguageCode } from '@app/repository/enum/language.enum';
-import { OrderStatus, ShippingType } from '@app/repository/enum/order.enum';
+import {
+  OrderEventType,
+  OrderStatus,
+  ShippingType,
+} from '@app/repository/enum/order.enum';
 import { CartRepositoryService } from '@app/repository/service/cart.repository.service';
 import { OrderRepositoryService } from '@app/repository/service/order.repository.service';
 import { PaymentRepositoryService } from '@app/repository/service/payment.repository.service';
@@ -298,6 +302,59 @@ export class UserOrderService {
     );
 
     return GetUserOrderResponse.from(order, payment, language);
+  }
+
+  /**
+   * 취소·계약해제 통지 접수. 통지 시각만 남기고 발주를 막는다 — 환불은 관리자가 따로 실행한다.
+   * 24시간 경과·한국 발주·배송 단계로 거절하지 않는다. 이미 접수된 주문은 처음 시각을 유지한다.
+   */
+  @Transactional()
+  async requestCancel(
+    userId: number,
+    id: number,
+    reason?: string,
+  ): Promise<void> {
+    const order = await this.orderRepositoryService.findDetailByIdAndUserId(
+      id,
+      userId,
+    );
+
+    if (!order) {
+      throw new ServiceError(
+        `No exist order ID: ${id}`,
+        ServiceErrorCode.NOT_FOUND_DATA,
+      );
+    }
+
+    if (order.status !== OrderStatus.PAID) {
+      throw new ServiceError(
+        `Order ${id} is not a paid order (status=${order.status})`,
+        ServiceErrorCode.CONFLICT,
+      );
+    }
+
+    const trimmed = reason?.trim() || null;
+    const accepted = await this.orderRepositoryService.requestCancellation(
+      id,
+      userId,
+      trimmed,
+      new Date(),
+    );
+
+    // 두 번 눌렀거나 이미 접수된 주문 — 처음 통지 시각을 그대로 둔다
+    if (!accepted) {
+      return;
+    }
+
+    await this.orderRepositoryService.saveEvents([
+      {
+        orderId: id,
+        type: OrderEventType.CANCEL_REQUESTED,
+        adminId: null,
+        userId,
+        message: trimmed,
+      },
+    ]);
   }
 
   /**

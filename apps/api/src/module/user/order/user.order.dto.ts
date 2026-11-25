@@ -4,14 +4,18 @@ import { PaymentEntity } from '@app/repository/entity/payment.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   DeliveryStage,
+  OrderStatus,
   PaymentMethod,
   ShippingType,
   UserOrderListFilter,
 } from '@app/repository/enum/order.enum';
 import {
+  canRequestCancel,
   getDeliveryStageLabel,
   getDeliveryStep,
   getOrderStatusLabel,
+  getReadyAt,
+  isQuickCancelPeriod,
 } from '@app/repository/helper/order-status.helper';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, plainToInstance } from 'class-transformer';
@@ -571,6 +575,47 @@ export class GetUserOrderResponse {
   paidAt: Date | null;
 
   @ApiPropertyOptional({
+    description: '실제 수령·배송 완료 시각. 배송 완료 전이면 null',
+    nullable: true,
+  })
+  deliveredAt: Date | null;
+
+  @ApiPropertyOptional({ description: '대만 국내운송사', nullable: true })
+  localCarrier: string | null;
+
+  @ApiPropertyOptional({
+    description: '대만 국내운송장 번호',
+    nullable: true,
+  })
+  localTrackingNo: string | null;
+
+  @ApiProperty({
+    description:
+      '취소·계약해제 신청 버튼을 보여도 되는지. 결제 완료 주문이면 발주·해외배송·수령 뒤에도 true 다. 이미 접수했으면 false',
+    example: true,
+  })
+  canRequestCancel: boolean;
+
+  @ApiProperty({
+    description:
+      '24시간 간편취소 구간인지(서버 시각 기준). 안내 문구만 바꾸는 값이다 — false 여도 canRequestCancel 이 true 면 신청 경로를 숨기지 않는다',
+    example: true,
+  })
+  isQuickCancelPeriod: boolean;
+
+  @ApiPropertyOptional({
+    description: '간편취소 구간이 끝나는 시각 (결제 완료 + 24시간)',
+    nullable: true,
+  })
+  quickCancelUntil: Date | null;
+
+  @ApiPropertyOptional({
+    description: '취소·계약해제를 접수한 시각. 접수 전이면 null',
+    nullable: true,
+  })
+  cancellationRequestedAt: Date | null;
+
+  @ApiPropertyOptional({
     description:
       '가장 최근 결제 시도. 결제를 시작하기 전이면 null. 입금 대기면 depositInfo 에 ATM 계좌·편의점 코드가 있다',
     type: GetOrderPaymentResponse,
@@ -614,6 +659,16 @@ export class GetUserOrderResponse {
       totalAmount: entity.totalAmount,
       orderedAt: entity.createDate,
       paidAt: entity.paidAt ?? null,
+      deliveredAt: entity.deliveredAt ?? null,
+      localCarrier: entity.localCarrier ?? null,
+      localTrackingNo: entity.localTrackingNo ?? null,
+      canRequestCancel: canRequestCancel(entity),
+      isQuickCancelPeriod: isQuickCancelPeriod(entity, new Date()),
+      quickCancelUntil:
+        entity.status === OrderStatus.PAID
+          ? getReadyAt(entity.paidAt ?? null)
+          : null,
+      cancellationRequestedAt: entity.cancellationRequestedAt ?? null,
       payment: payment ? GetOrderPaymentResponse.from(payment) : null,
       invoice: entity.invoice
         ? GetOrderInvoiceResponse.from(entity.invoice)
@@ -653,6 +708,17 @@ export class GetUserOrderResponse {
         : null,
     };
   }
+}
+
+export class PostUserOrderCancelRequest {
+  @ApiPropertyOptional({
+    description: '취소·계약해제 사유 (선택, 500자). 사유가 없어도 접수된다',
+    example: '사이즈를 잘못 골랐어요',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
 }
 
 export class GetUserOrderListRequest {
@@ -734,6 +800,13 @@ export class GetUserOrderListItemResponse {
   @ApiProperty({ description: '국제배송비 지원 할인액 NT$', example: 120 })
   internationalDiscount: number;
 
+  @ApiProperty({
+    description:
+      '취소·계약해제가 접수된 주문인지. 배송 진행바에 섞지 않고 배지로 보여준다',
+    example: false,
+  })
+  cancellationRequested: boolean;
+
   @ApiPropertyOptional({ description: '대표 상품명', nullable: true })
   representativeProductName: string | null;
 
@@ -764,6 +837,7 @@ export class GetUserOrderListItemResponse {
       deliveryStep: getDeliveryStep(entity.deliveryStage),
       totalAmount: entity.totalAmount,
       internationalDiscount: entity.internationalDiscount,
+      cancellationRequested: !!entity.cancellationRequestedAt,
       representativeProductName: first?.productNameSnapshot ?? null,
       representativeImageUrl: first?.imageUrlSnapshot ?? null,
       representativeOptionText: first?.optionTextSnapshot ?? null,

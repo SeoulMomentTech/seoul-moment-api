@@ -192,6 +192,37 @@ export class OrderEntity extends CommonEntity {
   })
   cancellationRequestedAt: Date | null;
 
+  @Column('varchar', {
+    name: 'cancellation_reason',
+    length: 500,
+    nullable: true,
+    comment: '고객이 적은 취소·계약해제 사유',
+  })
+  cancellationReason: string | null;
+
+  @Column('varchar', {
+    name: 'local_carrier',
+    length: 50,
+    nullable: true,
+    comment: '대만 국내운송사',
+  })
+  localCarrier: string | null;
+
+  @Column('varchar', {
+    name: 'local_tracking_no',
+    length: 100,
+    nullable: true,
+    comment: '대만 국내운송장 번호',
+  })
+  localTrackingNo: string | null;
+
+  @Column('timestamptz', {
+    name: 'delivered_at',
+    nullable: true,
+    comment: '실제 수령·배송 완료 시각. 법정 기간 계산의 기준이다',
+  })
+  deliveredAt: Date | null;
+
   @ManyToOne(() => UserEntity, {
     onDelete: 'CASCADE',
     createForeignKeyConstraints: process.env.NODE_ENV !== 'test',

@@ -9,12 +9,14 @@ import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   Request,
@@ -28,6 +30,8 @@ import {
   GetAdminOrderListItemResponse,
   GetAdminOrderListRequest,
   GetAdminOrderSummaryResponse,
+  PatchAdminOrderLocalDeliveryRequest,
+  PostAdminOrderDeliveryStageRequest,
   PostAdminOrderPurchaseRequest,
 } from './admin.order.dto';
 import { AdminOrderService } from './admin.order.service';
@@ -80,7 +84,7 @@ export class AdminOrderController {
   @ApiOperation({
     summary: '주문 상세 (우측 드로어)',
     description:
-      '고객 주문 상세 + 발주·매입 + 24시간 타이머. 통관·배송, 취소·환불, 작업 이력 탭은 아직 데이터가 없다.',
+      '고객 주문 상세 + 발주·매입 + 24시간 타이머 + 통관·배송(delivery) + 취소 접수(cancellation) + 작업 이력(events). 환불 상태는 아직 없다.',
   })
   @ApiHeader(LANGUAGE_HEADER)
   @ResponseData(GetAdminOrderDetailResponse)
@@ -118,6 +122,72 @@ export class AdminOrderController {
     @Body() body: PostAdminOrderPurchaseRequest,
   ): Promise<void> {
     await this.adminOrderService.startPurchase(
+      getTokenSubjectId(req.user),
+      id,
+      body,
+    );
+  }
+
+  @Delete(':id(\\d+)/cancel-request')
+  @ApiOperation({
+    summary: '취소·계약해제 접수 철회',
+    description:
+      '고객이 취소 의사를 거둔 경우에만 쓴다. 접수 시각·사유를 지우고 다시 발주할 수 있게 한다. 철회한 사실과 원래 사유는 작업 이력에 남는다. ' +
+      '적법한 통지를 관리자 판단으로 거절하는 용도가 아니다.',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ResponseException(HttpStatus.NOT_FOUND, 'Order not found')
+  @ResponseException(HttpStatus.CONFLICT, '접수된 취소가 없음')
+  async deleteAdminOrderCancelRequest(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    await this.adminOrderService.withdrawCancelRequest(
+      getTokenSubjectId(req.user),
+      id,
+    );
+  }
+
+  @Post('delivery-stage')
+  @ApiOperation({
+    summary: '배송 단계 변경 (여러 주문 한 번에)',
+    description:
+      '고객 주문조회의 배송 6단계를 수동으로 바꾼다. 결제 완료 주문만 되고 하나라도 아니면 전부 바뀌지 않는다(409). ' +
+      '통관 상태와는 따로다 — 대만 도착(ARRIVED_TAIWAN)으로 바꿔도 통관 완료가 되지 않고, 통관 완료를 넣어도 단계가 넘어가지 않는다. ' +
+      'DELIVERED 는 수령 시각(deliveredAt)이 함께 저장된다. 바꿀 때마다 작업 이력에 이전 → 이후 단계가 남는다.',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ResponseException(HttpStatus.CONFLICT, '없는 주문 / 결제 완료가 아닌 주문')
+  @ResponseException(
+    HttpStatus.BAD_REQUEST,
+    'deliveredAt 이 미래이거나 DELIVERED 가 아닌 단계와 함께 옴',
+  )
+  async postAdminOrderDeliveryStage(
+    @Request() req: any,
+    @Body() body: PostAdminOrderDeliveryStageRequest,
+  ): Promise<void> {
+    await this.adminOrderService.changeDeliveryStage(
+      getTokenSubjectId(req.user),
+      body,
+    );
+  }
+
+  @Patch(':id(\\d+)/local-delivery')
+  @ApiOperation({
+    summary: '대만 국내운송사·운송장 입력',
+    description:
+      '보낸 필드만 고친다. 국제운송장·수입신고번호는 주문이 아니라 묶음(/admin/shipment)에 넣는다. 배송 단계는 바뀌지 않는다.',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ResponseException(HttpStatus.NOT_FOUND, 'Order not found')
+  @ResponseException(HttpStatus.CONFLICT, '결제 완료 주문이 아님')
+  @ResponseException(HttpStatus.BAD_REQUEST, '고칠 필드가 없음')
+  async patchAdminOrderLocalDelivery(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: PatchAdminOrderLocalDeliveryRequest,
+  ): Promise<void> {
+    await this.adminOrderService.updateLocalDelivery(
       getTokenSubjectId(req.user),
       id,
       body,

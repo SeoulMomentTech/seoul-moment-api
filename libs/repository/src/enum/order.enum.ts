@@ -86,3 +86,21 @@ export enum AdminOrderChip {
   CANCEL_REQUESTED = 'CANCEL_REQUESTED',
   ORDERED = 'ORDERED',
 }
+
+/** 통관 상태. 배송 단계와 독립이다 — 대만 도착 ≠ 통관 완료 ≠ 국내배송 시작 */
+export enum CustomsStatus {
+  WAITING = 'WAITING',
+  IN_PROGRESS = 'IN_PROGRESS',
+  HELD = 'HELD',
+  CLEARED = 'CLEARED',
+}
+
+/** 주문 작업 이력 종류. 이력은 지우지 않고 쌓기만 한다 */
+export enum OrderEventType {
+  CANCEL_REQUESTED = 'CANCEL_REQUESTED',
+  CANCEL_REQUEST_WITHDRAWN = 'CANCEL_REQUEST_WITHDRAWN',
+  PURCHASED = 'PURCHASED',
+  DELIVERY_STAGE_CHANGED = 'DELIVERY_STAGE_CHANGED',
+  LOCAL_DELIVERY_UPDATED = 'LOCAL_DELIVERY_UPDATED',
+  SHIPMENT_UPDATED = 'SHIPMENT_UPDATED',
+}

@@ -10,6 +10,7 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
@@ -25,6 +26,7 @@ import {
   GetUserOrderListItemResponse,
   GetUserOrderListRequest,
   GetUserOrderResponse,
+  PostUserOrderCancelRequest,
   PostUserOrderPreviewRequest,
   PostUserOrderPreviewResponse,
   PostUserOrderRequest,
@@ -170,5 +172,29 @@ export class UserOrderController {
     );
 
     return new ResponseDataDto(data);
+  }
+
+  @Post(':id(\\d+)/cancel-request')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: '취소·계약해제 신청 (통지 접수)',
+    description:
+      '결제 완료(PAID) 주문이면 24시간 경과·한국 발주·해외배송·수령 여부와 무관하게 접수된다. ' +
+      '접수 시각을 남기고 한국 발주를 막을 뿐, 환불은 관리자가 확인한 뒤 따로 진행한다 — 이 API 가 돈을 돌려주지는 않는다. ' +
+      '이미 접수된 주문에 다시 보내도 204 이고 처음 접수 시각이 유지된다.',
+  })
+  @ApiBearerAuth(SwaggerAuthName.ACCESS_TOKEN)
+  @UseGuards(UserOneTimeTokenGuard)
+  @ResponseException(HttpStatus.NOT_FOUND, 'Order not found')
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '결제 완료 주문이 아님 (결제 전·입금 대기·취소·실패)',
+  )
+  async postUserOrderCancelRequest(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: PostUserOrderCancelRequest,
+  ): Promise<void> {
+    await this.userOrderService.requestCancel(req.user.id, id, body.reason);
   }
 }
