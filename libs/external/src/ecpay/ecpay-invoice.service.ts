@@ -6,6 +6,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
 
 import {
+  EcpayInvoiceAdjustResultDto,
+  EcpayInvoiceAllowanceData,
   EcpayInvoiceCheckDto,
   EcpayInvoiceIssueData,
   EcpayInvoiceResultDto,
@@ -44,6 +46,29 @@ export class ExternalEcpayInvoiceService {
     });
 
     return EcpayInvoiceResultDto.fromGetIssue(result);
+  }
+
+  /** 作廢. invoiceDate 는 'yyyy-MM-dd' (대만 날짜), reason 은 20자 이하 */
+  async invalid(
+    invoiceNo: string,
+    invoiceDate: string,
+    reason: string,
+  ): Promise<EcpayInvoiceAdjustResultDto> {
+    const result = await this.post('/B2CInvoice/Invalid', {
+      InvoiceNo: invoiceNo,
+      InvoiceDate: invoiceDate,
+      Reason: reason,
+    });
+
+    return EcpayInvoiceAdjustResultDto.from(result);
+  }
+
+  async allowance(
+    data: EcpayInvoiceAllowanceData,
+  ): Promise<EcpayInvoiceAdjustResultDto> {
+    const result = await this.post('/B2CInvoice/Allowance', data);
+
+    return EcpayInvoiceAdjustResultDto.from(result);
   }
 
   async checkBarcode(barcode: string): Promise<EcpayInvoiceCheckDto> {

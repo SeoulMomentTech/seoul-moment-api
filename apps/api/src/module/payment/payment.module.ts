@@ -46,6 +46,6 @@ import { InvoiceModule } from '../invoice/invoice.module';
     PaymentBatchService,
     PaymentScheduler,
   ],
-  exports: [PaymentStartService, PaymentBatchService],
+  exports: [PaymentStartService, PaymentBatchService, StockReservationService],
 })
 export class PaymentModule {}

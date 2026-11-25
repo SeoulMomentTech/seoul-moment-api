@@ -9,10 +9,13 @@ import { InvoiceType } from '@app/repository/enum/invoice.enum';
 import { plainToInstance } from 'class-transformer';
 
 import {
+  buildAllowanceData,
   buildIssueData,
   buildRelateNumber,
+  getVoidDeadline,
   isValidTaxId,
   normalizeTaiwanPhone,
+  toTaipeiDate,
 } from '../apps/api/src/module/invoice/invoice.util';
 
 /** 전자발표 순수 함수. 앱·DB 없이 돈다 */
@@ -198,6 +201,56 @@ describe('전자발표 순수 함수', () => {
       expect(data).toMatchObject(expected);
       expect(data.Print).toBe('0');
       expect(data.CustomerEmail || data.CustomerPhone).toBeTruthy();
+    });
+  });
+
+  describe('作廢 기한 · 折讓 데이터', () => {
+    it.each([
+      // [발행 시각(UTC), 作廢 마감(UTC)] — 마감은 대만 13일 23:59:59
+      ['2026-11-25T02:00:00Z', '2027-01-13T15:59:59.000Z'],
+      ['2026-12-31T15:59:59Z', '2027-01-13T15:59:59.000Z'],
+      // UTC 로는 12월이지만 대만은 이미 1월 1일 — 1–2월 기간이다
+      ['2026-12-31T16:30:00Z', '2027-03-13T15:59:59.000Z'],
+      ['2026-02-28T03:00:00Z', '2026-03-13T15:59:59.000Z'],
+      ['2026-03-01T03:00:00Z', '2026-05-13T15:59:59.000Z'],
+    ])('%s 에 발행한 발표는 %s 까지 作廢 할 수 있다', (issued, deadline) => {
+      expect(getVoidDeadline(new Date(issued)).toISOString()).toBe(deadline);
+    });
+
+    it('InvoiceDate 는 대만 날짜로 만든다', () => {
+      expect(toTaipeiDate(new Date('2026-11-25T17:00:00Z'))).toBe('2026-11-26');
+      expect(toTaipeiDate(new Date('2026-11-25T15:59:59Z'))).toBe('2026-11-25');
+    });
+
+    it('전액 折讓 은 품목 합이 折讓 금액과 같고, 이메일이 없으면 통지를 끈다', () => {
+      const invoice = plainToInstance(OrderInvoiceEntity, {
+        invoiceNo: 'LY74004967',
+        customerEmail: null,
+      });
+
+      const data = buildAllowanceData(
+        invoice,
+        3880,
+        '2026-11-25',
+        '訂單取消退款',
+      );
+
+      expect(data.AllowanceAmount).toBe(3880);
+      expect(data.Items.reduce((sum, item) => sum + item.ItemAmount, 0)).toBe(
+        3880,
+      );
+      expect(data.AllowanceNotify).toBe('N');
+      expect(
+        buildAllowanceData(
+          plainToInstance(OrderInvoiceEntity, {
+            invoiceNo: 'LY74004967',
+            customerEmail: 'a@example.com',
+          }),
+          100,
+          '2026-11-25',
+          'x',
+        ),
+      ).toMatchObject({ AllowanceNotify: 'E', NotifyMail: 'a@example.com' });
     });
   });
 });

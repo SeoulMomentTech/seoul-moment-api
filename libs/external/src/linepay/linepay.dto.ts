@@ -87,3 +87,65 @@ export class LinePayResultDto {
     return this.returnCode === LINE_PAY_SUCCESS;
   }
 }
+
+/** 이미 전액 환불된 거래에 다시 환불을 요청했을 때 */
+export const LINE_PAY_ALREADY_REFUNDED = '1165';
+
+export interface LinePayRefundInfo {
+  refundTransactionId?: string;
+  refundTransactionDate?: string;
+}
+
+export class LinePayRefundResultDto extends LinePayResultDto {
+  refundTransactionId: string | null;
+
+  static fromRefund(
+    response: LinePayRawResponse<LinePayRefundInfo>,
+  ): LinePayRefundResultDto {
+    const dto = new LinePayRefundResultDto();
+    dto.returnCode = response.returnCode;
+    dto.returnMessage = response.returnMessage;
+    dto.refundTransactionId = response.info?.refundTransactionId
+      ? String(response.info.refundTransactionId)
+      : null;
+
+    return dto;
+  }
+
+  isAlreadyRefunded(): boolean {
+    return this.returnCode === LINE_PAY_ALREADY_REFUNDED;
+  }
+}
+
+export interface LinePayPaymentDetail {
+  transactionId?: string;
+  refundList?: { refundTransactionId?: string; refundAmount?: number }[];
+}
+
+/** 결제 조회(GET /v3/payments)에서 환불 내역만 뽑은 것 */
+export class LinePayRefundLookupDto extends LinePayResultDto {
+  /** 지금까지 환불된 합계 (양수) */
+  refundedAmount: number;
+  refundTransactionId: string | null;
+
+  static fromDetails(
+    response: LinePayRawResponse<LinePayPaymentDetail[]>,
+  ): LinePayRefundLookupDto {
+    const refunds = (response.info ?? []).flatMap(
+      (detail) => detail.refundList ?? [],
+    );
+    const dto = new LinePayRefundLookupDto();
+    dto.returnCode = response.returnCode;
+    dto.returnMessage = response.returnMessage;
+    // refundAmount 는 음수로 온다
+    dto.refundedAmount = refunds.reduce(
+      (sum, refund) => sum + Math.abs(Number(refund.refundAmount ?? 0)),
+      0,
+    );
+    dto.refundTransactionId = refunds[0]?.refundTransactionId
+      ? String(refunds[0].refundTransactionId)
+      : null;
+
+    return dto;
+  }
+}

@@ -19,3 +19,18 @@ export enum InvoiceStatus {
   /** 발행 실패. 배치가 몇 번 다시 시도한다 */
   FAILED = 'FAILED',
 }
+
+/**
+ * 환불 뒤 발표 정정 상태. 환불(PG)과 따로 관리한다 — 정정이 실패해도 환불은 다시 하지 않는다.
+ */
+export enum InvoiceAdjustStatus {
+  /** 정정할 일이 없다 (환불 없음, 또는 발행 전에 취소됨) */
+  NONE = 'NONE',
+  /** 환불이 끝나 정정해야 한다 */
+  PENDING = 'PENDING',
+  /** 作廢 (발표 전체 무효) */
+  VOIDED = 'VOIDED',
+  /** 折讓 (신고 기한이 지나 作廢 할 수 없을 때) */
+  ALLOWANCED = 'ALLOWANCED',
+  FAILED = 'FAILED',
+}

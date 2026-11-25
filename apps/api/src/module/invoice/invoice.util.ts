@@ -1,4 +1,5 @@
 import {
+  EcpayInvoiceAllowanceData,
   EcpayInvoiceIssueData,
   EcpayInvoiceItem,
 } from '@app/external/ecpay/ecpay-invoice.dto';
@@ -149,7 +150,7 @@ function buildItems(
   }
 
   // SalesAmount 가 할인을 뺀 값이라 음수 라인으로 합을 맞춘다.
-  // shortcut: ECPay 발표가 음수 ItemAmount 를 받는지 문서로 확인 못 했다 — 할인 스위치를 켜기 전 sandbox 로 확인한다.
+  // ECPay stage 는 음수 ItemAmount 발행을 받는다 (2026-11-25 실측). 운영 상점에서는 아직 확인하지 않았다.
   if (order.internationalDiscount > 0) {
     lines.push({
       ItemName: '國際運費補貼',
@@ -167,4 +168,59 @@ function truncate(value: string, max: number): string {
   const chars = Array.from(value);
 
   return chars.length <= max ? value : chars.slice(0, max).join('');
+}
+
+const TAIPEI_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+/**
+ * 作廢 할 수 있는 마지막 시각. 발표는 두 달(1–2월, 3–4월 …) 단위로 신고되고, 그 기간이
+ * 끝난 다음 홀수 달 13일 23:59:59(대만)가 지나면 재정부에 신고돼 作廢 할 수 없다
+ * (developers.ecpay.com.tw/7906). 그 뒤에는 折讓 으로만 정정한다.
+ */
+export function getVoidDeadline(invoiceDate: Date): Date {
+  const taipei = new Date(invoiceDate.getTime() + TAIPEI_OFFSET_MS);
+  const month = taipei.getUTCMonth() + 1;
+  const periodEndMonth = month % 2 === 0 ? month : month + 1;
+
+  // Date.UTC 의 월은 0부터라 periodEndMonth 가 곧 '다음 달'이다 (12 → 이듬해 1월)
+  return new Date(
+    Date.UTC(taipei.getUTCFullYear(), periodEndMonth, 13, 23, 59, 59) -
+      TAIPEI_OFFSET_MS,
+  );
+}
+
+/** Date → 'yyyy-MM-dd' (대만 날짜). 作廢·折讓 의 InvoiceDate */
+export function toTaipeiDate(date: Date): string {
+  return new Date(date.getTime() + TAIPEI_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/**
+ * 전액 折讓. 원 발표의 품목을 다시 나열하지 않고 환불 금액 한 줄로 낸다
+ * (ItemAmount 합 = AllowanceAmount, stage 실측으로 통과 확인).
+ */
+export function buildAllowanceData(
+  invoice: OrderInvoiceEntity,
+  amount: number,
+  invoiceDate: string,
+  reason: string,
+): EcpayInvoiceAllowanceData {
+  return {
+    InvoiceNo: invoice.invoiceNo,
+    InvoiceDate: invoiceDate,
+    AllowanceNotify: invoice.customerEmail ? 'E' : 'N',
+    NotifyMail: invoice.customerEmail ?? '',
+    AllowanceAmount: amount,
+    Reason: reason,
+    Items: [
+      {
+        ItemSeq: 1,
+        ItemName: '訂單全額退款',
+        ItemCount: 1,
+        ItemWord: '式',
+        ItemPrice: amount,
+        ItemTaxType: '1',
+        ItemAmount: amount,
+      },
+    ],
+  };
 }

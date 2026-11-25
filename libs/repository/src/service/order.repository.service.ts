@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Not, Repository, SelectQueryBuilder } from 'typeorm';
+import {
+  In,
+  IsNull,
+  LessThan,
+  Not,
+  Repository,
+  SelectQueryBuilder,
+} from 'typeorm';
 
 import { OrderEventEntity } from '../entity/order-event.entity';
 import { OrderInvoiceEntity } from '../entity/order-invoice.entity';
@@ -8,7 +15,7 @@ import { OrderItemEntity } from '../entity/order-item.entity';
 import { OrderShippingEntity } from '../entity/order-shipping.entity';
 import { OrderEntity } from '../entity/order.entity';
 import { PaymentEntity } from '../entity/payment.entity';
-import { InvoiceStatus } from '../enum/invoice.enum';
+import { InvoiceAdjustStatus, InvoiceStatus } from '../enum/invoice.enum';
 import {
   AdminOrderChip,
   DeliveryStage,
@@ -111,6 +118,17 @@ export class OrderRepositoryService {
     );
 
     return (result.affected ?? 0) === 1;
+  }
+
+  /**
+   * 발표 행에서 넘긴 칸만 고친다. 엔티티를 통째로 save 하면 읽은 뒤 다른 작업이 바꾼 칸
+   * (발행 중에 환불이 끝나 PENDING 이 된 adjust_status 등)을 옛 값으로 덮는다.
+   */
+  async updateInvoiceFields(
+    orderId: number,
+    fields: Partial<Omit<OrderInvoiceEntity, 'orderId' | 'order'>>,
+  ) {
+    return this.orderInvoiceRepository.update({ orderId }, fields);
   }
 
   async findInvoiceByOrderId(
@@ -398,10 +416,7 @@ export class OrderRepositoryService {
 
   async findAdminDetail(id: number): Promise<OrderEntity | null> {
     return this.orderRepository.findOne({
-      where: {
-        id,
-        status: In([OrderStatus.PAID, OrderStatus.PAYMENT_WAITING]),
-      },
+      where: { id, status: Not(OrderStatus.PENDING) },
       relations: { items: true, shipping: true, invoice: true },
       order: { items: { id: 'ASC' } },
     });
@@ -530,5 +545,42 @@ export class OrderRepositoryService {
       where: { orderId },
       order: { id: 'DESC' },
     });
+  }
+
+  /**
+   * 환불이 끝난 주문의 발표를 정정 대기로 돌린다. 이미 정정 중·완료인 건은 건드리지 않는다.
+   * 발표가 아직 안 나갔어도 PENDING 으로 둔다 — 발행 중이던 요청이 늦게 성공했을 수 있어
+   * 정정 쪽이 ECPay 에 조회해서 가린다.
+   */
+  async markInvoiceAdjustPending(orderId: number) {
+    return this.orderInvoiceRepository.update(
+      { orderId, adjustStatus: InvoiceAdjustStatus.NONE },
+      { adjustStatus: InvoiceAdjustStatus.PENDING },
+    );
+  }
+
+  /** 정정이 안 끝난 발표 (배치 재시도). 횟수를 넘긴 건은 관리자가 직접 다시 시도한다 */
+  async findInvoicesToAdjust(
+    maxAttempts: number,
+  ): Promise<OrderInvoiceEntity[]> {
+    return this.orderInvoiceRepository.find({
+      where: {
+        adjustStatus: In([
+          InvoiceAdjustStatus.PENDING,
+          InvoiceAdjustStatus.FAILED,
+        ]),
+        adjustAttemptCount: LessThan(maxAttempts),
+      },
+      order: { orderId: 'ASC' },
+      take: BATCH_LIMIT,
+    });
+  }
+
+  async findInvoicesByOrderIds(
+    orderIds: number[],
+  ): Promise<OrderInvoiceEntity[]> {
+    return orderIds.length
+      ? this.orderInvoiceRepository.findBy({ orderId: In(orderIds) })
+      : [];
   }
 }

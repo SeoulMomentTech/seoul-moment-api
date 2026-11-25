@@ -58,6 +58,7 @@ import { ProductItemEntity } from './entity/product-item.entity';
 import { ProductVariantEntity } from './entity/product-variant.entity';
 import { ProductEntity } from './entity/product.entity';
 import { PromotionEntity } from './entity/promotion.entity';
+import { RefundEntity } from './entity/refund.entity';
 import { ShipmentOrderEntity } from './entity/shipment-order.entity';
 import { ShipmentEntity } from './entity/shipment.entity';
 import { ShippingPolicyEntity } from './entity/shipping-policy.entity';
@@ -91,6 +92,7 @@ import { PartnerRepositoryService } from './service/partner.repository.service';
 import { PaymentRepositoryService } from './service/payment.repository.service';
 import { ProductFilterRepositoryService } from './service/product-filter.repository.service';
 import { ProductRepositoryService } from './service/product.repository.service';
+import { RefundRepositoryService } from './service/refund.repository.service';
 import { ShipmentRepositoryService } from './service/shipment.repository.service';
 import { ShippingRepositoryService } from './service/shipping.repository.service';
 import { UserSnsRepositoryService } from './service/user-sns.repository.service';
@@ -167,6 +169,7 @@ import { UserRepositoryService } from './service/user.repository.service';
       OrderShippingEntity,
       OrderInvoiceEntity,
       OrderEventEntity,
+      RefundEntity,
       ShipmentEntity,
       ShipmentOrderEntity,
       PaymentEntity,
@@ -202,6 +205,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     PaymentRepositoryService,
     ShippingRepositoryService,
     ShipmentRepositoryService,
+    RefundRepositoryService,
     AdminMemberRepositoryService,
   ],
   exports: [
@@ -230,6 +234,7 @@ import { UserRepositoryService } from './service/user.repository.service';
     PaymentRepositoryService,
     ShippingRepositoryService,
     ShipmentRepositoryService,
+    RefundRepositoryService,
     AdminMemberRepositoryService,
   ],
 })

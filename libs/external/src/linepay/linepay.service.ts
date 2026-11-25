@@ -7,7 +7,11 @@ import { randomUUID } from 'crypto';
 import { lastValueFrom } from 'rxjs';
 
 import {
+  LinePayPaymentDetail,
   LinePayRawResponse,
+  LinePayRefundInfo,
+  LinePayRefundLookupDto,
+  LinePayRefundResultDto,
   LinePayRequestInfo,
   LinePayRequestInput,
   LinePayRequestResultDto,
@@ -83,21 +87,50 @@ export class ExternalLinePayService {
     return LinePayResultDto.from(response);
   }
 
+  /** 전액·부분 환불. 타임아웃이면 결과를 모르는 것이니 findRefund 로 확인한 뒤에만 다시 부른다 */
+  async refund(
+    transactionId: string,
+    refundAmount: number,
+  ): Promise<LinePayRefundResultDto> {
+    const response = await this.send<LinePayRefundInfo>(
+      'POST',
+      `/v3/payments/${transactionId}/refund`,
+      { refundAmount },
+    );
+
+    return LinePayRefundResultDto.fromRefund(response);
+  }
+
+  /** 이 거래에 이미 나간 환불이 있는지 조회한다 */
+  async findRefund(transactionId: string): Promise<LinePayRefundLookupDto> {
+    const response = await this.send<LinePayPaymentDetail[]>(
+      'GET',
+      '/v3/payments',
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+      `transactionId=${transactionId}`,
+    );
+
+    return LinePayRefundLookupDto.fromDetails(response);
+  }
+
   private async send<T = unknown>(
     method: 'GET' | 'POST',
     apiPath: string,
     body?: Record<string, unknown>,
     timeout = DEFAULT_TIMEOUT_MS,
+    query = '',
   ): Promise<LinePayRawResponse<T>> {
     const { channelId, channelSecret, apiUrl } = this.getCredentials();
-    const payload = body ? JSON.stringify(body) : '';
+    // 서명의 본문 자리에 POST 는 JSON, GET 은 쿼리스트링이 들어간다
+    const payload = body ? JSON.stringify(body) : query;
     const nonce = randomUUID();
 
     try {
       const { data } = await lastValueFrom(
         this.httpService.request<string>({
           method,
-          url: `${apiUrl}${apiPath}`,
+          url: `${apiUrl}${apiPath}${query ? `?${query}` : ''}`,
           data: method === 'POST' ? payload : undefined,
           headers: {
             'Content-Type': 'application/json',

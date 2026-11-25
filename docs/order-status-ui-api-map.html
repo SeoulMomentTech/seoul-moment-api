@@ -318,7 +318,7 @@ footer{padding:26px 0 60px;color:var(--ink-3);font-size:12.5px;border-top:1px so
     <div class="rule-card">
       <h4>인증</h4>
       <p>고객 API는 회원 <code>Authorization: Bearer</code>. 관리자 API(<code>/admin/*</code>)는 <b>관리자 토큰</b>이다 —
-         회원 토큰으로 부르면 <b>401</b>.</p>
+         회원 토큰으로 부르면 <b>401</b>. 환불 실행·수동 완료·발표 정정은 <b>super_admin</b> 관리자만 된다(그 외 <b>403</b>).</p>
     </div>
     <div class="rule-card">
       <h4>응답 봉투</h4>
@@ -342,16 +342,18 @@ footer{padding:26px 0 60px;color:var(--ink-3);font-size:12.5px;border-top:1px so
     <div class="rule-card">
       <h4>변경 표기</h4>
       <p>기준은 <code>payment-ui-api-map.html</code>(결제 1차, 2026-11-04). <span class="nt new">new</span> 새 API ·
-         <span class="nt upd">updated</span> 필드가 늘어난 API. <b>라벨이 없으면 예전 그대로</b>다.</p>
+         <span class="nt upd">updated</span> 필드가 늘어난 API. <b>라벨이 없으면 예전 그대로</b>다.
+         03 의 3~5번, 05 의 5~7번, 07·08 은 <b>2026-11-25</b> 에 더해졌다.</p>
     </div>
     <div class="rule-card">
       <h4>Swagger</h4>
       <p>DEV <code>api-dev.seoulmoment.com.tw/docs</code> · PROD <code>api.seoulmoment.com.tw/docs</code>.
-         <b>배포 전이라 링크는 DEV 배포 뒤에 열린다</b> (PROD 는 main 뒤).</p>
+         2026-11-25 에 더해진 API 의 링크는 <b>DEV 배포 뒤에 열린다</b> (PROD 는 main 뒤).</p>
     </div>
     <div class="rule-card">
       <h4>실측</h4>
-      <p>예시 값은 코드와 테스트(42건)에서 가져왔다. <b>DEV 배포 후 실측 예정</b> — 실측하면 이 카드를 갱신한다.</p>
+      <p>예시 값은 코드와 통합 테스트(<code>test/order.fulfillment.spec.ts</code>)에서 가져왔다. 발표 作廢·折讓 은 ECPay stage 에 실제로 호출해 확인했고,
+         LINE Pay 환불과 관리자 API 는 <b>DEV 실측 전</b>이다.</p>
     </div>
   </div>
 
@@ -362,6 +364,8 @@ footer{padding:26px 0 60px;color:var(--ink-3);font-size:12.5px;border-top:1px so
     <a href="#s4"><b>04</b>관리자 · 주문 및 발주 관리</a>
     <a href="#s5"><b>05</b>관리자 · 주문 드로어 · 발주</a>
     <a href="#s6"><b>06</b>관리자 · 할인 스위치</a>
+    <a href="#s7"><b>07</b>관리자 · 통관·물류 관리</a>
+    <a href="#s8"><b>08</b>관리자 · 취소/환불 관리</a>
     <a href="#flow"><b>—</b>호출 순서</a>
   </nav>
 </header>
@@ -626,7 +630,7 @@ months: 1~36 (없으면 전체 기간)</div>
           <div class="api-top"><span class="pin">3</span><span class="what">배송 6단계 진행바</span><span class="nt new">new</span></div>
           <div class="api-ep"><span class="m none">같은 응답</span><code>deliveryStage · deliveryStep</code></div>
           <p class="api-desc">진행바 위치는 <code>deliveryStep</code>(1~6)을 그대로 쓰고, 문구는 <code>deliveryStageLabel</code>. <b>취소·환불은 이 바에 섞지 않는다</b> —
-            <code>status</code> 가 <code>CANCELED</code> 면 바를 숨기고 배지로만 보여준다. <b>해외배송 중</b>은 실제 국제운송이 시작된 때만, <b>대만 도착 ≠ 통관 완료</b>다.</p>
+            <code>status</code> 가 <code>CANCELED</code> 면 바를 숨기고 배지로만 보여준다. 취소·계약해제를 접수한 주문은 <code>cancellationRequested: true</code> <span class="nt new">new</span> 로 오니 진행바는 그대로 두고 “取消申請中” 배지를 더한다. <b>해외배송 중</b>은 실제 국제운송이 시작된 때만, <b>대만 도착 ≠ 통관 완료</b>다.</p>
           <div class="io">  <span class="k">deliveryStage</span>:      "PREPARING_ORDER",
   <span class="k">deliveryStageLabel</span>: "商品準備中",
   <span class="k">deliveryStep</span>:       2
@@ -656,7 +660,7 @@ months: 1~36 (없으면 전체 기간)</div>
     <span class="no">03</span>
     <h2>주문 상세</h2>
     <span class="route">/mypage/orders/:id</span>
-    <p class="sub">목록에서 누른 <code>orderId</code> 로 부른다. 기존 응답에 상태 문구·배송 단계·할인 스냅샷이 더해졌다.</p>
+    <p class="sub">목록에서 누른 <code>orderId</code> 로 부른다. 기존 응답에 상태 문구·배송 단계·할인 스냅샷이 더해졌고, <b>취소·계약해제 신청과 환불 진행 상태</b>가 이 화면에 붙는다.</p>
   </div>
   <div class="split">
     <div class="ui-col">
@@ -693,6 +697,31 @@ months: 1~36 (없으면 전체 기간)</div>
             <div class="r"><span>배송비</span><span>NT$0</span></div>
             <div class="r total"><span>결제 금액</span><span>NT$3,880</span></div>
           </div>
+        </div>
+
+        <div class="hl" data-k="3-3">
+          <span class="pin">3</span>
+          <div class="fieldrow">
+            <div style="font-size:11.5px;color:var(--ink-3);line-height:1.5">訂單成立後24小時內可快速申請取消。依法享有之通訊交易契約解除權，不受此期限限制。</div>
+            <div class="lbl" style="margin-top:8px">取消原因 (選填)</div><div class="input ph">尺寸選錯了</div>
+          </div>
+          <div class="bottombar" style="border-top:none"><span class="btn ghost" style="flex:1">申請取消 / 解除契約</span></div>
+        </div>
+
+        <div class="hl" data-k="3-4">
+          <span class="pin">4</span>
+          <div class="fieldrow" style="border-top:1px solid var(--rule-soft)">
+            <div style="font-size:12px;font-weight:600">退款處理中 · NT$3,880</div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:4px">申請時間 2026-11-25 14:02 · 電子發票 作廢處理中</div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="3-5">
+          <span class="pin">5</span>
+          <div class="fieldrow" style="border-top:1px solid var(--rule-soft)">
+            <div class="lbl">台灣配送</div>
+            <div style="font-size:12.5px">7-ELEVEN · D1234567890</div>
+          </div>
         </div></div>
 </div>
       </div>
@@ -727,7 +756,63 @@ months: 1~36 (없으면 전체 기간)</div>
   <span class="k">internationalDiscount</span>: 120,  <span class="n">// NEW</span>
   shippingFee: 0, totalAmount: 3880 }</div>
         </div>
+
+        <div class="api-row" data-k="3-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">취소 · 계약해제 신청 버튼</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/user/order/{id}/cancel-request</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_postUserOrderCancelRequest" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_postUserOrderCancelRequest" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">버튼은 상세 응답의 <code>canRequestCancel</code> 이 <b>true 일 때 보인다</b> — 결제 완료 주문이면 24시간이 지나도, 한국 발주·해외배송 중이어도, <b>수령한 뒤에도 true</b> 다(법정 계약해제권). 숨기는 조건을 프론트에서 따로 만들지 않는다.
+            <code>isQuickCancelPeriod</code> 는 <b>안내 문구만</b> 바꾼다(24시간 안이면 “快速取消”, 지나면 “解除契約”). 이 API 는 <b>접수만 하고 돈을 돌려주지 않는다</b> — 환불은 관리자가 확인 후 진행하고 그 상태가 4번에 뜬다.
+            <b>204 라 본문이 없으니</b> 성공하면 상세를 다시 부른다. 두 번 눌러도 204 이고 처음 접수 시각이 유지된다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io">{
+  reason?: "尺寸選錯了"
+}</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>상세 응답의 관련 필드</div>
+              <div class="io">{
+  <span class="k">canRequestCancel</span>:    true,
+  <span class="k">isQuickCancelPeriod</span>: true,
+  quickCancelUntil?:
+    "2026-11-24T05:14:00Z",
+  <span class="k">cancellationRequestedAt</span>?: null
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">Bearer 필수</span><span class="tag">reason ≤ 500자</span><span class="tag">204 No Content</span><span class="tag err">409 결제 완료 주문이 아님</span><span class="tag err">404 주문 없음 · 남의 주문</span></div>
+        </div>
+
+        <div class="api-row" data-k="3-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">환불 진행 상태 · 발표 정정</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>refund · invoice.adjustStatus</code></div>
+          <p class="api-desc"><code>refund</code> 가 <b>null 이면 환불이 아직 시작되지 않은 것</b>이다(접수만 된 상태 — “申請已受理” 로 보여준다).
+            <code>REQUESTED</code>·<code>PROCESSING</code> 은 “退款處理中”, <code>COMPLETED</code> 는 “已退款”, <code>FAILED</code> 는 실패라고 쓰지 말고 “處理中，客服確認中” 정도로 둔다(관리자가 다른 방법으로 돌려준다).
+            환불이 끝나면 주문 <code>status</code> 가 <b>CANCELED</b> 로 바뀌고 <code>invoice.adjustStatus</code> 가 <code>VOIDED</code>(作廢) 또는 <code>ALLOWANCED</code>(折讓)가 된다.</p>
+          <div class="io">{
+  <span class="k">refund</span>?: {
+    status:       "REQUESTED",
+    amount:       3880,
+    requestedAt:  "2026-11-25T06:02:00Z",
+    completedAt?: null
+  },
+  invoice?: { …, <span class="k">adjustStatus</span>: "NONE" }
+}</div>
+        </div>
+
+        <div class="api-row" data-k="3-5">
+          <div class="api-top"><span class="pin">5</span><span class="what">대만 국내 운송장 · 수령 시각</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>localCarrier · localTrackingNo · deliveredAt</code></div>
+          <p class="api-desc">관리자가 입력하기 전에는 셋 다 <code>null</code> 이라 블록을 숨긴다. 국제운송장·수입신고번호·통관 상태는 <b>고객 응답에 내려가지 않는다.</b>
+            <code>deliveredAt</code> 은 배송 완료(6단계)일 때만 있다.</p>
+        </div>
       </div>
+      <div class="note"><b>주의</b> — “24시간 간편취소”는 서비스 안내일 뿐 신청 가능 기한이 아니다. <code>isQuickCancelPeriod: false</code> 여도 <code>canRequestCancel</code> 이 true 면 <b>버튼을 그대로 둔다.</b>
+        고객 고지 문구(약관)는 법무 검토 후 확정이라 위 중문 문구는 명세의 추천안이다.</div>
     </div>
   </div>
 </section>
@@ -938,6 +1023,36 @@ timerState: NOT_PAID · WAITING · SOON
             <div class="lbl">공급처 발주번호</div><div class="input ph">KR-20261123-0042</div>
             <div class="lbl" style="margin-top:8px">조기 발주 사유 (24시간 전에만)</div><div class="input ph">—</div>
           </div>
+        </div>
+
+        <div class="hl" data-k="5-5">
+          <span class="pin">5</span>
+          <div class="sec-head" style="border-top:1px solid var(--rule-soft)"><b>통관·배송</b></div>
+          <div class="fieldrow">
+            <div class="lbl">배송 단계</div><div class="input">해외배송 중 (3/6) ▾</div>
+            <div class="lbl" style="margin-top:8px">대만 운송사 · 운송장</div><div class="input ph">7-ELEVEN · D1234567890</div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:8px">묶음 #12 · EG123456789KR · 통관 진행</div>
+          </div>
+        </div>
+
+        <div class="hl" data-k="5-6">
+          <span class="pin">6</span>
+          <div class="sec-head" style="border-top:1px solid var(--rule-soft)"><b>취소·환불</b></div>
+          <div class="fieldrow">
+            <div style="font-size:12px">취소 접수 11/25 14:02 · 간편취소 구간</div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:3px">사유: 尺寸選錯了</div>
+            <div style="font-size:12px;margin-top:8px">환불 <b>대기</b> · 발표 <b>已開立</b></div>
+          </div>
+          <div class="bottombar" style="border-top:none"><span class="btn primary">환불 실행</span><span class="btn ghost" style="flex:1">접수 철회</span></div>
+        </div>
+
+        <div class="hl" data-k="5-7">
+          <span class="pin">7</span>
+          <div class="sec-head" style="border-top:1px solid var(--rule-soft)"><b>작업 이력</b></div>
+          <div class="fieldrow" style="font-size:11.5px;line-height:1.7">
+            11/25 14:02 고객 · 취소 접수<br>
+            11/24 09:10 관리자 #3 · PREPARING_ORDER → INTERNATIONAL_SHIPPING
+          </div>
         </div></div>
 </div>
       </div>
@@ -953,8 +1068,8 @@ timerState: NOT_PAID · WAITING · SOON
             <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_getAdminOrder" target="_blank" rel="noopener">DEV</a>
             <a href="https://api.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_getAdminOrder" target="_blank" rel="noopener">PROD</a></div>
           <p class="api-desc">행을 누를 때 1회 부르고, 탭을 바꿀 때는 <b>다시 부르지 않는다</b> — 한 응답에 주문·발주·타이머가 같이 온다.
-            <code>order</code> 는 <b>고객 주문 상세(03)와 같은 모양</b>(상품·가격·배송지·결제·발표)이고, 결제 완료·입금 대기 주문만 열린다(그 외 404).
-            <b>통관·배송 / 취소·환불 / 작업 이력</b> 탭의 데이터는 아직 이 응답에 없다(다음 스코프).</p>
+            <code>order</code> 는 <b>고객 주문 상세(03)와 같은 모양</b>(상품·가격·배송지·결제·발표)이다. 결제 전(PENDING) 주문만 404 이고, <b>환불이 끝나 취소된 주문도 열린다</b> <span class="nt upd">updated</span>.
+            <b>통관·배송 / 취소·환불 / 작업 이력</b> 탭의 데이터가 같은 응답에 더해졌다 <span class="nt new">new</span> — 아래 5·6·7번.</p>
           <div class="io">→ {
     <span class="k">order</span>:    { …고객 상세와 동일 },
     <span class="k">purchase</span>: {
@@ -964,7 +1079,12 @@ timerState: NOT_PAID · WAITING · SOON
       purchaseOverrideReason?: null,
       purchasedByAdminId?:    null
     },
-    <span class="k">timer</span>:    { …04 의 list[] 한 건 }
+    <span class="k">timer</span>:    { …04 의 list[] 한 건 },
+    <span class="k">delivery</span>:          { … },   <span class="n">// NEW · 5번</span>
+    <span class="k">cancellation</span>:      { … },   <span class="n">// NEW · 6번</span>
+    <span class="k">refund</span>?:           null,    <span class="n">// NEW · 6번</span>
+    <span class="k">invoiceAdjustment</span>?: { … },  <span class="n">// NEW · 6번</span>
+    <span class="k">events</span>:            [ … ]    <span class="n">// NEW · 7번</span>
   }</div>
           <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag">Accept-language 선택</span><span class="tag err">404 없음 · 결제 전 주문</span></div>
         </div>
@@ -1011,6 +1131,143 @@ timerState: NOT_PAID · WAITING · SOON
           <div class="api-ep"><span class="m none">API 없음</span><code>POST body</code></div>
           <p class="api-desc">입력칸일 뿐 별도 조회가 없다. <b>24시간이 안 지난 주문</b>(<code>WAITING</code> · <code>SOON</code>)에서만 “조기 발주 사유”칸을 열고, 이때 버튼은 일반 활성이 아니라 <b>사유 입력 후 별도 동작</b>으로 둔다.
             <b>취소 접수(<code>CANCEL_REQUESTED</code>)·이미 발주(<code>ORDERED</code>)</b>는 사유를 적어도 409다.</p>
+        </div>
+
+        <div class="api-row" data-k="5-5">
+          <div class="api-top"><span class="pin">5</span><span class="what">통관·배송 탭 — 단계 변경 · 대만 운송장</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/admin/order/delivery-stage</code></div>
+          <div class="api-ep"><span class="m patch">PATCH</span><code>/admin/order/{id}/local-delivery</code></div>
+          <div class="swg"><span class="swg-l">Swagger · 단계</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_postAdminOrderDeliveryStage" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_postAdminOrderDeliveryStage" target="_blank" rel="noopener">PROD</a></div>
+          <div class="swg"><span class="swg-l">Swagger · 운송장</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_patchAdminOrderLocalDelivery" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_patchAdminOrderLocalDelivery" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">표시는 상세 응답의 <code>delivery</code> 로 그린다. 단계 변경은 <b>여러 주문을 한 번에</b> 받는 API 하나뿐이라 드로어에서도 <code>orderIds: [id]</code> 로 보낸다(목록의 다중 선택도 같은 API).
+            <b>하나라도 결제 완료가 아니면 전부 안 바뀐다</b>(409). 앞·뒤 어느 단계로든 바꿀 수 있고 이력에 이전 → 이후가 남는다.
+            <b>통관 상태와 묶여 있지 않다</b> — “대만 도착”으로 바꿔도 통관 완료가 아니고, 묶음의 통관을 완료로 바꿔도 단계는 그대로다. 둘 다 204 라 성공 후 상세를 다시 부른다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io"><span class="c">// POST delivery-stage</span>
+{
+  orderIds:      [481],
+  deliveryStage: "DELIVERED",
+  deliveredAt*:  "2026-11-25T06:30:00Z"
+}
+
+<span class="c">// PATCH local-delivery</span>
+{
+  localCarrier?:    "7-ELEVEN",
+  localTrackingNo?: "D1234567890"
+}</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>상세 응답 · delivery</div>
+              <div class="io">{
+  deliveryStage:      "INTERNATIONAL_SHIPPING",
+  deliveryStageLabel: "해외배송 중",
+  deliveryStep:       3,
+  deliveredAt?:       null,
+  localCarrier?:      null,
+  localTrackingNo?:   null,
+  <span class="k">shipments</span>: [{
+    shipmentId:           12,
+    intlTrackingNo?:      "EG123456789KR",
+    importDeclarationNo?: null,
+    customsStatus:        "IN_PROGRESS"
+  }]
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag">orderIds 1~100건</span><span class="tag">deliveredAt 은 DELIVERED 일 때만 · 생략하면 지금</span><span class="tag">local-delivery: 빈 문자열·null 이면 지움</span><span class="tag err">409 없는 주문 · 결제 완료 아님</span><span class="tag err">400 deliveredAt 이 미래 · 다른 단계와 함께 옴 · 고칠 필드 없음</span></div>
+        </div>
+
+        <div class="api-row" data-k="5-6">
+          <div class="api-top"><span class="pin">6</span><span class="what">취소·환불 탭 — 접수 · 환불 · 발표 정정</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/admin/order/{id}/refund</code></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/admin/order/{id}/refund/complete</code></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/admin/order/{id}/invoice-adjust</code></div>
+          <div class="api-ep"><span class="m del">DELETE</span><code>/admin/order/{id}/cancel-request</code></div>
+          <div class="swg"><span class="swg-l">Swagger · 환불</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_postAdminOrderRefund" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_postAdminOrderRefund" target="_blank" rel="noopener">PROD</a></div>
+          <div class="swg"><span class="swg-l">Swagger · 수동 완료</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_postAdminOrderRefundComplete" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_postAdminOrderRefundComplete" target="_blank" rel="noopener">PROD</a></div>
+          <div class="swg"><span class="swg-l">Swagger · 발표 정정</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_postAdminOrderInvoiceAdjust" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_postAdminOrderInvoiceAdjust" target="_blank" rel="noopener">PROD</a></div>
+          <div class="swg"><span class="swg-l">Swagger · 접수 철회</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_deleteAdminOrderCancelRequest" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_deleteAdminOrderCancelRequest" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc"><b>환불은 전액만</b> 되고 <b>super_admin 만</b> 실행할 수 있다(그 외 403). 결제 수단에 따라 흐름이 갈린다:
+            <b>LINE Pay</b> 는 누르면 바로 PG 에 환불을 보내 응답의 <code>status</code> 가 <code>COMPLETED</code> / <code>FAILED</code> / <code>PROCESSING</code>(결과 미확인)으로 온다.
+            <b>ECPay(카드·ATM·편의점)</b> 는 API 를 부르지 않고 <code>REQUESTED</code> · <code>isManual: true</code> 로 기록만 한다 — ECPay 후台이나 계좌 송금으로 돌려준 뒤 <b>“환불 완료 입력”</b>(<code>/refund/complete</code>)을 누른다.
+            <code>FAILED</code>·<code>PROCESSING</code> 이면 같은 버튼이 <b>재시도</b>다(서버가 이미 나간 환불이 있는지 먼저 조회한다). 환불이 끝나면 주문이 <code>CANCELED</code> 가 되고 발표 정정이 이어서 돈다.
+            <b>환불 결과와 발표 정정 결과는 별도 칸</b>으로 보여준다 — <code>invoiceAdjustment.adjustStatus</code> 가 <code>FAILED</code> 면 “발표 정정 재시도”만 누르고 환불은 다시 누르지 않는다.
+            “접수 철회”는 고객이 취소 의사를 거뒀을 때만 쓴다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io"><span class="c">// POST refund</span>
+{ reason?: "고객 계약해제 통지" }
+
+<span class="c">// POST refund/complete</span>
+{ reference: "ECPay 退刷 2611250001" }
+
+<span class="c">// POST invoice-adjust</span>
+<span class="c">// DELETE cancel-request</span>
+<span class="c">(본문 없음)</span></div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 200 · refund</div>
+              <div class="io">{
+  refundId:  7,
+  orderId:   481,
+  method:    "LINE_PAY",
+  amount:    3880,
+  <span class="k">status</span>:    "COMPLETED",
+  <span class="k">isManual</span>:  false,
+  pgRefundId?:     "2026112500012345",
+  attemptCount:    1,
+  failureCode?:    null,
+  failureMessage?: null,
+  requestedAt, completedAt?
+}</div>
+            </div>
+          </div>
+          <div class="io">상세 응답 →
+  <span class="k">cancellation</span>: {
+    requestedAt?:             "2026-11-25T06:02:00Z",
+    reason?:                  "尺寸選錯了",
+    withinQuickCancelPeriod?: true
+  },
+  <span class="k">refund</span>?: { …위와 같은 모양 },
+  <span class="k">invoiceAdjustment</span>?: {
+    invoiceStatus: "ISSUED",
+    invoiceNo?:    "LY74004967",
+    <span class="k">adjustStatus</span>:  "VOIDED",
+    allowanceNo?:  null,
+    adjustedAt?, attemptCount, failureCode?, failureMessage?
+  }</div>
+          <div class="tags"><span class="tag">환불·수동 완료: super_admin</span><span class="tag">reason ≤ 500자</span><span class="tag">reference 필수 ≤ 100자</span><span class="tag">invoice-adjust 응답 = invoiceAdjustment 모양</span><span class="tag">cancel-request 는 204</span><span class="tag err">403 super_admin 아님</span><span class="tag err">409 이미 환불 완료 · 결제된 주문 아님 · 중복 결제 · 진행 중</span><span class="tag err">409 complete: 시작한 환불 없음 · PG 처리 중</span><span class="tag err">409 invoice-adjust: 정정할 것 없음</span><span class="tag err">404 주문 없음</span></div>
+        </div>
+
+        <div class="api-row" data-k="5-7">
+          <div class="api-top"><span class="pin">7</span><span class="what">작업 이력 탭</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>events[]</code></div>
+          <p class="api-desc">최신순이다. <code>adminId</code> 가 있으면 관리자, <code>userId</code> 가 있으면 고객, <b>둘 다 null 이면 시스템</b>(발표 정정 등)이 남긴 기록이다.
+            상태를 고쳐도 기존 줄은 지워지지 않는다. <code>message</code> 는 사람이 읽는 문구가 아니라 <b>변경 내용 그대로</b>(이전 → 이후)라 화면에서는 <code>type</code> 으로 문구를 만들고 message 를 보조로 붙인다.</p>
+          <div class="io">[{
+  eventId:   31,
+  <span class="k">type</span>:      "DELIVERY_STAGE_CHANGED",
+  adminId?:  3,
+  userId?:   null,
+  message?:  "PREPARING_ORDER → INTERNATIONAL_SHIPPING",
+  createdAt: "2026-11-24T01:10:00Z"
+}]</div>
+          <div class="tags"><span class="tag">type: CANCEL_REQUESTED · CANCEL_REQUEST_WITHDRAWN · PURCHASED · DELIVERY_STAGE_CHANGED · LOCAL_DELIVERY_UPDATED · SHIPMENT_UPDATED · REFUND_REQUESTED · REFUND_COMPLETED · REFUND_FAILED · INVOICE_ADJUSTED · INVOICE_ADJUST_FAILED</span></div>
         </div>
       </div>
       <div class="note"><b>주의</b> — “24시간 경과 = 발주 가능”은 <b>회사 내부 발주 기준</b>이지 고객의 취소·계약해제 권리가 끝났다는 뜻이 아니다. 이 화면에서 취소 신청 경로를 막지 않는다.
@@ -1087,6 +1344,230 @@ timerState: NOT_PAID · WAITING · SOON
 </section>
 
 <!-- ============================ FLOW ============================ -->
+<!-- ============================ 07 ============================ -->
+<section class="screen" id="s7">
+  <div class="screen-head">
+    <span class="no">07</span>
+    <h2>관리자 — 통관·물류 관리</h2>
+    <span class="route">/admin/shipments</span>
+    <p class="sub">국제배송 <b>묶음(박스 1개)</b> 단위로 운송장·수입신고번호·통관 상태를 기록한다. 주문 여러 건을 한 묶음에, 한 주문을 여러 묶음에 실을 수 있다. <b>기록만 한다</b> — 세관 신고나 EZWAY 인증을 대신하지 않는다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone wide desktop mk">
+        <div class="nav"><span class="brandmark">SEOUL MOMENT · Admin</span><span class="icons">🔔 ⚙</span></div>
+        <div class="cols drawer"><div>
+          <div class="hl" data-k="7-1">
+            <span class="pin">1</span>
+            <div class="fieldrow"><div class="input ph">운송장 · 신고번호 · 주문번호 검색</div></div>
+            <table class="tbl">
+              <tr><th>묶음</th><th>국제운송장</th><th>수입신고번호</th><th>통관</th><th>주문</th></tr>
+              <tr style="background:var(--green-bg)"><td><b>#12</b></td><td>EG123456789KR</td><td>AA 26 123 45678</td><td>진행</td><td>2건</td></tr>
+              <tr><td><b>#11</b></td><td>EG123450000KR</td><td>—</td><td>대기</td><td>1건</td></tr>
+              <tr style="background:var(--red-bg)"><td><b>#10</b></td><td>EG123449999KR</td><td>AA 26 123 40001</td><td>보류</td><td>3건</td></tr>
+            </table>
+          </div>
+        </div><div class="c2">
+          <div class="nav"><span class="brandmark">묶음 #12</span><span class="icons">✕</span></div>
+          <div class="hl" data-k="7-2">
+            <span class="pin">2</span>
+            <div class="fieldrow">
+              <div class="lbl">실린 주문</div><div class="input">SM-…000481 · SM-…000482</div>
+              <div class="lbl" style="margin-top:8px">국제운송사 · 운송장</div><div class="input">EMS · EG123456789KR</div>
+              <div class="lbl" style="margin-top:8px">수입신고번호</div><div class="input">AA 26 123 45678</div>
+              <div class="lbl" style="margin-top:8px">통관 상태</div><div class="input">진행 ▾</div>
+              <div class="lbl" style="margin-top:8px">메모 (고객 비노출)</div><div class="input ph">—</div>
+            </div>
+            <div class="bottombar" style="border-top:none"><span class="btn primary">저장</span></div>
+          </div>
+          <div class="hl" data-k="7-3">
+            <span class="pin">3</span>
+            <div class="fieldrow" style="border-top:1px solid var(--rule-soft);font-size:11.5px;color:var(--accent-ink)">⚠ 같은 국제운송장 번호를 쓰는 묶음이 있습니다: #9</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="7-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">묶음 목록 · 검색</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/admin/shipment</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminShipment/AdminShipmentController_getAdminShipmentList" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminShipment/AdminShipmentController_getAdminShipmentList" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">최근 등록순. <code>search</code> 하나로 <b>국제운송장·분할운송장·수입신고번호·주문번호·대만 운송장</b>을 같이 찾는다(부분 일치).
+            각 행에 실린 주문이 <code>orders[]</code> 로 같이 오니 건수는 그 길이로 센다. 행을 누르면 같은 데이터로 오른쪽 폼을 채우면 되고, 한 건만 새로 받을 때는 <code>GET /admin/shipment/{id}</code>.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Query</div>
+              <div class="io">page?:          1
+count?:         10
+search?:        "EG1234"
+customsStatus?: "IN_PROGRESS"</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 200</div>
+              <div class="io">{ total: 3, list: [{
+  <span class="k">shipmentId</span>:           12,
+  intlCarrier?:         "EMS",
+  intlTrackingNo?:      "EG123456789KR",
+  houseAirwaybillNo?:   null,
+  importDeclarationNo?: "AA 26 123 45678",
+  <span class="k">customsStatus</span>:        "IN_PROGRESS",
+  declaredAt?, clearedAt?, memo?,
+  updatedByAdminId?, updatedAt,
+  <span class="k">orders</span>: [{
+    orderId:        481,
+    orderNumber:    "SM-20261123-000481",
+    recipientName?: "李佳蓉",
+    status:         "PAID",
+    deliveryStage:  "INTERNATIONAL_SHIPPING",
+    deliveryStageLabel, localTrackingNo?
+  }]
+}] }</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag">count ≤ 100</span><span class="tag">customsStatus: WAITING · IN_PROGRESS · HELD · CLEARED</span></div>
+        </div>
+
+        <div class="api-row" data-k="7-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">묶음 등록 · 수정 폼</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m post">POST</span><code>/admin/shipment</code></div>
+          <div class="api-ep"><span class="m patch">PATCH</span><code>/admin/shipment/{id}</code></div>
+          <div class="swg"><span class="swg-l">Swagger · 등록</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminShipment/AdminShipmentController_postAdminShipment" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminShipment/AdminShipmentController_postAdminShipment" target="_blank" rel="noopener">PROD</a></div>
+          <div class="swg"><span class="swg-l">Swagger · 수정</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminShipment/AdminShipmentController_patchAdminShipment" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminShipment/AdminShipmentController_patchAdminShipment" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">등록은 <code>orderIds</code> 만 필수이고 나머지는 아는 것부터 채운다. 수정은 <b>보낸 필드만 바뀐다</b> — 글자 필드는 빈 문자열이나 <code>null</code>, 날짜 필드는 <code>null</code> 을 보내면 지워진다.
+            <code>orderIds</code> 를 보내면 실린 주문이 <b>통째로 교체</b>되니 추가할 때도 기존 ID 를 같이 보낸다.
+            <b>통관 상태를 바꿔도 주문의 배송 단계는 안 바뀐다</b> — 단계는 05 의 5번 API 로 따로 바꾼다. 저장할 때마다 실린 주문의 작업 이력에 한 줄이 남는다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io">{
+  <span class="k">orderIds</span>:             [481, 482],
+  intlCarrier?:         "EMS",
+  intlTrackingNo?:      "EG123456789KR",
+  houseAirwaybillNo?:   null,
+  importDeclarationNo?: "AA 26 123 45678",
+  customsStatus?:       "IN_PROGRESS",
+  declaredAt?:          "2026-11-25T03:00:00Z",
+  clearedAt?:           null,
+  memo?:                null
+}
+
+<span class="c">// PATCH 는 orderIds 도 선택</span></div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 201 · 200</div>
+              <div class="io">{
+  shipmentId: 12,
+  <span class="k">sameIntlTrackingNoShipmentIds</span>:      [9],
+  <span class="k">sameImportDeclarationNoShipmentIds</span>: []
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag">orderIds 1~200건 · 결제 완료 주문만</span><span class="tag">번호 ≤ 100자 · 운송사 ≤ 50자 · 메모 ≤ 1000자</span><span class="tag">날짜 ISO 8601</span><span class="tag err">400 운송장 번호 = 수입신고번호</span><span class="tag err">409 없는 주문 · 결제 완료 아님</span><span class="tag err">404 묶음 없음</span></div>
+        </div>
+
+        <div class="api-row" data-k="7-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">번호 중복 경고</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m none">같은 응답</span><code>same…ShipmentIds</code></div>
+          <p class="api-desc">다른 묶음과 번호가 겹쳐도 <b>저장은 된다.</b> 응답의 두 배열이 비어 있지 않으면 경고만 띄운다(합배송·분할 신고로 실제로 겹칠 수 있다).
+            반대로 <b>국제운송장 번호와 수입신고번호를 같은 값으로 넣으면 400</b> 이다 — 서로 다른 번호라 칸을 잘못 넣은 것으로 본다.</p>
+        </div>
+      </div>
+      <div class="note"><b>주의</b> — 통관 서류 첨부, CSV 일괄 업로드, 상품 단위 부분배송은 아직 없다. 수입자는 법인(首爾映像有限公司) 고정이라 개인 통관 인증번호 칸을 만들지 않는다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 08 ============================ -->
+<section class="screen" id="s8">
+  <div class="screen-head">
+    <span class="no">08</span>
+    <h2>관리자 — 취소/환불 관리</h2>
+    <span class="route">/admin/refunds</span>
+    <p class="sub"><b>시작된 환불</b>을 모아 본다. 환불(PG) 결과와 전자발표 정정 결과가 <b>따로</b> 내려오니 둘이 어긋난 건을 여기서 찾는다. 아직 환불을 시작하지 않은 취소 신청은 04 목록의 “취소 요청” 칩에 있다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone wide desktop mk">
+        <div class="nav"><span class="brandmark">SEOUL MOMENT · Admin</span><span class="icons">🔔 ⚙</span></div>
+        <div class="hl" data-k="8-1">
+          <span class="pin">1</span>
+          <div class="chips" style="padding:12px 14px 10px">
+            <span class="chip on">전체</span><span class="chip">환불 요청</span><span class="chip">처리 중</span><span class="chip">완료</span><span class="chip">실패</span>
+          </div>
+          <div style="overflow-x:auto"><table class="tbl" style="min-width:720px">
+            <tr><th>주문번호</th><th>고객</th><th>결제수단</th><th>환불액</th><th>환불</th><th>전자발표</th><th></th></tr>
+            <tr><td><b>SM-…000481</b></td><td>李佳蓉</td><td>LINE Pay</td><td>NT$3,880</td><td>완료</td><td>作廢</td><td><b>상세보기</b></td></tr>
+            <tr style="background:var(--accent-bg)"><td><b>SM-…000479</b></td><td>陳怡君</td><td>ECPay</td><td>NT$2,700</td><td>요청 · 수동</td><td>已開立</td><td><b>완료 입력</b></td></tr>
+            <tr style="background:var(--red-bg)"><td><b>SM-…000470</b></td><td>林美玲</td><td>LINE Pay</td><td>NT$1,860</td><td>완료</td><td>실패</td><td><b>발표 정정 재시도</b></td></tr>
+            <tr style="background:var(--red-bg)"><td><b>SM-…000466</b></td><td>王小明</td><td>LINE Pay</td><td>NT$5,650</td><td>결과 미확인</td><td>已開立</td><td><b>환불 재시도</b></td></tr>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="8-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">환불 목록 · 상태 칩 · 행 버튼</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/admin/refund</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_getAdminRefundList" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_getAdminRefundList" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">최근순. 칩은 <code>status</code> 쿼리로 건다. 행 버튼은 두 상태를 보고 정한다 —
+            <b>환불 <code>REQUESTED</code> + <code>isManual</code></b> → “완료 입력”(<code>/refund/complete</code>),
+            <b>환불 <code>FAILED</code>·<code>PROCESSING</code></b> → “환불 재시도”(<code>/refund</code>),
+            <b>환불 <code>COMPLETED</code> + 정정 <code>FAILED</code>·<code>PENDING</code></b> → “발표 정정 재시도”(<code>/invoice-adjust</code>).
+            버튼이 부르는 API 는 05 의 6번과 같다. 발표가 발행된 적이 없으면 <code>invoiceStatus</code> 가 <code>PENDING</code>·<code>FAILED</code> 이고 정정은 <code>NONE</code> 이다(“未開立”).</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Query</div>
+              <div class="io">page?:   1
+count?:  10
+status?: "FAILED"</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 200</div>
+              <div class="io">{ total: 4, list: [{
+  refundId:        7,
+  orderId:         481,
+  orderNumber?:    "SM-20261123-000481",
+  recipientName?:  "李佳蓉",
+  method:          "LINE_PAY",
+  amount:          3880,
+  <span class="k">status</span>:          "COMPLETED",
+  <span class="k">isManual</span>:        false,
+  pgRefundId?, attemptCount,
+  failureCode?, failureMessage?,
+  cancellationRequestedAt?,
+  requestedAt, completedAt?,
+  <span class="k">invoiceAdjustment</span>?: {
+    invoiceStatus: "ISSUED",
+    adjustStatus:  "VOIDED", …
+  }
+}] }</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag">count ≤ 100</span><span class="tag">status: REQUESTED · PROCESSING · COMPLETED · FAILED</span><span class="tag">adjustStatus: NONE · PENDING · VOIDED · ALLOWANCED · FAILED</span></div>
+        </div>
+      </div>
+      <div class="note"><b>주의</b> — 환불은 <b>전액만</b> 된다(부분 환불·상품별 환불 없음). ECPay 결제는 서버가 PG 환불을 보내지 않으므로 <b>“완료 입력”을 누르기 전에 실제로 돈을 돌려줬는지</b>가 운영 책임이다.
+        <code>PROCESSING</code>(결과 미확인)은 수동 완료가 막혀 있다(409) — 재시도로 결과부터 확인해야 이중 환불이 안 난다. 결제 후 처리 실패(FAILED) 주문은 04 목록에 안 나와서 주문 ID 로 직접 환불을 시작해야 한다.</div>
+    </div>
+  </div>
+</section>
+
 <section class="flow" id="flow">
   <h2>호출 순서 한 장</h2>
   <p class="lede">고객이 주문서를 보고 → 주문이 쌓인 뒤 → 관리자가 24시간 뒤에 발주하기까지, 실제로 나가는 요청만.</p>
@@ -1117,6 +1598,21 @@ timerState: NOT_PAID · WAITING · SOON
       <span class="ep">GET /admin/order/{id}</span> <span class="ep">POST /admin/order/{id}/purchase</span> <span class="ep">GET /admin/order/{id}</span>
     </div></div>
     <div class="step"><div class="n">06</div><div>
+      <h4>관리자 — 통관·물류 · 배송 단계</h4>
+      <p>묶음을 등록·수정하고, 실제 물류가 움직였을 때 단계를 따로 바꾼다. 둘은 서로를 바꾸지 않는다.</p>
+      <span class="ep">POST /admin/shipment</span> <span class="ep">PATCH /admin/shipment/{id}</span> <span class="ep">POST /admin/order/delivery-stage</span> <span class="ep">PATCH /admin/order/{id}/local-delivery</span>
+    </div></div>
+    <div class="step"><div class="n">07</div><div>
+      <h4>고객 — 취소·계약해제 신청</h4>
+      <p>접수만 한다(204). 관리자 KPI “취소 요청”이 올라가고 그 주문의 발주가 막힌다. 고객은 상세를 다시 불러 접수 시각을 본다.</p>
+      <span class="ep">POST /user/order/{id}/cancel-request</span> <span class="ep">GET /user/order/{id}</span>
+    </div></div>
+    <div class="step"><div class="n">08</div><div>
+      <h4>관리자 — 환불 → 발표 정정</h4>
+      <p>LINE Pay 는 한 번에 끝나고, ECPay 는 직접 돌려준 뒤 완료를 입력한다. 환불이 끝나면 발표 정정이 이어서 돌고, 정정만 실패하면 정정만 다시 누른다.</p>
+      <span class="ep">POST /admin/order/{id}/refund</span> <span class="ep">POST /admin/order/{id}/refund/complete</span> <span class="ep">POST /admin/order/{id}/invoice-adjust</span> <span class="ep">GET /admin/refund</span>
+    </div></div>
+    <div class="step"><div class="n">09</div><div>
       <h4>운영 — 할인 스위치</h4>
       <p>sandbox 확인 뒤 켠다. 켠 직후부터 01 의 응답이 바뀐다.</p>
       <span class="ep">GET /admin/shipping/policy</span> <span class="ep">PATCH /admin/shipping/policy</span>
@@ -1126,7 +1622,8 @@ timerState: NOT_PAID · WAITING · SOON
 
 <footer>
   전체 스펙은 Swagger(<code>/docs</code>)에서 본다. 이 문서의 값은 커밋 6e6ac66 의 코드와 테스트(<code>test/order.fulfillment.spec.ts</code> 등)에서 가져왔고,
-  <b>DEV 배포 후 실측 예정</b>이다. 다음 스코프: 취소·계약해제 접수, 통관·물류(배송 단계 변경), 환불, 전자발표 정정.
+  07·08 과 취소 신청·환불 필드는 2026-11-25 에 더해졌다(<code>new</code> 표시). ECPay 발표 作廢·折讓 은 stage 상점에서 실제 호출로 확인했고,
+  LINE Pay 환불은 sandbox 승인 결제가 없어 테스트(모의 응답)로만 확인했다. 아직 없는 것: 부분 환불, ECPay 카드 자동 환불(DoAction), 반품 회수·검수·재입고, 고객 알림.
 </footer>
 
 </div>

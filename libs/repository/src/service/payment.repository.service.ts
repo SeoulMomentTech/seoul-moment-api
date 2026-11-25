@@ -172,4 +172,12 @@ export class PaymentRepositoryService {
       }),
     );
   }
+
+  /** 돈이 실제로 들어온 결제 시도. 중복 결제면 둘 이상이다 */
+  async findPaidByOrderId(orderId: number): Promise<PaymentEntity[]> {
+    return this.paymentRepository.find({
+      where: { orderId, status: PaymentStatus.PAID },
+      order: { id: 'ASC' },
+    });
+  }
 }

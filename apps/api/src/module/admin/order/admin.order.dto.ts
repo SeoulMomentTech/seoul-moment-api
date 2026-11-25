@@ -1,6 +1,7 @@
 import { OrderEventEntity } from '@app/repository/entity/order-event.entity';
 import { OrderEntity } from '@app/repository/entity/order.entity';
 import { PaymentEntity } from '@app/repository/entity/payment.entity';
+import { RefundEntity } from '@app/repository/entity/refund.entity';
 import { ShipmentEntity } from '@app/repository/entity/shipment.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
@@ -39,6 +40,10 @@ import {
 
 import { GetUserOrderResponse } from '../../user/order/user.order.dto';
 import { ListFilterDto } from '../admin.dto';
+import {
+  GetAdminInvoiceAdjustmentResponse,
+  GetAdminRefundResponse,
+} from './admin.refund.dto';
 import { GetAdminShipmentInfoResponse } from './admin.shipment.dto';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -346,17 +351,41 @@ export class GetAdminOrderDetailResponse {
   })
   events: GetAdminOrderEventResponse[];
 
+  @ApiPropertyOptional({
+    description: '취소·환불 탭 중 환불. 환불을 시작하지 않았으면 null',
+    type: GetAdminRefundResponse,
+    nullable: true,
+  })
+  refund: GetAdminRefundResponse | null;
+
+  @ApiPropertyOptional({
+    description:
+      '전자발표 정정(作廢·折讓). 환불 결과와 따로 본다. 발표 행이 없는 주문이면 null',
+    type: GetAdminInvoiceAdjustmentResponse,
+    nullable: true,
+  })
+  invoiceAdjustment: GetAdminInvoiceAdjustmentResponse | null;
+
   static from(
     order: OrderEntity,
     payment: PaymentEntity | null,
     now: Date,
     language?: LanguageCode,
-    shipments: ShipmentEntity[] = [],
-    events: OrderEventEntity[] = [],
+    extra: {
+      shipments?: ShipmentEntity[];
+      events?: OrderEventEntity[];
+      refund?: RefundEntity | null;
+    } = {},
   ) {
+    const { shipments = [], events = [], refund = null } = extra;
+
     return plainToInstance(this, {
       delivery: this.toDelivery(order, shipments, language),
       cancellation: this.toCancellation(order),
+      refund: refund ? GetAdminRefundResponse.toPlain(refund) : null,
+      invoiceAdjustment: order.invoice
+        ? GetAdminInvoiceAdjustmentResponse.toPlain(order.invoice)
+        : null,
       events: events.map((event) => ({
         eventId: event.id,
         type: event.type,
@@ -365,7 +394,7 @@ export class GetAdminOrderDetailResponse {
         message: event.message ?? null,
         createdAt: event.createDate,
       })),
-      order: GetUserOrderResponse.from(order, payment, language),
+      order: GetUserOrderResponse.from(order, payment, language, refund),
       purchase: {
         purchaseStatus: order.purchaseStatus,
         supplierOrderedAt: order.supplierOrderedAt ?? null,

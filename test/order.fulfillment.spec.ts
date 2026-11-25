@@ -1,3 +1,13 @@
+import {
+  EcpayInvoiceAdjustResultDto,
+  EcpayInvoiceResultDto,
+} from '@app/external/ecpay/ecpay-invoice.dto';
+import { ExternalEcpayInvoiceService } from '@app/external/ecpay/ecpay-invoice.service';
+import {
+  LinePayRefundLookupDto,
+  LinePayRefundResultDto,
+} from '@app/external/linepay/linepay.dto';
+import { ExternalLinePayService } from '@app/external/linepay/linepay.service';
 import { faker } from '@faker-js/faker';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -6,6 +16,8 @@ import { DataSource } from 'typeorm';
 import { clearTokenCache, getAdminToken } from './setup/auth.helper';
 import { getDataSource, truncateTables } from './setup/db.helper';
 import { closeTestApp, getTestApp } from './setup/test-app';
+import { InvoiceAdjustService } from '../apps/api/src/module/invoice/invoice-adjust.service';
+import { InvoiceIssueService } from '../apps/api/src/module/invoice/invoice-issue.service';
 
 const USER_AUTH_BASE = '/user/auth';
 const CART_BASE = '/user/cart';
@@ -33,6 +45,7 @@ describe('주문 현황·발주 (E2E)', () => {
 
   afterEach(async () => {
     await truncateTables(dataSource, [
+      'refund',
       'order_event',
       'shipment_order',
       'shipment',
@@ -1333,6 +1346,815 @@ describe('주문 현황·발주 (E2E)', () => {
             .send({ orderIds: [pending] })
         ).status,
       ).toBe(401);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('환불 · 전자발표 정정', () => {
+    const REFUND_LIST = '/admin/refund';
+    const TX_ID = '2026112512345678901';
+    const ADMIN_EMAIL = 'e2e-test-admin@test.com';
+    const TODAY_TAIPEI = new Date(Date.now() + 8 * HOUR * 1000)
+      .toISOString()
+      .slice(0, 10);
+    let originalAdmin: { role_id: number | null; status: string };
+    const INVOICE_NO = 'LY74004967';
+    let linePay: ExternalLinePayService;
+    let ecpayInvoice: ExternalEcpayInvoiceService;
+    let refundSpy: jest.SpyInstance;
+    let findRefundSpy: jest.SpyInstance;
+    let getIssueSpy: jest.SpyInstance;
+    let invalidSpy: jest.SpyInstance;
+    let allowanceSpy: jest.SpyInstance;
+
+    const refunded = (code = '0000', message = 'Success.') =>
+      LinePayRefundResultDto.fromRefund({
+        returnCode: code,
+        returnMessage: message,
+        info:
+          code === '0000' ? { refundTransactionId: '900000001' } : undefined,
+      });
+    const lookup = (amount: number) =>
+      LinePayRefundLookupDto.fromDetails({
+        returnCode: '0000',
+        returnMessage: 'Success.',
+        info: [
+          {
+            refundList: amount
+              ? [{ refundTransactionId: '900000009', refundAmount: -amount }]
+              : [],
+          },
+        ],
+      });
+    const issued = (extra: Record<string, unknown> = {}) =>
+      EcpayInvoiceResultDto.fromGetIssue({
+        RtnCode: 1,
+        RtnMsg: '查詢成功',
+        IIS_Number: INVOICE_NO,
+        IIS_Create_Date: `${TODAY_TAIPEI} 10:00:00`,
+        IIS_Random_Number: '3204',
+        IIS_Invalid_Status: '0',
+        IIS_Remain_Allowance_Amt: 100000,
+        ...extra,
+      });
+    const adjusted = (code = 1, extra: Record<string, unknown> = {}) =>
+      EcpayInvoiceAdjustResultDto.from({
+        RtnCode: code,
+        RtnMsg: 'msg',
+        ...extra,
+      });
+
+    beforeAll(async () => {
+      linePay = app.get(ExternalLinePayService);
+      ecpayInvoice = app.get(ExternalEcpayInvoiceService);
+      [originalAdmin] = await dataSource.query(
+        `SELECT role_id, status FROM admin WHERE email = $1`,
+        [ADMIN_EMAIL],
+      );
+    });
+
+    afterAll(async () => {
+      await dataSource.query(
+        `UPDATE admin SET role_id = $2, status = $3 WHERE email = $1`,
+        [ADMIN_EMAIL, originalAdmin.role_id, originalAdmin.status],
+      );
+    });
+
+    beforeEach(async () => {
+      await setSuperAdmin(true);
+      refundSpy = jest.spyOn(linePay, 'refund').mockResolvedValue(refunded());
+      findRefundSpy = jest
+        .spyOn(linePay, 'findRefund')
+        .mockResolvedValue(lookup(0));
+      getIssueSpy = jest
+        .spyOn(ecpayInvoice, 'getIssue')
+        .mockResolvedValue(issued());
+      invalidSpy = jest
+        .spyOn(ecpayInvoice, 'invalid')
+        .mockResolvedValue(adjusted());
+      allowanceSpy = jest
+        .spyOn(ecpayInvoice, 'allowance')
+        .mockResolvedValue(adjusted(1, { IA_Allow_No: '2026112508481095' }));
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    async function setSuperAdmin(enabled: boolean) {
+      await dataSource.query(
+        `UPDATE admin
+            SET status = 'NORMAL',
+                role_id = (SELECT id FROM admin_role WHERE name ${enabled ? '=' : '<>'} 'super_admin' ORDER BY id LIMIT 1)
+          WHERE email = $1`,
+        [ADMIN_EMAIL],
+      );
+    }
+
+    /** 결제 완료 주문에 결제 행·발행된 발표·잡힌 재고를 만든다 */
+    async function paidOrder(
+      token: string,
+      options: {
+        method?: 'LINE_PAY' | 'ECPAY';
+        invoiceDate?: string;
+        issued?: boolean;
+      } = {},
+    ): Promise<{ orderId: number; variantId: number; amount: number }> {
+      const orderId = await placeOrder(token, { paidHoursAgo: 2 });
+      const [row] = await dataSource.query(
+        `SELECT o.total_amount, i.product_variant_id
+           FROM "order" o JOIN order_item i ON i.order_id = o.id WHERE o.id = $1`,
+        [orderId],
+      );
+      const method = options.method ?? 'LINE_PAY';
+
+      await dataSource.query(
+        `INSERT INTO payment
+           (order_id, method, status, merchant_trade_no, amount, access_token, pg_transaction_id, paid_at)
+         VALUES ($1, $2, 'PAID', $3, $4, $5, $6, NOW())`,
+        [
+          orderId,
+          method,
+          `T${faker.string.alphanumeric(12)}`,
+          row.total_amount,
+          faker.string.alphanumeric(40),
+          TX_ID,
+        ],
+      );
+      await dataSource.query(
+        `UPDATE "order" SET payment_method = $2, stock_reserved = true WHERE id = $1`,
+        [orderId, method],
+      );
+      await dataSource.query(
+        `UPDATE product_variant SET stock_quantity = stock_quantity - 1 WHERE id = $1`,
+        [row.product_variant_id],
+      );
+
+      if (options.issued !== false) {
+        await dataSource.query(
+          `UPDATE order_invoice
+              SET status = 'ISSUED', invoice_no = $2, invoice_date = $3,
+                  relate_number = $4, attempt_count = 1
+            WHERE order_id = $1`,
+          [
+            orderId,
+            INVOICE_NO,
+            options.invoiceDate ?? new Date().toISOString(),
+            `SMINV${orderId}`,
+          ],
+        );
+      }
+
+      return {
+        orderId,
+        variantId: row.product_variant_id,
+        amount: row.total_amount,
+      };
+    }
+
+    function refund(orderId: number, body: Record<string, unknown> = {}) {
+      return adminSend('post', `${ADMIN_ORDER_BASE}/${orderId}/refund`, body);
+    }
+
+    function completeRefund(orderId: number, reference?: string) {
+      return adminSend(
+        'post',
+        `${ADMIN_ORDER_BASE}/${orderId}/refund/complete`,
+        reference === undefined ? {} : { reference },
+      );
+    }
+
+    function retryAdjust(orderId: number) {
+      return adminSend('post', `${ADMIN_ORDER_BASE}/${orderId}/invoice-adjust`);
+    }
+
+    async function stockOf(variantId: number): Promise<number> {
+      const [row] = await dataSource.query(
+        `SELECT stock_quantity FROM product_variant WHERE id = $1`,
+        [variantId],
+      );
+
+      return row.stock_quantity;
+    }
+
+    async function orderStatus(orderId: number): Promise<string> {
+      const [row] = await dataSource.query(
+        `SELECT status FROM "order" WHERE id = $1`,
+        [orderId],
+      );
+
+      return row.status;
+    }
+
+    /** 발표 정정은 환불 커밋 뒤에 따로 돈다 — 끝날 때까지 기다린다 */
+    async function adjustStatusOf(
+      orderId: number,
+      settled = true,
+    ): Promise<Record<string, any>> {
+      for (let i = 0; i < 50; i++) {
+        const [row] = await dataSource.query(
+          `SELECT adjust_status, allowance_no, adjust_failure_code, adjust_attempt_count, status
+             FROM order_invoice WHERE order_id = $1`,
+          [orderId],
+        );
+
+        if (!settled || row.adjust_status !== 'PENDING') {
+          return row;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+
+      throw new Error('invoice adjust did not settle');
+    }
+
+    it('LINE Pay 전액 환불: 주문 취소·재고 복구·발표 作廢 까지 이어진다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId, variantId, amount } = await paidOrder(token);
+      await cancelRequest(token, orderId, '변심').expect(204);
+
+      // When
+      const res = await refund(orderId, { reason: '고객 계약해제 통지' });
+
+      // Then - 환불
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({
+        status: 'COMPLETED',
+        isManual: false,
+        method: 'LINE_PAY',
+        amount,
+        pgRefundId: '900000001',
+        attemptCount: 1,
+        reason: '고객 계약해제 통지',
+      });
+      expect(refundSpy).toHaveBeenCalledTimes(1);
+      expect(refundSpy).toHaveBeenCalledWith(TX_ID, amount);
+      expect(findRefundSpy).not.toHaveBeenCalled();
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+      expect(await stockOf(variantId)).toBe(100);
+
+      // Then - 발표 정정은 환불과 따로 기록된다
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('VOIDED');
+      expect(invalidSpy).toHaveBeenCalledWith(
+        INVOICE_NO,
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        '訂單取消退款',
+      );
+      expect(allowanceSpy).not.toHaveBeenCalled();
+
+      // Then - 고객·관리자 화면
+      const customer = (await userGetOrder(token, orderId)).body.data;
+      expect(customer.status).toBe('CANCELED');
+      expect(customer.canRequestCancel).toBe(false);
+      expect(customer.refund).toEqual({
+        status: 'COMPLETED',
+        amount,
+        requestedAt: expect.any(String),
+        completedAt: expect.any(String),
+      });
+      expect(customer.invoice.adjustStatus).toBe('VOIDED');
+
+      const admin = (await adminGet(`/${orderId}`)).body.data;
+      expect(admin.refund.status).toBe('COMPLETED');
+      expect(admin.invoiceAdjustment).toMatchObject({
+        adjustStatus: 'VOIDED',
+        invoiceNo: INVOICE_NO,
+      });
+      expect(admin.events.map((x: any) => x.type)).toEqual(
+        expect.arrayContaining([
+          'INVOICE_ADJUSTED',
+          'REFUND_COMPLETED',
+          'REFUND_REQUESTED',
+          'CANCEL_REQUESTED',
+        ]),
+      );
+      expect((await adminGet('/summary')).body.data.cancelRequested).toBe(0);
+
+      const list = await request(app.getHttpServer())
+        .get(REFUND_LIST)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(list.body.data.total).toBe(1);
+      expect(list.body.data.list[0]).toMatchObject({
+        orderId,
+        status: 'COMPLETED',
+        recipientName: '李佳蓉',
+        invoiceAdjustment: { adjustStatus: 'VOIDED' },
+      });
+      expect(list.body.data.list[0].cancellationRequestedAt).not.toBeNull();
+    });
+
+    it('환불 버튼을 동시에 두 번 눌러도 PG 환불은 한 번만 나간다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId, variantId } = await paidOrder(token);
+
+      // When
+      const results = await Promise.all([refund(orderId), refund(orderId)]);
+      const again = await refund(orderId);
+
+      // Then
+      expect(results.map((x) => x.status).sort()).toEqual([200, 409]);
+      expect(again.status).toBe(409);
+      expect(refundSpy).toHaveBeenCalledTimes(1);
+      expect(await stockOf(variantId)).toBe(100);
+    });
+
+    it('타임아웃으로 결과를 모르면 PROCESSING 이고, 재시도는 조회부터 해서 다시 환불하지 않는다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId, amount } = await paidOrder(token);
+      refundSpy.mockRejectedValueOnce(new Error('timeout'));
+
+      // When
+      const first = await refund(orderId);
+
+      // Then - 결과 미확인: 주문은 그대로, 수동 완료로 덮을 수 없다
+      expect(first.body.data).toMatchObject({
+        status: 'PROCESSING',
+        failureCode: 'UNKNOWN_RESULT',
+      });
+      expect(await orderStatus(orderId)).toBe('PAID');
+      expect((await completeRefund(orderId, 'x')).status).toBe(409);
+
+      // When - 조회도 안 되면 환불을 다시 부르지 않는다
+      findRefundSpy.mockRejectedValueOnce(new Error('timeout'));
+      const blind = await refund(orderId);
+
+      // Then
+      expect(blind.body.data.status).toBe('PROCESSING');
+      expect(refundSpy).toHaveBeenCalledTimes(1);
+
+      // When - 조회해 보니 이미 환불돼 있었다
+      findRefundSpy.mockResolvedValueOnce(lookup(amount));
+      const settled = await refund(orderId);
+
+      // Then
+      expect(settled.body.data).toMatchObject({
+        status: 'COMPLETED',
+        pgRefundId: '900000009',
+        attemptCount: 1,
+      });
+      expect(refundSpy).toHaveBeenCalledTimes(1);
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+    });
+
+    it('조회에 환불이 없으면 다시 요청하고, 일부만 환불돼 있으면 멈춘다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const first = await paidOrder(token);
+      const second = await paidOrder(token);
+      refundSpy.mockRejectedValueOnce(new Error('timeout'));
+      await refund(first.orderId);
+      refundSpy.mockRejectedValueOnce(new Error('timeout'));
+      await refund(second.orderId);
+
+      // When
+      const retried = await refund(first.orderId);
+      findRefundSpy.mockResolvedValueOnce(lookup(1));
+      const partial = await refund(second.orderId);
+
+      // Then
+      expect(retried.body.data).toMatchObject({
+        status: 'COMPLETED',
+        attemptCount: 2,
+      });
+      expect(partial.body.data).toMatchObject({
+        status: 'FAILED',
+        failureCode: 'PARTIALLY_REFUNDED',
+      });
+      expect(await orderStatus(second.orderId)).toBe('PAID');
+    });
+
+    it('LINE Pay 가 거절하면 FAILED 로 남고, 다른 방법으로 돌려준 뒤 수동 완료할 수 있다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId, variantId } = await paidOrder(token);
+      refundSpy.mockResolvedValueOnce(
+        refunded('1163', 'Refund period expired'),
+      );
+
+      // When
+      const res = await refund(orderId);
+
+      // Then
+      expect(res.body.data).toMatchObject({
+        status: 'FAILED',
+        failureCode: '1163',
+        failureMessage: 'Refund period expired',
+      });
+      expect(await orderStatus(orderId)).toBe('PAID');
+      expect(await stockOf(variantId)).toBe(99);
+      expect((await userGetOrder(token, orderId)).body.data.refund.status).toBe(
+        'FAILED',
+      );
+
+      // When
+      const done = await completeRefund(orderId, '  계좌 송금 20261125-01 ');
+
+      // Then
+      expect(done.status).toBe(200);
+      expect(done.body.data).toMatchObject({
+        status: 'COMPLETED',
+        pgRefundId: '계좌 송금 20261125-01',
+        failureCode: null,
+      });
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+      expect((await completeRefund(orderId, 'x')).status).toBe(409);
+    });
+
+    it('이미 환불된 거래라고 답하면(1165) 조회로 금액을 확인한 뒤에만 완료로 닫는다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const confirmed = await paidOrder(token);
+      const unconfirmed = await paidOrder(token);
+      refundSpy.mockResolvedValue(refunded('1165', 'Already refunded'));
+
+      // When
+      findRefundSpy.mockResolvedValueOnce(lookup(confirmed.amount));
+      const done = await refund(confirmed.orderId);
+      const open = await refund(unconfirmed.orderId);
+
+      // Then
+      expect(done.body.data).toMatchObject({
+        status: 'COMPLETED',
+        pgRefundId: '900000009',
+      });
+      expect(await orderStatus(confirmed.orderId)).toBe('CANCELED');
+      expect(open.body.data.status).toBe('PROCESSING');
+      expect(await orderStatus(unconfirmed.orderId)).toBe('PAID');
+    });
+
+    it('뜻이 불명확한 응답(9000)은 실패로 닫지 않아 수동 환불이 열리지 않는다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      refundSpy.mockResolvedValueOnce(refunded('9000', 'Internal error'));
+
+      // When
+      const res = await refund(orderId);
+
+      // Then - 돈이 나갔는지 모른다
+      expect(res.body.data).toMatchObject({
+        status: 'PROCESSING',
+        failureCode: 'UNKNOWN_RESULT',
+        failureMessage: '9000 Internal error',
+      });
+      expect((await completeRefund(orderId, '계좌 송금')).status).toBe(409);
+      expect(await orderStatus(orderId)).toBe('PAID');
+
+      // When - 조회가 "그런 거래 없음"으로 확정해 주면 실패로 닫힌다
+      findRefundSpy.mockResolvedValueOnce(
+        LinePayRefundLookupDto.fromDetails({
+          returnCode: '1150',
+          returnMessage: 'Transaction record not found',
+        }),
+      );
+      const rejected = await refund(orderId);
+
+      // Then
+      expect(rejected.body.data).toMatchObject({
+        status: 'FAILED',
+        failureCode: '1150',
+      });
+      expect(refundSpy).toHaveBeenCalledTimes(1);
+      expect((await completeRefund(orderId, '계좌 송금')).status).toBe(200);
+    });
+
+    it('ECPay 결제는 API 를 부르지 않고, 관리자가 완료를 입력해야 끝난다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId, variantId } = await paidOrder(token, {
+        method: 'ECPAY',
+      });
+
+      // When
+      const res = await refund(orderId, { reason: '수령 후 계약해제' });
+      const again = await refund(orderId);
+
+      // Then
+      expect(res.body.data).toMatchObject({
+        status: 'REQUESTED',
+        isManual: true,
+        method: 'ECPAY',
+        attemptCount: 0,
+      });
+      expect(again.body.data.refundId).toBe(res.body.data.refundId);
+      expect(refundSpy).not.toHaveBeenCalled();
+      expect(await orderStatus(orderId)).toBe('PAID');
+      expect((await completeRefund(orderId)).status).toBe(400);
+      expect((await completeRefund(orderId, '   ')).status).toBe(400);
+
+      // When
+      const done = await completeRefund(orderId, 'ECPay 退刷 2611250001');
+
+      // Then
+      expect(done.body.data).toMatchObject({
+        status: 'COMPLETED',
+        pgRefundId: 'ECPay 退刷 2611250001',
+      });
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+      expect(await stockOf(variantId)).toBe(100);
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('VOIDED');
+    });
+
+    it('이미 한국에 발주한 주문은 환불해도 재고를 돌려주지 않는다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId, variantId } = await paidOrder(token);
+      await adminPurchase(orderId, { earlyReason: '선발주' }).expect(204);
+
+      // When
+      await refund(orderId).expect(200);
+
+      // Then
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+      expect(await stockOf(variantId)).toBe(99);
+    });
+
+    it('결제 후 처리 실패(FAILED) 주문도 환불되고, 결제가 없거나 둘이면 409 다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const failed = await paidOrder(token);
+      const duplicated = await paidOrder(token);
+      const pending = await placeOrder(token, { paidHoursAgo: null });
+      await dataSource.query(
+        `UPDATE "order" SET status = 'FAILED', stock_reserved = false WHERE id = $1`,
+        [failed.orderId],
+      );
+      await dataSource.query(
+        `INSERT INTO payment (order_id, method, status, merchant_trade_no, amount, access_token, paid_at)
+         VALUES ($1, 'LINE_PAY', 'PAID', 'TDUPLICATE01', 1000, 'dup-token', NOW())`,
+        [duplicated.orderId],
+      );
+
+      // When / Then
+      expect((await refund(failed.orderId)).body.data.status).toBe('COMPLETED');
+      expect(await stockOf(failed.variantId)).toBe(99);
+      expect((await refund(duplicated.orderId)).status).toBe(409);
+      expect((await refund(pending)).status).toBe(409);
+      expect((await refund(999999)).status).toBe(404);
+      expect((await completeRefund(pending, 'x')).status).toBe(409);
+      expect(refundSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('super_admin 이 아니면 환불을 실행할 수 없다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      await setSuperAdmin(false);
+
+      // When / Then
+      expect((await refund(orderId)).status).toBe(403);
+      expect((await completeRefund(orderId, 'x')).status).toBe(403);
+      expect((await retryAdjust(orderId)).status).toBe(403);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .post(`${ADMIN_ORDER_BASE}/${orderId}/refund`)
+            .set('Authorization', `Bearer ${token}`)
+        ).status,
+      ).toBe(401);
+      expect(refundSpy).not.toHaveBeenCalled();
+      expect(await orderStatus(orderId)).toBe('PAID');
+    });
+
+    it('발표 정정이 실패해도 환불은 그대로고, 정정만 다시 시도한다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      invalidSpy.mockResolvedValueOnce(adjusted(5070999));
+
+      // When
+      const res = await refund(orderId);
+
+      // Then
+      expect(res.body.data.status).toBe('COMPLETED');
+      expect(await adjustStatusOf(orderId)).toMatchObject({
+        adjust_status: 'FAILED',
+        adjust_failure_code: '5070999',
+        adjust_attempt_count: 1,
+      });
+
+      // When
+      const retried = await retryAdjust(orderId);
+
+      // Then - 환불은 다시 나가지 않는다
+      expect(retried.status).toBe(200);
+      expect(retried.body.data).toMatchObject({
+        adjustStatus: 'VOIDED',
+        attemptCount: 2,
+        failureCode: null,
+      });
+      expect(refundSpy).toHaveBeenCalledTimes(1);
+      expect((await retryAdjust(orderId)).status).toBe(409);
+    });
+
+    it('신고 기한이 지난 발표는 作廢 대신 전액 折讓 한다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId, amount } = await paidOrder(token, {
+        invoiceDate: '2026-01-10T03:00:00Z',
+      });
+
+      // When
+      await refund(orderId).expect(200);
+
+      // Then
+      expect(await adjustStatusOf(orderId)).toMatchObject({
+        adjust_status: 'ALLOWANCED',
+        allowance_no: '2026112508481095',
+      });
+      expect(invalidSpy).not.toHaveBeenCalled();
+      expect(allowanceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          InvoiceNo: INVOICE_NO,
+          InvoiceDate: '2026-01-10',
+          AllowanceAmount: amount,
+        }),
+      );
+    });
+
+    it('ECPay 조회에서 이미 作廢 됐거나 발행된 적이 없으면 정정을 요청하지 않는다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const voided = await paidOrder(token);
+      const neverIssued = await paidOrder(token, { issued: false });
+      getIssueSpy.mockResolvedValueOnce(
+        issued({ IIS_Invalid_Status: '1', IIS_Remain_Allowance_Amt: 0 }),
+      );
+
+      // When
+      await refund(voided.orderId).expect(200);
+      const first = await adjustStatusOf(voided.orderId);
+      await refund(neverIssued.orderId).expect(200);
+      const second = await adjustStatusOf(neverIssued.orderId);
+
+      // Then
+      expect(first.adjust_status).toBe('VOIDED');
+      expect(second).toMatchObject({
+        adjust_status: 'NONE',
+        status: 'PENDING',
+      });
+      expect(getIssueSpy).toHaveBeenCalledTimes(1);
+      expect(invalidSpy).not.toHaveBeenCalled();
+    });
+
+    it('발행 결과를 모르던 발표가 실제로는 나가 있었으면 맞춰 놓고 作廢 한다', async () => {
+      // Given - 발행 요청은 했지만 결과를 못 받은 발표
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token, { issued: false });
+      await dataSource.query(
+        `UPDATE order_invoice SET relate_number = 'SMINVUNKNOWN', attempt_count = 1 WHERE order_id = $1`,
+        [orderId],
+      );
+
+      // When
+      await refund(orderId).expect(200);
+
+      // Then
+      expect(await adjustStatusOf(orderId)).toMatchObject({
+        adjust_status: 'VOIDED',
+        status: 'ISSUED',
+      });
+      expect(getIssueSpy).toHaveBeenCalledWith('SMINVUNKNOWN');
+      expect(invalidSpy).toHaveBeenCalledWith(
+        INVOICE_NO,
+        TODAY_TAIPEI,
+        '訂單取消退款',
+      );
+    });
+
+    it('이미 전액 折讓 됐거나 "이미 作廢 됨" 응답이면 끝난 것으로 본다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const allowanced = await paidOrder(token);
+      const alreadyVoided = await paidOrder(token);
+      getIssueSpy.mockResolvedValueOnce(
+        issued({ IIS_Remain_Allowance_Amt: 0 }),
+      );
+      invalidSpy.mockResolvedValueOnce(adjusted(5070453));
+
+      // When
+      await refund(allowanced.orderId).expect(200);
+      await refund(alreadyVoided.orderId).expect(200);
+
+      // Then
+      expect((await adjustStatusOf(allowanced.orderId)).adjust_status).toBe(
+        'ALLOWANCED',
+      );
+      expect((await adjustStatusOf(alreadyVoided.orderId)).adjust_status).toBe(
+        'VOIDED',
+      );
+      expect(invalidSpy).toHaveBeenCalledTimes(1);
+      expect(allowanceSpy).not.toHaveBeenCalled();
+    });
+
+    it('일부 折讓 된 발표는 作廢 하지 않고 남은 금액을 折讓 한다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      getIssueSpy.mockResolvedValueOnce(
+        issued({ IIS_Remain_Allowance_Amt: 300 }),
+      );
+
+      // When
+      await refund(orderId).expect(200);
+
+      // Then
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('ALLOWANCED');
+      expect(invalidSpy).not.toHaveBeenCalled();
+      expect(allowanceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ AllowanceAmount: 300 }),
+      );
+    });
+
+    it('발행됐다고 기록된 발표를 ECPay 가 모르면 닫지 않고 실패로 남긴다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      getIssueSpy.mockResolvedValueOnce(
+        EcpayInvoiceResultDto.fromGetIssue({ RtnCode: 2, RtnMsg: '查無資料' }),
+      );
+
+      // When
+      await refund(orderId).expect(200);
+
+      // Then
+      expect(await adjustStatusOf(orderId)).toMatchObject({
+        adjust_status: 'FAILED',
+        adjust_failure_code: '2',
+      });
+      expect(invalidSpy).not.toHaveBeenCalled();
+    });
+
+    it('발행하는 동안 환불이 끝나도 정정 대기가 지워지지 않고, 배치가 정정한다', async () => {
+      // Given - 발행 전 발표가 있는 결제 완료 주문
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token, { issued: false });
+      jest.spyOn(ecpayInvoice, 'issue').mockImplementationOnce(async () => {
+        // 발행 요청이 나가 있는 사이 환불이 끝났다
+        await dataSource.query(
+          `UPDATE order_invoice SET adjust_status = 'PENDING' WHERE order_id = $1`,
+          [orderId],
+        );
+        await dataSource.query(
+          `INSERT INTO refund (order_id, payment_id, method, amount, status, admin_id, requested_at, completed_at)
+           VALUES ($1, 1, 'LINE_PAY', 1000, 'COMPLETED', 1, NOW(), NOW())`,
+          [orderId],
+        );
+
+        return EcpayInvoiceResultDto.fromIssue({
+          RtnCode: 1,
+          RtnMsg: 'ok',
+          InvoiceNo: INVOICE_NO,
+          InvoiceDate: `${TODAY_TAIPEI} 10:00:00`,
+          RandomNumber: '3204',
+        });
+      });
+
+      // When
+      await app.get(InvoiceIssueService).issueForOrder(orderId);
+
+      // Then - 발행은 기록되고 정정 대기는 그대로다
+      expect(await adjustStatusOf(orderId, false)).toMatchObject({
+        status: 'ISSUED',
+        adjust_status: 'PENDING',
+      });
+
+      // When
+      await app.get(InvoiceAdjustService).retryPending();
+
+      // Then
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('VOIDED');
+    });
+
+    it('환불 전 주문의 발표는 정정할 수 없고, 남은 정정은 배치가 다시 시도한다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const untouched = await paidOrder(token);
+      const stuck = await paidOrder(token);
+      getIssueSpy.mockRejectedValueOnce(new Error('timeout'));
+      await refund(stuck.orderId).expect(200);
+
+      // When / Then - 환불하지 않은 주문
+      expect((await retryAdjust(untouched.orderId)).status).toBe(409);
+      expect((await retryAdjust(999999)).status).toBe(404);
+      expect(await adjustStatusOf(stuck.orderId)).toMatchObject({
+        adjust_status: 'FAILED',
+        adjust_failure_code: 'NETWORK',
+      });
+
+      // When
+      await app.get(InvoiceAdjustService).retryPending();
+
+      // Then
+      expect((await adjustStatusOf(stuck.orderId)).adjust_status).toBe(
+        'VOIDED',
+      );
+      expect(
+        (await adjustStatusOf(untouched.orderId, false)).adjust_status,
+      ).toBe('NONE');
     });
   });
 });

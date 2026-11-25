@@ -9,7 +9,11 @@ import {
 
 import { CommonEntity } from './common.entity';
 import { OrderEntity } from './order.entity';
-import { InvoiceStatus, InvoiceType } from '../enum/invoice.enum';
+import {
+  InvoiceAdjustStatus,
+  InvoiceStatus,
+  InvoiceType,
+} from '../enum/invoice.enum';
 
 /**
  * 주문 전자발표 (1:1). order_shipping 처럼 PK 가 곧 FK 다.
@@ -154,6 +158,52 @@ export class OrderInvoiceEntity extends CommonEntity {
     nullable: true,
   })
   failureMessage: string | null;
+
+  @Column('enum', {
+    name: 'adjust_status',
+    enum: InvoiceAdjustStatus,
+    default: InvoiceAdjustStatus.NONE,
+    nullable: false,
+    comment: '환불 뒤 발표 정정(作廢·折讓) 상태. 환불 상태와 따로 본다',
+  })
+  adjustStatus: InvoiceAdjustStatus;
+
+  @Column('int', {
+    name: 'adjust_attempt_count',
+    nullable: false,
+    default: 0,
+    comment: '정정 시도 횟수',
+  })
+  adjustAttemptCount: number;
+
+  @Column('varchar', {
+    name: 'allowance_no',
+    length: 16,
+    nullable: true,
+    comment: '折讓單 번호 (折讓 으로 정정했을 때)',
+  })
+  allowanceNo: string | null;
+
+  @Column('timestamptz', {
+    name: 'adjusted_at',
+    nullable: true,
+    comment: '정정 완료 시각',
+  })
+  adjustedAt: Date | null;
+
+  @Column('varchar', {
+    name: 'adjust_failure_code',
+    length: 50,
+    nullable: true,
+  })
+  adjustFailureCode: string | null;
+
+  @Column('varchar', {
+    name: 'adjust_failure_message',
+    length: 255,
+    nullable: true,
+  })
+  adjustFailureMessage: string | null;
 
   @OneToOne(() => OrderEntity, (order) => order.invoice, {
     onDelete: 'CASCADE',

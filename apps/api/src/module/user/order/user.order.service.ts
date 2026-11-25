@@ -16,6 +16,7 @@ import { CartRepositoryService } from '@app/repository/service/cart.repository.s
 import { OrderRepositoryService } from '@app/repository/service/order.repository.service';
 import { PaymentRepositoryService } from '@app/repository/service/payment.repository.service';
 import { ProductRepositoryService } from '@app/repository/service/product.repository.service';
+import { RefundRepositoryService } from '@app/repository/service/refund.repository.service';
 import { ShippingRepositoryService } from '@app/repository/service/shipping.repository.service';
 import { UserRepositoryService } from '@app/repository/service/user.repository.service';
 import { Injectable } from '@nestjs/common';
@@ -90,6 +91,7 @@ export class UserOrderService {
     private readonly shippingFeeCalculator: ShippingFeeCalculator,
     private readonly cvsStoreService: CvsStoreService,
     private readonly invoiceValidationService: InvoiceValidationService,
+    private readonly refundRepositoryService: RefundRepositoryService,
   ) {}
 
   /**
@@ -297,11 +299,12 @@ export class UserOrderService {
       );
     }
 
-    const payment = await this.paymentRepositoryService.findLatestByOrderId(
-      order.id,
-    );
+    const [payment, refund] = await Promise.all([
+      this.paymentRepositoryService.findLatestByOrderId(order.id),
+      this.refundRepositoryService.findByOrderId(order.id),
+    ]);
 
-    return GetUserOrderResponse.from(order, payment, language);
+    return GetUserOrderResponse.from(order, payment, language, refund);
   }
 
   /**

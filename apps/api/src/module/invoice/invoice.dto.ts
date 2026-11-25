@@ -1,5 +1,9 @@
 import { OrderInvoiceEntity } from '@app/repository/entity/order-invoice.entity';
-import { InvoiceStatus, InvoiceType } from '@app/repository/enum/invoice.enum';
+import {
+  InvoiceAdjustStatus,
+  InvoiceStatus,
+  InvoiceType,
+} from '@app/repository/enum/invoice.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, plainToInstance } from 'class-transformer';
 import {
@@ -121,6 +125,14 @@ export class GetOrderInvoiceResponse {
   })
   randomNumber: string | null;
 
+  @ApiProperty({
+    description:
+      '환불 뒤 발표 정정 상태. NONE 정정 없음 / PENDING 정정 대기 / VOIDED 作廢 / ALLOWANCED 折讓 / FAILED 정정 지연',
+    enum: InvoiceAdjustStatus,
+    example: InvoiceAdjustStatus.NONE,
+  })
+  adjustStatus: InvoiceAdjustStatus;
+
   static from(entity: OrderInvoiceEntity): GetOrderInvoiceResponse {
     return plainToInstance(this, {
       type: entity.type,
@@ -132,6 +144,7 @@ export class GetOrderInvoiceResponse {
       invoiceNo: entity.invoiceNo,
       invoiceDate: entity.invoiceDate,
       randomNumber: entity.randomNumber,
+      adjustStatus: entity.adjustStatus,
     });
   }
 }

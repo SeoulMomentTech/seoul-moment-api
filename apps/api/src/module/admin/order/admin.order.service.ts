@@ -12,6 +12,7 @@ import {
 import { getTimerState } from '@app/repository/helper/order-status.helper';
 import { OrderRepositoryService } from '@app/repository/service/order.repository.service';
 import { PaymentRepositoryService } from '@app/repository/service/payment.repository.service';
+import { RefundRepositoryService } from '@app/repository/service/refund.repository.service';
 import { ShipmentRepositoryService } from '@app/repository/service/shipment.repository.service';
 import { Injectable } from '@nestjs/common';
 import moment from 'moment-timezone';
@@ -36,6 +37,7 @@ export class AdminOrderService {
     private readonly orderRepositoryService: OrderRepositoryService,
     private readonly paymentRepositoryService: PaymentRepositoryService,
     private readonly shipmentRepositoryService: ShipmentRepositoryService,
+    private readonly refundRepositoryService: RefundRepositoryService,
   ) {}
 
   async getSummary(): Promise<GetAdminOrderSummaryResponse> {
@@ -108,10 +110,11 @@ export class AdminOrderService {
       );
     }
 
-    const [payment, shipments, events] = await Promise.all([
+    const [payment, shipments, events, refund] = await Promise.all([
       this.paymentRepositoryService.findLatestByOrderId(order.id),
       this.shipmentRepositoryService.findByOrderId(order.id),
       this.orderRepositoryService.findEventsByOrderId(order.id),
+      this.refundRepositoryService.findByOrderId(order.id),
     ]);
 
     return GetAdminOrderDetailResponse.from(
@@ -119,8 +122,7 @@ export class AdminOrderService {
       payment,
       new Date(),
       language,
-      shipments,
-      events,
+      { shipments, events, refund },
     );
   }
 

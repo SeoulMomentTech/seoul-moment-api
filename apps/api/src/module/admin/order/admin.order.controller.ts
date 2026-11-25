@@ -84,7 +84,8 @@ export class AdminOrderController {
   @ApiOperation({
     summary: '주문 상세 (우측 드로어)',
     description:
-      '고객 주문 상세 + 발주·매입 + 24시간 타이머 + 통관·배송(delivery) + 취소 접수(cancellation) + 작업 이력(events). 환불 상태는 아직 없다.',
+      '고객 주문 상세 + 발주·매입 + 24시간 타이머 + 통관·배송(delivery) + 취소 접수(cancellation) + 환불(refund) + 발표 정정(invoiceAdjustment) + 작업 이력(events). ' +
+      '결제 전(PENDING) 주문만 404 이고, 환불이 끝나 취소된 주문도 열린다.',
   })
   @ApiHeader(LANGUAGE_HEADER)
   @ResponseData(GetAdminOrderDetailResponse)

@@ -28,6 +28,7 @@ export enum PaymentEventSource {
   LINEPAY_CONFIRM = 'LINEPAY_CONFIRM',
   LINEPAY_CHECK = 'LINEPAY_CHECK',
   LINEPAY_CANCEL = 'LINEPAY_CANCEL',
+  LINEPAY_REFUND = 'LINEPAY_REFUND',
   /** 결제는 됐는데 후처리가 실패해 사람이 봐야 하는 건 (재고 부족·중복 결제 등) */
   NEEDS_ATTENTION = 'NEEDS_ATTENTION',
 }

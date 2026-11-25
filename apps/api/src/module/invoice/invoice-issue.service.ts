@@ -217,7 +217,17 @@ export class InvoiceIssueService {
     invoice.failureCode = null;
     invoice.failureMessage = null;
 
-    return this.orderRepositoryService.saveInvoice(invoice);
+    // 발행하는 동안 환불이 끝나 정정 대기(adjust_status)가 걸렸을 수 있다 — 발행 칸만 고친다
+    await this.orderRepositoryService.updateInvoiceFields(invoice.orderId, {
+      status: invoice.status,
+      invoiceNo: invoice.invoiceNo,
+      invoiceDate: invoice.invoiceDate,
+      randomNumber: invoice.randomNumber,
+      failureCode: null,
+      failureMessage: null,
+    });
+
+    return invoice;
   }
 
   private async markFailed(

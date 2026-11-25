@@ -1,6 +1,7 @@
 import { OrderItemEntity } from '@app/repository/entity/order-item.entity';
 import { OrderEntity } from '@app/repository/entity/order.entity';
 import { PaymentEntity } from '@app/repository/entity/payment.entity';
+import { RefundEntity } from '@app/repository/entity/refund.entity';
 import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   DeliveryStage,
@@ -9,6 +10,7 @@ import {
   ShippingType,
   UserOrderListFilter,
 } from '@app/repository/enum/order.enum';
+import { RefundStatus } from '@app/repository/enum/refund.enum';
 import {
   canRequestCancel,
   getDeliveryStageLabel,
@@ -503,6 +505,28 @@ export class GetUserOrderShippingResponse {
   } | null;
 }
 
+export class GetUserOrderRefundResponse {
+  @ApiProperty({
+    description:
+      'REQUESTED·PROCESSING 환불 진행 중 / COMPLETED 환불 완료 / FAILED 환불 처리 지연 (고객센터 확인 중)',
+    enum: RefundStatus,
+  })
+  status: RefundStatus;
+
+  @ApiProperty({ description: '환불 금액 NT$', example: 3880 })
+  amount: number;
+
+  @ApiProperty({ description: '환불 접수 시각' })
+  requestedAt: Date;
+
+  @ApiPropertyOptional({
+    description:
+      '환불 완료 시각. 카드 명세서 반영은 카드사에 따라 더 걸릴 수 있다',
+    nullable: true,
+  })
+  completedAt: Date | null;
+}
+
 export class GetUserOrderResponse {
   @ApiProperty({ description: '주문 ID', example: 481 })
   orderId: number;
@@ -512,7 +536,7 @@ export class GetUserOrderResponse {
 
   @ApiProperty({
     description:
-      '주문 상태. PENDING 결제 전(결제창 이탈 포함, 다시 결제 가능) / PAYMENT_WAITING ATM·편의점 입금 대기 / PAID 결제 완료 / CANCELED 취소(입금 기한 경과·장기 미결제) / FAILED 결제 후 재고 부족 등으로 환불 대상',
+      '주문 상태. PENDING 결제 전(결제창 이탈 포함, 다시 결제 가능) / PAYMENT_WAITING ATM·편의점 입금 대기 / PAID 결제 완료 / CANCELED 취소(입금 기한 경과·장기 미결제·환불 완료) / FAILED 결제 후 재고 부족 등으로 환불 대상',
     example: 'PENDING',
   })
   status: string;
@@ -625,6 +649,14 @@ export class GetUserOrderResponse {
 
   @ApiPropertyOptional({
     description:
+      '환불. 환불이 시작되지 않았으면 null. 완료되면 status 가 CANCELED 로 바뀐다',
+    type: GetUserOrderRefundResponse,
+    nullable: true,
+  })
+  refund: GetUserOrderRefundResponse | null;
+
+  @ApiPropertyOptional({
+    description:
       '전자발표. 결제가 확정되면 서버가 발행해 invoiceNo 가 채워진다',
     type: GetOrderInvoiceResponse,
     nullable: true,
@@ -641,8 +673,10 @@ export class GetUserOrderResponse {
     entity: OrderEntity,
     payment?: PaymentEntity | null,
     language?: LanguageCode,
+    refund?: RefundEntity | null,
   ) {
     return plainToInstance(this, {
+      refund: refund ? this.toRefund(refund) : null,
       orderId: entity.id,
       orderNumber: entity.orderNumber,
       status: entity.status,
@@ -678,6 +712,16 @@ export class GetUserOrderResponse {
       ),
       shipping: this.toShipping(entity),
     });
+  }
+
+  /** 처리자·PG 응답 같은 내부 값은 고객에게 주지 않는다 */
+  private static toRefund(refund: RefundEntity) {
+    return {
+      status: refund.status,
+      amount: refund.amount,
+      requestedAt: refund.requestedAt,
+      completedAt: refund.completedAt ?? null,
+    };
   }
 
   private static toShipping(entity: OrderEntity) {

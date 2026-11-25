@@ -16,6 +16,7 @@ import {
   READY_EXPIRE_MINUTES,
 } from './payment.constant';
 import { minutesAgo, sleep } from './payment.util';
+import { InvoiceAdjustService } from '../invoice/invoice-adjust.service';
 import { InvoiceIssueService } from '../invoice/invoice-issue.service';
 
 /**
@@ -33,6 +34,7 @@ export class PaymentBatchService {
     private readonly ecpayPaymentService: EcpayPaymentService,
     private readonly linePayPaymentService: LinePayPaymentService,
     private readonly invoiceIssueService: InvoiceIssueService,
+    private readonly invoiceAdjustService: InvoiceAdjustService,
   ) {}
 
   async runAll(now: Date = new Date()) {
@@ -42,6 +44,7 @@ export class PaymentBatchService {
     await this.reconcileEcpay(now);
     await this.cancelStaleOrders();
     await this.invoiceIssueService.retryPending();
+    await this.invoiceAdjustService.retryPending();
   }
 
   /**
