@@ -49,6 +49,16 @@ export function parseTaipeiDateTime(value: string | undefined): Date | null {
   return new Date(utc - TAIPEI_OFFSET_MS);
 }
 
+/**
+ * ECPay 는 매일 20:15~20:30(대만)에 카드 거래를 매입하고, 그동안 請退款(DoAction)을 부르지
+ * 말라고 한다 (developers.ecpay.com.tw/2885). 앞뒤로 5분씩 더 비운다.
+ */
+export function isEcpayClosingWindow(now: Date): boolean {
+  const time = formatTaipeiDateTime(now).slice(11, 16);
+
+  return time >= '20:10' && time < '20:35';
+}
+
 function pad(value: number): string {
   return String(value).padStart(2, '0');
 }

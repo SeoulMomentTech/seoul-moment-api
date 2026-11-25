@@ -1,27 +1,30 @@
 import { CacheModule } from '@app/cache/cache.module';
+import { ExternalEcpayModule } from '@app/external/ecpay/ecpay.module';
 import { ExternalGoogleModule } from '@app/external/google/google.module';
 import { ExternalLinePayModule } from '@app/external/linepay/linepay.module';
 import { RepositoryModule } from '@app/repository/repository.module';
 import { Module } from '@nestjs/common';
 
+import { EcpayCardRefundService } from './ecpay-card-refund.service';
 import { RefundNoticeService } from './refund-notice.service';
 import { RefundService } from './refund.service';
 import { InvoiceModule } from '../invoice/invoice.module';
 import { PaymentModule } from '../payment/payment.module';
 
-/** 환불 (LINE Pay API · ECPay 수동). 관리자 주문 모듈과 고객 취소 접수(자동 환불)가 쓴다 */
+/** 환불 (LINE Pay · ECPay 카드는 API, 그 밖의 ECPay 는 수동). 관리자 주문 모듈과 고객 취소 접수(자동 환불)가 쓴다 */
 @Module({
   imports: [
     RepositoryModule,
     CacheModule,
     ExternalLinePayModule,
+    ExternalEcpayModule,
     // 재고 복구를 결제와 같은 코드로 한다
     PaymentModule,
     InvoiceModule,
     // 환불 완료 메일
     ExternalGoogleModule,
   ],
-  providers: [RefundService, RefundNoticeService],
+  providers: [RefundService, EcpayCardRefundService, RefundNoticeService],
   exports: [RefundService],
 })
 export class RefundModule {}

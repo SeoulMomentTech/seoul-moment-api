@@ -52,11 +52,12 @@ export class AdminRefundController {
     description:
       'super_admin 만 된다. 결제 완료(PAID)·결제 후 처리 실패(FAILED) 주문을 환불한다. 고객의 취소 신청이 없어도(품절·판매 중단 등) 실행할 수 있다. ' +
       'amount 를 생략하면 남은 금액 전부, 보내면 그 금액만 돌려준다(부분 환불 — 여러 번 할 수 있고 합계가 결제 금액을 넘으면 400). ' +
-      '고객이 결제 후 24시간 안 · 발주 전에 취소를 신청한 주문은 이 API 없이 시스템이 자동으로 환불을 시작한다 — 실패했거나 ECPay 결제면 여기서 이어서 처리한다. ' +
-      'LINE Pay 는 환불 API 를 불러 결과가 바로 status 에 온다 (COMPLETED / FAILED=LINE Pay 가 환불하지 않았다고 확정 / PROCESSING=결과 미확인). ' +
-      'ECPay(카드·ATM·편의점)는 API 를 부르지 않고 REQUESTED·isManual=true 로 기록만 한다 — ECPay 후台이나 계좌 송금으로 돌려준 뒤 /refund/complete 를 부른다. ' +
-      '끝나지 않은 환불(FAILED·PROCESSING·REQUESTED)이 있는 주문에 다시 부르면 새로 만들지 않고 그 환불의 재시도이고, 이미 나간 환불이 있는지 LINE Pay 에 먼저 조회해서 두 번 돌려주지 않는다. ' +
-      '결과 미확인(PROCESSING)은 마지막 요청 뒤 5분 동안은 조회만 하고 다시 보내지 않는다(LINE Pay 가 아직 처리 중일 수 있다). ' +
+      '고객이 결제 후 24시간 안 · 발주 전에 취소를 신청한 주문은 이 API 없이 시스템이 자동으로 환불을 시작한다 — 실패했거나 수동 환불이면 여기서 이어서 처리한다. ' +
+      'LINE Pay 와 ECPay 카드 결제는 환불 API 를 불러 결과가 바로 status 에 온다 (COMPLETED / FAILED=PG 가 환불하지 않았다고 확정 / PROCESSING=결과 미확인). ' +
+      'ECPay 카드는 거래 상태를 먼저 조회해 매입 전이면 승인 취소, 매입 뒤면 退刷 를 보낸다. 조회가 안 되거나(LOOKUP_FAILED) ECPay 매입 시간대(대만 20:10~20:35, CLOSING_WINDOW)면 보내지 않고 상태를 그대로 둔다 — 잠시 뒤 다시 부른다. ' +
+      'ECPay ATM·편의점 결제와, 승인번호가 없는 예전 카드 결제·검사 코드가 설정되지 않은 환경은 API 를 부르지 않고 REQUESTED·isManual=true 로 기록만 한다 — ECPay 後台이나 계좌 송금으로 돌려준 뒤 /refund/complete 를 부른다. ' +
+      '끝나지 않은 환불(FAILED·PROCESSING·REQUESTED)이 있는 주문에 다시 부르면 새로 만들지 않고 그 환불의 재시도이고, 이미 나간 환불이 있는지 PG 에 먼저 조회해서 두 번 돌려주지 않는다. ' +
+      '결과 미확인(PROCESSING)은 마지막 요청 뒤 5분 동안은 조회만 하고 다시 보내지 않는다(PG 가 아직 처리 중일 수 있다). ' +
       'COMPLETED 가 되면 고객에게 환불 완료 메일이 가고 전자발표 정정이 따로 시작된다(전액이면 作廢 또는 折讓, 부분이면 그 금액만 折讓). ' +
       '환불 합계가 결제 금액에 닿았을 때에만 주문이 CANCELED 로 바뀌고 미발주 재고를 돌려준다 — 부분 환불은 주문 상태와 재고를 건드리지 않는다.',
   })
@@ -114,8 +115,8 @@ export class AdminRefundController {
     summary: '수동 환불 완료 입력',
     description:
       'super_admin 만 된다. PG 밖에서 실제로 돈을 돌려준 뒤에 부른다 — 이 API 는 돈을 보내지 않고 완료만 기록한다. ' +
-      '수동 환불(isManual=true)이거나, LINE Pay 가 거절했거나(FAILED) 한 번도 보내지 못한(attemptCount 0 — LINE Pay 조회 실패로 보류된 LOOKUP_FAILED 등) 환불에만 된다. 결과 미확인(PROCESSING)인 LINE Pay 환불은 409 — /refund 로 다시 시도해 결과부터 확인한다. ' +
-      'LINE Pay 조회가 계속 실패해 PROCESSING 에서 못 벗어나면 LINE Pay 가맹점 화면에서 환불 여부를 확인한 뒤 개발팀이 상태를 고쳐야 한다.',
+      '수동 환불(isManual=true)이거나, PG 가 거절했거나(FAILED) 한 번도 보내지 못한(attemptCount 0 — 조회 실패로 보류된 LOOKUP_FAILED 등) 환불에만 된다. 결과 미확인(PROCESSING)인 PG 환불은 409 — /refund 로 다시 시도해 결과부터 확인한다. ' +
+      'PG 조회가 계속 실패해 PROCESSING 에서 못 벗어나면 LINE Pay 가맹점 화면·ECPay 後台에서 환불 여부를 확인한 뒤 개발팀이 상태를 고쳐야 한다.',
   })
   @ResponseData(GetAdminRefundResponse)
   @ResponseException(HttpStatus.NOT_FOUND, 'Order not found')

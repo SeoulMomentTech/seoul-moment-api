@@ -276,6 +276,8 @@ describe('결제 (E2E) — ECPay · LINE Pay', () => {
       TradeDate: '2026/10/26 12:30:00',
       SimulatePaid: '0',
       CustomField1: '',
+      // NeedExtraPaidInfo=Y 로 함께 오는 카드 승인 거래번호
+      gwsr: '14788440',
       ...extra,
     });
   }
@@ -547,6 +549,7 @@ describe('결제 (E2E) — ECPay · LINE Pay', () => {
 
       // Then
       expect(fields.TotalAmount).toBe(String(started.totalAmount));
+      expect(fields.NeedExtraPaidInfo).toBe('Y');
       expect(fields.CheckMacValue).toBe(
         generateCheckMacValue(fields, ECPAY.hashKey, ECPAY.hashIV),
       );
@@ -597,6 +600,7 @@ describe('결제 (E2E) — ECPay · LINE Pay', () => {
       expect(payment.status).toBe('PAID');
       expect(payment.pg_transaction_id).toBe('2510261234567890');
       expect(payment.pg_payment_type).toBe('Credit_CreditCard');
+      expect(payment.pg_auth_id).toBe('14788440');
 
       const cartIds = (
         await dataSource.query(`SELECT id FROM cart_item ORDER BY id`)

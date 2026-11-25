@@ -62,7 +62,7 @@ export class RefundEntity extends CommonEntity {
     nullable: false,
     default: false,
     comment:
-      'PG 환불 API 를 쓰지 않고 관리자가 직접 처리하는 환불 (ECPay 카드·ATM·편의점)',
+      'PG 환불 API 를 쓰지 않고 관리자가 직접 처리하는 환불 (ECPay ATM·편의점, 승인번호가 없는 카드 결제)',
   })
   isManual: boolean;
 

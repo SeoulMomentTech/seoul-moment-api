@@ -3,6 +3,12 @@ import {
   EcpayInvoiceResultDto,
 } from '@app/external/ecpay/ecpay-invoice.dto';
 import { ExternalEcpayInvoiceService } from '@app/external/ecpay/ecpay-invoice.service';
+import { isEcpayClosingWindow } from '@app/external/ecpay/ecpay.date';
+import {
+  EcpayCreditActionResultDto,
+  EcpayCreditTradeDto,
+} from '@app/external/ecpay/ecpay.dto';
+import { ExternalEcpayService } from '@app/external/ecpay/ecpay.service';
 import { ExternalGoogleMailService } from '@app/external/google/google-mail.service';
 import {
   LinePayRefundLookupDto,
@@ -2715,6 +2721,467 @@ describe('주문 현황·발주 (E2E)', () => {
       // Then
       expect((await adjustStatusOf(orderId)).adjust_status).toBe('NONE');
       expect(await orderStatus(orderId)).toBe('FAILED');
+    });
+
+    describe('ECPay 카드 결제 — 請退款 API', () => {
+      const GWSR = '14788440';
+      let queryTradeSpy: jest.SpyInstance;
+      let actionSpy: jest.SpyInstance;
+      let windowSpy: jest.SpyInstance;
+
+      /** QueryTrade/V2 응답. closeData 는 [상태, 금액] — 退刷 는 음수 한 줄에 합쳐져 온다 */
+      const trade = (
+        amount: number,
+        status: string,
+        closeData: [string, number][] | null = null,
+      ) =>
+        EcpayCreditTradeDto.fromJson(
+          JSON.stringify({
+            RtnMsg: '',
+            RtnValue: {
+              TradeID: GWSR,
+              amount: String(amount),
+              clsamt: '0',
+              authtime: '2026/11/25 下午 04:00:10',
+              status,
+              close_data:
+                closeData?.map(([rowStatus, rowAmount], index) => ({
+                  sno: String(1691666 + index),
+                  status: rowStatus,
+                  amount: String(rowAmount),
+                  datetime: '2026/11/25 下午 04:01:16',
+                })) ?? null,
+            },
+          }),
+        );
+      const acted = (code = '1', message = 'Succeeded.') =>
+        EcpayCreditActionResultDto.from({
+          MerchantID: '3002607',
+          RtnCode: code,
+          RtnMsg: message,
+        });
+
+      beforeEach(() => {
+        const ecpay = app.get(ExternalEcpayService, { strict: false });
+
+        queryTradeSpy = jest.spyOn(ecpay, 'queryCreditTrade');
+        actionSpy = jest
+          .spyOn(ecpay, 'doCreditAction')
+          .mockResolvedValue(acted());
+        windowSpy = jest
+          .spyOn(ecpay, 'isCreditClosingWindow')
+          .mockReturnValue(false);
+      });
+
+      /** 승인번호(gwsr)를 받아 둔 카드 결제 주문 */
+      async function cardOrder(token: string) {
+        const order = await paidOrder(token, { method: 'ECPAY' });
+
+        await dataSource.query(
+          `UPDATE payment SET pg_payment_type = 'Credit_CreditCard', pg_auth_id = $2 WHERE order_id = $1`,
+          [order.orderId, GWSR],
+        );
+
+        const [payment] = await dataSource.query(
+          `SELECT merchant_trade_no FROM payment WHERE order_id = $1`,
+          [order.orderId],
+        );
+
+        return { ...order, tradeNo: payment.merchant_trade_no as string };
+      }
+
+      const actions = () =>
+        actionSpy.mock.calls.map((call) => `${call[2]} ${call[3]}`);
+
+      it('stage 에서 받은 조회 응답에서 상태와 환불 합계를 읽는다 (2026-11-25 실측)', () => {
+        // Given - payment-stage.ecpay.com.tw 가 실제로 돌려준 응답 원문
+        const authorized =
+          '{"RtnMsg":"","RtnValue":{"TradeID":"14788440","amount":"1000","clsamt":"0","authtime":"2026/11/25 下午 04:00:10","status":"已授權","close_data":null}}';
+        const refundedTwice =
+          '{"RtnMsg":"","RtnValue":{"TradeID":"14788440","amount":"1000","clsamt":"0","authtime":"2026/11/25 下午 04:00:10","status":"要關帳","close_data":[{"sno":"1691666","status":"要關帳","amount":"1000","datetime":"2026/11/25 下午 04:01:16"},{"sno":"1691667","status":"要關帳","amount":"-600","datetime":"2026/11/26 下午 04:01:25"}]}}';
+        const closeCanceled =
+          '{"RtnMsg":"","RtnValue":{"TradeID":"14788449","amount":"1000","clsamt":"0","authtime":"2026/11/25 下午 04:03:42","status":"操作取消","close_data":[{"sno":"1691669","status":"操作取消","amount":"1000","datetime":"2026/11/25 下午 04:03:54"},{"sno":"1691670","status":"操作取消","amount":"-300","datetime":"2026/11/26 下午 04:03:57"}]}}';
+        const abandoned =
+          '{"RtnMsg":"","RtnValue":{"TradeID":"14788444","amount":"1000","clsamt":"0","authtime":"2026/11/25 下午 04:02:35","status":"已取消","close_data":null}}';
+
+        // When & Then
+        expect(EcpayCreditTradeDto.fromJson(authorized)).toMatchObject({
+          status: '已授權',
+          amount: 1000,
+          refundedAmount: 0,
+        });
+        expect(EcpayCreditTradeDto.fromJson(refundedTwice)).toMatchObject({
+          status: '要關帳',
+          refundedAmount: 600,
+        });
+        // 매입 취소(E)로 함께 취소된 退刷 는 세지 않는다
+        expect(EcpayCreditTradeDto.fromJson(closeCanceled)).toMatchObject({
+          status: '操作取消',
+          refundedAmount: 0,
+        });
+        // 승인 취소(N)는 결제 금액 전부가 돌아간 것이다
+        expect(EcpayCreditTradeDto.fromJson(abandoned)).toMatchObject({
+          status: '已取消',
+          refundedAmount: 1000,
+        });
+        expect(
+          EcpayCreditTradeDto.fromJson(
+            '{"RtnMsg":"error_nopay","RtnValue":""}',
+          ).isSuccess(),
+        ).toBe(false);
+      });
+
+      it('ECPay 매입 시간대(대만 20:15~20:30)와 앞뒤 5분을 알아본다', () => {
+        const taipei = (time: string) =>
+          new Date(`2026-11-25T${time}:00+08:00`);
+
+        expect(isEcpayClosingWindow(taipei('20:09'))).toBe(false);
+        expect(isEcpayClosingWindow(taipei('20:10'))).toBe(true);
+        expect(isEcpayClosingWindow(taipei('20:34'))).toBe(true);
+        expect(isEcpayClosingWindow(taipei('20:35'))).toBe(false);
+      });
+
+      it('매입 전 카드 결제를 24시간 안에 취소하면 승인 취소(N)로 자동 환불된다', async () => {
+        // Given
+        const { token } = await signUpAndLogin();
+        const { orderId, variantId, amount, tradeNo } = await cardOrder(token);
+        queryTradeSpy.mockResolvedValue(trade(amount, '已授權'));
+
+        // When
+        const res = await cancelRequest(token, orderId, '변심');
+
+        // Then
+        expect(res.status).toBe(204);
+        expect(queryTradeSpy).toHaveBeenCalledWith(GWSR, amount);
+        expect(actionSpy).toHaveBeenCalledTimes(1);
+        expect(actionSpy).toHaveBeenCalledWith(tradeNo, TX_ID, 'N', amount);
+        expect(await refundRows(orderId)).toEqual([
+          expect.objectContaining({
+            amount,
+            status: 'COMPLETED',
+            is_manual: false,
+            admin_id: null,
+            pg_refund_id: `N:${TX_ID}`,
+          }),
+        ]);
+        expect(await orderStatus(orderId)).toBe('CANCELED');
+        expect(await stockOf(variantId)).toBe(100);
+        expect(mailSpy).toHaveBeenCalledTimes(1);
+
+        const [event] = await dataSource.query(
+          `SELECT payload FROM payment_event WHERE source = 'ECPAY_REFUND'`,
+        );
+        expect(event.payload).toMatchObject({ Action: 'N', RtnCode: '1' });
+      });
+
+      it('매입 전 부분 환불은 매입을 요청(C)한 뒤 退刷(R)한다 — 승인 취소는 금액과 무관하게 전부 취소한다', async () => {
+        // Given
+        const { token } = await signUpAndLogin();
+        const { orderId, amount } = await cardOrder(token);
+        queryTradeSpy.mockResolvedValue(trade(amount, '已授權'));
+
+        // When
+        const res = await refund(orderId, { amount: 300, reason: '일부 품절' });
+
+        // Then
+        expect(res.body.data).toMatchObject({
+          status: 'COMPLETED',
+          isManual: false,
+          amount: 300,
+          pgRefundId: `C+R:${TX_ID}`,
+        });
+        expect(actions()).toEqual([`C ${amount}`, 'R 300']);
+        expect(await orderStatus(orderId)).toBe('PAID');
+      });
+
+      it('매입 요청된 거래의 전액 환불은 매입 취소(E) 뒤 승인 취소(N), 매입 취소가 안 되면 전액 退刷', async () => {
+        // Given
+        const { token } = await signUpAndLogin();
+        const canceled = await cardOrder(token);
+        const refundedBack = await cardOrder(token);
+        queryTradeSpy.mockImplementation(async (_gwsr, amount: number) =>
+          trade(amount, '要關帳', [['要關帳', amount]]),
+        );
+
+        // When - 매입 취소가 된다
+        const first = await refund(canceled.orderId);
+
+        // Then
+        expect(first.body.data.status).toBe('COMPLETED');
+        expect(actions()).toEqual([
+          `E ${canceled.amount}`,
+          `N ${canceled.amount}`,
+        ]);
+
+        // When - 자동 매입된 거래는 다음 날 06:00 전에 매입 취소가 거절된다
+        actionSpy.mockClear();
+        actionSpy.mockResolvedValueOnce(
+          acted('10000002', '更新失敗.(error_cancleclose)'),
+        );
+        const second = await refund(refundedBack.orderId);
+
+        // Then
+        expect(second.body.data).toMatchObject({
+          status: 'COMPLETED',
+          pgRefundId: `R:${TX_ID}`,
+        });
+        expect(actions()).toEqual([
+          `E ${refundedBack.amount}`,
+          `R ${refundedBack.amount}`,
+        ]);
+        expect(await orderStatus(refundedBack.orderId)).toBe('CANCELED');
+      });
+
+      it('응답을 못 받은 退刷 는 조회로 확인하고 다시 보내지 않는다 — 다음 환불은 앞선 합계를 빼고 본다', async () => {
+        // Given
+        const { token } = await signUpAndLogin();
+        const { orderId, amount } = await cardOrder(token);
+        const closed = (refundedSoFar: number): [string, number][] =>
+          refundedSoFar
+            ? [
+                ['已關帳', amount],
+                ['要關帳', -refundedSoFar],
+              ]
+            : [['已關帳', amount]];
+        queryTradeSpy.mockResolvedValue(trade(amount, '已關帳', closed(0)));
+        actionSpy.mockRejectedValueOnce(new Error('timeout'));
+
+        // When - 300 을 보냈는데 응답이 없다
+        const lost = await refund(orderId, { amount: 300 });
+
+        // Then
+        expect(lost.body.data).toMatchObject({
+          status: 'PROCESSING',
+          failureCode: 'UNKNOWN_RESULT',
+          attemptCount: 1,
+        });
+
+        // When - 다시 누르면 조회에 300 이 보인다
+        queryTradeSpy.mockResolvedValue(trade(amount, '已關帳', closed(300)));
+        const settled = await refund(orderId);
+
+        // Then - 다시 보내지 않고 완료
+        expect(settled.body.data).toMatchObject({
+          status: 'COMPLETED',
+          pgRefundId: `lookup:${TX_ID}`,
+        });
+        expect(actionSpy).toHaveBeenCalledTimes(1);
+
+        // When - 200 을 더 환불하는데 또 응답이 없다. 조회에는 앞선 300 만 보인다
+        actionSpy.mockRejectedValueOnce(new Error('timeout'));
+        await refund(orderId, { amount: 200 });
+        const waiting = await refund(orderId);
+
+        // Then - 앞선 300 을 이 환불로 착각하지 않고, 5분 안에는 다시 보내지도 않는다
+        expect(waiting.body.data.status).toBe('PROCESSING');
+        expect(actionSpy).toHaveBeenCalledTimes(2);
+
+        // When - 5분이 지나도 조회에 없으면 다시 보낸다
+        await waitOut(orderId);
+        const resent = await refund(orderId);
+
+        // Then
+        expect(resent.body.data).toMatchObject({
+          status: 'COMPLETED',
+          amount: 200,
+          attemptCount: 2,
+        });
+        expect(actions()).toEqual(['R 300', 'R 200', 'R 200']);
+        expect((await adminGet(`/${orderId}`)).body.data.refundedAmount).toBe(
+          500,
+        );
+      });
+
+      it('ECPay 가 거절하면 코드와 사유를 남기고 실패로 닫는다 — 다른 방법으로 돌려주고 완료할 수 있다', async () => {
+        // Given
+        const { token } = await signUpAndLogin();
+        const { orderId, amount } = await cardOrder(token);
+        queryTradeSpy.mockResolvedValue(
+          trade(amount, '已關帳', [['已關帳', amount]]),
+        );
+        actionSpy.mockResolvedValueOnce(
+          acted('10000002', '更新失敗.(error_amount_R)'),
+        );
+
+        // When
+        const res = await refund(orderId, { amount: 300 });
+        const done = await completeRefund(orderId, '銀行轉帳 1125-07');
+
+        // Then
+        expect(res.body.data).toMatchObject({
+          status: 'FAILED',
+          failureCode: '10000002',
+          failureMessage: 'R: 更新失敗.(error_amount_R)',
+        });
+        expect(done.body.data).toMatchObject({
+          status: 'COMPLETED',
+          isManual: true,
+        });
+      });
+
+      it('매입 취소(E)는 됐는데 승인 취소(N)가 거절되면 실패로 남고, 다시 누르면 승인 취소만 보낸다', async () => {
+        // Given
+        const { token } = await signUpAndLogin();
+        const { orderId, amount } = await cardOrder(token);
+        queryTradeSpy.mockResolvedValueOnce(
+          trade(amount, '要關帳', [['要關帳', amount]]),
+        );
+        actionSpy
+          .mockResolvedValueOnce(acted())
+          .mockResolvedValueOnce(acted('10000002', '更新失敗.(error)'));
+
+        // When
+        const res = await refund(orderId);
+
+        // Then - 어디까지 됐는지 사유에 남는다
+        expect(res.body.data).toMatchObject({
+          status: 'FAILED',
+          failureMessage: 'N: 更新失敗.(error) (done: E — retry to finish)',
+        });
+
+        // When - 거래는 매입 취소 상태다
+        queryTradeSpy.mockResolvedValueOnce(
+          trade(amount, '操作取消', [['操作取消', amount]]),
+        );
+        const again = await refund(orderId);
+
+        // Then
+        expect(again.body.data.status).toBe('COMPLETED');
+        expect(actions()).toEqual([
+          `E ${amount}`,
+          `N ${amount}`,
+          `N ${amount}`,
+        ]);
+      });
+
+      it('뜻을 모르는 응답(점검 페이지 등)은 실패로 닫지 않고, 처음 보는 상태의 줄이 있으면 보내지 않는다', async () => {
+        // Given
+        const { token } = await signUpAndLogin();
+        const unreadable = await cardOrder(token);
+        const strange = await cardOrder(token);
+        queryTradeSpy.mockResolvedValueOnce(
+          trade(unreadable.amount, '已關帳', [['已關帳', unreadable.amount]]),
+        );
+        actionSpy.mockResolvedValueOnce(
+          EcpayCreditActionResultDto.from({ '<html>maintenance</html>': '' }),
+        );
+
+        // When
+        const first = await refund(unreadable.orderId, { amount: 300 });
+
+        // Then - 수동 완료가 열리지 않는다
+        expect(first.body.data).toMatchObject({
+          status: 'PROCESSING',
+          failureCode: 'UNKNOWN_RESULT',
+        });
+        expect(
+          (await completeRefund(unreadable.orderId, '銀行轉帳')).status,
+        ).toBe(409);
+
+        // When - 환불 줄의 상태가 처음 보는 값이다
+        actionSpy.mockClear();
+        queryTradeSpy.mockResolvedValueOnce(
+          trade(strange.amount, '已關帳', [
+            ['已關帳', strange.amount],
+            ['退刷中', -300],
+          ]),
+        );
+        const second = await refund(strange.orderId, { amount: 300 });
+
+        // Then
+        expect(second.body.data).toMatchObject({
+          status: 'REQUESTED',
+          failureCode: 'LOOKUP_FAILED',
+        });
+        expect(actionSpy).not.toHaveBeenCalled();
+      });
+
+      it('이미 승인 취소된 거래는 보내지 않고 실패로 닫는다', async () => {
+        // Given
+        const { token } = await signUpAndLogin();
+        const { orderId, amount } = await cardOrder(token);
+        queryTradeSpy.mockResolvedValue(trade(amount, '已取消'));
+
+        // When
+        const res = await refund(orderId);
+
+        // Then
+        expect(res.body.data).toMatchObject({
+          status: 'FAILED',
+          failureCode: 'ALREADY_REFUNDED',
+          attemptCount: 0,
+        });
+        expect(actionSpy).not.toHaveBeenCalled();
+        expect(await orderStatus(orderId)).toBe('PAID');
+      });
+
+      it('거래 조회가 안 되거나 매입 시간대면 보내지 않고 환불 요청을 그대로 둔다', async () => {
+        // Given
+        const { token } = await signUpAndLogin();
+        const { orderId, amount } = await cardOrder(token);
+        queryTradeSpy.mockRejectedValueOnce(new Error('403'));
+
+        // When - 조회 실패
+        const unseen = await refund(orderId);
+
+        // Then
+        expect(unseen.body.data).toMatchObject({
+          status: 'REQUESTED',
+          isManual: false,
+          failureCode: 'LOOKUP_FAILED',
+          attemptCount: 0,
+        });
+
+        // When - 매입 시간대
+        queryTradeSpy.mockResolvedValue(trade(amount, '已授權'));
+        windowSpy.mockReturnValueOnce(true);
+        const closing = await refund(orderId);
+
+        // Then
+        expect(closing.body.data).toMatchObject({
+          status: 'REQUESTED',
+          failureCode: 'CLOSING_WINDOW',
+        });
+        expect(actionSpy).not.toHaveBeenCalled();
+
+        // When - 시간대가 지나 다시 누른다
+        const done = await refund(orderId);
+
+        // Then
+        expect(done.body.data.status).toBe('COMPLETED');
+        expect(actions()).toEqual([`N ${amount}`]);
+      });
+
+      it('승인번호가 없는 카드 결제와 ATM 결제는 API 를 부르지 않고 수동 환불로 남는다', async () => {
+        // Given
+        const { token } = await signUpAndLogin();
+        const oldCard = await paidOrder(token, { method: 'ECPAY' });
+        const atm = await paidOrder(token, { method: 'ECPAY' });
+        await dataSource.query(
+          `UPDATE payment SET pg_payment_type = 'Credit_CreditCard' WHERE order_id = $1`,
+          [oldCard.orderId],
+        );
+        await dataSource.query(
+          `UPDATE payment SET pg_payment_type = 'ATM_LAND', pg_auth_id = $2 WHERE order_id = $1`,
+          [atm.orderId, GWSR],
+        );
+
+        // When
+        const first = await refund(oldCard.orderId);
+        const second = await refund(atm.orderId);
+
+        // Then
+        expect(first.body.data).toMatchObject({
+          status: 'REQUESTED',
+          isManual: true,
+        });
+        expect(second.body.data).toMatchObject({
+          status: 'REQUESTED',
+          isManual: true,
+        });
+        expect(queryTradeSpy).not.toHaveBeenCalled();
+        expect(actionSpy).not.toHaveBeenCalled();
+      });
     });
 
     it('부분 환불된 주문을 24시간 안에 취소하면 남은 금액만 자동 환불된다', async () => {

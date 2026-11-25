@@ -60,6 +60,8 @@ const getConfig = (): ConfigImpl => ({
   ECPAY_HASH_IV: process.env.ECPAY_HASH_IV || 'EkRm7iFT261dpevs',
   ECPAY_PAYMENT_URL:
     process.env.ECPAY_PAYMENT_URL || 'https://payment-stage.ecpay.com.tw',
+  // stage 는 검사 코드를 대조하지 않는다 (2026-11-25 실측) — 아무 숫자나 통과한다
+  ECPAY_CREDIT_CHECK_CODE: process.env.ECPAY_CREDIT_CHECK_CODE || '25938511',
   LINE_PAY_CHANNEL_ID: process.env.LINE_PAY_CHANNEL_ID || '',
   LINE_PAY_CHANNEL_SECRET: process.env.LINE_PAY_CHANNEL_SECRET || '',
   LINE_PAY_API_URL:

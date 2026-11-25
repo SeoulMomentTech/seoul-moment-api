@@ -94,6 +94,15 @@ export class PaymentEntity extends CommonEntity {
   pgTransactionId: string | null;
 
   @Column('varchar', {
+    name: 'pg_auth_id',
+    length: 20,
+    nullable: true,
+    comment:
+      'ECPay 카드 승인 거래번호(gwsr). 카드 환불 전 거래 조회에 쓴다. 카드가 아니거나 이 컬럼이 생기기 전 결제는 null',
+  })
+  pgAuthId: string | null;
+
+  @Column('varchar', {
     name: 'pg_payment_type',
     length: 50,
     nullable: true,

@@ -22,6 +22,7 @@ import { canAutoRefund } from '@app/repository/helper/order-status.helper';
 import {
   getOpenRefund,
   getRefundedAmount,
+  isWaitingForPg,
 } from '@app/repository/helper/refund.helper';
 import { OrderRepositoryService } from '@app/repository/service/order.repository.service';
 import { PaymentRepositoryService } from '@app/repository/service/payment.repository.service';
@@ -31,11 +32,12 @@ import { plainToInstance } from 'class-transformer';
 import { randomUUID } from 'crypto';
 import { Transactional } from 'typeorm-transactional';
 
+import { EcpayCardRefundService } from './ecpay-card-refund.service';
 import { RefundNoticeService } from './refund-notice.service';
 import { InvoiceAdjustService } from '../invoice/invoice-adjust.service';
 import { StockReservationService } from '../payment/stock-reservation.service';
 
-/** LINE Pay 호출 두 번(조회 + 환불, 각 20초) + 발표 정정(ECPay 두 번, 각 15초)보다 넉넉히 */
+/** PG 호출(LINE Pay 조회 + 환불 각 20초 · ECPay 조회 10초 + 동작 두 번 각 20초) + 발표 정정(두 번, 각 15초)보다 넉넉히 */
 const REFUND_LOCK_SECONDS = 120;
 const REFUNDABLE_ORDER_STATUSES = [OrderStatus.PAID, OrderStatus.FAILED];
 /**
@@ -46,11 +48,6 @@ const REFUNDABLE_ORDER_STATUSES = [OrderStatus.PAID, OrderStatus.FAILED];
  */
 const LINE_PAY_REJECTED = ['1150', '1155', '1163', '1164'];
 
-/**
- * 결과를 모르는 요청을 다시 보내기 전에 기다리는 시간. 조회에 환불이 안 보여도 LINE Pay 가
- * 아직 처리 중일 수 있다 — 전액은 LINE Pay 가 초과 환불을 막아 주지만 부분 금액은 두 번 나간다.
- */
-const RESEND_WAIT_MS = 5 * 60 * 1000;
 const AUTO_REFUND_REASON = '자동 환불 — 결제 후 24시간 안 · 발주 전 고객 취소';
 
 export interface RefundRequestOptions {
@@ -68,9 +65,10 @@ export interface RefundRequestOptions {
  *   바꾸고 재고를 돌려준다.
  * - LINE Pay 는 환불 API 를 부른다. 결과를 모르는 재시도는 조회부터 해서 같은 금액을 두 번
  *   돌려주지 않는다.
- * - ECPay(카드·ATM·편의점)는 API 를 부르지 않는다. 카드 환불(DoAction)은 테스트 환경에서
- *   검증할 수 없고 ATM·편의점은 환불 API 가 없어서, 관리자가 ECPay 후台·계좌 송금으로 처리한
- *   뒤 완료를 입력한다.
+ * - ECPay 카드 결제는 請退款 API 를 부른다 (EcpayCardRefundService). 상점 검사 코드가
+ *   설정돼 있고 결제 때 승인번호(gwsr)를 받아 둔 결제만이다.
+ * - 그 밖의 ECPay 결제(ATM·편의점, 승인번호가 없는 예전 카드 결제)는 환불 API 가 없어서
+ *   관리자가 ECPay 後台·계좌 송금으로 처리한 뒤 완료를 입력한다.
  * - 환불이 확인된 때에만 주문·재고를 고치고 발표 정정과 고객 알림을 시작한다. 발표 정정은
  *   환불과 따로 실패하고 따로 다시 시도한다.
  */
@@ -83,6 +81,7 @@ export class RefundService {
     private readonly orderRepositoryService: OrderRepositoryService,
     private readonly paymentRepositoryService: PaymentRepositoryService,
     private readonly linePayService: ExternalLinePayService,
+    private readonly ecpayCardRefundService: EcpayCardRefundService,
     private readonly stockReservationService: StockReservationService,
     private readonly invoiceAdjustService: InvoiceAdjustService,
     private readonly refundNoticeService: RefundNoticeService,
@@ -107,7 +106,13 @@ export class RefundService {
         ? await this.reuseOpen(adminId, open, refunds, options.amount)
         : await this.create(adminId, order, refunds, options);
 
-      return refund.isManual ? refund : this.refundLinePay(adminId, refund);
+      if (refund.isManual) {
+        return refund;
+      }
+
+      return refund.method === PaymentMethod.LINE_PAY
+        ? this.refundLinePay(adminId, refund)
+        : this.refundEcpayCard(adminId, refund);
     });
   }
 
@@ -150,8 +155,8 @@ export class RefundService {
   }
 
   /**
-   * 관리자가 PG 밖에서 환불을 끝낸 뒤 완료를 기록한다. 수동 환불(ECPay)이거나,
-   * LINE Pay 가 환불하지 않았다고 확정한(FAILED) 경우에만 된다.
+   * 관리자가 PG 밖에서 환불을 끝낸 뒤 완료를 기록한다. 수동 환불이거나, PG 가 환불하지
+   * 않았다고 확정했거나(FAILED) 한 번도 보내지 않은 경우에만 된다.
    */
   async completeManually(
     adminId: number,
@@ -248,7 +253,9 @@ export class RefundService {
         method: payment.method,
         amount,
         status: RefundStatus.REQUESTED,
-        isManual: payment.method !== PaymentMethod.LINE_PAY,
+        isManual:
+          payment.method !== PaymentMethod.LINE_PAY &&
+          !this.ecpayCardRefundService.supports(payment),
         reason,
         adminId,
         attemptCount: 0,
@@ -267,7 +274,7 @@ export class RefundService {
   }
 
   /**
-   * 결과를 모르는 LINE Pay 환불을 수동 완료로 덮으면 이중 환불이 될 수 있다.
+   * 결과를 모르는 PG 환불을 수동 완료로 덮으면 이중 환불이 될 수 있다.
    * 수동 환불이거나, 거절됐거나(FAILED) 한 번도 보내지 않은 환불만 받는다.
    */
   private assertNoPgResultPending(refund: RefundEntity) {
@@ -405,7 +412,7 @@ export class RefundService {
       return stopped;
     }
 
-    if (this.isWaitingForPg(refund)) {
+    if (isWaitingForPg(refund, new Date())) {
       return this.markUnknown(
         refund,
         'not found by lookup yet. Retry after 5 minutes',
@@ -415,13 +422,23 @@ export class RefundService {
     return this.sendLinePayRefund(adminId, refund, transactionId);
   }
 
-  /** 방금 보낸 요청의 결과를 아직 모른다 — 조회에 없다고 바로 다시 보내지 않는다 */
-  private isWaitingForPg(refund: RefundEntity): boolean {
-    return (
-      refund.status === RefundStatus.PROCESSING &&
-      !!refund.lastAttemptAt &&
-      Date.now() - refund.lastAttemptAt.getTime() < RESEND_WAIT_MS
-    );
+  /** ECPay 카드 환불. PG 와 주고받는 일은 EcpayCardRefundService 가 하고 여기서는 결과만 반영한다 */
+  private async refundEcpayCard(
+    adminId: number | null,
+    refund: RefundEntity,
+  ): Promise<RefundEntity> {
+    const outcome = await this.ecpayCardRefundService.refund(refund);
+
+    switch (outcome.kind) {
+      case 'completed':
+        return this.completeAndAdjust(adminId, refund, outcome.pgRefundId);
+      case 'failed':
+        return this.markFailed(refund, outcome.code, outcome.message);
+      case 'unknown':
+        return this.markUnknown(refund, outcome.message);
+      default:
+        return this.hold(refund, outcome.code, outcome.message);
+    }
   }
 
   /**
@@ -449,17 +466,11 @@ export class RefundService {
       .catch(() => null);
 
     if (!found?.isSuccess()) {
-      const message = `not sent: ${found?.returnCode ?? 'network'} ${found?.returnMessage ?? ''}`;
-
-      this.logger.error(
-        `[환불 보류 — LINE Pay 조회 실패] orderId=${refund.orderId} ${message}`,
+      return this.hold(
+        refund,
+        'LOOKUP_FAILED',
+        `not sent: ${found?.returnCode ?? 'network'} ${found?.returnMessage ?? ''}`,
       );
-
-      return this.updateOpen(refund, {
-        status: refund.status,
-        failureCode: 'LOOKUP_FAILED',
-        failureMessage: message,
-      });
     }
 
     // 방금 끝난 환불이 조회에 아직 안 보일 수 있다 — 이 시스템이 보낸 합계보다 작게 잡지 않는다
@@ -731,6 +742,23 @@ export class RefundService {
     return this.updateOpen(refund, {
       status: RefundStatus.PROCESSING,
       failureCode: 'UNKNOWN_RESULT',
+      failureMessage: message.slice(0, 255),
+    });
+  }
+
+  /** PG 에 보내지 않고 멈췄다 (조회 실패·매입 시간대). 상태는 그대로 두고 사유만 남긴다 */
+  private async hold(
+    refund: RefundEntity,
+    code: string,
+    message: string,
+  ): Promise<RefundEntity> {
+    this.logger.error(
+      `[환불 보류 — 보내지 않음] orderId=${refund.orderId} ${code} ${message}`,
+    );
+
+    return this.updateOpen(refund, {
+      status: refund.status,
+      failureCode: code,
       failureMessage: message.slice(0, 255),
     });
   }

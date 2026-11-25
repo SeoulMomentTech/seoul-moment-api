@@ -21,6 +21,8 @@ import { InvoiceIssueService } from '../invoice/invoice-issue.service';
 
 export interface PaidInfo {
   pgTransactionId?: string | null;
+  /** ECPay 카드 승인 거래번호(gwsr) */
+  pgAuthId?: string | null;
   pgPaymentType?: string | null;
   paidAt?: Date | null;
 }
@@ -76,6 +78,7 @@ export class PaymentCompletionService {
     payment.status = PaymentStatus.PAID;
     payment.paidAt = paid.paidAt ?? new Date();
     payment.pgTransactionId = paid.pgTransactionId ?? payment.pgTransactionId;
+    payment.pgAuthId = paid.pgAuthId ?? payment.pgAuthId;
     payment.pgPaymentType = paid.pgPaymentType ?? payment.pgPaymentType;
     payment.failureCode = null;
     payment.failureMessage = null;

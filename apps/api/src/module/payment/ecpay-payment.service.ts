@@ -153,6 +153,7 @@ export class EcpayPaymentService {
 
     await this.paymentCompletionService.markPaid(payment.id, {
       pgTransactionId: params.TradeNo,
+      pgAuthId: params.gwsr || null,
       pgPaymentType: params.PaymentType,
       paidAt: parseTaipeiDateTime(params.PaymentDate) ?? new Date(),
     });
@@ -351,6 +352,7 @@ export class EcpayPaymentService {
 
     await this.paymentCompletionService.markPaid(payment.id, {
       pgTransactionId: info.tradeNo,
+      pgAuthId: info.raw.gwsr || null,
       pgPaymentType: info.paymentType,
       paidAt: parseTaipeiDateTime(info.paymentDate) ?? now,
     });

@@ -604,6 +604,7 @@ apps/api/src/module/payment/                            # PG 콜백 · handoff (
 | `ECPAY_HASH_KEY` | `pwFHCqoQZGmho4w6` (공개 테스트) | 노션 값 |
 | `ECPAY_HASH_IV` | `EkRm7iFT261dpevs` (공개 테스트) | 노션 값 |
 | `ECPAY_PAYMENT_URL` | `https://payment-stage.ecpay.com.tw` | `https://payment.ecpay.com.tw` |
+| `ECPAY_CREDIT_CHECK_CODE` | `25938511` (stage 는 대조하지 않는다) | 廠商後台 > 信用卡收單 > 信用卡授權資訊 의 商家檢查碼. 비우면 카드 환불은 수동 |
 | `LINE_PAY_CHANNEL_ID` | 샌드박스 계정의 채널 ID | `2011719693` |
 | `LINE_PAY_CHANNEL_SECRET` | 샌드박스 계정의 Channel Secret | 노션 값 |
 | `LINE_PAY_API_URL` | `https://sandbox-api-pay.line.me` | `https://api-pay.line.me` |

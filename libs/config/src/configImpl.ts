@@ -65,6 +65,11 @@ export interface ConfigImpl {
   ECPAY_HASH_IV: string;
   /** ECPay 결제 호스트 (payment-stage / payment) */
   ECPAY_PAYMENT_URL: string;
+  /**
+   * 카드 거래 조회(QueryTrade)에 쓰는 商家檢查碼 — 廠商後台 > 信用卡收單 > 信用卡授權資訊.
+   * 비어 있으면 카드 환불 API 를 쓰지 않고 수동 환불로 둔다
+   */
+  ECPAY_CREDIT_CHECK_CODE: string;
   /** LINE Pay 채널. LINE 로그인 채널(LINE_CHANNEL_ID)과 다르다 */
   LINE_PAY_CHANNEL_ID: string;
   LINE_PAY_CHANNEL_SECRET: string;

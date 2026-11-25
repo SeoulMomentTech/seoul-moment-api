@@ -59,6 +59,7 @@ const getConfig = (): ConfigImpl => ({
   ECPAY_HASH_IV: process.env.ECPAY_HASH_IV || '',
   ECPAY_PAYMENT_URL:
     process.env.ECPAY_PAYMENT_URL || 'https://payment.ecpay.com.tw',
+  ECPAY_CREDIT_CHECK_CODE: process.env.ECPAY_CREDIT_CHECK_CODE || '',
   LINE_PAY_CHANNEL_ID: process.env.LINE_PAY_CHANNEL_ID || '',
   LINE_PAY_CHANNEL_SECRET: process.env.LINE_PAY_CHANNEL_SECRET || '',
   LINE_PAY_API_URL: process.env.LINE_PAY_API_URL || 'https://api-pay.line.me',
