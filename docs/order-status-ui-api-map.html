@@ -547,6 +547,7 @@ footer{padding:26px 0 60px;color:var(--ink-3);font-size:12.5px;border-top:1px so
               <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
             </div>
             <div style="font-size:12px;margin-top:4px"><b>商品準備中</b> <span style="color:var(--ink-3)">· 2/6</span></div>
+            <div class="pill" style="margin-top:6px">取消申請中</div>
           </div>
         </div>
 
@@ -649,7 +650,7 @@ months: 1~36 (없으면 전체 기간)</div>
           <p class="api-desc"><code>total</code> 은 필터가 걸린 <b>전체 건수</b>다. 누적 로딩이면 <code>list.length &lt; total</code> 일 때만 버튼을 보인다. 주문 합계가 아니라 <b>주문 건수</b>다.</p>
         </div>
       </div>
-      <div class="note"><b>주의</b> — 남의 주문은 목록에도 상세에도 나오지 않는다(상세는 404). <code>COMPLETED</code> 탭은 <b>통관·배송 API가 붙기 전까지 비어 있다</b> — 배송 완료로 바꾸는 경로가 아직 없다(다음 스코프).</div>
+      <div class="note"><b>주의</b> — 남의 주문은 목록에도 상세에도 나오지 않는다(상세는 404). <code>COMPLETED</code> 탭에는 관리자가 배송 단계를 <b>배송 완료(6단계)</b>로 바꾼 주문이 나온다(05 의 5번) — 그 전에는 비어 있다.</div>
     </div>
   </div>
 </section>
@@ -1251,7 +1252,7 @@ timerState: NOT_PAID · WAITING · SOON
     allowanceNo?:  null,
     adjustedAt?, attemptCount, failureCode?, failureMessage?
   }</div>
-          <div class="tags"><span class="tag">환불·수동 완료: super_admin</span><span class="tag">reason ≤ 500자</span><span class="tag">reference 필수 ≤ 100자</span><span class="tag">invoice-adjust 응답 = invoiceAdjustment 모양</span><span class="tag">cancel-request 는 204</span><span class="tag err">403 super_admin 아님</span><span class="tag err">409 이미 환불 완료 · 결제된 주문 아님 · 중복 결제 · 진행 중</span><span class="tag err">409 complete: 시작한 환불 없음 · PG 처리 중</span><span class="tag err">409 invoice-adjust: 정정할 것 없음</span><span class="tag err">404 주문 없음</span></div>
+          <div class="tags"><span class="tag">환불·수동 완료: super_admin</span><span class="tag">reason ≤ 500자</span><span class="tag">reference 필수 ≤ 100자</span><span class="tag">invoice-adjust 응답 = invoiceAdjustment 모양</span><span class="tag">cancel-request 는 204</span><span class="tag err">403 super_admin 아님</span><span class="tag err">409 이미 환불 완료 · 결제된 주문 아님 · 중복 결제 · 진행 중</span><span class="tag err">409 complete: 시작한 환불 없음 · LINE Pay 는 확정 거절(FAILED)일 때만 가능</span><span class="tag err">409 invoice-adjust: 정정할 것 없음</span><span class="tag err">404 주문 없음</span></div>
         </div>
 
         <div class="api-row" data-k="5-7">
