@@ -11,8 +11,8 @@ import {
   InvoiceAdjustStatus,
   InvoiceStatus,
 } from '@app/repository/enum/invoice.enum';
-import { OrderEventType } from '@app/repository/enum/order.enum';
-import { RefundStatus } from '@app/repository/enum/refund.enum';
+import { OrderEventType, OrderStatus } from '@app/repository/enum/order.enum';
+import { getRefundedAmount } from '@app/repository/helper/refund.helper';
 import { OrderRepositoryService } from '@app/repository/service/order.repository.service';
 import { RefundRepositoryService } from '@app/repository/service/refund.repository.service';
 import { Injectable, Logger } from '@nestjs/common';
@@ -30,15 +30,25 @@ export const INVOICE_ADJUST_MAX_ATTEMPTS = 5;
 const ADJUST_LOCK_SECONDS = 120;
 /** Invalid 의 Reason 은 20자 이하 */
 const ADJUST_REASON = '訂單取消退款';
+const PARTIAL_REASON = '訂單部分退款';
+
+/** 발표 금액(주문 결제 금액)과 지금까지 돌려준 합계 */
+interface RefundTotals {
+  total: number;
+  refunded: number;
+  /** 아직 발행 전이라도 나중에 전액으로 발행될 주문인지 (결제 완료 + 부분 환불) */
+  willBeIssued: boolean;
+}
 const OPEN_STATUSES = [InvoiceAdjustStatus.PENDING, InvoiceAdjustStatus.FAILED];
 
 /**
  * 환불이 끝난 주문의 전자발표 정정 (명세 v6 §8.4).
  *
  * 환불(PG)과 따로 돈다 — 정정이 실패해도 환불을 다시 하지 않고 정정만 다시 시도한다.
- * 신고 기한 안이면 作廢, 지났으면 남은 금액 전부를 折讓 한다. 요청 전에 ECPay 에 현재 상태를
- * 물어 이미 처리된 발표를 두 번 정정하지 않는다. 발행과 같은 락을 써서 발행 중인 발표를
- * 동시에 건드리지 않고, 저장은 정정 칸만 고친다.
+ * 전액 환불이고 신고 기한 안이면 作廢, 그 밖(부분 환불·기한 경과)은 折讓 한다. 요청 전에
+ * ECPay 에 현재 상태를 물어, 발표에 이미 折讓 된 금액과 환불 합계의 차이만큼만 정정한다 —
+ * 같은 환불을 두 번 정정하지 않고, 부분 환불이 여러 번이어도 합계가 맞는다. 발행과 같은
+ * 락을 써서 발행 중인 발표를 동시에 건드리지 않고, 저장은 정정 칸만 고친다.
  */
 @Injectable()
 export class InvoiceAdjustService {
@@ -98,18 +108,22 @@ export class InvoiceAdjustService {
       return invoice;
     }
 
-    const refund = await this.refundRepositoryService.findByOrderId(orderId);
+    const totals = await this.getTotals(orderId);
+    const { refunded } = totals;
 
-    if (refund?.status !== RefundStatus.COMPLETED) {
+    if (refunded <= 0) {
       return invoice;
     }
 
-    // 발행을 한 번도 요청하지 않았다 — 정정할 발표가 없다
-    if (!invoice.relateNumber) {
-      return this.finish(invoice, InvoiceAdjustStatus.NONE);
-    }
-
     invoice.adjustAttemptCount += 1;
+
+    // 발행을 한 번도 요청하지 않았다. 앞으로도 발행되지 않을 주문이면 정정할 발표가 없다.
+    // 부분 환불된 결제 완료 주문은 나중에 전액으로 발행된다 — 닫지 않고 발행 뒤에 다시 본다
+    if (!invoice.relateNumber) {
+      return totals.willBeIssued
+        ? this.fail(invoice, 'NOT_ISSUED_YET', 'invoice is not issued yet')
+        : this.finish(invoice, InvoiceAdjustStatus.NONE);
+    }
 
     let state: EcpayInvoiceResultDto;
 
@@ -120,7 +134,7 @@ export class InvoiceAdjustService {
     }
 
     if (!state.isIssued()) {
-      return this.closeNotIssued(invoice, state);
+      return this.closeNotIssued(invoice, state, !totals.willBeIssued);
     }
 
     await this.syncIssued(invoice, state);
@@ -129,59 +143,103 @@ export class InvoiceAdjustService {
       return this.finish(invoice, InvoiceAdjustStatus.VOIDED);
     }
 
-    if (state.remainAllowanceAmount === 0) {
-      return this.finish(invoice, InvoiceAdjustStatus.ALLOWANCED);
-    }
+    return this.request(invoice, totals, state, now);
+  }
 
-    return this.request(invoice, refund.amount, state, now);
+  private async getTotals(orderId: number): Promise<RefundTotals> {
+    const [order, refunds] = await Promise.all([
+      this.orderRepositoryService.findById(orderId),
+      this.refundRepositoryService.findAllByOrderId(orderId),
+    ]);
+
+    const refunded = getRefundedAmount(refunds);
+
+    return {
+      total: order.totalAmount,
+      refunded,
+      willBeIssued:
+        order.status === OrderStatus.PAID && refunded < order.totalAmount,
+    };
   }
 
   /**
-   * ECPay 에 발표가 없다. 우리도 발행된 적이 없다고 알고 있을 때만 "정정할 것 없음"이다 —
-   * 발행됐다고 기록돼 있는데 ECPay 가 모른다면 설정이 어긋난 것이라 사람이 봐야 한다.
+   * 折讓 으로 닫는다. 정정하는 동안 환불이 더 끝났으면(부분 환불이 이어진 경우) 닫지 않고
+   * 다시 대기로 돌린다 — 그 환불의 정정 요청은 이 정정의 락에 막혀 건너뛰었다.
+   */
+  private async finishAllowanced(
+    invoice: OrderInvoiceEntity,
+    adjustedFor: number,
+    allowanceNo?: string | null,
+  ): Promise<OrderInvoiceEntity> {
+    await this.finish(invoice, InvoiceAdjustStatus.ALLOWANCED, allowanceNo);
+
+    const { refunded } = await this.getTotals(invoice.orderId);
+
+    if (refunded === adjustedFor) {
+      return invoice;
+    }
+
+    invoice.adjustStatus = InvoiceAdjustStatus.PENDING;
+    invoice.adjustAttemptCount = 0;
+    await this.saveAdjustFields(invoice);
+
+    return invoice;
+  }
+
+  /**
+   * ECPay 에 발표가 없다. 우리도 발행된 적이 없다고 알고 있고 전액을 돌려줬을 때만 "정정할
+   * 것 없음"이다. 발행됐다고 기록돼 있는데 ECPay 가 모른다면 설정이 어긋난 것이고, 부분
+   * 환불이면 주문이 살아 있어 발표가 뒤늦게 전액으로 나갈 수 있다 — 둘 다 실패로 남겨 다시 본다.
    */
   private closeNotIssued(
     invoice: OrderInvoiceEntity,
     state: EcpayInvoiceResultDto,
+    isFullRefund: boolean,
   ): Promise<OrderInvoiceEntity> {
     const neverIssued =
       state.rtnCode === EcpayInvoiceRtnCode.NOT_FOUND &&
       invoice.status !== InvoiceStatus.ISSUED;
 
-    return neverIssued
+    return neverIssued && isFullRefund
       ? this.finish(invoice, InvoiceAdjustStatus.NONE)
       : this.fail(invoice, String(state.rtnCode), state.rtnMsg);
   }
 
   private async request(
     invoice: OrderInvoiceEntity,
-    refundAmount: number,
+    { total, refunded }: Pick<RefundTotals, 'total' | 'refunded'>,
     state: EcpayInvoiceResultDto,
     now: Date,
   ): Promise<OrderInvoiceEntity> {
-    // 折讓 은 환불액과 발표에 남은 금액 중 작은 쪽까지만 한다
-    const remain = Math.min(
-      state.remainAllowanceAmount ?? refundAmount,
-      refundAmount,
-    );
+    const isFull = refunded >= total;
+
+    // 남은 금액을 모르면 얼마가 이미 折讓 됐는지 모른다. 전액 환불은 "折讓 없음"으로 봐도
+    // 되지만(틀리면 ECPay 가 거절), 부분 환불은 같은 금액을 두 번 折讓 할 수 있어 멈춘다
+    if (state.remainAllowanceAmount === null && !isFull) {
+      return this.fail(invoice, 'UNKNOWN_REMAIN', 'no remain allowance amount');
+    }
+
+    const remain = state.remainAllowanceAmount ?? total;
+    const allowanced = Math.max(0, total - remain);
+    // 환불 합계 중 아직 발표에 반영되지 않은 금액. 발표에 남은 금액을 넘지 않는다
+    const need = Math.min(refunded - allowanced, remain);
+
+    if (need <= 0) {
+      return this.finishAllowanced(invoice, refunded);
+    }
+
     // 이미 일부 折讓 된 발표는 作廢 할 수 없다 — 남은 금액을 折讓 한다
     const canVoid =
-      remain >= refundAmount &&
+      isFull &&
+      allowanced === 0 &&
       now.getTime() <= getVoidDeadline(invoice.invoiceDate).getTime();
-    const date = toTaipeiDate(invoice.invoiceDate);
 
     let result: EcpayInvoiceAdjustResultDto;
 
     try {
       result = canVoid
-        ? await this.ecpayInvoiceService.invalid(
-            invoice.invoiceNo,
-            date,
-            ADJUST_REASON,
-          )
-        : await this.ecpayInvoiceService.allowance(
-            buildAllowanceData(invoice, remain, date, ADJUST_REASON),
-          );
+        ? await this.void(invoice)
+        : await this.allow(invoice, need, isFull);
     } catch (error) {
       return this.fail(invoice, 'NETWORK', String(error));
     }
@@ -190,10 +248,32 @@ export class InvoiceAdjustService {
       return this.fail(invoice, String(result.rtnCode), result.rtnMsg);
     }
 
-    return this.finish(
-      invoice,
-      canVoid ? InvoiceAdjustStatus.VOIDED : InvoiceAdjustStatus.ALLOWANCED,
-      result.allowanceNo,
+    return canVoid
+      ? this.finish(invoice, InvoiceAdjustStatus.VOIDED)
+      : this.finishAllowanced(invoice, refunded, result.allowanceNo);
+  }
+
+  private void(invoice: OrderInvoiceEntity) {
+    return this.ecpayInvoiceService.invalid(
+      invoice.invoiceNo,
+      toTaipeiDate(invoice.invoiceDate),
+      ADJUST_REASON,
+    );
+  }
+
+  private allow(invoice: OrderInvoiceEntity, amount: number, isFull: boolean) {
+    const date = toTaipeiDate(invoice.invoiceDate);
+
+    return this.ecpayInvoiceService.allowance(
+      isFull
+        ? buildAllowanceData(invoice, amount, date, ADJUST_REASON)
+        : buildAllowanceData(
+            invoice,
+            amount,
+            date,
+            PARTIAL_REASON,
+            PARTIAL_REASON,
+          ),
     );
   }
 

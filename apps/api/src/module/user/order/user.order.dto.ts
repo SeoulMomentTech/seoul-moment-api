@@ -19,6 +19,7 @@ import {
   getReadyAt,
   isQuickCancelPeriod,
 } from '@app/repository/helper/order-status.helper';
+import { getRefundedAmount } from '@app/repository/helper/refund.helper';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, plainToInstance } from 'class-transformer';
 import {
@@ -513,7 +514,10 @@ export class GetUserOrderRefundResponse {
   })
   status: RefundStatus;
 
-  @ApiProperty({ description: '환불 금액 NT$', example: 3880 })
+  @ApiProperty({
+    description: '이 환불의 금액 NT$. 결제 금액보다 작으면 부분 환불이다',
+    example: 3880,
+  })
   amount: number;
 
   @ApiProperty({ description: '환불 접수 시각' })
@@ -649,11 +653,19 @@ export class GetUserOrderResponse {
 
   @ApiPropertyOptional({
     description:
-      '환불. 환불이 시작되지 않았으면 null. 완료되면 status 가 CANCELED 로 바뀐다',
+      '가장 최근 환불. 환불이 시작되지 않았으면 null. 결제 후 24시간 안 · 발주 전에 취소를 신청하면 신청 직후에 생긴다(자동 환불). ' +
+      '전액이 환불되면 주문 status 가 CANCELED 로 바뀌고, 부분 환불이면 PAID 그대로다',
     type: GetUserOrderRefundResponse,
     nullable: true,
   })
   refund: GetUserOrderRefundResponse | null;
+
+  @ApiProperty({
+    description:
+      '지금까지 환불이 완료된 합계 NT$. 부분 환불이 여러 번이면 더한 값이다. 없으면 0',
+    example: 0,
+  })
+  refundedAmount: number;
 
   @ApiPropertyOptional({
     description:
@@ -673,10 +685,13 @@ export class GetUserOrderResponse {
     entity: OrderEntity,
     payment?: PaymentEntity | null,
     language?: LanguageCode,
-    refund?: RefundEntity | null,
+    refunds: RefundEntity[] = [],
   ) {
+    const refund = refunds[refunds.length - 1];
+
     return plainToInstance(this, {
       refund: refund ? this.toRefund(refund) : null,
+      refundedAmount: getRefundedAmount(refunds),
       orderId: entity.id,
       orderNumber: entity.orderNumber,
       status: entity.status,

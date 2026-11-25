@@ -9,6 +9,7 @@ import {
   DeliveryStage,
   FulfillmentTimerState,
   OrderEventType,
+  OrderStatus,
   PaymentMethod,
   PurchaseStatus,
 } from '@app/repository/enum/order.enum';
@@ -20,6 +21,10 @@ import {
   getTimerState,
   getTimerStateLabel,
 } from '@app/repository/helper/order-status.helper';
+import {
+  getOpenRefund,
+  getRefundedAmount,
+} from '@app/repository/helper/refund.helper';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, plainToInstance } from 'class-transformer';
 import {
@@ -352,11 +357,28 @@ export class GetAdminOrderDetailResponse {
   events: GetAdminOrderEventResponse[];
 
   @ApiPropertyOptional({
-    description: '취소·환불 탭 중 환불. 환불을 시작하지 않았으면 null',
+    description:
+      '취소·환불 탭 중 가장 최근 환불. 환불을 시작하지 않았으면 null. 끝나지 않은 환불(재시도·완료 입력 대상)이 있으면 그 환불이다',
     type: GetAdminRefundResponse,
     nullable: true,
   })
   refund: GetAdminRefundResponse | null;
+
+  @ApiProperty({
+    description: '이 주문의 환불 전부 (오래된 순). 부분 환불이면 여러 건이다',
+    type: [GetAdminRefundResponse],
+  })
+  refunds: GetAdminRefundResponse[];
+
+  @ApiProperty({ description: '환불이 완료된 합계 NT$', example: 0 })
+  refundedAmount: number;
+
+  @ApiProperty({
+    description:
+      '앞으로 환불할 수 있는 금액 NT$ (결제 금액 − 완료된 환불). 부분 환불 금액 입력의 상한이다. 결제된 주문이 아니면 0',
+    example: 3880,
+  })
+  refundableAmount: number;
 
   @ApiPropertyOptional({
     description:
@@ -374,15 +396,15 @@ export class GetAdminOrderDetailResponse {
     extra: {
       shipments?: ShipmentEntity[];
       events?: OrderEventEntity[];
-      refund?: RefundEntity | null;
+      refunds?: RefundEntity[];
     } = {},
   ) {
-    const { shipments = [], events = [], refund = null } = extra;
+    const { shipments = [], events = [], refunds = [] } = extra;
 
     return plainToInstance(this, {
       delivery: this.toDelivery(order, shipments, language),
       cancellation: this.toCancellation(order),
-      refund: refund ? GetAdminRefundResponse.toPlain(refund) : null,
+      ...this.toRefunds(order, refunds),
       invoiceAdjustment: order.invoice
         ? GetAdminInvoiceAdjustmentResponse.toPlain(order.invoice)
         : null,
@@ -394,7 +416,7 @@ export class GetAdminOrderDetailResponse {
         message: event.message ?? null,
         createdAt: event.createDate,
       })),
-      order: GetUserOrderResponse.from(order, payment, language, refund),
+      order: GetUserOrderResponse.from(order, payment, language, refunds),
       purchase: {
         purchaseStatus: order.purchaseStatus,
         supplierOrderedAt: order.supplierOrderedAt ?? null,
@@ -421,6 +443,23 @@ export class GetAdminOrderDetailResponse {
       shipments: shipments.map((shipment) =>
         GetAdminShipmentInfoResponse.toInfo(shipment),
       ),
+    };
+  }
+
+  private static toRefunds(order: OrderEntity, refunds: RefundEntity[]) {
+    const refundedAmount = getRefundedAmount(refunds);
+    const latest = getOpenRefund(refunds) ?? refunds[refunds.length - 1];
+    const isPaid = [OrderStatus.PAID, OrderStatus.FAILED].includes(
+      order.status,
+    );
+
+    return {
+      refund: latest ? GetAdminRefundResponse.toPlain(latest) : null,
+      refunds: refunds.map((refund) => GetAdminRefundResponse.toPlain(refund)),
+      refundedAmount,
+      refundableAmount: isPaid
+        ? Math.max(0, order.totalAmount - refundedAmount)
+        : 0,
     };
   }
 

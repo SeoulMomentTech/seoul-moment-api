@@ -134,11 +134,15 @@ export class AdminOrderController {
     summary: '취소·계약해제 접수 철회',
     description:
       '고객이 취소 의사를 거둔 경우에만 쓴다. 접수 시각·사유를 지우고 다시 발주할 수 있게 한다. 철회한 사실과 원래 사유는 작업 이력에 남는다. ' +
-      '적법한 통지를 관리자 판단으로 거절하는 용도가 아니다.',
+      '적법한 통지를 관리자 판단으로 거절하는 용도가 아니다. ' +
+      '끝나지 않은 환불(자동 환불 요청 포함)이 있으면 409 — DELETE /admin/order/{id}/refund 로 환불 요청을 먼저 취소하거나 환불을 끝낸다.',
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ResponseException(HttpStatus.NOT_FOUND, 'Order not found')
-  @ResponseException(HttpStatus.CONFLICT, '접수된 취소가 없음')
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '접수된 취소가 없음 / 끝나지 않은 환불이 있음',
+  )
   async deleteAdminOrderCancelRequest(
     @Request() req: any,
     @Param('id', ParseIntPipe) id: number,

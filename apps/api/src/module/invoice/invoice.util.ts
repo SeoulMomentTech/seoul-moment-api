@@ -195,14 +195,15 @@ export function toTaipeiDate(date: Date): string {
 }
 
 /**
- * 전액 折讓. 원 발표의 품목을 다시 나열하지 않고 환불 금액 한 줄로 낸다
- * (ItemAmount 합 = AllowanceAmount, stage 실측으로 통과 확인).
+ * 折讓. 원 발표의 품목을 다시 나열하지 않고 환불 금액 한 줄로 낸다
+ * (ItemAmount 합 = AllowanceAmount, 전액은 stage 실측으로 통과 확인).
  */
 export function buildAllowanceData(
   invoice: OrderInvoiceEntity,
   amount: number,
   invoiceDate: string,
   reason: string,
+  itemName = '訂單全額退款',
 ): EcpayInvoiceAllowanceData {
   return {
     InvoiceNo: invoice.invoiceNo,
@@ -214,7 +215,7 @@ export function buildAllowanceData(
     Items: [
       {
         ItemSeq: 1,
-        ItemName: '訂單全額退款',
+        ItemName: itemName,
         ItemCount: 1,
         ItemWord: '式',
         ItemPrice: amount,

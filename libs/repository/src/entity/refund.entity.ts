@@ -7,11 +7,17 @@ import { RefundStatus } from '../enum/refund.enum';
 /**
  * 환불. 주문의 금액 스냅샷은 건드리지 않고 여기에 따로 기록한다.
  *
- * shortcut: 전액 환불만 하므로 주문당 1행(order_id UNIQUE)이고, 이 UNIQUE 가 버튼 중복
- * 클릭의 이중 환불을 막는다. 부분 환불을 넣을 때 UNIQUE 를 풀고 누계 검증으로 바꾼다.
+ * 부분 환불이 있어 한 주문에 여러 행이 생긴다. 다만 끝나지 않은 환불은 주문당 하나뿐이다
+ * (아래 부분 UNIQUE) — 버튼 중복 클릭이 환불을 두 건 만들지 못하고, 앞 환불의 결과를
+ * 모르는 채로 다음 환불을 시작하지 못한다. 환불 합계는 결제 금액을 넘지 않게 서비스가 막는다.
  */
 @Entity('refund')
 @Index(['status'])
+@Index(['orderId'])
+@Index('uq_refund_open_order', ['orderId'], {
+  unique: true,
+  where: `"status" <> 'COMPLETED'`,
+})
 export class RefundEntity extends CommonEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -19,7 +25,6 @@ export class RefundEntity extends CommonEntity {
   @Column('int', {
     name: 'order_id',
     nullable: false,
-    unique: true,
     comment: '주문 ID',
   })
   orderId: number;
@@ -38,7 +43,10 @@ export class RefundEntity extends CommonEntity {
   })
   method: PaymentMethod;
 
-  @Column('int', { nullable: false, comment: '환불 금액 (TWD)' })
+  @Column('int', {
+    nullable: false,
+    comment: '환불 금액 (TWD). 결제 금액보다 작으면 부분 환불',
+  })
   amount: number;
 
   @Column('enum', {
@@ -61,16 +69,17 @@ export class RefundEntity extends CommonEntity {
   @Column('varchar', {
     length: 500,
     nullable: true,
-    comment: '환불 근거 (관리자 입력)',
+    comment: '환불 근거 (관리자 입력, 자동 환불이면 고객의 취소 사유)',
   })
   reason: string | null;
 
   @Column('int', {
     name: 'admin_id',
-    nullable: false,
-    comment: '환불을 시작한 관리자 ID',
+    nullable: true,
+    comment:
+      '환불을 시작한 관리자 ID. NULL 이면 고객 취소로 시스템이 시작한 자동 환불',
   })
-  adminId: number;
+  adminId: number | null;
 
   @Column('varchar', {
     name: 'pg_refund_id',
@@ -87,6 +96,21 @@ export class RefundEntity extends CommonEntity {
     comment: 'PG 환불 요청 횟수',
   })
   attemptCount: number;
+
+  @Column('int', {
+    name: 'pg_refunded_before',
+    nullable: true,
+    comment:
+      '이 환불을 처음 보내기 직전에 LINE Pay 거래에 이미 있던 환불 합계. 결과 조회에서 이만큼을 빼고 본다 (NULL 은 0)',
+  })
+  pgRefundedBefore: number | null;
+
+  @Column('timestamptz', {
+    name: 'last_attempt_at',
+    nullable: true,
+    comment: 'PG 에 마지막으로 환불을 요청한 시각',
+  })
+  lastAttemptAt: Date | null;
 
   @Column('varchar', {
     name: 'failure_code',

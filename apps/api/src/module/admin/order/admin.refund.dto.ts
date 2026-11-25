@@ -23,13 +23,24 @@ import {
 export class PostAdminOrderRefundRequest {
   @ApiPropertyOptional({
     description:
-      '환불 근거 (500자). 처음 환불을 시작할 때만 저장되고 재시도에서는 무시된다',
-    example: '고객 계약해제 통지 (11/25 접수)',
+      '환불 근거 (500자). 품절·판매 중단·고객 요청 등. 새 환불을 시작할 때만 저장되고 재시도에서는 무시된다',
+    example: '품절 — 코튼 트윌 오버셔츠 IVORY/M',
   })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   reason?: string;
+
+  @ApiPropertyOptional({
+    description:
+      '환불 금액 NT$ (정수, 1 이상). 생략하면 남은 금액 전부(전액 환불). 주문 상세의 refundableAmount 를 넘으면 400. ' +
+      '끝나지 않은 환불이 있는데 다른 금액을 보내면 그 환불의 금액을 고친다 — 결과 미확인(PROCESSING)이면 409',
+    example: 1200,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  amount?: number;
 }
 
 export class PostAdminOrderRefundCompleteRequest {
@@ -76,7 +87,10 @@ export class GetAdminRefundResponse {
   @ApiProperty({ description: '원 결제 수단', enum: PaymentMethod })
   method: PaymentMethod;
 
-  @ApiProperty({ description: '환불 금액 NT$ (전액)', example: 3880 })
+  @ApiProperty({
+    description: '이 환불의 금액 NT$. 결제 금액보다 작으면 부분 환불',
+    example: 3880,
+  })
   amount: number;
 
   @ApiProperty({
@@ -110,8 +124,12 @@ export class GetAdminRefundResponse {
   @ApiPropertyOptional({ nullable: true })
   failureMessage: string | null;
 
-  @ApiProperty({ description: '환불을 시작한 관리자 ID' })
-  adminId: number;
+  @ApiPropertyOptional({
+    description:
+      '환불을 시작한 관리자 ID. null 이면 고객이 24시간 안 · 발주 전에 취소해 시스템이 시작한 자동 환불',
+    nullable: true,
+  })
+  adminId: number | null;
 
   @ApiProperty()
   requestedAt: Date;
@@ -132,7 +150,7 @@ export class GetAdminRefundResponse {
       attemptCount: entity.attemptCount,
       failureCode: entity.failureCode ?? null,
       failureMessage: entity.failureMessage ?? null,
-      adminId: entity.adminId,
+      adminId: entity.adminId ?? null,
       requestedAt: entity.requestedAt,
       completedAt: entity.completedAt ?? null,
     };

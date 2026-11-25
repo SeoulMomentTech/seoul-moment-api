@@ -186,6 +186,30 @@ export function canRequestCancel(
   return order.status === OrderStatus.PAID && !order.cancellationRequestedAt;
 }
 
+/**
+ * 고객이 취소를 접수하면 관리자 확인 없이 바로 환불하는 주문인지 (환불 규정 1).
+ * 결제 후 24시간 안이고 아직 한국에 발주하지 않은 주문만이다. 그 밖은 관리자가 확인한다.
+ * 발주 기록 없이 배송 단계만 옮긴 주문도 이미 움직인 것으로 본다.
+ */
+export function canAutoRefund(
+  order: Pick<
+    OrderEntity,
+    | 'status'
+    | 'paidAt'
+    | 'purchaseStatus'
+    | 'deliveryStage'
+    | 'cancellationRequestedAt'
+  >,
+  now: Date,
+): boolean {
+  return (
+    !!order.cancellationRequestedAt &&
+    order.purchaseStatus === PurchaseStatus.NOT_ORDERED &&
+    order.deliveryStage === DeliveryStage.ORDER_CONFIRMED &&
+    isQuickCancelPeriod(order, now)
+  );
+}
+
 /** 24시간 간편취소 구간인지. 안내 문구만 바꾸는 값이고 신청 가능 여부와는 별개다 */
 export function isQuickCancelPeriod(
   order: Pick<OrderEntity, 'status' | 'paidAt'>,

@@ -127,6 +127,19 @@ export class LinePayRefundLookupDto extends LinePayResultDto {
   /** 지금까지 환불된 합계 (양수) */
   refundedAmount: number;
   refundTransactionId: string | null;
+  private entries: { transactionId: string | null; amount: number }[] = [];
+
+  /** 이 금액으로 나간 환불의 거래번호. 이미 다른 환불에 적어 둔 번호는 건너뛴다 */
+  findTransactionId(amount: number, known: string[] = []): string | null {
+    const match = this.entries.find(
+      (entry) =>
+        entry.amount === amount &&
+        !!entry.transactionId &&
+        !known.includes(entry.transactionId),
+    );
+
+    return match?.transactionId ?? null;
+  }
 
   static fromDetails(
     response: LinePayRawResponse<LinePayPaymentDetail[]>,
@@ -142,6 +155,12 @@ export class LinePayRefundLookupDto extends LinePayResultDto {
       (sum, refund) => sum + Math.abs(Number(refund.refundAmount ?? 0)),
       0,
     );
+    dto.entries = refunds.map((refund) => ({
+      transactionId: refund.refundTransactionId
+        ? String(refund.refundTransactionId)
+        : null,
+      amount: Math.abs(Number(refund.refundAmount ?? 0)),
+    }));
     dto.refundTransactionId = refunds[0]?.refundTransactionId
       ? String(refunds[0].refundTransactionId)
       : null;

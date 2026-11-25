@@ -10,6 +10,7 @@ import {
   OrderStatus,
 } from '@app/repository/enum/order.enum';
 import { getTimerState } from '@app/repository/helper/order-status.helper';
+import { getOpenRefund } from '@app/repository/helper/refund.helper';
 import { OrderRepositoryService } from '@app/repository/service/order.repository.service';
 import { PaymentRepositoryService } from '@app/repository/service/payment.repository.service';
 import { RefundRepositoryService } from '@app/repository/service/refund.repository.service';
@@ -110,11 +111,11 @@ export class AdminOrderService {
       );
     }
 
-    const [payment, shipments, events, refund] = await Promise.all([
+    const [payment, shipments, events, refunds] = await Promise.all([
       this.paymentRepositoryService.findLatestByOrderId(order.id),
       this.shipmentRepositoryService.findByOrderId(order.id),
       this.orderRepositoryService.findEventsByOrderId(order.id),
-      this.refundRepositoryService.findByOrderId(order.id),
+      this.refundRepositoryService.findAllByOrderId(order.id),
     ]);
 
     return GetAdminOrderDetailResponse.from(
@@ -122,7 +123,7 @@ export class AdminOrderService {
       payment,
       new Date(),
       language,
-      { shipments, events, refund },
+      { shipments, events, refunds },
     );
   }
 
@@ -171,6 +172,16 @@ export class AdminOrderService {
   @Transactional()
   async withdrawCancelRequest(adminId: number, id: number): Promise<void> {
     const order = await this.findOrThrow(id);
+
+    // 환불 요청을 남긴 채 철회하면 발주된 주문이 나중에 환불 완료로 취소될 수 있다
+    if (
+      getOpenRefund(await this.refundRepositoryService.findAllByOrderId(id))
+    ) {
+      throw new ServiceError(
+        `Order ${id} has an open refund. Finish or cancel it first`,
+        ServiceErrorCode.CONFLICT,
+      );
+    }
     const withdrawn =
       await this.orderRepositoryService.withdrawCancellation(id);
 

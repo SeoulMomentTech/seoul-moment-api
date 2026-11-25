@@ -3,6 +3,7 @@ import {
   EcpayInvoiceResultDto,
 } from '@app/external/ecpay/ecpay-invoice.dto';
 import { ExternalEcpayInvoiceService } from '@app/external/ecpay/ecpay-invoice.service';
+import { ExternalGoogleMailService } from '@app/external/google/google-mail.service';
 import {
   LinePayRefundLookupDto,
   LinePayRefundResultDto,
@@ -1366,6 +1367,7 @@ describe('주문 현황·발주 (E2E)', () => {
     let getIssueSpy: jest.SpyInstance;
     let invalidSpy: jest.SpyInstance;
     let allowanceSpy: jest.SpyInstance;
+    let mailSpy: jest.SpyInstance;
 
     const refunded = (code = '0000', message = 'Success.') =>
       LinePayRefundResultDto.fromRefund({
@@ -1383,6 +1385,20 @@ describe('주문 현황·발주 (E2E)', () => {
             refundList: amount
               ? [{ refundTransactionId: '900000009', refundAmount: -amount }]
               : [],
+          },
+        ],
+      });
+    /** LINE Pay 조회 응답에 환불이 여러 건 있는 경우. [거래번호, 금액] */
+    const lookupList = (entries: [string, number][]) =>
+      LinePayRefundLookupDto.fromDetails({
+        returnCode: '0000',
+        returnMessage: 'Success.',
+        info: [
+          {
+            refundList: entries.map(([id, amount]) => ({
+              refundTransactionId: id,
+              refundAmount: -amount,
+            })),
           },
         ],
       });
@@ -1435,6 +1451,12 @@ describe('주문 현황·발주 (E2E)', () => {
       allowanceSpy = jest
         .spyOn(ecpayInvoice, 'allowance')
         .mockResolvedValue(adjusted(1, { IA_Allow_No: '2026112508481095' }));
+      mailSpy = jest
+        .spyOn(
+          app.get(ExternalGoogleMailService, { strict: false }),
+          'sendMail',
+        )
+        .mockResolvedValue(undefined);
     });
 
     afterEach(() => {
@@ -1458,9 +1480,12 @@ describe('주문 현황·발주 (E2E)', () => {
         method?: 'LINE_PAY' | 'ECPAY';
         invoiceDate?: string;
         issued?: boolean;
+        paidHoursAgo?: number;
       } = {},
     ): Promise<{ orderId: number; variantId: number; amount: number }> {
-      const orderId = await placeOrder(token, { paidHoursAgo: 2 });
+      const orderId = await placeOrder(token, {
+        paidHoursAgo: options.paidHoursAgo ?? 2,
+      });
       const [row] = await dataSource.query(
         `SELECT o.total_amount, i.product_variant_id
            FROM "order" o JOIN order_item i ON i.order_id = o.id WHERE o.id = $1`,
@@ -1524,6 +1549,18 @@ describe('주문 현황·발주 (E2E)', () => {
       );
     }
 
+    function cancelRefund(orderId: number) {
+      return adminSend('delete', `${ADMIN_ORDER_BASE}/${orderId}/refund`);
+    }
+
+    /** 마지막 PG 요청을 10분 전으로 돌린다 — 결과 미확인 환불은 5분 안에 다시 보내지 않는다 */
+    async function waitOut(orderId: number) {
+      await dataSource.query(
+        `UPDATE refund SET last_attempt_at = NOW() - interval '10 minutes' WHERE order_id = $1`,
+        [orderId],
+      );
+    }
+
     function retryAdjust(orderId: number) {
       return adminSend('post', `${ADMIN_ORDER_BASE}/${orderId}/invoice-adjust`);
     }
@@ -1571,8 +1608,12 @@ describe('주문 현황·발주 (E2E)', () => {
     it('LINE Pay 전액 환불: 주문 취소·재고 복구·발표 作廢 까지 이어진다', async () => {
       // Given
       const { token } = await signUpAndLogin();
-      const { orderId, variantId, amount } = await paidOrder(token);
+      const { orderId, variantId, amount } = await paidOrder(token, {
+        paidHoursAgo: 48,
+      });
       await cancelRequest(token, orderId, '변심').expect(204);
+      expect(refundSpy).not.toHaveBeenCalled();
+      expect(await orderStatus(orderId)).toBe('PAID');
 
       // When
       const res = await refund(orderId, { reason: '고객 계약해제 통지' });
@@ -1614,9 +1655,15 @@ describe('주문 현황·발주 (E2E)', () => {
         completedAt: expect.any(String),
       });
       expect(customer.invoice.adjustStatus).toBe('VOIDED');
+      expect(customer.refundedAmount).toBe(amount);
 
       const admin = (await adminGet(`/${orderId}`)).body.data;
       expect(admin.refund.status).toBe('COMPLETED');
+      expect(admin).toMatchObject({
+        refundedAmount: amount,
+        refundableAmount: 0,
+      });
+      expect(admin.refunds).toHaveLength(1);
       expect(admin.invoiceAdjustment).toMatchObject({
         adjustStatus: 'VOIDED',
         invoiceNo: INVOICE_NO,
@@ -1709,7 +1756,18 @@ describe('주문 현황·발주 (E2E)', () => {
       refundSpy.mockRejectedValueOnce(new Error('timeout'));
       await refund(second.orderId);
 
-      // When
+      // When - 조회에 아직 안 보인다고 바로 다시 보내지 않는다
+      const tooSoon = await refund(first.orderId);
+
+      // Then
+      expect(tooSoon.body.data).toMatchObject({
+        status: 'PROCESSING',
+        attemptCount: 1,
+      });
+      expect(refundSpy).toHaveBeenCalledTimes(2);
+
+      // When - 5분이 지난 뒤에도 조회에 없으면 다시 요청한다
+      await waitOut(first.orderId);
       const retried = await refund(first.orderId);
       findRefundSpy.mockResolvedValueOnce(lookup(1));
       const partial = await refund(second.orderId);
@@ -2100,7 +2158,7 @@ describe('주문 현황·발주 (E2E)', () => {
         );
         await dataSource.query(
           `INSERT INTO refund (order_id, payment_id, method, amount, status, admin_id, requested_at, completed_at)
-           VALUES ($1, 1, 'LINE_PAY', 1000, 'COMPLETED', 1, NOW(), NOW())`,
+           SELECT id, 1, 'LINE_PAY', total_amount, 'COMPLETED', 1, NOW(), NOW() FROM "order" WHERE id = $1`,
           [orderId],
         );
 
@@ -2155,6 +2213,727 @@ describe('주문 현황·발주 (E2E)', () => {
       expect(
         (await adjustStatusOf(untouched.orderId, false)).adjust_status,
       ).toBe('NONE');
+    });
+
+    // -----------------------------------------------------------------------
+    // 환불 규정: 자동 환불 · 부분 환불 · 고객 알림
+    // -----------------------------------------------------------------------
+    async function refundRows(orderId: number): Promise<Record<string, any>[]> {
+      return dataSource.query(
+        `SELECT amount, status, is_manual, admin_id, reason, pg_refund_id
+           FROM refund WHERE order_id = $1 ORDER BY id`,
+        [orderId],
+      );
+    }
+
+    it('결제 후 24시간 안 · 발주 전에 취소를 접수하면 관리자 없이 자동으로 환불된다', async () => {
+      // Given
+      const { token, userId } = await signUpAndLogin();
+      const { orderId, variantId, amount } = await paidOrder(token);
+      const [user] = await dataSource.query(
+        `SELECT email FROM "user" WHERE id = $1`,
+        [userId],
+      );
+
+      // When
+      const res = await cancelRequest(token, orderId, '尺寸選錯了');
+
+      // Then - 접수 응답은 그대로 204 이고 환불까지 끝나 있다
+      expect(res.status).toBe(204);
+      expect(refundSpy).toHaveBeenCalledWith(TX_ID, amount);
+      expect(await refundRows(orderId)).toEqual([
+        expect.objectContaining({
+          amount,
+          status: 'COMPLETED',
+          is_manual: false,
+          admin_id: null,
+          reason: expect.stringContaining('尺寸選錯了'),
+        }),
+      ]);
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+      expect(await stockOf(variantId)).toBe(100);
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('VOIDED');
+
+      // Then - 고객 화면과 알림 메일
+      const customer = (await userGetOrder(token, orderId)).body.data;
+      expect(customer).toMatchObject({
+        status: 'CANCELED',
+        refundedAmount: amount,
+        refund: { status: 'COMPLETED', amount },
+      });
+      expect(mailSpy).toHaveBeenCalledTimes(1);
+      expect(mailSpy.mock.calls[0][0]).toBe(user.email);
+      expect(mailSpy.mock.calls[0][3]).toContain(
+        `NT$${amount.toLocaleString('en-US')}`,
+      );
+
+      // Then - 관리자 이력에 시스템이 한 환불로 남는다
+      const admin = (await adminGet(`/${orderId}`)).body.data;
+      expect(admin.refund.adminId).toBeNull();
+      expect(
+        admin.events.find((x: any) => x.type === 'REFUND_COMPLETED').adminId,
+      ).toBeNull();
+    });
+
+    it('24시간이 지났거나 이미 발주한 주문은 접수만 되고 자동 환불되지 않는다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const late = await paidOrder(token, { paidHoursAgo: 25 });
+      const purchased = await paidOrder(token);
+      const moved = await paidOrder(token);
+      await adminPurchase(purchased.orderId, { earlyReason: '선발주' }).expect(
+        204,
+      );
+      await changeStage([moved.orderId], {
+        deliveryStage: 'PREPARING_ORDER',
+      }).expect(204);
+
+      // When
+      await cancelRequest(token, late.orderId).expect(204);
+      await cancelRequest(token, purchased.orderId).expect(204);
+      await cancelRequest(token, moved.orderId).expect(204);
+
+      // Then
+      expect(refundSpy).not.toHaveBeenCalled();
+      expect(mailSpy).not.toHaveBeenCalled();
+      expect(await refundRows(late.orderId)).toEqual([]);
+      expect(await refundRows(purchased.orderId)).toEqual([]);
+      expect(await refundRows(moved.orderId)).toEqual([]);
+      expect(await orderStatus(late.orderId)).toBe('PAID');
+      expect((await adminGet('/summary')).body.data.cancelRequested).toBe(3);
+
+      // When - 관리자가 확인하고 환불한다
+      const res = await refund(late.orderId);
+
+      // Then
+      expect(res.body.data).toMatchObject({ status: 'COMPLETED' });
+      expect(res.body.data.adminId).not.toBeNull();
+    });
+
+    it('자동 환불이 LINE Pay 에서 거절돼도 접수는 유지되고 관리자가 이어서 처리한다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      refundSpy.mockResolvedValueOnce(
+        refunded('1163', 'Refund period expired'),
+      );
+
+      // When
+      const res = await cancelRequest(token, orderId);
+
+      // Then
+      expect(res.status).toBe(204);
+      expect(await orderStatus(orderId)).toBe('PAID');
+      expect(await refundRows(orderId)).toEqual([
+        expect.objectContaining({ status: 'FAILED', admin_id: null }),
+      ]);
+      expect(mailSpy).not.toHaveBeenCalled();
+      const detail = (await userGetOrder(token, orderId)).body.data;
+      expect(detail.cancellationRequestedAt).not.toBeNull();
+      expect(detail.refund.status).toBe('FAILED');
+
+      // When - 두 번 눌러도 자동 환불을 다시 걸지 않는다
+      await cancelRequest(token, orderId).expect(204);
+
+      // Then
+      expect(refundSpy).toHaveBeenCalledTimes(1);
+
+      // When - 관리자가 계좌 송금으로 돌려주고 완료를 입력한다
+      const done = await completeRefund(orderId, '계좌 송금 1125-01');
+
+      // Then
+      expect(done.body.data).toMatchObject({
+        status: 'COMPLETED',
+        isManual: true,
+      });
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+      expect(mailSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('ECPay 결제의 자동 환불은 요청만 만들어지고 관리자가 완료를 입력한다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId, amount } = await paidOrder(token, { method: 'ECPAY' });
+
+      // When
+      await cancelRequest(token, orderId).expect(204);
+
+      // Then - 돈은 아직 안 나갔다
+      expect(refundSpy).not.toHaveBeenCalled();
+      expect(await refundRows(orderId)).toEqual([
+        expect.objectContaining({
+          amount,
+          status: 'REQUESTED',
+          is_manual: true,
+          admin_id: null,
+        }),
+      ]);
+      expect(await orderStatus(orderId)).toBe('PAID');
+      const list = await request(app.getHttpServer())
+        .get(`${REFUND_LIST}?status=REQUESTED`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(list.body.data.list.map((x: any) => x.orderId)).toEqual([orderId]);
+
+      // When
+      await completeRefund(orderId, 'ECPay 退刷 2611250002').expect(200);
+
+      // Then
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+      expect(mailSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('부분 환불: 금액만 돌려주고 주문·재고는 그대로, 발표는 그 금액만 折讓 한다', async () => {
+      // Given - 품절로 일부만 돌려주는 경우 (취소 신청 없음)
+      const { token } = await signUpAndLogin();
+      const { orderId, variantId, amount } = await paidOrder(token, {
+        paidHoursAgo: 48,
+      });
+
+      // When
+      const res = await refund(orderId, { amount: 300, reason: '品項缺貨' });
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({
+        status: 'COMPLETED',
+        amount: 300,
+        reason: '品項缺貨',
+      });
+      expect(refundSpy).toHaveBeenCalledWith(TX_ID, 300);
+      expect(await orderStatus(orderId)).toBe('PAID');
+      expect(await stockOf(variantId)).toBe(99);
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('ALLOWANCED');
+      expect(invalidSpy).not.toHaveBeenCalled();
+      expect(allowanceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          AllowanceAmount: 300,
+          Reason: '訂單部分退款',
+          Items: [expect.objectContaining({ ItemName: '訂單部分退款' })],
+        }),
+      );
+      expect(mailSpy.mock.calls[0][3]).toContain('部分退款');
+
+      const admin = (await adminGet(`/${orderId}`)).body.data;
+      expect(admin).toMatchObject({
+        refundedAmount: 300,
+        refundableAmount: amount - 300,
+      });
+      expect(admin.order).toMatchObject({
+        status: 'PAID',
+        refundedAmount: 300,
+      });
+
+      // When - 넘치는 금액과 잘못된 금액
+      const over = await refund(orderId, { amount: amount - 299 });
+      const zero = await refund(orderId, { amount: 0 });
+      const decimal = await refund(orderId, { amount: 10.5 });
+
+      // Then
+      expect([over.status, zero.status, decimal.status]).toEqual([
+        400, 400, 400,
+      ]);
+      expect(refundSpy).toHaveBeenCalledTimes(1);
+
+      // When - 금액을 생략하면 남은 금액 전부. 발표에는 이미 300 이 折讓 돼 있다
+      getIssueSpy.mockResolvedValueOnce(
+        issued({ IIS_Remain_Allowance_Amt: amount - 300 }),
+      );
+      const rest = await refund(orderId, { reason: '全部缺貨' });
+
+      // Then - 합계가 결제 금액에 닿아 주문이 취소되고 재고가 돌아온다
+      expect(rest.body.data).toMatchObject({
+        status: 'COMPLETED',
+        amount: amount - 300,
+      });
+      expect(res.body.data.refundId).not.toBe(rest.body.data.refundId);
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+      expect(await stockOf(variantId)).toBe(100);
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('ALLOWANCED');
+      expect(invalidSpy).not.toHaveBeenCalled();
+      expect(allowanceSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({ AllowanceAmount: amount - 300 }),
+      );
+      expect((await refund(orderId)).status).toBe(409);
+      const after = (await adminGet(`/${orderId}`)).body.data;
+      expect(after.refunds.map((x: any) => x.amount)).toEqual([
+        300,
+        amount - 300,
+      ]);
+      expect(after.refundableAmount).toBe(0);
+    });
+
+    it('부분 환불의 발표 정정을 다시 돌려도 같은 금액을 두 번 折讓 하지 않는다', async () => {
+      // Given - 折讓 요청이 타임아웃났지만 ECPay 에는 반영된 경우
+      const { token } = await signUpAndLogin();
+      const { orderId, amount } = await paidOrder(token);
+      allowanceSpy.mockRejectedValueOnce(new Error('timeout'));
+      await refund(orderId, { amount: 300 }).expect(200);
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('FAILED');
+
+      // When
+      getIssueSpy.mockResolvedValueOnce(
+        issued({ IIS_Remain_Allowance_Amt: amount - 300 }),
+      );
+      const res = await retryAdjust(orderId);
+
+      // Then
+      expect(res.body.data.adjustStatus).toBe('ALLOWANCED');
+      expect(allowanceSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('남은 금액을 모르는 발표는 부분 환불을 折讓 하지 않고 실패로 남긴다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      getIssueSpy.mockResolvedValueOnce(
+        issued({ IIS_Remain_Allowance_Amt: '' }),
+      );
+
+      // When
+      await refund(orderId, { amount: 300 }).expect(200);
+
+      // Then
+      expect(await adjustStatusOf(orderId)).toMatchObject({
+        adjust_status: 'FAILED',
+        adjust_failure_code: 'UNKNOWN_REMAIN',
+      });
+      expect(allowanceSpy).not.toHaveBeenCalled();
+    });
+
+    it('두 번째 부분 환불의 결과를 모르면, 보내기 전 LINE Pay 합계에서 늘어난 만큼만 그 환불로 본다', async () => {
+      // Given - 첫 환불은 끝났고, 두 번째는 보내기 전 합계를 적어 둔 뒤 타임아웃
+      const { token } = await signUpAndLogin();
+      const unsent = await paidOrder(token);
+      const sent = await paidOrder(token);
+      await refund(unsent.orderId, { amount: 300 }).expect(200);
+      await refund(sent.orderId, { amount: 200 }).expect(200);
+      findRefundSpy
+        .mockResolvedValueOnce(lookupList([['900000001', 300]]))
+        .mockResolvedValueOnce(lookupList([['900000001', 200]]));
+      refundSpy
+        .mockRejectedValueOnce(new Error('timeout'))
+        .mockRejectedValueOnce(new Error('timeout'));
+      expect(
+        (await refund(unsent.orderId, { amount: 200 })).body.data.status,
+      ).toBe('PROCESSING');
+      expect(
+        (await refund(sent.orderId, { amount: 200 })).body.data.status,
+      ).toBe('PROCESSING');
+      await waitOut(unsent.orderId);
+      await waitOut(sent.orderId);
+      refundSpy.mockClear();
+
+      // When - 합계가 그대로면 안 나간 것(다시 보낸다), 200 늘었으면 나간 것(보내지 않는다)
+      findRefundSpy.mockResolvedValueOnce(lookupList([['900000001', 300]]));
+      const resent = await refund(unsent.orderId);
+      findRefundSpy.mockResolvedValueOnce(
+        lookupList([
+          ['900000001', 200],
+          ['900000002', 200],
+        ]),
+      );
+      const settled = await refund(sent.orderId);
+
+      // Then - 조회로 닫힌 환불에는 앞 환불의 번호가 아니라 자기 번호가 적힌다
+      expect(resent.body.data).toMatchObject({
+        status: 'COMPLETED',
+        amount: 200,
+      });
+      expect(settled.body.data).toMatchObject({
+        status: 'COMPLETED',
+        amount: 200,
+        pgRefundId: '900000002',
+      });
+      expect(refundSpy).toHaveBeenCalledTimes(1);
+      expect(refundSpy).toHaveBeenCalledWith(TX_ID, 200);
+
+      // Then - 결과를 모르는 환불은 금액을 바꾸거나 취소할 수 없다
+      const third = await paidOrder(token);
+      refundSpy.mockRejectedValueOnce(new Error('timeout'));
+      await refund(third.orderId, { amount: 200 }).expect(200);
+      expect((await refund(third.orderId, { amount: 100 })).status).toBe(409);
+      expect((await cancelRefund(third.orderId)).status).toBe(409);
+    });
+
+    it('가맹점 화면에서 따로 한 환불을 다음 환불의 결과로 착각하지 않는다', async () => {
+      // Given - 첫 환불 300 은 LINE Pay 가 거절해 가맹점 화면에서 돌려주고 수동 완료했다
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      refundSpy.mockResolvedValueOnce(
+        refunded('1163', 'Refund period expired'),
+      );
+      await refund(orderId, { amount: 300 }).expect(200);
+      await completeRefund(orderId, 'LINE Pay 後台 退款').expect(200);
+      refundSpy.mockClear();
+
+      // When - 두 번째 환불 200 이 타임아웃. LINE Pay 에는 밖에서 한 300 만 있다
+      findRefundSpy.mockResolvedValue(lookupList([['M-300', 300]]));
+      refundSpy.mockRejectedValueOnce(new Error('timeout'));
+      await refund(orderId, { amount: 200 }).expect(200);
+      await waitOut(orderId);
+      const retried = await refund(orderId);
+
+      // Then - 300 을 이 환불로 보지 않고 실제로 다시 보낸다
+      expect(retried.body.data).toMatchObject({
+        status: 'COMPLETED',
+        amount: 200,
+        attemptCount: 2,
+        pgRefundId: '900000001',
+      });
+      expect(refundSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('앞선 환불이 있는데 LINE Pay 조회가 안 되면 다음 환불을 보내지 않는다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      await refund(orderId, { amount: 300 }).expect(200);
+      refundSpy.mockClear();
+      findRefundSpy.mockRejectedValueOnce(new Error('timeout'));
+
+      // When
+      const res = await refund(orderId, { amount: 200 });
+
+      // Then
+      expect(res.body.data).toMatchObject({
+        status: 'REQUESTED',
+        attemptCount: 0,
+        failureCode: 'LOOKUP_FAILED',
+      });
+      expect(refundSpy).not.toHaveBeenCalled();
+
+      // When - 조회가 되면 그때 보낸다
+      const again = await refund(orderId);
+
+      // Then
+      expect(again.body.data.status).toBe('COMPLETED');
+      expect(refundSpy).toHaveBeenCalledWith(TX_ID, 200);
+    });
+
+    it('밖에서 이미 전액 환불된 주문은 결과 미확인에 갇히지 않고 실패로 닫힌다', async () => {
+      // Given - 300 은 시스템이, 나머지는 가맹점 화면에서 이미 환불했다
+      const { token } = await signUpAndLogin();
+      const { orderId, amount } = await paidOrder(token);
+      await refund(orderId, { amount: 300 }).expect(200);
+      findRefundSpy.mockResolvedValue(
+        lookupList([
+          ['900000001', 300],
+          ['M-REST', amount - 300],
+        ]),
+      );
+      refundSpy.mockResolvedValueOnce(refunded('1165', 'Already refunded'));
+
+      // When
+      const res = await refund(orderId);
+
+      // Then - 다시 보내도 같은 거절만 되풀이되므로 실패로 닫는다
+      expect(res.body.data).toMatchObject({
+        status: 'FAILED',
+        failureCode: 'ALREADY_REFUNDED',
+        amount: amount - 300,
+      });
+      expect(await orderStatus(orderId)).toBe('PAID');
+
+      // When - 관리자가 가맹점 화면의 환불을 확인하고 완료를 입력한다
+      const done = await completeRefund(orderId, 'LINE Pay 後台 退款');
+
+      // Then
+      expect(done.body.data.status).toBe('COMPLETED');
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+    });
+
+    it('LINE Pay 가 거절한 환불은 기다리지 않고 다시 보낼 수 있고, 요청을 취소할 수도 있다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const retried = await paidOrder(token);
+      const dropped = await paidOrder(token);
+      refundSpy
+        .mockResolvedValueOnce(refunded('1163', 'Refund period expired'))
+        .mockResolvedValueOnce(refunded('1163', 'Refund period expired'));
+      await refund(retried.orderId, { amount: 300 }).expect(200);
+      await refund(dropped.orderId, { amount: 300 }).expect(200);
+
+      // When
+      const again = await refund(retried.orderId);
+      const canceled = await cancelRefund(dropped.orderId);
+
+      // Then
+      expect(again.body.data).toMatchObject({
+        status: 'COMPLETED',
+        attemptCount: 2,
+      });
+      expect(canceled.status).toBe(204);
+      expect(await refundRows(dropped.orderId)).toEqual([]);
+      expect(
+        (await adminGet(`/${dropped.orderId}`)).body.data.refundableAmount,
+      ).toBe(dropped.amount);
+    });
+
+    it('LINE Pay 조회가 실패 코드를 줘서 보내지 못한 환불은 다른 방법으로 돌려주고 완료할 수 있다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      await refund(orderId, { amount: 300 }).expect(200);
+      refundSpy.mockClear();
+      findRefundSpy.mockResolvedValueOnce(
+        LinePayRefundLookupDto.fromDetails({
+          returnCode: '9000',
+          returnMessage: 'Internal error',
+        }),
+      );
+
+      // When
+      const held = await refund(orderId, { amount: 200 });
+      const done = await completeRefund(orderId, '銀行轉帳 1125-03');
+
+      // Then
+      expect(held.body.data).toMatchObject({
+        status: 'REQUESTED',
+        attemptCount: 0,
+        failureCode: 'LOOKUP_FAILED',
+      });
+      expect(refundSpy).not.toHaveBeenCalled();
+      expect(done.body.data).toMatchObject({
+        status: 'COMPLETED',
+        isManual: true,
+        amount: 200,
+      });
+    });
+
+    it('발표가 발행될 일이 없는 주문(결제 후 처리 실패)의 부분 환불은 정정할 것이 없다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token, { issued: false });
+      await dataSource.query(
+        `UPDATE "order" SET status = 'FAILED', stock_reserved = false WHERE id = $1`,
+        [orderId],
+      );
+
+      // When
+      await refund(orderId, { amount: 300 }).expect(200);
+
+      // Then
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('NONE');
+      expect(await orderStatus(orderId)).toBe('FAILED');
+    });
+
+    it('부분 환불된 주문을 24시간 안에 취소하면 남은 금액만 자동 환불된다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId, amount } = await paidOrder(token);
+      await refund(orderId, { amount: 300 }).expect(200);
+      findRefundSpy.mockResolvedValueOnce(lookupList([['900000001', 300]]));
+
+      // When
+      await cancelRequest(token, orderId).expect(204);
+
+      // Then
+      expect(refundSpy).toHaveBeenLastCalledWith(TX_ID, amount - 300);
+      expect(await refundRows(orderId)).toEqual([
+        expect.objectContaining({ amount: 300, status: 'COMPLETED' }),
+        expect.objectContaining({
+          amount: amount - 300,
+          status: 'COMPLETED',
+          admin_id: null,
+        }),
+      ]);
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+    });
+
+    it('관리자가 시작한 환불이 남아 있거나 결제가 꼬인 주문은 자동 환불하지 않고 접수만 한다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const open = await paidOrder(token);
+      const duplicated = await paidOrder(token);
+      refundSpy.mockResolvedValueOnce(
+        refunded('1163', 'Refund period expired'),
+      );
+      await refund(open.orderId, { amount: 500 }).expect(200);
+      refundSpy.mockClear();
+      await dataSource.query(
+        `INSERT INTO payment (order_id, method, status, merchant_trade_no, amount, access_token, paid_at)
+         VALUES ($1, 'LINE_PAY', 'PAID', 'TDUPLICATE02', 1000, 'dup-token-2', NOW())`,
+        [duplicated.orderId],
+      );
+
+      // When
+      const first = await cancelRequest(token, open.orderId);
+      const second = await cancelRequest(token, duplicated.orderId);
+
+      // Then - 둘 다 접수는 되고 환불은 그대로다
+      expect([first.status, second.status]).toEqual([204, 204]);
+      expect(refundSpy).not.toHaveBeenCalled();
+      expect(await refundRows(open.orderId)).toEqual([
+        expect.objectContaining({ amount: 500, status: 'FAILED' }),
+      ]);
+      expect((await refundRows(open.orderId))[0].admin_id).not.toBeNull();
+      expect(await refundRows(duplicated.orderId)).toEqual([]);
+      expect((await adminGet('/summary')).body.data.cancelRequested).toBe(2);
+    });
+
+    it('환불 요청이 남아 있으면 취소 철회가 막히고, 환불 요청을 취소한 뒤에 철회된다', async () => {
+      // Given - ECPay 자동 환불 요청이 만들어진 뒤 고객이 마음을 바꿨다
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token, { method: 'ECPAY' });
+      await cancelRequest(token, orderId).expect(204);
+      const withdrawPath = `${ADMIN_ORDER_BASE}/${orderId}/cancel-request`;
+
+      // When / Then - 환불 요청이 남은 채로는 철회할 수 없다
+      expect((await adminSend('delete', withdrawPath)).status).toBe(409);
+      await setSuperAdmin(false);
+      expect((await cancelRefund(orderId)).status).toBe(403);
+      await setSuperAdmin(true);
+
+      // When
+      const canceled = await cancelRefund(orderId);
+
+      // Then
+      expect(canceled.status).toBe(204);
+      expect(await refundRows(orderId)).toEqual([]);
+      expect((await cancelRefund(orderId)).status).toBe(409);
+      expect((await adminSend('delete', withdrawPath)).status).toBe(204);
+      expect((await userGetOrder(token, orderId)).body.data).toMatchObject({
+        refund: null,
+        cancellationRequestedAt: null,
+        status: 'PAID',
+      });
+      const admin = (await adminGet(`/${orderId}`)).body.data;
+      expect(admin.events.map((x: any) => x.type)).toEqual(
+        expect.arrayContaining(['REFUND_CANCELED', 'CANCEL_REQUEST_WITHDRAWN']),
+      );
+      expect(mailSpy).not.toHaveBeenCalled();
+    });
+
+    it('부분 환불 합계가 결제 금액에 닿아도 이미 발주한 주문은 재고를 돌려주지 않는다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId, variantId } = await paidOrder(token);
+      await adminPurchase(orderId, { earlyReason: '선발주' }).expect(204);
+
+      // When
+      await refund(orderId, { amount: 300 }).expect(200);
+      await refund(orderId).expect(200);
+
+      // Then
+      expect(await orderStatus(orderId)).toBe('CANCELED');
+      expect(await stockOf(variantId)).toBe(99);
+    });
+
+    it('발표가 아직 안 나간 주문의 부분 환불은 닫지 않고, 발행된 뒤에 折讓 한다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token, { issued: false });
+
+      // When
+      await refund(orderId, { amount: 300 }).expect(200);
+
+      // Then - 정정할 발표가 아직 없다
+      expect(await adjustStatusOf(orderId)).toMatchObject({
+        adjust_status: 'FAILED',
+        adjust_failure_code: 'NOT_ISSUED_YET',
+      });
+      expect(getIssueSpy).not.toHaveBeenCalled();
+
+      // When - 발표가 발행되고 배치가 돈다
+      await dataSource.query(
+        `UPDATE order_invoice SET adjust_attempt_count = 5 WHERE order_id = $1`,
+        [orderId],
+      );
+      jest.spyOn(ecpayInvoice, 'issue').mockResolvedValueOnce(
+        EcpayInvoiceResultDto.fromIssue({
+          RtnCode: 1,
+          RtnMsg: 'ok',
+          InvoiceNo: INVOICE_NO,
+          InvoiceDate: `${TODAY_TAIPEI} 10:00:00`,
+          RandomNumber: '3204',
+        }),
+      );
+      await app.get(InvoiceIssueService).issueForOrder(orderId);
+      await app.get(InvoiceAdjustService).retryPending();
+
+      // Then - 소진됐던 재시도가 다시 열려 그 금액만 折讓 된다
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('ALLOWANCED');
+      expect(allowanceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ AllowanceAmount: 300 }),
+      );
+    });
+
+    it('발표를 정정하는 동안 환불이 더 끝나면 닫지 않고 다시 정정한다', async () => {
+      // Given - 300 을 折讓 하는 사이 200 환불이 끝났다
+      const { token } = await signUpAndLogin();
+      const { orderId, amount } = await paidOrder(token);
+      allowanceSpy.mockImplementationOnce(async () => {
+        await dataSource.query(
+          `INSERT INTO refund (order_id, payment_id, method, amount, status, admin_id, requested_at, completed_at)
+           VALUES ($1, 1, 'LINE_PAY', 200, 'COMPLETED', 1, NOW(), NOW())`,
+          [orderId],
+        );
+
+        return adjusted(1, { IA_Allow_No: '2026112508481095' });
+      });
+
+      // When
+      await refund(orderId, { amount: 300 }).expect(200);
+
+      // Then
+      expect((await adjustStatusOf(orderId, false)).adjust_status).toBe(
+        'PENDING',
+      );
+
+      // When
+      getIssueSpy.mockResolvedValueOnce(
+        issued({ IIS_Remain_Allowance_Amt: amount - 300 }),
+      );
+      await app.get(InvoiceAdjustService).retryPending();
+
+      // Then
+      expect((await adjustStatusOf(orderId)).adjust_status).toBe('ALLOWANCED');
+      expect(allowanceSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({ AllowanceAmount: 200 }),
+      );
+    });
+
+    it('완료 입력을 기다리는 환불은 금액을 고칠 수 있고, 고친 금액으로 끝난다', async () => {
+      // Given - ECPay 자동 환불(전액 요청)을 관리자가 부분 환불로 바꾼다
+      const { token } = await signUpAndLogin();
+      const { orderId, amount } = await paidOrder(token, { method: 'ECPAY' });
+      await cancelRequest(token, orderId).expect(204);
+
+      // When
+      const changed = await refund(orderId, { amount: 500 });
+      const over = await refund(orderId, { amount: amount + 1 });
+      const done = await completeRefund(orderId, '銀行轉帳 1125-02');
+
+      // Then
+      expect(changed.body.data).toMatchObject({
+        status: 'REQUESTED',
+        amount: 500,
+      });
+      expect(over.status).toBe(400);
+      expect(done.body.data).toMatchObject({
+        status: 'COMPLETED',
+        amount: 500,
+      });
+      expect(await refundRows(orderId)).toHaveLength(1);
+      expect(await orderStatus(orderId)).toBe('PAID');
+      expect((await adminGet(`/${orderId}`)).body.data.refundableAmount).toBe(
+        amount - 500,
+      );
+    });
+
+    it('알림 메일이 실패해도 환불은 성공으로 끝난다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const { orderId } = await paidOrder(token);
+      mailSpy.mockRejectedValueOnce(new Error('smtp down'));
+
+      // When
+      const res = await refund(orderId);
+
+      // Then
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('COMPLETED');
+      expect(await orderStatus(orderId)).toBe('CANCELED');
     });
   });
 });

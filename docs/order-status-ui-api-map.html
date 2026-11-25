@@ -765,8 +765,9 @@ months: 1~36 (없으면 전체 기간)</div>
             <a href="https://api-dev.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_postUserOrderCancelRequest" target="_blank" rel="noopener">DEV</a>
             <a href="https://api.seoulmoment.com.tw/docs#/UserOrder/UserOrderController_postUserOrderCancelRequest" target="_blank" rel="noopener">PROD</a></div>
           <p class="api-desc">버튼은 상세 응답의 <code>canRequestCancel</code> 이 <b>true 일 때 보인다</b> — 결제 완료 주문이면 24시간이 지나도, 한국 발주·해외배송 중이어도, <b>수령한 뒤에도 true</b> 다(법정 계약해제권). 숨기는 조건을 프론트에서 따로 만들지 않는다.
-            <code>isQuickCancelPeriod</code> 는 <b>안내 문구만</b> 바꾼다(24시간 안이면 “快速取消”, 지나면 “解除契約”). 이 API 는 <b>접수만 하고 돈을 돌려주지 않는다</b> — 환불은 관리자가 확인 후 진행하고 그 상태가 4번에 뜬다.
-            <b>204 라 본문이 없으니</b> 성공하면 상세를 다시 부른다. 두 번 눌러도 204 이고 처음 접수 시각이 유지된다.</p>
+            <code>isQuickCancelPeriod</code> 는 <b>안내 문구만</b> 바꾼다(24시간 안이면 “快速取消”, 지나면 “解除契約”).
+            <b>결제 후 24시간 안이고 아직 한국 발주 전이면 접수와 함께 자동으로 환불이 시작된다</b> — LINE Pay 는 응답이 올 때 이미 환불 완료이고, ECPay 결제는 “退款處理中”으로 남아 운영이 처리한다.
+            24시간이 지났거나 이미 발주한 주문은 <b>접수만</b> 되고 관리자가 확인한 뒤 환불한다. 어느 쪽이든 응답은 <b>204 라 본문이 없으니</b> 성공하면 상세를 다시 불러 4번을 그린다. 두 번 눌러도 204 이고 처음 접수 시각이 유지된다.</p>
           <div class="io-pair">
             <div class="io-block">
               <div class="io-l req"><span class="ar">←</span>Request</div>
@@ -791,9 +792,10 @@ months: 1~36 (없으면 전체 기간)</div>
         <div class="api-row" data-k="3-4">
           <div class="api-top"><span class="pin">4</span><span class="what">환불 진행 상태 · 발표 정정</span><span class="nt new">new</span></div>
           <div class="api-ep"><span class="m none">같은 응답</span><code>refund · invoice.adjustStatus</code></div>
-          <p class="api-desc"><code>refund</code> 가 <b>null 이면 환불이 아직 시작되지 않은 것</b>이다(접수만 된 상태 — “申請已受理” 로 보여준다).
+          <p class="api-desc"><code>refund</code> 는 <b>가장 최근 환불 한 건</b>이고, <b>null 이면 환불이 아직 시작되지 않은 것</b>이다(접수만 된 상태 — “申請已受理” 로 보여준다).
             <code>REQUESTED</code>·<code>PROCESSING</code> 은 “退款處理中”, <code>COMPLETED</code> 는 “已退款”, <code>FAILED</code> 는 실패라고 쓰지 말고 “處理中，客服確認中” 정도로 둔다(관리자가 다른 방법으로 돌려준다).
-            환불이 끝나면 주문 <code>status</code> 가 <b>CANCELED</b> 로 바뀌고 <code>invoice.adjustStatus</code> 가 <code>VOIDED</code>(作廢) 또는 <code>ALLOWANCED</code>(折讓)가 된다.</p>
+            <b>전액</b>이 환불되면 주문 <code>status</code> 가 <b>CANCELED</b> 로 바뀌고 <code>invoice.adjustStatus</code> 가 <code>VOIDED</code>(作廢) 또는 <code>ALLOWANCED</code>(折讓)가 된다.
+            <b>부분 환불</b>(품절 등으로 일부만 돌려준 경우)은 <code>status</code> 가 <b>PAID 그대로</b>이고 <code>refundedAmount</code> 만 늘어난다 — “已部分退款 NT$300” 처럼 합계로 보여준다. 환불이 완료될 때마다 고객에게 메일이 간다.</p>
           <div class="io">{
   <span class="k">refund</span>?: {
     status:       "REQUESTED",
@@ -801,6 +803,7 @@ months: 1~36 (없으면 전체 기간)</div>
     requestedAt:  "2026-11-25T06:02:00Z",
     completedAt?: null
   },
+  <span class="k">refundedAmount</span>: 0,
   invoice?: { …, <span class="k">adjustStatus</span>: "NONE" }
 }</div>
         </div>
@@ -1043,6 +1046,8 @@ timerState: NOT_PAID · WAITING · SOON
             <div style="font-size:12px">취소 접수 11/25 14:02 · 간편취소 구간</div>
             <div style="font-size:11px;color:var(--ink-3);margin-top:3px">사유: 尺寸選錯了</div>
             <div style="font-size:12px;margin-top:8px">환불 <b>대기</b> · 발표 <b>已開立</b></div>
+            <div class="lbl" style="margin-top:8px">환불 금액 (비우면 전액 · 최대 NT$3,880)</div><div class="input ph">3,880</div>
+            <div class="lbl" style="margin-top:8px">환불 사유</div><div class="input ph">品項缺貨</div>
           </div>
           <div class="bottombar" style="border-top:none"><span class="btn primary">환불 실행</span><span class="btn ghost" style="flex:1">접수 철회</span></div>
         </div>
@@ -1084,6 +1089,9 @@ timerState: NOT_PAID · WAITING · SOON
     <span class="k">delivery</span>:          { … },   <span class="n">// NEW · 5번</span>
     <span class="k">cancellation</span>:      { … },   <span class="n">// NEW · 6번</span>
     <span class="k">refund</span>?:           null,    <span class="n">// NEW · 6번</span>
+    <span class="k">refunds</span>:           [ … ],   <span class="n">// NEW · 6번</span>
+    <span class="k">refundedAmount</span>:    0,       <span class="n">// NEW · 6번</span>
+    <span class="k">refundableAmount</span>:  3880,    <span class="n">// NEW · 6번</span>
     <span class="k">invoiceAdjustment</span>?: { … },  <span class="n">// NEW · 6번</span>
     <span class="k">events</span>:            [ … ]    <span class="n">// NEW · 7번</span>
   }</div>
@@ -1189,6 +1197,7 @@ timerState: NOT_PAID · WAITING · SOON
           <div class="api-ep"><span class="m post">POST</span><code>/admin/order/{id}/refund</code></div>
           <div class="api-ep"><span class="m post">POST</span><code>/admin/order/{id}/refund/complete</code></div>
           <div class="api-ep"><span class="m post">POST</span><code>/admin/order/{id}/invoice-adjust</code></div>
+          <div class="api-ep"><span class="m del">DELETE</span><code>/admin/order/{id}/refund</code></div>
           <div class="api-ep"><span class="m del">DELETE</span><code>/admin/order/{id}/cancel-request</code></div>
           <div class="swg"><span class="swg-l">Swagger · 환불</span>
             <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_postAdminOrderRefund" target="_blank" rel="noopener">DEV</a>
@@ -1199,25 +1208,35 @@ timerState: NOT_PAID · WAITING · SOON
           <div class="swg"><span class="swg-l">Swagger · 발표 정정</span>
             <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_postAdminOrderInvoiceAdjust" target="_blank" rel="noopener">DEV</a>
             <a href="https://api.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_postAdminOrderInvoiceAdjust" target="_blank" rel="noopener">PROD</a></div>
+          <div class="swg"><span class="swg-l">Swagger · 환불 요청 취소</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_deleteAdminOrderRefund" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminRefund/AdminRefundController_deleteAdminOrderRefund" target="_blank" rel="noopener">PROD</a></div>
           <div class="swg"><span class="swg-l">Swagger · 접수 철회</span>
             <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_deleteAdminOrderCancelRequest" target="_blank" rel="noopener">DEV</a>
             <a href="https://api.seoulmoment.com.tw/docs#/AdminOrder/AdminOrderController_deleteAdminOrderCancelRequest" target="_blank" rel="noopener">PROD</a></div>
-          <p class="api-desc"><b>환불은 전액만</b> 되고 <b>super_admin 만</b> 실행할 수 있다(그 외 403). 결제 수단에 따라 흐름이 갈린다:
+          <p class="api-desc"><b>전액·부분 환불 모두</b> 되고 <b>super_admin 만</b> 실행할 수 있다(그 외 403). 고객의 취소 신청이 없어도(품절·판매 중단) 누를 수 있다.
+            <code>amount</code> 를 <b>비우면 남은 금액 전부</b>, 넣으면 그 금액만 돌려준다 — 상한은 상세 응답의 <code>refundableAmount</code> 이고 넘으면 400 이다. 부분 환불은 여러 번 할 수 있고 <b>주문 상태·재고를 건드리지 않는다</b>; 합계가 결제 금액에 닿을 때에만 주문이 <code>CANCELED</code> 가 된다.
+            <b>결제 후 24시간 안 · 발주 전에 고객이 취소한 주문은 버튼을 누르지 않아도 환불이 이미 시작돼 있다</b>(<code>adminId: null</code> = 자동). 결제 수단에 따라 흐름이 갈린다:
             <b>LINE Pay</b> 는 누르면 바로 PG 에 환불을 보내 응답의 <code>status</code> 가 <code>COMPLETED</code> / <code>FAILED</code> / <code>PROCESSING</code>(결과 미확인)으로 온다.
             <b>ECPay(카드·ATM·편의점)</b> 는 API 를 부르지 않고 <code>REQUESTED</code> · <code>isManual: true</code> 로 기록만 한다 — ECPay 후台이나 계좌 송금으로 돌려준 뒤 <b>“환불 완료 입력”</b>(<code>/refund/complete</code>)을 누른다.
-            <code>FAILED</code>·<code>PROCESSING</code> 이면 같은 버튼이 <b>재시도</b>다(서버가 이미 나간 환불이 있는지 먼저 조회한다). 환불이 끝나면 주문이 <code>CANCELED</code> 가 되고 발표 정정이 이어서 돈다.
+            끝나지 않은 환불(<code>FAILED</code>·<code>PROCESSING</code>·<code>REQUESTED</code>)이 있으면 같은 버튼이 <b>재시도</b>다(새로 만들지 않고, 서버가 이미 나간 환불이 있는지 먼저 조회한다) — 자동 환불이 실패한 건도 이렇게 이어서 처리한다. 이때 다른 <code>amount</code> 를 보내면 그 환불의 금액이 바뀐다(결과 미확인 <code>PROCESSING</code> 은 409). <code>PROCESSING</code> 은 마지막 요청 뒤 <b>5분 동안은 조회만</b> 하고 다시 보내지 않으니, 재시도 응답이 여전히 <code>PROCESSING</code> 이면 잠시 뒤 다시 누른다. 환불이 끝나면 고객에게 메일이 가고 발표 정정이 이어서 돈다(전액은 作廢·折讓, 부분은 그 금액만 折讓).
             <b>환불 결과와 발표 정정 결과는 별도 칸</b>으로 보여준다 — <code>invoiceAdjustment.adjustStatus</code> 가 <code>FAILED</code> 면 “발표 정정 재시도”만 누르고 환불은 다시 누르지 않는다.
-            “접수 철회”는 고객이 취소 의사를 거뒀을 때만 쓴다.</p>
+            “접수 철회”는 고객이 취소 의사를 거뒀을 때만 쓴다 — <b>끝나지 않은 환불(자동 환불 요청 포함)이 있으면 409</b> 라서, 아직 돈이 나가지 않은 환불(<code>REQUESTED</code>·<code>FAILED</code>)을 <b>“환불 요청 취소”</b>(<code>DELETE …/refund</code>)로 먼저 없앤다. 결과 미확인 <code>PROCESSING</code> 과 완료된 환불은 취소할 수 없다.</p>
           <div class="io-pair">
             <div class="io-block">
               <div class="io-l req"><span class="ar">←</span>Request</div>
               <div class="io"><span class="c">// POST refund</span>
-{ reason?: "고객 계약해제 통지" }
+{
+  reason?: "品項缺貨",
+  amount?: 1200
+}
+<span class="c">// amount 생략 = 남은 금액 전부</span>
 
 <span class="c">// POST refund/complete</span>
 { reference: "ECPay 退刷 2611250001" }
 
 <span class="c">// POST invoice-adjust</span>
+<span class="c">// DELETE refund</span>
 <span class="c">// DELETE cancel-request</span>
 <span class="c">(본문 없음)</span></div>
             </div>
@@ -1230,6 +1249,8 @@ timerState: NOT_PAID · WAITING · SOON
   amount:    3880,
   <span class="k">status</span>:    "COMPLETED",
   <span class="k">isManual</span>:  false,
+  adminId?:        3,
+  reason?:         "品項缺貨",
   pgRefundId?:     "2026112500012345",
   attemptCount:    1,
   failureCode?:    null,
@@ -1244,7 +1265,10 @@ timerState: NOT_PAID · WAITING · SOON
     reason?:                  "尺寸選錯了",
     withinQuickCancelPeriod?: true
   },
-  <span class="k">refund</span>?: { …위와 같은 모양 },
+  <span class="k">refund</span>?:  { …위와 같은 모양 },   <span class="c">// 가장 최근 (끝나지 않은 환불 우선)</span>
+  <span class="k">refunds</span>:  [ { … }, { … } ],     <span class="c">// 전부, 오래된 순</span>
+  <span class="k">refundedAmount</span>:   1200,
+  <span class="k">refundableAmount</span>: 2680,
   <span class="k">invoiceAdjustment</span>?: {
     invoiceStatus: "ISSUED",
     invoiceNo?:    "LY74004967",
@@ -1252,7 +1276,7 @@ timerState: NOT_PAID · WAITING · SOON
     allowanceNo?:  null,
     adjustedAt?, attemptCount, failureCode?, failureMessage?
   }</div>
-          <div class="tags"><span class="tag">환불·수동 완료: super_admin</span><span class="tag">reason ≤ 500자</span><span class="tag">reference 필수 ≤ 100자</span><span class="tag">invoice-adjust 응답 = invoiceAdjustment 모양</span><span class="tag">cancel-request 는 204</span><span class="tag err">403 super_admin 아님</span><span class="tag err">409 이미 환불 완료 · 결제된 주문 아님 · 중복 결제 · 진행 중</span><span class="tag err">409 complete: 시작한 환불 없음 · LINE Pay 는 확정 거절(FAILED)일 때만 가능</span><span class="tag err">409 invoice-adjust: 정정할 것 없음</span><span class="tag err">404 주문 없음</span></div>
+          <div class="tags"><span class="tag">환불·수동 완료: super_admin</span><span class="tag">reason ≤ 500자</span><span class="tag">amount 정수 ≥ 1 · ≤ refundableAmount</span><span class="tag">adminId null = 자동 환불</span><span class="tag">reference 필수 ≤ 100자</span><span class="tag">invoice-adjust 응답 = invoiceAdjustment 모양</span><span class="tag">DELETE 둘은 204</span><span class="tag err">403 super_admin 아님</span><span class="tag err">400 amount 가 환불 가능 금액 초과</span><span class="tag err">409 이미 전액 환불 · 결제된 주문 아님 · 중복 결제 · 진행 중 · 결과 미확인 환불의 금액 변경</span><span class="tag err">409 complete: 끝나지 않은 환불 없음 · LINE Pay 는 거절(FAILED)됐거나 한 번도 못 보낸 환불만 가능</span><span class="tag err">409 DELETE refund: 끝나지 않은 환불 없음 · 결과 미확인</span><span class="tag err">409 cancel-request: 접수 없음 · 끝나지 않은 환불 있음</span><span class="tag err">409 invoice-adjust: 정정할 것 없음</span><span class="tag err">404 주문 없음</span></div>
         </div>
 
         <div class="api-row" data-k="5-7">
@@ -1268,7 +1292,7 @@ timerState: NOT_PAID · WAITING · SOON
   message?:  "PREPARING_ORDER → INTERNATIONAL_SHIPPING",
   createdAt: "2026-11-24T01:10:00Z"
 }]</div>
-          <div class="tags"><span class="tag">type: CANCEL_REQUESTED · CANCEL_REQUEST_WITHDRAWN · PURCHASED · DELIVERY_STAGE_CHANGED · LOCAL_DELIVERY_UPDATED · SHIPMENT_UPDATED · REFUND_REQUESTED · REFUND_COMPLETED · REFUND_FAILED · INVOICE_ADJUSTED · INVOICE_ADJUST_FAILED</span></div>
+          <div class="tags"><span class="tag">type: CANCEL_REQUESTED · CANCEL_REQUEST_WITHDRAWN · PURCHASED · DELIVERY_STAGE_CHANGED · LOCAL_DELIVERY_UPDATED · SHIPMENT_UPDATED · REFUND_REQUESTED · REFUND_COMPLETED · REFUND_FAILED · REFUND_CANCELED · INVOICE_ADJUSTED · INVOICE_ADJUST_FAILED</span></div>
         </div>
       </div>
       <div class="note"><b>주의</b> — “24시간 경과 = 발주 가능”은 <b>회사 내부 발주 기준</b>이지 고객의 취소·계약해제 권리가 끝났다는 뜻이 아니다. 이 화면에서 취소 신청 경로를 막지 않는다.
@@ -1494,7 +1518,7 @@ customsStatus?: "IN_PROGRESS"</div>
     <span class="no">08</span>
     <h2>관리자 — 취소/환불 관리</h2>
     <span class="route">/admin/refunds</span>
-    <p class="sub"><b>시작된 환불</b>을 모아 본다. 환불(PG) 결과와 전자발표 정정 결과가 <b>따로</b> 내려오니 둘이 어긋난 건을 여기서 찾는다. 아직 환불을 시작하지 않은 취소 신청은 04 목록의 “취소 요청” 칩에 있다.</p>
+    <p class="sub"><b>시작된 환불</b>을 모아 본다(자동 환불 포함 · 부분 환불은 건마다 한 줄). 환불(PG) 결과와 전자발표 정정 결과가 <b>따로</b> 내려오니 둘이 어긋난 건을 여기서 찾는다. 아직 환불을 시작하지 않은 취소 신청은 04 목록의 “취소 요청” 칩에 있다.</p>
   </div>
   <div class="split">
     <div class="ui-col">
@@ -1563,8 +1587,8 @@ status?: "FAILED"</div>
           <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag">count ≤ 100</span><span class="tag">status: REQUESTED · PROCESSING · COMPLETED · FAILED</span><span class="tag">adjustStatus: NONE · PENDING · VOIDED · ALLOWANCED · FAILED</span></div>
         </div>
       </div>
-      <div class="note"><b>주의</b> — 환불은 <b>전액만</b> 된다(부분 환불·상품별 환불 없음). ECPay 결제는 서버가 PG 환불을 보내지 않으므로 <b>“완료 입력”을 누르기 전에 실제로 돈을 돌려줬는지</b>가 운영 책임이다.
-        <code>PROCESSING</code>(결과 미확인)은 수동 완료가 막혀 있다(409) — 재시도로 결과부터 확인해야 이중 환불이 안 난다. 결제 후 처리 실패(FAILED) 주문은 04 목록에 안 나와서 주문 ID 로 직접 환불을 시작해야 한다.</div>
+      <div class="note"><b>주의</b> — 부분 환불은 <b>금액으로만</b> 한다(상품을 고르는 환불은 없고 재고도 돌아오지 않는다). <code>adminId</code> 가 null 인 행은 고객 취소로 시스템이 시작한 <b>자동 환불</b>이다. ECPay 결제는 서버가 PG 환불을 보내지 않으므로 <b>“완료 입력”을 누르기 전에 실제로 돈을 돌려줬는지</b>가 운영 책임이다.
+        <code>PROCESSING</code>(결과 미확인)은 수동 완료가 막혀 있다(409) — 재시도로 결과부터 확인해야 이중 환불이 안 난다. <code>failureCode</code> 가 <code>ALREADY_REFUNDED</code>(밖에서 이미 전액 환불됨) · <code>LOOKUP_FAILED</code>(LINE Pay 조회가 안 돼 보내지 못함)인 건은 확인 후 완료 입력이나 요청 취소로 정리한다. 결제 후 처리 실패(FAILED) 주문은 04 목록에 안 나와서 주문 ID 로 직접 환불을 시작해야 한다.</div>
     </div>
   </div>
 </section>
@@ -1605,13 +1629,13 @@ status?: "FAILED"</div>
     </div></div>
     <div class="step"><div class="n">07</div><div>
       <h4>고객 — 취소·계약해제 신청</h4>
-      <p>접수만 한다(204). 관리자 KPI “취소 요청”이 올라가고 그 주문의 발주가 막힌다. 고객은 상세를 다시 불러 접수 시각을 본다.</p>
+      <p>204. 결제 후 24시간 안 · 발주 전이면 접수와 함께 자동으로 환불이 시작되고, 그 밖은 접수만 되어 관리자 KPI “취소 요청”에 쌓인다. 어느 쪽이든 그 주문의 발주는 막히고, 고객은 상세를 다시 불러 환불 상태를 본다.</p>
       <span class="ep">POST /user/order/{id}/cancel-request</span> <span class="ep">GET /user/order/{id}</span>
     </div></div>
     <div class="step"><div class="n">08</div><div>
       <h4>관리자 — 환불 → 발표 정정</h4>
-      <p>LINE Pay 는 한 번에 끝나고, ECPay 는 직접 돌려준 뒤 완료를 입력한다. 환불이 끝나면 발표 정정이 이어서 돌고, 정정만 실패하면 정정만 다시 누른다.</p>
-      <span class="ep">POST /admin/order/{id}/refund</span> <span class="ep">POST /admin/order/{id}/refund/complete</span> <span class="ep">POST /admin/order/{id}/invoice-adjust</span> <span class="ep">GET /admin/refund</span>
+      <p>전액 또는 금액을 넣은 부분 환불. LINE Pay 는 한 번에 끝나고, ECPay 는 직접 돌려준 뒤 완료를 입력한다(자동 환불이 실패했거나 ECPay 라 멈춘 건도 여기서 잇는다). 환불이 끝나면 고객 메일과 발표 정정이 이어서 돌고, 정정만 실패하면 정정만 다시 누른다.</p>
+      <span class="ep">POST /admin/order/{id}/refund</span> <span class="ep">POST /admin/order/{id}/refund/complete</span> <span class="ep">DELETE /admin/order/{id}/refund</span> <span class="ep">POST /admin/order/{id}/invoice-adjust</span> <span class="ep">GET /admin/refund</span>
     </div></div>
     <div class="step"><div class="n">09</div><div>
       <h4>운영 — 할인 스위치</h4>
@@ -1624,7 +1648,7 @@ status?: "FAILED"</div>
 <footer>
   전체 스펙은 Swagger(<code>/docs</code>)에서 본다. 이 문서의 값은 커밋 6e6ac66 의 코드와 테스트(<code>test/order.fulfillment.spec.ts</code> 등)에서 가져왔고,
   07·08 과 취소 신청·환불 필드는 2026-11-25 에 더해졌다(<code>new</code> 표시). ECPay 발표 作廢·折讓 은 stage 상점에서 실제 호출로 확인했고,
-  LINE Pay 환불은 sandbox 승인 결제가 없어 테스트(모의 응답)로만 확인했다. 아직 없는 것: 부분 환불, ECPay 카드 자동 환불(DoAction), 반품 회수·검수·재입고, 고객 알림.
+  LINE Pay 환불은 sandbox 승인 결제가 없어 테스트(모의 응답)로만 확인했다. 환불 완료 알림은 메일 한 가지다. 아직 없는 것: ECPay 카드 자동 환불(DoAction), 상품 단위 환불, 반품 회수·검수·재입고.
 </footer>
 
 </div>

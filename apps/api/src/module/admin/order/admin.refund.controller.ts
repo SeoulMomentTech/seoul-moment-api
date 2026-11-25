@@ -8,6 +8,7 @@ import { ResponseListDto } from '@app/common/type/response-list';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -47,20 +48,28 @@ export class AdminRefundController {
   @AdminRole('super_admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: '환불 실행 (전액) · 재시도',
+    summary: '환불 실행 (전액 · 부분) · 재시도',
     description:
-      'super_admin 만 된다. 결제 완료(PAID)·결제 후 처리 실패(FAILED) 주문의 결제 금액 전부를 돌려준다. 고객의 취소 신청이 없어도 실행할 수 있다. ' +
+      'super_admin 만 된다. 결제 완료(PAID)·결제 후 처리 실패(FAILED) 주문을 환불한다. 고객의 취소 신청이 없어도(품절·판매 중단 등) 실행할 수 있다. ' +
+      'amount 를 생략하면 남은 금액 전부, 보내면 그 금액만 돌려준다(부분 환불 — 여러 번 할 수 있고 합계가 결제 금액을 넘으면 400). ' +
+      '고객이 결제 후 24시간 안 · 발주 전에 취소를 신청한 주문은 이 API 없이 시스템이 자동으로 환불을 시작한다 — 실패했거나 ECPay 결제면 여기서 이어서 처리한다. ' +
       'LINE Pay 는 환불 API 를 불러 결과가 바로 status 에 온다 (COMPLETED / FAILED=LINE Pay 가 환불하지 않았다고 확정 / PROCESSING=결과 미확인). ' +
       'ECPay(카드·ATM·편의점)는 API 를 부르지 않고 REQUESTED·isManual=true 로 기록만 한다 — ECPay 후台이나 계좌 송금으로 돌려준 뒤 /refund/complete 를 부른다. ' +
-      'FAILED·PROCESSING 인 주문에 다시 부르면 재시도이고, 이미 나간 환불이 있는지 LINE Pay 에 먼저 조회해서 두 번 돌려주지 않는다. ' +
-      'COMPLETED 가 되면 주문은 CANCELED 로 바뀌고 전자발표 정정이 따로 시작된다.',
+      '끝나지 않은 환불(FAILED·PROCESSING·REQUESTED)이 있는 주문에 다시 부르면 새로 만들지 않고 그 환불의 재시도이고, 이미 나간 환불이 있는지 LINE Pay 에 먼저 조회해서 두 번 돌려주지 않는다. ' +
+      '결과 미확인(PROCESSING)은 마지막 요청 뒤 5분 동안은 조회만 하고 다시 보내지 않는다(LINE Pay 가 아직 처리 중일 수 있다). ' +
+      'COMPLETED 가 되면 고객에게 환불 완료 메일이 가고 전자발표 정정이 따로 시작된다(전액이면 作廢 또는 折讓, 부분이면 그 금액만 折讓). ' +
+      '환불 합계가 결제 금액에 닿았을 때에만 주문이 CANCELED 로 바뀌고 미발주 재고를 돌려준다 — 부분 환불은 주문 상태와 재고를 건드리지 않는다.',
   })
   @ResponseData(GetAdminRefundResponse)
   @ResponseException(HttpStatus.NOT_FOUND, 'Order not found')
   @ResponseException(HttpStatus.FORBIDDEN, 'super_admin 이 아님')
   @ResponseException(
+    HttpStatus.BAD_REQUEST,
+    'amount 가 환불 가능 금액(refundableAmount)을 넘음',
+  )
+  @ResponseException(
     HttpStatus.CONFLICT,
-    '이미 환불 완료 / 결제된 주문이 아님 / 결제가 둘 이상(중복 결제) / 같은 주문의 환불이 진행 중',
+    '이미 전액 환불 / 결제된 주문이 아님 / 결제가 둘 이상(중복 결제) / 같은 주문의 환불이 진행 중 / 결과 미확인 환불의 금액 변경',
   )
   async postAdminOrderRefund(
     @Request() req: any,
@@ -70,10 +79,32 @@ export class AdminRefundController {
     const refund = await this.refundService.request(
       getTokenSubjectId(req.user),
       id,
-      body.reason,
+      body,
     );
 
     return new ResponseDataDto(GetAdminRefundResponse.from(refund));
+  }
+
+  @Delete('order/:id(\\d+)/refund')
+  @AdminRole('super_admin')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: '끝나지 않은 환불 요청 취소',
+    description:
+      'super_admin 만 된다. 아직 돈이 나가지 않은 환불(REQUESTED · FAILED)을 없던 일로 한다 — 고객이 취소를 거뒀거나 잘못 시작한 환불. ' +
+      '환불 행은 지워지고 작업 이력에 REFUND_CANCELED 가 남는다. 결과 미확인(PROCESSING)은 409 — /refund 로 다시 시도해 결과부터 확인한다. 완료된 환불은 취소할 수 없다.',
+  })
+  @ResponseException(HttpStatus.NOT_FOUND, 'Order not found')
+  @ResponseException(HttpStatus.FORBIDDEN, 'super_admin 이 아님')
+  @ResponseException(
+    HttpStatus.CONFLICT,
+    '끝나지 않은 환불이 없음 / 결과 미확인 환불 / 같은 주문의 환불이 진행 중',
+  )
+  async deleteAdminOrderRefund(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    await this.refundService.cancelOpen(getTokenSubjectId(req.user), id);
   }
 
   @Post('order/:id(\\d+)/refund/complete')
@@ -83,7 +114,7 @@ export class AdminRefundController {
     summary: '수동 환불 완료 입력',
     description:
       'super_admin 만 된다. PG 밖에서 실제로 돈을 돌려준 뒤에 부른다 — 이 API 는 돈을 보내지 않고 완료만 기록한다. ' +
-      '수동 환불(isManual=true)이거나 LINE Pay 가 거절한(FAILED) 환불에만 된다. 결과 미확인(PROCESSING)인 LINE Pay 환불은 409 — /refund 로 다시 시도해 결과부터 확인한다. ' +
+      '수동 환불(isManual=true)이거나, LINE Pay 가 거절했거나(FAILED) 한 번도 보내지 못한(attemptCount 0 — LINE Pay 조회 실패로 보류된 LOOKUP_FAILED 등) 환불에만 된다. 결과 미확인(PROCESSING)인 LINE Pay 환불은 409 — /refund 로 다시 시도해 결과부터 확인한다. ' +
       'LINE Pay 조회가 계속 실패해 PROCESSING 에서 못 벗어나면 LINE Pay 가맹점 화면에서 환불 여부를 확인한 뒤 개발팀이 상태를 고쳐야 한다.',
   })
   @ResponseData(GetAdminRefundResponse)
@@ -91,7 +122,7 @@ export class AdminRefundController {
   @ResponseException(HttpStatus.FORBIDDEN, 'super_admin 이 아님')
   @ResponseException(
     HttpStatus.CONFLICT,
-    '시작한 환불이 없음 / 이미 완료 / PG 가 처리 중인 환불',
+    '끝나지 않은 환불이 없음(시작 전·이미 완료) / PG 가 처리 중인 환불',
   )
   async postAdminOrderRefundComplete(
     @Request() req: any,
@@ -113,7 +144,7 @@ export class AdminRefundController {
   @ApiOperation({
     summary: '전자발표 정정 재시도 (作廢·折讓)',
     description:
-      'super_admin 만 된다. 환불이 끝난 주문의 발표 정정만 다시 시도한다. 환불은 다시 하지 않는다. 신고 기한(발표 기간 다음 홀수 달 13일) 안이면 作廢, 지났으면 전액 折讓 이다. ' +
+      'super_admin 만 된다. 환불이 끝난 주문의 발표 정정만 다시 시도한다. 환불은 다시 하지 않는다. 전액 환불이고 신고 기한(발표 기간 다음 홀수 달 13일) 안이면 作廢, 그 밖(부분 환불·기한 경과)은 환불 합계만큼 折讓 이다. ' +
       '정정은 환불 완료 직후와 5분 배치(5회까지)가 자동으로 시도하므로, 이 API 는 adjustStatus 가 FAILED·PENDING 으로 남았을 때 쓴다.',
   })
   @ResponseData(GetAdminInvoiceAdjustmentResponse)

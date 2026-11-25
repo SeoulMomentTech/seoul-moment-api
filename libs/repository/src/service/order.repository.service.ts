@@ -553,9 +553,10 @@ export class OrderRepositoryService {
    * 정정 쪽이 ECPay 에 조회해서 가린다.
    */
   async markInvoiceAdjustPending(orderId: number) {
+    // 作廢 된 발표만 빼고 다시 건다 — 부분 환불은 환불할 때마다 折讓 이 하나씩 더 필요하다
     return this.orderInvoiceRepository.update(
-      { orderId, adjustStatus: InvoiceAdjustStatus.NONE },
-      { adjustStatus: InvoiceAdjustStatus.PENDING },
+      { orderId, adjustStatus: Not(InvoiceAdjustStatus.VOIDED) },
+      { adjustStatus: InvoiceAdjustStatus.PENDING, adjustAttemptCount: 0 },
     );
   }
 

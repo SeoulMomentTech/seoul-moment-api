@@ -7,6 +7,7 @@ import { UserOrderController } from './user.order.controller';
 import { UserOrderService } from './user.order.service';
 import { InvoiceModule } from '../../invoice/invoice.module';
 import { LogisticsModule } from '../../logistics/logistics.module';
+import { RefundModule } from '../../refund/refund.module';
 import { UserCartModule } from '../cart/user.cart.module';
 
 @Module({
@@ -17,6 +18,8 @@ import { UserCartModule } from '../cart/user.cart.module';
     UserCartModule,
     LogisticsModule,
     InvoiceModule,
+    // 24시간 안 · 발주 전 취소의 자동 환불
+    RefundModule,
   ],
   controllers: [UserOrderController],
   providers: [UserOrderService],

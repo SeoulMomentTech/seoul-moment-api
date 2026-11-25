@@ -12,8 +12,16 @@ export class RefundRepositoryService {
     private readonly refundRepository: Repository<RefundEntity>,
   ) {}
 
-  async findByOrderId(orderId: number): Promise<RefundEntity | null> {
-    return this.refundRepository.findOneBy({ orderId });
+  /** 한 주문의 환불 전부 (오래된 순). 부분 환불이 있으면 여러 건이다 */
+  async findAllByOrderId(orderId: number): Promise<RefundEntity[]> {
+    return this.refundRepository.find({
+      where: { orderId },
+      order: { id: 'ASC' },
+    });
+  }
+
+  async findById(id: number): Promise<RefundEntity | null> {
+    return this.refundRepository.findOneBy({ id });
   }
 
   async save(entity: RefundEntity): Promise<RefundEntity> {
@@ -49,7 +57,14 @@ export class RefundRepositoryService {
     fields: Partial<
       Pick<
         RefundEntity,
-        'status' | 'attemptCount' | 'failureCode' | 'failureMessage'
+        | 'status'
+        | 'attemptCount'
+        | 'failureCode'
+        | 'failureMessage'
+        | 'amount'
+        | 'isManual'
+        | 'pgRefundedBefore'
+        | 'lastAttemptAt'
       >
     >,
   ) {
@@ -57,6 +72,17 @@ export class RefundRepositoryService {
       { id, status: Not(RefundStatus.COMPLETED) },
       fields,
     );
+  }
+
+  /** 끝나지 않은 환불을 없던 일로 한다. 완료된 환불은 지우지 않는다. 지웠으면 true */
+  async deleteOpen(id: number): Promise<boolean> {
+    // 소프트 삭제가 아니다 — 남아 있으면 "끝나지 않은 환불은 주문당 하나" 인덱스에 걸린다
+    const result = await this.refundRepository.delete({
+      id,
+      status: Not(RefundStatus.COMPLETED),
+    });
+
+    return (result.affected ?? 0) === 1;
   }
 
   async findPage(

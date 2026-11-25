@@ -39,6 +39,7 @@ import { InvoiceValidationService } from '../../invoice/invoice-validation.servi
 import { UserOrderInvoiceRequest } from '../../invoice/invoice.dto';
 import { normalizeTaiwanPhone } from '../../invoice/invoice.util';
 import { CvsStoreService } from '../../logistics/cvs-store.service';
+import { RefundService } from '../../refund/refund.service';
 import {
   CartAmountCalculator,
   CartAmountDto,
@@ -92,6 +93,7 @@ export class UserOrderService {
     private readonly cvsStoreService: CvsStoreService,
     private readonly invoiceValidationService: InvoiceValidationService,
     private readonly refundRepositoryService: RefundRepositoryService,
+    private readonly refundService: RefundService,
   ) {}
 
   /**
@@ -299,24 +301,39 @@ export class UserOrderService {
       );
     }
 
-    const [payment, refund] = await Promise.all([
+    const [payment, refunds] = await Promise.all([
       this.paymentRepositoryService.findLatestByOrderId(order.id),
-      this.refundRepositoryService.findByOrderId(order.id),
+      this.refundRepositoryService.findAllByOrderId(order.id),
     ]);
 
-    return GetUserOrderResponse.from(order, payment, language, refund);
+    return GetUserOrderResponse.from(order, payment, language, refunds);
   }
 
   /**
-   * 취소·계약해제 통지 접수. 통지 시각만 남기고 발주를 막는다 — 환불은 관리자가 따로 실행한다.
-   * 24시간 경과·한국 발주·배송 단계로 거절하지 않는다. 이미 접수된 주문은 처음 시각을 유지한다.
+   * 취소·계약해제 통지 접수 (환불 규정 1·2). 결제 후 24시간 안이고 아직 한국에 발주하지
+   * 않았으면 접수를 확정한 뒤 바로 환불한다. 그 밖은 접수만 하고 관리자가 확인한다.
+   * 자동 환불이 실패해도 접수는 유지된다 — 관리자가 이어서 처리한다.
    */
-  @Transactional()
   async requestCancel(
     userId: number,
     id: number,
     reason?: string,
   ): Promise<void> {
+    if (await this.acceptCancel(userId, id, reason)) {
+      await this.refundService.requestAuto(id);
+    }
+  }
+
+  /**
+   * 통지 시각을 남기고 발주를 막는다 (한 트랜잭션). 새로 접수됐으면 true.
+   * 24시간 경과·한국 발주·배송 단계로 거절하지 않는다. 이미 접수된 주문은 처음 시각을 유지한다.
+   */
+  @Transactional()
+  private async acceptCancel(
+    userId: number,
+    id: number,
+    reason?: string,
+  ): Promise<boolean> {
     const order = await this.orderRepositoryService.findDetailByIdAndUserId(
       id,
       userId,
@@ -344,9 +361,9 @@ export class UserOrderService {
       new Date(),
     );
 
-    // 두 번 눌렀거나 이미 접수된 주문 — 처음 통지 시각을 그대로 둔다
+    // 두 번 눌렀거나 이미 접수된 주문 — 처음 통지 시각을 그대로 두고 환불도 다시 걸지 않는다
     if (!accepted) {
-      return;
+      return false;
     }
 
     await this.orderRepositoryService.saveEvents([
@@ -358,6 +375,8 @@ export class UserOrderService {
         message: trimmed,
       },
     ]);
+
+    return true;
   }
 
   /**

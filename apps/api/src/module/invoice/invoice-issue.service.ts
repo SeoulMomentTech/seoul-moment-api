@@ -217,8 +217,10 @@ export class InvoiceIssueService {
     invoice.failureCode = null;
     invoice.failureMessage = null;
 
-    // 발행하는 동안 환불이 끝나 정정 대기(adjust_status)가 걸렸을 수 있다 — 발행 칸만 고친다
+    // 발행하는 동안 환불이 끝나 정정 대기(adjust_status)가 걸렸을 수 있다 — 발행 칸만 고친다.
+    // 발행을 기다리다 소진된 정정 재시도는 여기서 다시 연다 (같은 락이라 정정과 겹치지 않는다)
     await this.orderRepositoryService.updateInvoiceFields(invoice.orderId, {
+      adjustAttemptCount: 0,
       status: invoice.status,
       invoiceNo: invoice.invoiceNo,
       invoiceDate: invoice.invoiceDate,
