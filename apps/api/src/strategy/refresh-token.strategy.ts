@@ -49,6 +49,8 @@ export class RefreshTokenStrategy extends PassportStrategy(
         HttpStatus.FORBIDDEN,
       );
 
+    adminEntity.verifyApproved();
+
     return adminEntity;
   }
 }

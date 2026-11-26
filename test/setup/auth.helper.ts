@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { DataSource } from 'typeorm';
 
 const TEST_ADMIN_EMAIL = 'e2e-test-admin@test.com';
 const TEST_ADMIN_PASSWORD = 'TestAdmin1234!';
@@ -33,6 +34,12 @@ export async function getAdminToken(app: INestApplication): Promise<string> {
     password: TEST_ADMIN_PASSWORD,
     name: TEST_ADMIN_NAME,
   });
+  // 가입 직후는 WAIT 라 로그인이 막힌다 — super_admin 의 승인을 대신한다
+  await app
+    .get(DataSource)
+    .query(`UPDATE admin SET status = 'NORMAL' WHERE email = $1`, [
+      TEST_ADMIN_EMAIL,
+    ]);
 
   // When - 로그인으로 refreshToken 획득
   const loginRes = await request(app.getHttpServer())

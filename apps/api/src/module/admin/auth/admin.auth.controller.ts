@@ -35,8 +35,13 @@ export class AdminAuthController {
   ) {}
 
   @Post('signup')
-  @ApiOperation({ summary: '관리자 회원가입' })
+  @ApiOperation({
+    summary: '관리자 회원가입',
+    description:
+      '가입 직후는 admin · WAIT 다. super_admin 이 PATCH /admin/user/:id 로 승인(NORMAL)하기 전에는 로그인할 수 없다.',
+  })
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ResponseException(HttpStatus.CONFLICT, '이미 가입한 메일')
   async postAdminSignUp(@Body() body: PostAdminSignUpRequest) {
     return this.adminAuthService.signUp(body);
   }
@@ -44,6 +49,10 @@ export class AdminAuthController {
   @Post('login')
   @ApiOperation({ summary: '관리자 로그인' })
   @HttpCode(HttpStatus.OK)
+  @ResponseException(
+    HttpStatus.FORBIDDEN,
+    '승인 전(WAIT)·정지 계정 — super_admin 의 승인이 필요하다',
+  )
   @ResponseData(PostAdminLoginResponse)
   async postAdminLogin(
     @Body() body: PostAdminLoginRequest,

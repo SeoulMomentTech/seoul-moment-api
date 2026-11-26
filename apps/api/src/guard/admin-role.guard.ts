@@ -36,12 +36,7 @@ export class AdminRoleGuard implements CanActivate {
     // 감사 기록(누가 처리했는지)에 쓰도록 검증된 관리자 토큰을 요청에 싣는다
     context.switchToHttp().getRequest().user = payload;
 
-    // 역할이 지정되지 않았으면 통과
-    if (!requiredRole) {
-      return true;
-    }
-
-    await this.validateRole(payload, requiredRole);
+    await this.validateAdmin(payload, requiredRole);
 
     return true;
   }
@@ -89,23 +84,24 @@ export class AdminRoleGuard implements CanActivate {
     return payload;
   }
 
-  private async validateRole(
+  /** 가입 승인(NORMAL)된 계정만 통과한다 — 역할 지정이 없는 API 도 마찬가지다 */
+  private async validateAdmin(
     payload: Record<string, any>,
-    requiredRole: string,
+    requiredRole?: string,
   ) {
     const adminEntity = await this.adminRepositoryService.findAdminById(
       getTokenSubjectId(payload),
       AdminStatus.NORMAL,
     );
 
-    if (!adminEntity || !adminEntity.role) {
+    if (!adminEntity) {
       throw new ServiceError(
         'Admin not found or not in normal status',
         ServiceErrorCode.FORBIDDEN,
       );
     }
 
-    if (adminEntity.role.name !== requiredRole) {
+    if (requiredRole && adminEntity.role?.name !== requiredRole) {
       throw new ServiceError(
         'Insufficient permissions',
         ServiceErrorCode.FORBIDDEN,

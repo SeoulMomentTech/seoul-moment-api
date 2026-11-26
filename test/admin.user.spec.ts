@@ -71,31 +71,52 @@ describe('AdminUserController — 관리자 권한 관리 (E2E)', () => {
       .send(body);
   }
 
-  async function loginOther(): Promise<string> {
-    const login = await request(app.getHttpServer())
-      .post('/admin/auth/login')
-      .send(OTHER);
-    const token = await request(app.getHttpServer())
-      .get('/admin/auth/one-time-token')
-      .set('Authorization', `Bearer ${login.body.data.refreshToken}`);
-
-    return token.body.data.oneTimeToken;
+  function get(url: string, token: string) {
+    return request(app.getHttpServer())
+      .get(url)
+      .set('Authorization', `Bearer ${token}`);
   }
 
-  it('super_admin 이 다른 관리자를 super_admin · NORMAL 로 올리면 바로 super_admin API 를 쓸 수 있다', async () => {
-    // Given - 가입 직후 계정은 권한 관리 API 를 쓸 수 없다
-    const otherToken = await loginOther();
-    expect((await patch(adminId, { status: 'BLOCK' }, otherToken)).status).toBe(
-      403,
-    );
+  function login() {
+    return request(app.getHttpServer()).post('/admin/auth/login').send(OTHER);
+  }
+
+  async function loginOther() {
+    const { refreshToken } = (await login()).body.data;
+    const token = await get('/admin/auth/one-time-token', refreshToken);
+
+    return { refreshToken, token: token.body.data.oneTimeToken as string };
+  }
+
+  it('가입 직후(WAIT) 계정은 로그인할 수 없고, super_admin 이 승인하면 일반 관리자 API 를 쓴다', async () => {
+    // Given - 가입만 한 계정. 같은 메일로 또 가입할 수는 없다
+    expect((await login()).status).toBe(403);
+    const again = await request(app.getHttpServer())
+      .post('/admin/auth/signup')
+      .send({ ...OTHER, name: '다른관리자' });
+    expect(again.status).toBe(409);
+
+    // When - 승인만 한다(역할은 admin 그대로)
+    const res = await patch(otherId, { status: 'NORMAL' });
+
+    // Then
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ role: 'admin', status: 'NORMAL' });
+    const { token } = await loginOther();
+    expect((await get('/admin/member', token)).status).toBe(200); // AdminRoleGuard
+    expect((await get('/admin/category', token)).status).toBe(200); // OneTimeTokenGuard
+    expect((await get(BASE, token)).status).toBe(403); // super_admin 전용
+  });
+
+  it('super_admin 으로 올리면 같은 토큰으로 바로 통과하고, 정지하면 바로 막힌다', async () => {
+    // Given
+    await setAdmin(otherId, 'admin', 'NORMAL');
+    const { token, refreshToken } = await loginOther();
 
     // When
-    const res = await patch(otherId, {
-      role: 'super_admin',
-      status: 'NORMAL',
-    });
+    const res = await patch(otherId, { role: 'super_admin' });
 
-    // Then - 다시 로그인하지 않아도 같은 토큰으로 통과한다
+    // Then - 다시 로그인하지 않아도 된다
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({
       id: otherId,
@@ -103,13 +124,18 @@ describe('AdminUserController — 관리자 권한 관리 (E2E)', () => {
       role: 'super_admin',
       status: 'NORMAL',
     });
-    const list = await request(app.getHttpServer())
-      .get(BASE)
-      .set('Authorization', `Bearer ${otherToken}`);
-    expect(list.status).toBe(200);
-    expect(
-      list.body.data.list.find((x: any) => x.id === otherId),
-    ).toMatchObject({ role: 'super_admin', status: 'NORMAL' });
+    expect((await get(BASE, token)).status).toBe(200);
+
+    // When - 정지
+    expect((await patch(otherId, { status: 'BLOCK' })).status).toBe(200);
+
+    // Then - 이미 받은 토큰도, 재발급도, 로그인도 막힌다
+    expect((await get('/admin/member', token)).status).toBe(403);
+    expect((await get('/admin/category', token)).status).toBe(403);
+    expect((await get('/admin/auth/one-time-token', refreshToken)).status).toBe(
+      403,
+    );
+    expect((await login()).status).toBe(403);
   });
 
   it('보낸 필드만 바뀐다 — 역할만 내리면 상태는 그대로다', async () => {

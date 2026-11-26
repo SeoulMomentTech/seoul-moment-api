@@ -72,4 +72,13 @@ export class AdminEntity extends CommonEntity {
         ServiceErrorCode.UNAUTHORIZED,
       );
   }
+
+  /** 가입 승인(NORMAL) 전이거나 정지된 계정은 로그인·관리자 API 를 쓸 수 없다 */
+  verifyApproved() {
+    if (this.status !== AdminStatus.NORMAL)
+      throw new ServiceError(
+        `Admin is not approved (status: ${this.status})`,
+        ServiceErrorCode.FORBIDDEN,
+      );
+  }
 }

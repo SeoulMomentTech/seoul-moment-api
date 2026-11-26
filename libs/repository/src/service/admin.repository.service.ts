@@ -20,6 +20,10 @@ export class AdminRepositoryService {
     return this.adminRepository.save(admin);
   }
 
+  async existsAdminByEmail(email: string): Promise<boolean> {
+    return (await this.adminRepository.countBy({ email })) > 0;
+  }
+
   async getAdminByEmail(email: string): Promise<AdminEntity> {
     const admin = await this.adminRepository.findOne({
       where: { email },

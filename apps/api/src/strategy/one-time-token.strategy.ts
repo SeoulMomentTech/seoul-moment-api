@@ -34,6 +34,8 @@ export class OneTimeTokenStrategy extends PassportStrategy(
 
     const adminEntity = await this.adminRepositoryService.getAdminById(adminId);
 
+    adminEntity.verifyApproved();
+
     return adminEntity;
   }
 }
