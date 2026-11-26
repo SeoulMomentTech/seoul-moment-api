@@ -367,6 +367,7 @@ footer{padding:26px 0 60px;color:var(--ink-3);font-size:12.5px;border-top:1px so
     <a href="#s6"><b>06</b>관리자 · 할인 스위치</a>
     <a href="#s7"><b>07</b>관리자 · 통관·물류 관리</a>
     <a href="#s8"><b>08</b>관리자 · 취소/환불 관리</a>
+    <a href="#s9"><b>09</b>관리자 · 권한 관리</a>
     <a href="#flow"><b>—</b>호출 순서</a>
   </nav>
 </header>
@@ -1616,6 +1617,128 @@ status?: "FAILED"</div>
   </div>
 </section>
 
+<!-- ============================ 09 ============================ -->
+<section class="screen" id="s9">
+  <div class="screen-head">
+    <span class="no">09</span>
+    <h2>관리자 — 권한 관리</h2>
+    <span class="route">/admin/users</span>
+    <p class="sub">관리자 계정의 <b>역할</b>(<code>super_admin</code> · <code>admin</code>)과 <b>상태</b>를 바꾼다. 이 화면 전체가 <b>super_admin 전용</b>이다 — 일반 관리자는 목록도 403 이다. 가입 직후 계정은 <code>admin</code> · <code>WAIT</code> 로 들어온다.</p>
+  </div>
+  <div class="split">
+    <div class="ui-col">
+      <p class="col-tag">UI</p>
+      <div class="phone wide desktop mk">
+        <div class="nav"><span class="brandmark">SEOUL MOMENT · Admin</span><span class="icons">🔔 ⚙</span></div>
+        <div class="cols drawer"><div style="min-width:0">
+          <div class="hl" data-k="9-1">
+            <span class="pin">1</span>
+            <div class="fieldrow"><div class="input ph">이메일 검색</div></div>
+            <div style="overflow-x:auto"><table class="tbl" style="min-width:520px">
+              <tr><th>ID</th><th>이메일</th><th>이름</th><th>역할</th><th>상태</th></tr>
+              <tr><td><b>1</b></td><td>owner@seoulmoment.example</td><td>대표</td><td>super_admin</td><td>NORMAL</td></tr>
+              <tr style="background:var(--green-bg)"><td><b>7</b></td><td>ops@seoulmoment.example</td><td>운영</td><td>admin</td><td>NORMAL</td></tr>
+              <tr style="background:var(--accent-bg)"><td><b>9</b></td><td>new@seoulmoment.example</td><td>신규</td><td>admin</td><td>WAIT</td></tr>
+            </table></div>
+          </div>
+        </div><div class="c2">
+          <div class="nav"><span class="brandmark">관리자 #7</span><span class="icons">✕</span></div>
+          <div class="hl" data-k="9-2">
+            <span class="pin">2</span>
+            <div class="fieldrow">
+              <div class="lbl">이메일</div><div class="input">ops@seoulmoment.example</div>
+              <div class="lbl" style="margin-top:8px">역할</div><div class="input">super_admin ▾</div>
+              <div class="lbl" style="margin-top:8px">상태</div><div class="input">NORMAL ▾</div>
+            </div>
+            <div class="bottombar" style="border-top:none"><span class="btn primary">저장</span></div>
+          </div>
+          <div class="hl" data-k="9-3">
+            <span class="pin">3</span>
+            <div class="fieldrow" style="border-top:1px solid var(--rule-soft);font-size:11.5px;color:var(--ink-3)">내 계정(#1)은 역할·상태 칸이 잠겨 있다</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="col-tag">사용된 API</p>
+      <div class="api-list">
+        <div class="api-row" data-k="9-1">
+          <div class="api-top"><span class="pin">1</span><span class="what">관리자 계정 목록 · 검색</span><span class="nt upd">updated</span></div>
+          <div class="api-ep"><span class="m get">GET</span><code>/admin/user</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminUser/AdminUserController_getAdminUserList" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminUser/AdminUserController_getAdminUserList" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc">어드민 로그인 계정 목록이다(서울모먼트 회원은 <code>/admin/member</code>). <code>search</code> 는 <b>이메일만</b> 부분 일치로 찾는다. 기본은 가입 최근순.
+            이번에 더해진 것은 <code>status</code> 다 — 전에는 비어서 내려갔다. 기존 호출은 그대로 동작한다. 한 건 조회 API 는 없으니 오른쪽 폼은 이 행 데이터로 채운다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Query</div>
+              <div class="io">page?:   1
+count?:  10
+search?: "ops@"
+sort?:   "DESC"</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 200</div>
+              <div class="io">{ total: 3, list: [{
+  <span class="k">id</span>:         7,
+  email:      "ops@seoulmoment.example",
+  name:       "운영",
+  <span class="k">role</span>?:      "admin",
+  <span class="k">status</span>:     "NORMAL",  <span class="n">// NEW</span>
+  createDate: "2026-11-02T03:10:00Z",
+  updateDate: "2026-11-26T03:20:00Z"
+}] }</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수 · super_admin</span><span class="tag">sort: ASC · DESC</span><span class="tag err">403 super_admin 아님 · 내 상태가 NORMAL 아님</span></div>
+        </div>
+
+        <div class="api-row" data-k="9-2">
+          <div class="api-top"><span class="pin">2</span><span class="what">역할 · 상태 변경</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m patch">PATCH</span><code>/admin/user/{id}</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminUser/AdminUserController_patchAdminUser" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminUser/AdminUserController_patchAdminUser" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc"><b>보낸 필드만 바뀐다.</b> 둘 다 없으면 400. 응답으로 바뀐 계정이 오니 그 행만 갈아 끼우면 된다. <b>다음 요청부터 바로 적용</b>되고 상대가 다시 로그인할 필요는 없다.
+            super_admin 전용 API(환불·강제 탈퇴·이 화면)는 <b><code>super_admin</code> 이면서 <code>NORMAL</code></b> 이어야 통과한다 — 새로 가입한 계정을 올려 줄 때는 <b>둘 다</b> 보낸다.
+            <code>status</code> 는 <b>로그인을 막지 않는다</b> — <code>BLOCK</code> 으로 바꿔도 일반 관리자 API 는 계속 쓸 수 있고 super_admin 전용 API 만 막힌다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l req"><span class="ar">←</span>Request</div>
+              <div class="io">{
+  <span class="k">role</span>?:   "super_admin",
+  <span class="k">status</span>?: "NORMAL"
+}</div>
+            </div>
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>Response 200</div>
+              <div class="io">{
+  id:     7,
+  email:  "ops@seoulmoment.example",
+  name:   "운영",
+  <span class="k">role</span>:   "super_admin",
+  <span class="k">status</span>: "NORMAL",
+  createDate, updateDate
+}</div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수 · super_admin</span><span class="tag">role: super_admin · admin</span><span class="tag">status: WAIT · NORMAL · BLOCK · DELETE</span><span class="tag err">400 빈 요청 · 없는 role·status</span><span class="tag err">403 super_admin 아님</span><span class="tag err">404 없는 계정</span><span class="tag err">409 내 계정</span></div>
+        </div>
+
+        <div class="api-row" data-k="9-3">
+          <div class="api-top"><span class="pin">3</span><span class="what">내 계정은 못 바꾼다</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m none">API 없음</span><code>409</code></div>
+          <p class="api-desc">자기 자신의 <code>id</code> 로 2번을 부르면 <b>409</b> 다(마지막 super_admin 이 스스로 내려가는 것을 막는다). 다른 super_admin 이 바꿔 줘야 한다.
+            <b>내 역할을 알려 주는 API 는 아직 없다</b> — 내 <code>id</code> 는 access token(JWT) payload 의 <code>id</code> 로 알 수 있으니 그 행의 칸을 잠그고, 이 화면에 들어올 수 있는지는 1번이 200 인지 403 인지로 가른다.</p>
+        </div>
+      </div>
+      <div class="note"><b>주의</b> — 역할은 두 가지뿐이고 메뉴·기능별 세부 권한은 없다. 관리자 가입(<code>POST /admin/auth/signup</code>)은 누구나 할 수 있고 승인 절차가 없다 — <code>WAIT</code> 계정도 일반 관리자 API 는 쓸 수 있다. 계정 삭제·비밀번호 초기화 API 는 없다.</div>
+    </div>
+  </div>
+</section>
+
 <section class="flow" id="flow">
   <h2>호출 순서 한 장</h2>
   <p class="lede">고객이 주문서를 보고 → 주문이 쌓인 뒤 → 관리자가 24시간 뒤에 발주하기까지, 실제로 나가는 요청만.</p>
@@ -1664,6 +1787,11 @@ status?: "FAILED"</div>
       <h4>운영 — 할인 스위치</h4>
       <p>sandbox 확인 뒤 켠다. 켠 직후부터 01 의 응답이 바뀐다.</p>
       <span class="ep">GET /admin/shipping/policy</span> <span class="ep">PATCH /admin/shipping/policy</span>
+    </div></div>
+    <div class="step"><div class="n">10</div><div>
+      <h4>운영 — 관리자 권한</h4>
+      <p>새 관리자가 가입하면 super_admin 이 역할·상태를 올려 준다. 바꾼 즉시 적용된다.</p>
+      <span class="ep">GET /admin/user</span> <span class="ep">PATCH /admin/user/{id}</span>
     </div></div>
   </div>
 </section>
