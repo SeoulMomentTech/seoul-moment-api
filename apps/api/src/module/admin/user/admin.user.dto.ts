@@ -1,12 +1,33 @@
 import { AdminEntity } from '@app/repository/entity/admin.entity';
-import { AdminStatus } from '@app/repository/enum/admin.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { AdminRoleName, AdminStatus } from '@app/repository/enum/admin.enum';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
-import { IsEnum } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
 
 import { ListFilterDto } from '../admin.dto';
 
 export class AdminUserRequest extends ListFilterDto {}
+
+export class PatchAdminUserRequest {
+  @ApiPropertyOptional({
+    description: '역할. super_admin 은 환불·강제 탈퇴·권한 관리까지 할 수 있다',
+    enum: AdminRoleName,
+    example: AdminRoleName.SUPER_ADMIN,
+  })
+  @IsOptional()
+  @IsEnum(AdminRoleName)
+  role?: AdminRoleName;
+
+  @ApiPropertyOptional({
+    description:
+      '상태. super_admin 전용 API 는 NORMAL 이어야 통과한다 (가입 직후는 WAIT)',
+    enum: AdminStatus,
+    example: AdminStatus.NORMAL,
+  })
+  @IsOptional()
+  @IsEnum(AdminStatus)
+  status?: AdminStatus;
+}
 
 export class AdminUserResponse {
   @ApiProperty({
@@ -57,7 +78,8 @@ export class AdminUserResponse {
       id: entity.id,
       email: entity.email,
       name: entity.name,
-      role: entity.role.name,
+      role: entity.role?.name ?? null,
+      status: entity.status,
       createDate: entity.createDate,
       updateDate: entity.updateDate,
     });

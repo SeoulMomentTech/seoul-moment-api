@@ -318,7 +318,8 @@ footer{padding:26px 0 60px;color:var(--ink-3);font-size:12.5px;border-top:1px so
     <div class="rule-card">
       <h4>인증</h4>
       <p>고객 API는 회원 <code>Authorization: Bearer</code>. 관리자 API(<code>/admin/*</code>)는 <b>관리자 토큰</b>이다 —
-         회원 토큰으로 부르면 <b>401</b>. 환불 실행·수동 완료·발표 정정은 <b>super_admin</b> 관리자만 된다(그 외 <b>403</b>).</p>
+         회원 토큰으로 부르면 <b>401</b>. 환불 실행·환불 요청 취소·수동 완료·발표 정정은 <b>super_admin</b> 관리자만 된다(그 외 <b>403</b>).
+         역할은 <code>super_admin</code> · <code>admin</code> 두 가지이고 가입 직후는 <code>admin</code> 이다 — super_admin 이 <code>PATCH /admin/user/{id}</code> 로 올려 준다.</p>
     </div>
     <div class="rule-card">
       <h4>응답 봉투</h4>
@@ -1407,6 +1408,10 @@ timerState: NOT_PAID · WAITING · SOON
             </div>
             <div class="bottombar" style="border-top:none"><span class="btn primary">저장</span></div>
           </div>
+          <div class="hl" data-k="7-4">
+            <span class="pin">4</span>
+            <div class="fieldrow" style="font-size:12px;color:var(--red);text-align:right">이 묶음 삭제</div>
+          </div>
           <div class="hl" data-k="7-3">
             <span class="pin">3</span>
             <div class="fieldrow" style="border-top:1px solid var(--rule-soft);font-size:11.5px;color:var(--accent-ink)">⚠ 같은 국제운송장 번호를 쓰는 묶음이 있습니다: #9</div>
@@ -1506,6 +1511,23 @@ customsStatus?: "IN_PROGRESS"</div>
           <div class="api-ep"><span class="m none">같은 응답</span><code>same…ShipmentIds</code></div>
           <p class="api-desc">다른 묶음과 번호가 겹쳐도 <b>저장은 된다.</b> 응답의 두 배열이 비어 있지 않으면 경고만 띄운다(합배송·분할 신고로 실제로 겹칠 수 있다).
             반대로 <b>국제운송장 번호와 수입신고번호를 같은 값으로 넣으면 400</b> 이다 — 서로 다른 번호라 칸을 잘못 넣은 것으로 본다.</p>
+        </div>
+
+        <div class="api-row" data-k="7-4">
+          <div class="api-top"><span class="pin">4</span><span class="what">묶음 삭제</span><span class="nt new">new</span></div>
+          <div class="api-ep"><span class="m del">DELETE</span><code>/admin/shipment/{id}</code></div>
+          <div class="swg"><span class="swg-l">Swagger</span>
+            <a href="https://api-dev.seoulmoment.com.tw/docs#/AdminShipment/AdminShipmentController_deleteAdminShipment" target="_blank" rel="noopener">DEV</a>
+            <a href="https://api.seoulmoment.com.tw/docs#/AdminShipment/AdminShipmentController_deleteAdminShipment" target="_blank" rel="noopener">PROD</a></div>
+          <p class="api-desc"><b>잘못 등록한 묶음</b>을 지운다. 목록·상세와 주문 상세의 <code>delivery.shipments</code> 에서 사라지고, 실려 있던 주문의 작업 이력에 <code>deleted</code> 한 줄이 남는다.
+            <b>주문의 배송 단계와 대만 운송장은 그대로다.</b> 응답 본문이 없으니 성공하면 목록을 다시 받는다. 되돌리는 API 는 없다 — 다시 등록한다. 주문 하나만 빼려면 삭제가 아니라 2번의 <code>orderIds</code> 로 뺀다.</p>
+          <div class="io-pair">
+            <div class="io-block">
+              <div class="io-l res"><span class="ar">→</span>204 No Content</div>
+              <div class="io"><span class="c">// 본문 없음</span></div>
+            </div>
+          </div>
+          <div class="tags"><span class="tag">관리자 Bearer 필수</span><span class="tag err">404 묶음 없음 · 이미 삭제</span></div>
         </div>
       </div>
       <div class="note"><b>주의</b> — 통관 서류 첨부, CSV 일괄 업로드, 상품 단위 부분배송은 아직 없다. 수입자는 법인(首爾映像有限公司) 고정이라 개인 통관 인증번호 칸을 만들지 않는다.</div>
@@ -1626,7 +1648,7 @@ status?: "FAILED"</div>
     <div class="step"><div class="n">06</div><div>
       <h4>관리자 — 통관·물류 · 배송 단계</h4>
       <p>묶음을 등록·수정하고, 실제 물류가 움직였을 때 단계를 따로 바꾼다. 둘은 서로를 바꾸지 않는다.</p>
-      <span class="ep">POST /admin/shipment</span> <span class="ep">PATCH /admin/shipment/{id}</span> <span class="ep">POST /admin/order/delivery-stage</span> <span class="ep">PATCH /admin/order/{id}/local-delivery</span>
+      <span class="ep">POST /admin/shipment</span> <span class="ep">PATCH /admin/shipment/{id}</span> <span class="ep">DELETE /admin/shipment/{id}</span> <span class="ep">POST /admin/order/delivery-stage</span> <span class="ep">PATCH /admin/order/{id}/local-delivery</span>
     </div></div>
     <div class="step"><div class="n">07</div><div>
       <h4>고객 — 취소·계약해제 신청</h4>

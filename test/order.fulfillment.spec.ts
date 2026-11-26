@@ -1299,6 +1299,48 @@ describe('주문 현황·발주 (E2E)', () => {
       ).toBe(404);
     });
 
+    it('잘못 등록한 묶음을 지우면 목록·주문에서 사라지고 이력이 남는다', async () => {
+      // Given
+      const { token } = await signUpAndLogin();
+      const orderId = await placeOrder(token);
+      const kept = await adminSend('post', SHIPMENT_BASE, {
+        orderIds: [orderId],
+        intlTrackingNo: 'KEEP-1',
+      }).expect(201);
+      const wrong = await adminSend('post', SHIPMENT_BASE, {
+        orderIds: [orderId],
+        intlTrackingNo: 'WRONG-1',
+      }).expect(201);
+      const path = `${SHIPMENT_BASE}/${wrong.body.data.shipmentId}`;
+
+      // When
+      const res = await adminSend('delete', path);
+
+      // Then - 다른 묶음과 주문의 배송 단계는 그대로다
+      expect(res.status).toBe(204);
+      expect((await getShipment(`/${wrong.body.data.shipmentId}`)).status).toBe(
+        404,
+      );
+      expect(
+        (await getShipment('')).body.data.list.map((x: any) => x.shipmentId),
+      ).toEqual([kept.body.data.shipmentId]);
+      const order = (await adminGet(`/${orderId}`)).body.data;
+      expect(order.delivery.shipments.map((x: any) => x.shipmentId)).toEqual([
+        kept.body.data.shipmentId,
+      ]);
+      expect(order.events[0].message).toContain(
+        `shipment #${wrong.body.data.shipmentId} deleted`,
+      );
+
+      // When - 지운 묶음과 같은 번호로 다시 등록해도 중복 경고가 없고, 두 번 지우면 404
+      const again = await adminSend('post', SHIPMENT_BASE, {
+        orderIds: [orderId],
+        intlTrackingNo: 'WRONG-1',
+      }).expect(201);
+      expect(again.body.data.sameIntlTrackingNoShipmentIds).toEqual([]);
+      expect((await adminSend('delete', path)).status).toBe(404);
+    });
+
     it('목록은 운송장·신고번호·주문번호로 찾고 통관 상태로 거른다', async () => {
       // Given
       const { token } = await signUpAndLogin();

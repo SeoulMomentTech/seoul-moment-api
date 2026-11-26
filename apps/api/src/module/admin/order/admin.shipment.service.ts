@@ -99,6 +99,18 @@ export class AdminShipmentService {
     return this.toWriteResponse(saved);
   }
 
+  /** 잘못 등록한 묶음을 지운다. 실려 있던 주문의 작업 이력에 한 줄씩 남는다 */
+  @Transactional()
+  async remove(adminId: number, id: number): Promise<void> {
+    const entity = await this.findOrThrow(id);
+    const linked = (await this.shipmentRepositoryService.findLinks([id])).map(
+      (link) => link.orderId,
+    );
+
+    await this.shipmentRepositoryService.remove(id);
+    await this.logEvents(adminId, entity, linked, 'deleted');
+  }
+
   async getList(
     query: GetAdminShipmentListRequest,
     language?: LanguageCode,

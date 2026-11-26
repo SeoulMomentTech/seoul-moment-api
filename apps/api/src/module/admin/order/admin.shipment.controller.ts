@@ -9,8 +9,10 @@ import { LanguageCode } from '@app/repository/enum/language.enum';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
+  HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
@@ -98,6 +100,25 @@ export class AdminShipmentController {
         body,
       ),
     );
+  }
+
+  @Delete(':id(\\d+)')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: '통관·물류 삭제',
+    description:
+      '잘못 등록한 묶음을 지운다. 목록·상세와 주문 상세의 shipments 에서 사라지고, 실려 있던 주문의 작업 이력에 deleted 한 줄이 남는다. ' +
+      '주문의 배송 단계와 대만 운송장은 바뀌지 않는다. 되돌리는 API 는 없다 — 다시 등록한다.',
+  })
+  @ResponseException(
+    HttpStatus.NOT_FOUND,
+    'Shipment not found (이미 삭제 포함)',
+  )
+  async deleteAdminShipment(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    await this.adminShipmentService.remove(getTokenSubjectId(req.user), id);
   }
 
   @Get()

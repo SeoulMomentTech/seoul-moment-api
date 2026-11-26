@@ -11,6 +11,10 @@ export class AdminRoleRepositoryService implements OnModuleInit {
     private readonly adminRoleRepository: Repository<AdminRoleEntity>,
   ) {}
 
+  async findByName(name: string): Promise<AdminRoleEntity | null> {
+    return this.adminRoleRepository.findOneBy({ name });
+  }
+
   async onModuleInit() {
     const count = await this.adminRoleRepository.count();
     if (count === 0) {

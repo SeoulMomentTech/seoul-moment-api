@@ -38,6 +38,12 @@ export class ShipmentRepositoryService {
     );
   }
 
+  /** 묶음은 소프트 삭제로 남기고(잘못 등록한 기록), 주문과의 연결만 지운다. 트랜잭션 안에서 부른다 */
+  async remove(shipmentId: number) {
+    await this.shipmentOrderRepository.delete({ shipmentId });
+    await this.shipmentRepository.softDelete(shipmentId);
+  }
+
   async findLinks(shipmentIds: number[]): Promise<ShipmentOrderEntity[]> {
     if (shipmentIds.length === 0) {
       return [];
